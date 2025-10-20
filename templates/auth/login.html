@@ -1,0 +1,111 @@
+{% extends "auth/base.html" %}
+
+{% block title %}Login - Referral Ninja{% endblock %}
+
+{% block auth_content %}
+<div class="auth-card">
+    <div class="auth-header">
+        <div class="auth-logo">
+            <i class="fas fa-user-ninja"></i>
+        </div>
+        <h2 class="fw-bold mb-2">Welcome Back Ninja!</h2>
+        <p class="auth-subtitle mb-0">Sign in to your Referral Ninja account</p>
+    </div>
+    
+    <div class="auth-body">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+                        <i class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' }} me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <form method="POST" action="{{ url_for('login') }}">
+            <div class="mb-3">
+                <label for="username" class="form-label fw-semibold">Username</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0">
+                        <i class="fas fa-user text-danger"></i>
+                    </span>
+                    <input type="text" class="form-control border-start-0" id="username" name="username" 
+                           required placeholder="Enter your username" value="{{ request.form.username if request.form }}">
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <label for="password" class="form-label fw-semibold">Password</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0">
+                        <i class="fas fa-lock text-danger"></i>
+                    </span>
+                    <input type="password" class="form-control border-start-0" id="password" name="password" 
+                           required placeholder="Enter your password">
+                    <button type="button" class="btn btn-outline-secondary password-toggle border-start-0">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="remember_me" name="remember_me">
+                    <label class="form-check-label" for="remember_me">
+                        Remember me
+                    </label>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary w-100 py-3 fw-semibold mb-3">
+                <i class="fas fa-sign-in-alt me-2"></i>Sign In
+            </button>
+            
+            <div class="text-center">
+                <a href="#" class="text-muted text-decoration-none small">Forgot your password?</a>
+            </div>
+        </form>
+        
+        <div class="auth-footer">
+            <p class="mb-0 text-muted">
+                Don't have an account? 
+                <a href="{{ url_for('register') }}" class="text-danger fw-semibold text-decoration-none">Join the Ninjas</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Focus on username field
+        document.getElementById('username').focus();
+        
+        // Password toggle
+        const passwordToggle = document.querySelector('.password-toggle');
+        const passwordInput = document.getElementById('password');
+        
+        if (passwordToggle && passwordInput) {
+            passwordToggle.addEventListener('click', function() {
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                this.innerHTML = type === 'password' ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
+            });
+        }
+        
+        // Add enter key submission
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const form = document.querySelector('form');
+                if (form) {
+                    form.dispatchEvent(new Event('submit'));
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

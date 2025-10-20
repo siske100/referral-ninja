@@ -1,0 +1,655 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - ReferralNinja{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <!-- Header Section -->
+    <div class="profile-header mb-5">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center">
+                    <div class="avatar-section me-4">
+                        <div class="avatar-circle">
+                            <i class="fas fa-user"></i>
+                        </div>
+                    </div>
+                    <div class="profile-info">
+                        <h1 class="display-6 fw-bold text-gradient mb-1">Welcome, {{ current_user.username }}! 👋</h1>
+                        <p class="text-muted mb-0">Manage your account settings and track your earnings</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="status-badge">
+                    <span class="badge bg-success-subtle text-success fs-6 p-3">
+                        <i class="fas fa-shield-check me-2"></i>Account Verified
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'error' %}exclamation-triangle{% elif category == 'warning' %}exclamation-circle{% else %}info-circle{% endif %} me-2"></i>
+                        <span>{{ message }}</span>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="profile-grid">
+        <!-- Profile Information Card -->
+        <div class="profile-card profile-main">
+            <div class="card-header-gradient">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-user-edit fa-lg me-3"></i>
+                    <h3 class="mb-0">Profile Information</h3>
+                </div>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('profile') }}">
+                    <div class="form-floating mb-4">
+                        <input type="text" class="form-control" id="username" value="{{ current_user.username }}" readonly>
+                        <label for="username"><i class="fas fa-user me-2"></i>Username</label>
+                        <div class="form-text">Username cannot be changed</div>
+                    </div>
+                    
+                    <div class="form-floating mb-4">
+                        <input type="email" class="form-control" id="email" name="email" value="{{ current_user.email }}" required>
+                        <label for="email"><i class="fas fa-envelope me-2"></i>Email Address</label>
+                    </div>
+                    
+                    <div class="form-floating mb-4">
+                        <input type="tel" class="form-control" id="phone" name="phone_number" value="{{ current_user.phone_number or '' }}" 
+                               pattern="254[0-9]{9}" placeholder="254712345678" required>
+                        <label for="phone"><i class="fas fa-phone me-2"></i>Phone Number</label>
+                        <div class="form-text">Format: 254712345678 (for M-Pesa withdrawals)</div>
+                    </div>
+                    
+                    <div class="form-floating mb-4">
+                        <input type="text" class="form-control" id="referral_code" value="{{ current_user.referral_code }}" readonly>
+                        <label for="referral_code"><i class="fas fa-user-friends me-2"></i>Your Referral Code</label>
+                        <div class="form-text">Share this code with friends to earn KSH 50 per referral</div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary btn-lg w-100 py-3">
+                        <i class="fas fa-save me-2"></i>Update Profile
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Security Card -->
+        <div class="profile-card security-card">
+            <div class="card-header-gradient">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-shield-alt fa-lg me-3"></i>
+                    <h3 class="mb-0">Security Settings</h3>
+                </div>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('profile') }}">
+                    <div class="form-floating mb-4">
+                        <input type="password" class="form-control" id="new_password" name="new_password" 
+                               minlength="6" placeholder="Enter new password">
+                        <label for="new_password"><i class="fas fa-key me-2"></i>New Password</label>
+                        <div class="form-text">Minimum 6 characters</div>
+                    </div>
+                    
+                    <div class="form-floating mb-4">
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" 
+                               placeholder="Confirm new password">
+                        <label for="confirm_password"><i class="fas fa-key me-2"></i>Confirm New Password</label>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-warning btn-lg w-100 py-3">
+                        <i class="fas fa-lock me-2"></i>Change Password
+                    </button>
+                </form>
+                
+                <div class="security-status mt-4 pt-4 border-top">
+                    <h6 class="mb-3"><i class="fas fa-check-circle text-success me-2"></i>Security Status</h6>
+                    <div class="security-item d-flex justify-content-between align-items-center mb-2">
+                        <span>Password Strength</span>
+                        <span class="badge bg-success">Strong</span>
+                    </div>
+                    <div class="security-item d-flex justify-content-between align-items-center">
+                        <span>Two-Factor Auth</span>
+                        <span class="badge bg-secondary">Disabled</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Card -->
+        <div class="profile-card stats-card">
+            <div class="card-header-gradient">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-chart-line fa-lg me-3"></i>
+                    <h3 class="mb-0">Performance Dashboard</h3>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="stats-grid">
+                    <div class="stat-item bg-primary-subtle">
+                        <div class="stat-icon">
+                            <i class="fas fa-wallet"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value">KSH {{ "%.2f"|format(current_user.balance) }}</div>
+                            <div class="stat-label">Available Balance</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-item bg-success-subtle">
+                        <div class="stat-icon">
+                            <i class="fas fa-money-bill-wave"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value">KSH {{ "%.2f"|format(total_earned) }}</div>
+                            <div class="stat-label">Total Earned</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-item bg-info-subtle">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value">{{ current_user.referral_count }}</div>
+                            <div class="stat-label">Referrals Made</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-item bg-warning-subtle">
+                        <div class="stat-icon">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value">{{ current_user.created_at.strftime('%d/%m/%Y') }}</div>
+                            <div class="stat-label">Member Since</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rank-section mt-4 pt-4 border-top">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0"><i class="fas fa-trophy me-2"></i>Your Rank</h6>
+                        <span class="rank-badge rank-{{ current_user.user_rank|lower }}">
+                            <i class="fas fa-gem me-1"></i>{{ current_user.user_rank }}
+                        </span>
+                    </div>
+                    <div class="progress mb-2" style="height: 8px;">
+                        {% set progress = [current_user.total_commission / 10000 * 100, 100]|min %}
+                        <div class="progress-bar bg-gradient-rank" style="width: {{ progress }}%"></div>
+                    </div>
+                    <div class="d-flex justify-content-between text-sm">
+                        <small>Bronze</small>
+                        <small>Progress to {{ 'Silver' if current_user.user_rank == 'Bronze' else 'Gold' if current_user.user_rank == 'Silver' else 'Platinum' if current_user.user_rank == 'Gold' else 'Diamond' }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Referral Program Card -->
+        <div class="profile-card referral-card">
+            <div class="card-header-gradient">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-rocket fa-lg me-3"></i>
+                    <h3 class="mb-0">Referral Program</h3>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="referral-hero text-center mb-4">
+                    <div class="referral-badge">
+                        <i class="fas fa-gift fa-2x"></i>
+                    </div>
+                    <h4 class="mt-3">Earn KSH 50 per referral! 💰</h4>
+                    <p class="text-muted">Share your code and earn instantly when friends join</p>
+                </div>
+                
+                <div class="referral-code-section mb-4">
+                    <label class="form-label fw-semibold">Your Referral Code</label>
+                    <div class="input-group input-group-lg">
+                        <input type="text" class="form-control referral-code-input" value="{{ current_user.referral_code }}" 
+                               id="referralCode" readonly>
+                        <button type="button" class="btn btn-primary" onclick="copyReferralCode()">
+                            <i class="fas fa-copy me-2"></i>Copy
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="referral-stats-grid mb-4">
+                    <div class="referral-stat">
+                        <div class="stat-number">{{ referred_count }}</div>
+                        <div class="stat-label">People Referred</div>
+                    </div>
+                    <div class="referral-stat">
+                        <div class="stat-number">KSH {{ "%.2f"|format(current_user.referral_balance) }}</div>
+                        <div class="stat-label">Referral Earnings</div>
+                    </div>
+                </div>
+
+                <div class="referral-actions">
+                    <a href="{{ url_for('referral_system') }}" class="btn btn-success btn-lg w-100 py-3">
+                        <i class="fas fa-share-alt me-2"></i>Go to Referral System
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.profile-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+.profile-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 2rem;
+    border-radius: 20px;
+    color: white;
+    margin-top: 1rem;
+}
+
+.text-gradient {
+    background: linear-gradient(45deg, #fff, #e3f2fd);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.avatar-section {
+    position: relative;
+}
+
+.avatar-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.profile-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.profile-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 4px 25px rgba(0,0,0,0.08);
+    border: none;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.profile-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 35px rgba(0,0,0,0.12);
+}
+
+.card-header-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem;
+    border-bottom: none;
+}
+
+.card-header-gradient h3 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.card-body {
+    padding: 2rem;
+}
+
+.form-floating {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.form-control {
+    border-radius: 12px;
+    border: 2px solid #e9ecef;
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    transform: translateY(-2px);
+}
+
+.form-label {
+    font-weight: 500;
+}
+
+.btn {
+    border-radius: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.btn-warning:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(245, 87, 108, 0.4);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+}
+
+.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(79, 172, 254, 0.4);
+}
+
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.stat-item {
+    padding: 1.5rem;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: transform 0.3s ease;
+}
+
+.stat-item:hover {
+    transform: translateY(-3px);
+}
+
+.stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.bg-primary-subtle .stat-icon { color: #667eea; }
+.bg-success-subtle .stat-icon { color: #28a745; }
+.bg-info-subtle .stat-icon { color: #17a2b8; }
+.bg-warning-subtle .stat-icon { color: #ffc107; }
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #2c3e50;
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+/* Rank Section */
+.rank-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.rank-bronze {
+    background: linear-gradient(135deg, #cd7f32, #8b4513);
+    color: white;
+}
+
+.rank-silver {
+    background: linear-gradient(135deg, #c0c0c0, #808080);
+    color: white;
+}
+
+.rank-gold {
+    background: linear-gradient(135deg, #ffd700, #daa520);
+    color: white;
+}
+
+.rank-platinum {
+    background: linear-gradient(135deg, #e5e4e2, #8a8a8a);
+    color: white;
+}
+
+.rank-diamond {
+    background: linear-gradient(135deg, #b9f2ff, #4fc3f7);
+    color: white;
+}
+
+.bg-gradient-rank {
+    background: linear-gradient(90deg, #cd7f32, #c0c0c0, #ffd700, #e5e4e2, #b9f2ff);
+}
+
+/* Referral Section */
+.referral-hero {
+    padding: 1rem;
+}
+
+.referral-badge {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    color: white;
+}
+
+.referral-code-input {
+    background: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    text-align: center;
+    letter-spacing: 1px;
+}
+
+.referral-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.referral-stat {
+    text-align: center;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+    transition: transform 0.3s ease;
+}
+
+.referral-stat:hover {
+    transform: translateY(-3px);
+}
+
+.referral-stat .stat-number {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #667eea;
+    margin-bottom: 0.5rem;
+}
+
+.referral-stat .stat-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+/* Security Section */
+.security-status {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 12px;
+}
+
+.security-item {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.security-item:last-child {
+    border-bottom: none;
+}
+
+/* Alert Styling */
+.alert {
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .profile-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-grid,
+    .referral-stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .profile-header {
+        padding: 1.5rem;
+    }
+    
+    .avatar-circle {
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
+    }
+}
+
+/* Animation for copy notification */
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    animation: slideIn 0.3s ease;
+}
+</style>
+
+<script>
+function copyReferralCode() {
+    const referralCode = document.getElementById('referralCode');
+    referralCode.select();
+    referralCode.setSelectionRange(0, 99999);
+    
+    try {
+        navigator.clipboard.writeText(referralCode.value).then(() => {
+            showNotification('🎉 Referral code copied to clipboard!', 'success');
+        });
+    } catch (err) {
+        // Fallback for older browsers
+        document.execCommand('copy');
+        showNotification('🎉 Referral code copied to clipboard!', 'success');
+    }
+}
+
+function showNotification(message, type = 'success') {
+    // Remove existing notifications
+    const existingNotifications = document.querySelectorAll('.notification');
+    existingNotifications.forEach(notif => notif.remove());
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} notification`;
+    notification.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Remove notification after 3 seconds
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+// Add interactive animations
+document.addEventListener('DOMContentLoaded', function() {
+    const statItems = document.querySelectorAll('.stat-item, .referral-stat');
+    
+    statItems.forEach(item => {
+        item.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-5px)';
+        });
+        
+        item.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+});
+</script>
+{% endblock %}

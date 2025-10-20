@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Notifications - ReferralNinja{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+    <div class="admin-header">
+        <h1><i class="fas fa-bell me-2"></i>Admin Notifications</h1>
+        <p>System notifications and alerts</p>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <div class="stat-content">
+                    <h3>{{ unread_count }}</h3>
+                    <p>Unread Notifications</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-notifications">
+        {% if notifications %}
+            {% for notification in notifications %}
+            <div class="notification-item card mb-3 {% if not notification.is_read %}unread{% endif %}">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-10">
+                            <h5 class="card-title">{{ notification.title }}</h5>
+                            <p class="card-text">{{ notification.message }}</p>
+                            <small class="text-muted">{{ notification.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+                        </div>
+                        <div class="col-md-2 text-end">
+                            {% if not notification.is_read %}
+                            <form method="POST" action="{{ url_for('mark_notification_read', notification_id=notification.id) }}" class="d-inline">
+                                <button type="submit" class="btn btn-success btn-sm">Mark Read</button>
+                            </form>
+                            {% else %}
+                            <span class="badge bg-secondary">Read</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-bell-slash fa-3x mb-3"></i>
+                <h3>No Notifications</h3>
+                <p>You're all caught up! No new notifications.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.admin-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.admin-header {
+    background: linear-gradient(135deg, #2c3e50, #34495e);
+    color: white;
+    padding: 2rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+}
+
+.admin-header h1 {
+    margin: 0;
+    font-size: 2rem;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-left: 4px solid #3498db;
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-right: 1rem;
+    background: rgba(52, 152, 219, 0.1);
+    color: #3498db;
+}
+
+.stat-content h3 {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.stat-content p {
+    margin: 0;
+    color: #7f8c8d;
+    font-weight: 500;
+}
+
+.notification-item.unread {
+    border-left: 4px solid #3498db;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #7f8c8d;
+}
+
+.empty-state i {
+    color: #bdc3c7;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle mark as read forms
+    document.querySelectorAll('form[action*="/read"]').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const form = this;
+            const submitBtn = form.querySelector('button[type="submit"]');
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '...';
+            
+            fetch(form.action, {
+                method: 'POST',
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    form.closest('.notification-item').classList.remove('unread');
+                    form.innerHTML = '<span class="badge bg-secondary">Read</span>';
+                    // Update unread count in the stat card
+                    const unreadCountElement = document.querySelector('.stat-content h3');
+                    unreadCountElement.textContent = parseInt(unreadCountElement.textContent) - 1;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Mark Read';
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

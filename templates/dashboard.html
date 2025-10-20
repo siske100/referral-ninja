@@ -1,0 +1,432 @@
+
+{% extends "base.html" %}
+
+{% block title %}Dashboard - ReferralNinja{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'error' %}exclamation-triangle{% elif category == 'warning' %}exclamation-circle{% else %}info-circle{% endif %} me-2"></i>
+                        <span>{{ message }}</span>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Welcome Header -->
+    <div class="dashboard-header mb-5">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="display-6 fw-bold text-gradient mb-2">Welcome back, {{ current_user.first_name or 'Ninja' }}! 👋</h1>
+                <p class="text-muted mb-0">Here's your earnings overview and quick actions to get started.</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="badge bg-primary-subtle text-primary fs-6 p-3">
+                    <i class="fas fa-user-check me-2"></i>Account Active
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Stats Cards -->
+            <div class="row mb-5">
+                <div class="col-md-4 mb-4">
+                    <div class="card stat-card balance-card border-0 shadow-hover">
+                        <div class="card-body p-4">
+                            <div class="d-flex align-items-center">
+                                <div class="stat-icon me-3">
+                                    <i class="fas fa-wallet"></i>
+                                </div>
+                                <div class="stat-content flex-grow-1">
+                                    <span class="stat-label">Available Balance</span>
+                                    <h2 class="stat-amount mb-0">KES {{ "%.2f"|format(current_user.balance) }}</h2>
+                                    <small class="text-success">
+                                        <i class="fas fa-arrow-up me-1"></i>Ready to withdraw
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-transparent border-0 pt-0">
+                            <a href="{{ url_for('withdraw') }}" class="btn btn-sm btn-outline-primary w-100">
+                                Withdraw Now <i class="fas fa-arrow-right ms-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 mb-4">
+                    <div class="card stat-card earned-card border-0 shadow-hover">
+                        <div class="card-body p-4">
+                            <div class="d-flex align-items-center">
+                                <div class="stat-icon me-3">
+                                    <i class="fas fa-money-bill-trend-up"></i>
+                                </div>
+                                <div class="stat-content flex-grow-1">
+                                    <span class="stat-label">Total Withdrawn</span>
+                                    <h2 class="stat-amount mb-0">KES {{ "%.2f"|format(total_withdrawn) }}</h2>
+                                    <small class="text-muted">
+                                        <i class="fas fa-history me-1"></i>All time earnings
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 mb-4">
+                    <div class="card stat-card pending-card border-0 shadow-hover">
+                        <div class="card-body p-4">
+                            <div class="d-flex align-items-center">
+                                <div class="stat-icon me-3">
+                                    <i class="fas fa-clock-rotate-left"></i>
+                                </div>
+                                <div class="stat-content flex-grow-1">
+                                    <span class="stat-label">Pending Withdrawals</span>
+                                    <h2 class="stat-amount mb-0">{{ pending_withdrawals }}</h2>
+                                    <small class="text-warning">
+                                        <i class="fas fa-sync-alt me-1"></i>Being processed
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent border-0 py-4">
+                    <h4 class="card-title mb-0">
+                        <i class="fas fa-rocket me-2 text-primary"></i>Quick Actions
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="action-card bg-gradient-primary text-white p-4 rounded-3 h-100">
+                                <div class="d-flex align-items-center mb-3">
+                                    <i class="fas fa-money-bill-wave fa-2x me-3"></i>
+                                    <h5 class="mb-0">Withdraw Earnings</h5>
+                                </div>
+                                <p class="mb-3 opacity-75">Transfer your earnings to your mobile money account instantly</p>
+                                <a href="{{ url_for('withdraw') }}" class="btn btn-light btn-sm">
+                                    Withdraw Now <i class="fas fa-arrow-right ms-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="action-card bg-gradient-success text-white p-4 rounded-3 h-100">
+                                <div class="d-flex align-items-center mb-3">
+                                    <i class="fas fa-users fa-2x me-3"></i>
+                                    <h5 class="mb-0">Refer & Earn</h5>
+                                </div>
+                                <p class="mb-3 opacity-75">Invite friends and earn commissions on their activity</p>
+                                <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#referralModal">
+                                    Share Link <i class="fas fa-share-alt ms-1"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <!-- Recent Activity -->
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-transparent border-0 py-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="card-title mb-0">
+                            <i class="fas fa-receipt me-2 text-primary"></i>Recent Activity
+                        </h4>
+                        <span class="badge bg-primary rounded-pill">{{ withdrawals|length }}</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if withdrawals %}
+                        <div class="activity-list">
+                            {% for transaction in withdrawals %}
+                                <div class="activity-item d-flex align-items-center p-3 rounded-2 mb-2 bg-light-hover">
+                                    <div class="activity-icon me-3">
+                                        <i class="fas fa-{% if transaction.status == 'approved' %}check-circle text-success{% elif transaction.status == 'rejected' %}times-circle text-danger{% else %}clock text-warning{% endif %} fa-lg"></i>
+                                    </div>
+                                    <div class="activity-details flex-grow-1">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <h6 class="mb-1 fw-semibold">KES {{ "%.2f"|format(transaction.amount) }}</h6>
+                                            <span class="badge status-{{ transaction.status }} fs-7">
+                                                {{ transaction.status|title }}
+                                            </span>
+                                        </div>
+                                        <small class="text-muted">
+                                            <i class="far fa-clock me-1"></i>{{ transaction.created_at.strftime('%b %d, %Y at %H:%M') }}
+                                        </small>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="#" class="btn btn-outline-primary btn-sm">View All Activity</a>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <div class="empty-state-icon mb-3">
+                                <i class="fas fa-inbox fa-3x text-muted opacity-50"></i>
+                            </div>
+                            <h5 class="text-muted mb-2">No activity yet</h5>
+                            <p class="text-muted mb-3">Your withdrawal history will appear here</p>
+                            <a href="{{ url_for('withdraw') }}" class="btn btn-primary">Make Your First Withdrawal</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Referral Modal -->
+<div class="modal fade" id="referralModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">Share Your Referral Link</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3">Share this link with friends and start earning commissions:</p>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" value="{{ referral_link }}" id="referralLink" readonly>
+                    <button class="btn btn-primary" type="button" onclick="copyReferralLink()">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+                <div class="social-share d-flex gap-2">
+                    <button class="btn btn-outline-primary flex-fill">
+                        <i class="fab fa-whatsapp me-2"></i>WhatsApp
+                    </button>
+                    <button class="btn btn-outline-primary flex-fill">
+                        <i class="fas fa-envelope me-2"></i>Email
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.dashboard-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+.dashboard-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 2rem;
+    border-radius: 20px;
+    color: white;
+    margin-top: 1rem;
+}
+
+.text-gradient {
+    background: linear-gradient(45deg, #fff, #e3f2fd);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.stat-card {
+    border-radius: 16px;
+    transition: all 0.3s ease;
+    overflow: hidden;
+    position: relative;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--gradient-start), var(--gradient-end));
+}
+
+.balance-card {
+    --gradient-start: #3498db;
+    --gradient-end: #2ecc71;
+}
+
+.earned-card {
+    --gradient-start: #9b59b6;
+    --gradient-end: #e74c3c;
+}
+
+.pending-card {
+    --gradient-start: #f39c12;
+    --gradient-end: #e67e22;
+}
+
+.shadow-hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+.shadow-hover:hover {
+    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    transform: translateY(-5px);
+}
+
+.stat-icon {
+    width: 70px;
+    height: 70px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+}
+
+.balance-card .stat-icon {
+    background: linear-gradient(135deg, #3498db, #2ecc71);
+    color: white;
+}
+
+.earned-card .stat-icon {
+    background: linear-gradient(135deg, #9b59b6, #e74c3c);
+    color: white;
+}
+
+.pending-card .stat-icon {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    color: white;
+}
+
+.stat-label {
+    color: #6c757d;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-amount {
+    font-weight: 800;
+    color: #2c3e50;
+    font-size: 1.8rem;
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.bg-gradient-success {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+}
+
+.action-card {
+    transition: all 0.3s ease;
+}
+
+.action-card:hover {
+    transform: translateY(-3px);
+}
+
+.activity-item {
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.bg-light-hover:hover {
+    background-color: #f8f9fa !important;
+    border-color: #e9ecef !important;
+}
+
+.activity-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(52, 152, 219, 0.1);
+}
+
+.empty-state-icon {
+    opacity: 0.7;
+}
+
+.badge {
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+}
+
+.status-pending {
+    background: rgba(243, 156, 18, 0.1);
+    color: #f39c12;
+    border: 1px solid rgba(243, 156, 18, 0.2);
+}
+
+.status-approved {
+    background: rgba(39, 174, 96, 0.1);
+    color: #27ae60;
+    border: 1px solid rgba(39, 174, 96, 0.2);
+}
+
+.status-rejected {
+    background: rgba(231, 76, 60, 0.1);
+    color: #e74c3c;
+    border: 1px solid rgba(231, 76, 60, 0.2);
+}
+
+.status-processing {
+    background: rgba(52, 152, 219, 0.1);
+    color: #3498db;
+    border: 1px solid rgba(52, 152, 219, 0.2);
+}
+
+.btn {
+    border-radius: 10px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.card-title {
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.fs-7 {
+    font-size: 0.8rem !important;
+}
+</style>
+
+<script>
+function copyReferralLink() {
+    const referralLink = document.getElementById('referralLink');
+    referralLink.select();
+    referralLink.setSelectionRange(0, 99999);
+    document.execCommand('copy');
+    
+    // Show toast or alert
+    const btn = event.target.closest('button');
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+    btn.classList.remove('btn-primary');
+    btn.classList.add('btn-success');
+    
+    setTimeout(() => {
+        btn.innerHTML = originalHtml;
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-primary');
+    }, 2000);
+}
+</script>
+{% endblock %}

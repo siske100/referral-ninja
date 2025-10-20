@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Referral Ninja - Earn KSH 50 Per Referral</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-red: #e74c3c;
+            --primary-dark: #c0392b;
+            --secondary-dark: #2c3e50;
+            --accent-orange: #e67e22;
+        }
+        
+        .landing-hero {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero-content {
+            position: relative;
+            z-index: 2;
+        }
+        
+        .ninja-badge {
+            background: linear-gradient(135deg, var(--primary-red), var(--primary-dark));
+            color: white;
+            padding: 0.5rem 1.5rem;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 1rem;
+        }
+        
+        .hero-image {
+            position: relative;
+            text-align: center;
+        }
+        
+        .hero-image i {
+            font-size: 15rem;
+            color: rgba(231, 76, 60, 0.1);
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        .feature-card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-10px);
+            background: rgba(231, 76, 60, 0.2);
+        }
+        
+        .feature-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--primary-red), var(--primary-dark));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 2rem;
+            color: white;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-red), var(--primary-dark));
+            border: none;
+            padding: 12px 30px;
+            font-weight: 600;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+        }
+        
+        .btn-outline-light {
+            border: 2px solid white;
+            padding: 12px 30px;
+            font-weight: 600;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-outline-light:hover {
+            background: white;
+            color: var(--primary-red);
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="landing-hero">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <div class="hero-content">
+                        <div class="ninja-badge">
+                            <i class="fas fa-bolt me-1"></i> INSTANT EARNINGS
+                        </div>
+                        <h1 class="display-3 fw-bold mb-4">
+                            Become a 
+                            <span class="text-danger">Referral Ninja</span>
+                        </h1>
+                        <p class="lead mb-4">
+                            Earn <strong>KSH 50 instantly</strong> for every friend who joins using your referral code. 
+                            Start building your income stream today!
+                        </p>
+                        
+                        <div class="earning-stats mb-4">
+                            <div class="row">
+                                <div class="col-4">
+                                    <h3 class="text-warning fw-bold">KSH 50</h3>
+                                    <small>Per Referral</small>
+                                </div>
+                                <div class="col-4">
+                                    <h3 class="text-warning fw-bold">Instant</h3>
+                                    <small>Payment</small>
+                                </div>
+                                <div class="col-4">
+                                    <h3 class="text-warning fw-bold">24/7</h3>
+                                    <small>Withdrawal</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="hero-buttons">
+                            <a href="{{ url_for('register') }}" class="btn btn-primary me-3">
+                                <i class="fas fa-user-plus me-2"></i>Start Earning Now
+                            </a>
+                            <a href="{{ url_for('login') }}" class="btn btn-outline-light">
+                                <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="hero-image">
+                        <i class="fas fa-user-ninja"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="py-5 bg-light">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="fw-bold">How It Works</h2>
+                <p class="text-muted">Start earning in just 3 simple steps</p>
+            </div>
+            
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-user-plus"></i>
+                        </div>
+                        <h4>1. Register</h4>
+                        <p class="text-muted">Sign up with your phone number and pay the one-time KSH 200 registration fee</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-share-alt"></i>
+                        </div>
+                        <h4>2. Share</h4>
+                        <p class="text-muted">Share your unique referral code with friends and family</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-money-bill-wave"></i>
+                        </div>
+                        <h4>3. Earn</h4>
+                        <p class="text-muted">Get KSH 50 instantly for each friend who joins using your code</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-5" style="background: linear-gradient(135deg, var(--primary-red), var(--primary-dark)); color: white;">
+        <div class="container text-center">
+            <h2 class="fw-bold mb-3">Ready to Start Earning?</h2>
+            <p class="mb-4">Join thousands of Referral Ninjas already earning money by referring friends</p>
+            <a href="{{ url_for('register') }}" class="btn btn-light btn-lg">
+                <i class="fas fa-rocket me-2"></i>Join Now - KSH 200
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4">
+        <div class="container text-center">
+            <p class="mb-0">&copy; 2025 Referral Ninja. All rights reserved.</p>
+            <small class="text-muted">Earn KSH 50 per referral | Instant M-Pesa withdrawals</small>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

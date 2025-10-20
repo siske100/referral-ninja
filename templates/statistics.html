@@ -1,0 +1,799 @@
+{% extends "base.html" %}
+
+{% block title %}Statistics - ReferralNinja{% endblock %}
+
+{% block content %}
+<div class="statistics-container">
+    <!-- Header Section -->
+    <div class="stats-header mb-5">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center">
+                    <div class="stats-icon me-4">
+                        <div class="icon-circle bg-gradient-primary">
+                            <i class="fas fa-chart-bar fa-lg"></i>
+                        </div>
+                    </div>
+                    <div class="header-content">
+                        <h1 class="display-6 fw-bold text-gradient mb-1">Performance Analytics 📊</h1>
+                        <p class="text-muted mb-0">Track your earnings, referrals, and growth over time</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="performance-badge">
+                    <span class="badge bg-primary-subtle text-primary fs-6 p-3">
+                        <i class="fas fa-trending-up me-2"></i>Active Tracker
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Stats Cards -->
+    <div class="row mb-5">
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="stats-card earnings-card">
+                <div class="card-body">
+                    <div class="stats-content">
+                        <div class="stats-icon-circle bg-success-subtle">
+                            <i class="fas fa-money-bill-wave text-success"></i>
+                        </div>
+                        <div class="stats-info">
+                            <h3 class="stats-value">KSH {{ "%.2f"|format(total_earned) }}</h3>
+                            <p class="stats-label">Total Earnings</p>
+                            <div class="stats-trend">
+                                <i class="fas fa-arrow-up text-success me-1"></i>
+                                <span class="text-success">All Time</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="stats-card balance-card">
+                <div class="card-body">
+                    <div class="stats-content">
+                        <div class="stats-icon-circle bg-primary-subtle">
+                            <i class="fas fa-wallet text-primary"></i>
+                        </div>
+                        <div class="stats-info">
+                            <h3 class="stats-value">KSH {{ "%.2f"|format(pending_balance) }}</h3>
+                            <p class="stats-label">Available Balance</p>
+                            <div class="stats-trend">
+                                <i class="fas fa-coins text-warning me-1"></i>
+                                <span class="text-warning">Ready to Withdraw</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="stats-card withdrawn-card">
+                <div class="card-body">
+                    <div class="stats-content">
+                        <div class="stats-icon-circle bg-info-subtle">
+                            <i class="fas fa-piggy-bank text-info"></i>
+                        </div>
+                        <div class="stats-info">
+                            <h3 class="stats-value">KSH {{ "%.2f"|format(total_withdrawn) }}</h3>
+                            <p class="stats-label">Total Withdrawn</p>
+                            <div class="stats-trend">
+                                <i class="fas fa-check-circle text-success me-1"></i>
+                                <span class="text-success">Successfully Processed</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts & Metrics Section -->
+    <div class="row">
+        <!-- Main Chart -->
+        <div class="col-lg-8 mb-4">
+            <div class="stats-card chart-card">
+                <div class="card-header-gradient">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-chart-line fa-lg me-3"></i>
+                            <h4 class="mb-0">Referral Growth Analytics</h4>
+                        </div>
+                        <div class="chart-actions">
+                            <button class="btn btn-sm btn-outline-light">7D</button>
+                            <button class="btn btn-sm btn-light mx-1">30D</button>
+                            <button class="btn btn-sm btn-outline-light">All</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if referral_stats %}
+                    <div class="chart-container">
+                        <canvas id="referralChart" height="250"></canvas>
+                    </div>
+                    {% else %}
+                    <div class="empty-state text-center py-5">
+                        <div class="empty-icon mb-4">
+                            <i class="fas fa-chart-line fa-4x text-muted opacity-50"></i>
+                        </div>
+                        <h4 class="text-muted mb-2">No Data Available Yet</h4>
+                        <p class="text-muted mb-4">Start referring friends to see your growth analytics</p>
+                        <a href="{{ url_for('referral_system') }}" class="btn btn-primary">
+                            <i class="fas fa-share-alt me-2"></i>Start Referring
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Performance Metrics -->
+        <div class="col-lg-4 mb-4">
+            <div class="stats-card metrics-card h-100">
+                <div class="card-header-gradient">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-tachometer-alt fa-lg me-3"></i>
+                        <h4 class="mb-0">Performance Metrics</h4>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="metrics-grid">
+                        <div class="metric-item">
+                            <div class="metric-icon">
+                                <i class="fas fa-calendar-day text-primary"></i>
+                            </div>
+                            <div class="metric-content">
+                                <div class="metric-value">KSH {{ "%.2f"|format(total_earned / 30 if total_earned > 0 else 0) }}</div>
+                                <div class="metric-label">Daily Average</div>
+                            </div>
+                        </div>
+                        
+                        <div class="metric-item">
+                            <div class="metric-icon">
+                                <i class="fas fa-trophy text-warning"></i>
+                            </div>
+                            <div class="metric-content">
+                                <div class="metric-value">-</div>
+                                <div class="metric-label">Best Month</div>
+                            </div>
+                        </div>
+                        
+                        <div class="metric-item">
+                            <div class="metric-icon">
+                                <i class="fas fa-percentage text-success"></i>
+                            </div>
+                            <div class="metric-content">
+                                <div class="metric-value">-</div>
+                                <div class="metric-label">Conversion Rate</div>
+                            </div>
+                        </div>
+                        
+                        <div class="metric-item">
+                            <div class="metric-icon">
+                                <i class="fas fa-fire text-danger"></i>
+                            </div>
+                            <div class="metric-content">
+                                <div class="metric-value">-</div>
+                                <div class="metric-label">Active Days</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="performance-summary mt-4 p-3 rounded-3 bg-light">
+                        <h6 class="mb-2"><i class="fas fa-bullseye me-2"></i>Performance Summary</h6>
+                        <p class="text-muted mb-0 small">
+                            Track your progress and optimize your referral strategy with real-time analytics.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Stats & Activity -->
+    <div class="row">
+        <!-- Recent Activity -->
+        <div class="col-lg-8 mb-4">
+            <div class="stats-card activity-card">
+                <div class="card-header-gradient">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-history fa-lg me-3"></i>
+                            <h4 class="mb-0">Recent Activity Timeline</h4>
+                        </div>
+                        <span class="badge bg-light text-primary">{{ referral_stats|length if referral_stats else 0 }} Events</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if referral_stats %}
+                    <div class="activity-timeline">
+                        {% for stat in referral_stats[:6] %}
+                        <div class="activity-item">
+                            <div class="activity-indicator">
+                                <div class="activity-dot"></div>
+                                {% if not loop.last %}
+                                <div class="activity-line"></div>
+                                {% endif %}
+                            </div>
+                            <div class="activity-content">
+                                <div class="activity-header">
+                                    <h6 class="activity-title mb-1">
+                                        {{ stat.count }} New Referral{% if stat.count != 1 %}s{% endif %}
+                                    </h6>
+                                    <span class="activity-badge">
+                                        <i class="fas fa-users me-1"></i>Growth Spike
+                                    </span>
+                                </div>
+                                <div class="activity-footer">
+                                    <span class="activity-date">
+                                        <i class="far fa-calendar me-1"></i>{{ stat.date }}
+                                    </span>
+                                    <span class="activity-earnings text-success">
+                                        +KSH {{ (stat.count * 50)|float }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="empty-state text-center py-4">
+                        <div class="empty-icon mb-3">
+                            <i class="fas fa-history fa-3x text-muted opacity-50"></i>
+                        </div>
+                        <h5 class="text-muted mb-2">No Recent Activity</h5>
+                        <p class="text-muted">Your referral activity will appear here</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Insights -->
+        <div class="col-lg-4 mb-4">
+            <div class="stats-card insights-card h-100">
+                <div class="card-header-gradient">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-lightbulb fa-lg me-3"></i>
+                        <h4 class="mb-0">Quick Insights</h4>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="insights-list">
+                        <div class="insight-item">
+                            <div class="insight-icon text-success">
+                                <i class="fas fa-rocket"></i>
+                            </div>
+                            <div class="insight-content">
+                                <h6>Growth Potential</h6>
+                                <p class="text-muted mb-0">You're on track to reach Silver rank soon!</p>
+                            </div>
+                        </div>
+                        
+                        <div class="insight-item">
+                            <div class="insight-icon text-primary">
+                                <i class="fas fa-bullhorn"></i>
+                            </div>
+                            <div class="insight-content">
+                                <h6>Referral Tip</h6>
+                                <p class="text-muted mb-0">Share your code on social media for better reach</p>
+                            </div>
+                        </div>
+                        
+                        <div class="insight-item">
+                            <div class="insight-icon text-warning">
+                                <i class="fas fa-chart-pie"></i>
+                            </div>
+                            <div class="insight-content">
+                                <h6>Weekly Goal</h6>
+                                <p class="text-muted mb-0">Aim for 5 referrals this week for maximum earnings</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="insight-actions mt-4">
+                        <a href="{{ url_for('referral_system') }}" class="btn btn-primary w-100 py-3">
+                            <i class="fas fa-share-alt me-2"></i>Boost Your Referrals
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if referral_stats %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('referralChart').getContext('2d');
+    const dates = [{% for stat in referral_stats %}'{{ stat.date }}'{% if not loop.last %},{% endif %}{% endfor %}].reverse();
+    const counts = [{% for stat in referral_stats %}{{ stat.count }}{% if not loop.last %},{% endif %}{% endfor %}].reverse();
+
+    // Create gradient
+    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+    gradient.addColorStop(0, 'rgba(102, 126, 234, 0.3)');
+    gradient.addColorStop(1, 'rgba(102, 126, 234, 0.05)');
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'Daily Referrals',
+                data: counts,
+                borderColor: '#667eea',
+                backgroundColor: gradient,
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: '#667eea',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                pointRadius: 6,
+                pointHoverRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleFont: {
+                        size: 14
+                    },
+                    bodyFont: {
+                        size: 13
+                    },
+                    padding: 12,
+                    cornerRadius: 8
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    },
+                    ticks: {
+                        stepSize: 1,
+                        font: {
+                            size: 12
+                        }
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        font: {
+                            size: 11
+                        }
+                    }
+                }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            }
+        }
+    });
+});
+</script>
+{% endif %}
+
+<style>
+.statistics-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+.stats-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 2rem;
+    border-radius: 20px;
+    color: white;
+    margin-top: 1rem;
+}
+
+.text-gradient {
+    background: linear-gradient(45deg, #fff, #e3f2fd);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.stats-icon {
+    position: relative;
+}
+
+.icon-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Stats Cards */
+.stats-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 4px 25px rgba(0,0,0,0.08);
+    border: none;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.stats-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 35px rgba(0,0,0,0.12);
+}
+
+.earnings-card {
+    border-left: 4px solid #28a745;
+}
+
+.balance-card {
+    border-left: 4px solid #667eea;
+}
+
+.withdrawn-card {
+    border-left: 4px solid #17a2b8;
+}
+
+.stats-card .card-body {
+    padding: 2rem;
+}
+
+.stats-content {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.stats-icon-circle {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.stats-value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+    line-height: 1;
+}
+
+.stats-label {
+    color: #6c757d;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.stats-trend {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* Chart Section */
+.card-header-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem;
+    border-bottom: none;
+}
+
+.card-header-gradient h4 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.chart-actions .btn {
+    border-radius: 20px;
+    padding: 0.25rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.chart-container {
+    position: relative;
+    height: 250px;
+    width: 100%;
+}
+
+/* Metrics Grid */
+.metrics-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.metric-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.metric-item:hover {
+    background: #e9ecef;
+    transform: translateX(5px);
+}
+
+.metric-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    background: white;
+}
+
+.metric-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 0.25rem;
+}
+
+.metric-label {
+    font-size: 0.85rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+/* Activity Timeline */
+.activity-timeline {
+    position: relative;
+}
+
+.activity-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    position: relative;
+}
+
+.activity-indicator {
+    position: relative;
+    margin-right: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.activity-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #667eea;
+    border: 3px solid white;
+    box-shadow: 0 0 0 3px #667eea;
+    z-index: 2;
+}
+
+.activity-line {
+    width: 2px;
+    flex: 1;
+    background: linear-gradient(to bottom, #667eea, #e9ecef);
+    margin-top: 0.5rem;
+    min-height: 40px;
+}
+
+.activity-content {
+    flex: 1;
+    background: #f8f9fa;
+    padding: 1.25rem;
+    border-radius: 12px;
+    border-left: 4px solid #667eea;
+}
+
+.activity-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+}
+
+.activity-title {
+    font-weight: 600;
+    color: #2c3e50;
+    margin: 0;
+}
+
+.activity-badge {
+    background: rgba(102, 126, 234, 0.1);
+    color: #667eea;
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.activity-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.activity-date {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.activity-earnings {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+/* Insights */
+.insights-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.insight-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.insight-item:hover {
+    background: #e9ecef;
+    transform: translateY(-2px);
+}
+
+.insight-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    background: white;
+    flex-shrink: 0;
+}
+
+.insight-content h6 {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+/* Empty States */
+.empty-state {
+    padding: 3rem 2rem;
+}
+
+.empty-icon {
+    opacity: 0.7;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .stats-header {
+        padding: 1.5rem;
+    }
+    
+    .icon-circle {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .stats-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+    
+    .stats-value {
+        font-size: 1.75rem;
+    }
+    
+    .activity-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .activity-footer {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+}
+
+/* Animation for cards */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.stats-card {
+    animation: fadeInUp 0.6s ease;
+}
+
+.stats-card:nth-child(2) {
+    animation-delay: 0.1s;
+}
+
+.stats-card:nth-child(3) {
+    animation-delay: 0.2s;
+}
+</style>
+
+<script>
+// Add interactive animations
+document.addEventListener('DOMContentLoaded', function() {
+    // Add hover effects to metric items
+    const metricItems = document.querySelectorAll('.metric-item, .insight-item');
+    
+    metricItems.forEach(item => {
+        item.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-3px)';
+        });
+        
+        item.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+
+    // Add click handlers for chart period buttons
+    const periodButtons = document.querySelectorAll('.chart-actions .btn');
+    
+    periodButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Remove active class from all buttons
+            periodButtons.forEach(btn => {
+                btn.classList.remove('btn-light');
+                btn.classList.add('btn-outline-light');
+            });
+            
+            // Add active class to clicked button
+            this.classList.remove('btn-outline-light');
+            this.classList.add('btn-light');
+        });
+    });
+});
+</script>
+{% endblock %}

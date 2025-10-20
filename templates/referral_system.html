@@ -1,0 +1,828 @@
+{% extends "base.html" %}
+
+{% block title %}Referral System - ReferralNinja{% endblock %}
+
+{% block content %}
+<div class="referral-container">
+    <!-- Header Section -->
+    <div class="referral-header mb-5">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center">
+                    <div class="referral-icon me-4">
+                        <div class="icon-circle bg-gradient-primary">
+                            <i class="fas fa-users fa-lg"></i>
+                        </div>
+                    </div>
+                    <div class="header-content">
+                        <h1 class="display-6 fw-bold text-gradient mb-1">Referral System 👥</h1>
+                        <p class="text-muted mb-0">Invite friends and earn KSH 50 for every successful referral!</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="referral-badge">
+                    <span class="badge bg-success-subtle text-success fs-6 p-3">
+                        <i class="fas fa-money-bill-wave me-2"></i>Earn KSH 50 Each
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Referral Code Section -->
+    <div class="referral-hero-card mb-5">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <div class="referral-hero-content">
+                        <div class="hero-badge mb-3">
+                            <span class="badge bg-warning-subtle text-warning fs-6">
+                                <i class="fas fa-star me-2"></i>Your Personal Code
+                            </span>
+                        </div>
+                        <h2 class="hero-code display-4 fw-bold text-primary mb-3">
+                            {{ current_user.referral_code }}
+                        </h2>
+                        <p class="hero-description text-muted fs-5 mb-4">
+                            Share this unique code with friends and earn <strong class="text-success">KSH 50</strong> 
+                            instantly when they join and complete registration!
+                        </p>
+                        <div class="hero-features">
+                            <div class="feature-item">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <span>Instant KSH 50 commission</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <span>No limit on referrals</span>
+                            </div>
+                            <div class="feature-item">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <span>Real-time tracking</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="referral-link-card">
+                        <div class="link-card-header">
+                            <h5><i class="fas fa-link me-2"></i>Your Referral Link</h5>
+                        </div>
+                        <div class="link-card-body">
+                            <div class="input-group input-group-lg">
+                                <input type="text" class="form-control referral-link-input" 
+                                       value="{{ referral_url }}" id="referralUrl" readonly>
+                                <button class="btn btn-primary px-4" onclick="copyReferralLink()">
+                                    <i class="fas fa-copy me-2"></i>Copy
+                                </button>
+                            </div>
+                            <div class="link-stats mt-3">
+                                <div class="stat">
+                                    <span class="number">{{ referrals|length }}</span>
+                                    <span class="label">Total Referrals</span>
+                                </div>
+                                <div class="stat">
+                                    <span class="number">KSH {{ referrals|length * 50 }}</span>
+                                    <span class="label">Total Earnings</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Share Section -->
+    <div class="share-section mb-5">
+        <div class="section-header text-center mb-4">
+            <h3 class="fw-bold">Share Instantly 🚀</h3>
+            <p class="text-muted">Spread the word with one click</p>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col-xl-2 col-md-3 col-6 mb-3">
+                <a href="{{ share_links.whatsapp }}" target="_blank" class="share-btn whatsapp-btn">
+                    <div class="share-icon">
+                        <i class="fab fa-whatsapp"></i>
+                    </div>
+                    <span class="share-label">WhatsApp</span>
+                </a>
+            </div>
+            <div class="col-xl-2 col-md-3 col-6 mb-3">
+                <a href="{{ share_links.facebook }}" target="_blank" class="share-btn facebook-btn">
+                    <div class="share-icon">
+                        <i class="fab fa-facebook-f"></i>
+                    </div>
+                    <span class="share-label">Facebook</span>
+                </a>
+            </div>
+            <div class="col-xl-2 col-md-3 col-6 mb-3">
+                <a href="{{ share_links.twitter }}" target="_blank" class="share-btn twitter-btn">
+                    <div class="share-icon">
+                        <i class="fab fa-twitter"></i>
+                    </div>
+                    <span class="share-label">Twitter</span>
+                </a>
+            </div>
+            <div class="col-xl-2 col-md-3 col-6 mb-3">
+                <a href="{{ share_links.telegram }}" target="_blank" class="share-btn telegram-btn">
+                    <div class="share-icon">
+                        <i class="fab fa-telegram"></i>
+                    </div>
+                    <span class="share-label">Telegram</span>
+                </a>
+            </div>
+            <div class="col-xl-2 col-md-3 col-6 mb-3">
+                <a href="#" class="share-btn copy-btn" onclick="copyReferralLink()">
+                    <div class="share-icon">
+                        <i class="fas fa-copy"></i>
+                    </div>
+                    <span class="share-label">Copy Link</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Earnings Overview -->
+    <div class="earnings-section mb-5">
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="earning-card total-referrals">
+                    <div class="card-body">
+                        <div class="earning-content">
+                            <div class="earning-icon">
+                                <i class="fas fa-user-plus"></i>
+                            </div>
+                            <div class="earning-info">
+                                <h3 class="earning-value">{{ referrals|length }}</h3>
+                                <p class="earning-label">Total Referrals</p>
+                                <div class="earning-trend">
+                                    <i class="fas fa-users text-primary me-1"></i>
+                                    <span>People Joined</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="earning-card total-earnings">
+                    <div class="card-body">
+                        <div class="earning-content">
+                            <div class="earning-icon">
+                                <i class="fas fa-money-bill-wave"></i>
+                            </div>
+                            <div class="earning-info">
+                                <h3 class="earning-value">KSH {{ referrals|length * 50 }}</h3>
+                                <p class="earning-label">Total Earnings</p>
+                                <div class="earning-trend">
+                                    <i class="fas fa-chart-line text-success me-1"></i>
+                                    <span>From Referrals</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="earning-card per-referral">
+                    <div class="card-body">
+                        <div class="earning-content">
+                            <div class="earning-icon">
+                                <i class="fas fa-gift"></i>
+                            </div>
+                            <div class="earning-info">
+                                <h3 class="earning-value">KSH 50</h3>
+                                <p class="earning-label">Per Referral</p>
+                                <div class="earning-trend">
+                                    <i class="fas fa-bolt text-warning me-1"></i>
+                                    <span>Instant Commission</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Referral List -->
+    <div class="referrals-list-section">
+        <div class="section-header d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h3 class="fw-bold mb-1">Your Referral Network 👥</h3>
+                <p class="text-muted mb-0">Track all your successful referrals and earnings</p>
+            </div>
+            <span class="badge bg-primary fs-6 p-3">
+                {{ referrals|length }} Referral{% if referrals|length != 1 %}s{% endif %}
+            </span>
+        </div>
+
+        {% if referrals %}
+        <div class="referrals-table-card">
+            <div class="table-responsive">
+                <table class="table referrals-table">
+                    <thead>
+                        <tr>
+                            <th class="user-col">Referred User</th>
+                            <th class="date-col">Date Joined</th>
+                            <th class="earning-col">Your Earnings</th>
+                            <th class="status-col">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for referral in referrals %}
+                        <tr class="referral-row">
+                            <td class="user-cell">
+                                <div class="user-info">
+                                    <div class="user-avatar">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                    <div class="user-details">
+                                        <span class="username">{{ referral.referred.username }}</span>
+                                        <span class="user-email">{{ referral.referred.email }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="date-cell">
+                                <div class="date-info">
+                                    <span class="date">{{ referral.created_at.strftime('%d %b %Y') }}</span>
+                                    <span class="time">{{ referral.created_at.strftime('%I:%M %p') }}</span>
+                                </div>
+                            </td>
+                            <td class="earning-cell">
+                                <div class="earning-amount">
+                                    <i class="fas fa-coins text-warning me-2"></i>
+                                    <span class="amount">KSH {{ referral.commission_earned }}</span>
+                                </div>
+                            </td>
+                            <td class="status-cell">
+                                <span class="status-badge status-{{ referral.status }}">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    {{ referral.status|title }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-referrals text-center py-5">
+            <div class="empty-icon mb-4">
+                <i class="fas fa-users fa-4x text-muted opacity-50"></i>
+            </div>
+            <h4 class="text-muted mb-3">No Referrals Yet</h4>
+            <p class="text-muted mb-4">Start sharing your referral link to build your network and earn commissions!</p>
+            <div class="empty-actions">
+                <a href="#share-section" class="btn btn-primary btn-lg me-3">
+                    <i class="fas fa-share-alt me-2"></i>Share Now
+                </a>
+                <button onclick="copyReferralLink()" class="btn btn-outline-primary btn-lg">
+                    <i class="fas fa-copy me-2"></i>Copy Link
+                </button>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function copyReferralLink() {
+    const referralUrl = document.getElementById('referralUrl');
+    referralUrl.select();
+    referralUrl.setSelectionRange(0, 99999);
+    
+    try {
+        navigator.clipboard.writeText(referralUrl.value).then(() => {
+            showNotification('🎉 Referral link copied to clipboard!', 'success');
+        });
+    } catch (err) {
+        // Fallback for older browsers
+        document.execCommand('copy');
+        showNotification('🎉 Referral link copied to clipboard!', 'success');
+    }
+}
+
+function showNotification(message, type = 'success') {
+    // Remove existing notifications
+    const existingNotifications = document.querySelectorAll('.notification');
+    existingNotifications.forEach(notif => notif.remove());
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} notification`;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        min-width: 300px;
+        animation: slideInRight 0.3s ease;
+    `;
+    notification.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Remove notification after 3 seconds
+    setTimeout(() => {
+        notification.style.animation = 'slideOutRight 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+// Add interactive animations
+document.addEventListener('DOMContentLoaded', function() {
+    const shareButtons = document.querySelectorAll('.share-btn');
+    const referralRows = document.querySelectorAll('.referral-row');
+    
+    shareButtons.forEach(button => {
+        button.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-5px) scale(1.05)';
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0) scale(1)';
+        });
+    });
+    
+    referralRows.forEach(row => {
+        row.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateX(5px)';
+        });
+        
+        row.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateX(0)';
+        });
+    });
+});
+</script>
+
+<style>
+.referral-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+.referral-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 2rem;
+    border-radius: 20px;
+    color: white;
+    margin-top: 1rem;
+}
+
+.text-gradient {
+    background: linear-gradient(45deg, #fff, #e3f2fd);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.referral-icon {
+    position: relative;
+}
+
+.icon-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Referral Hero Card */
+.referral-hero-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 25px;
+    color: white;
+    box-shadow: 0 20px 40px rgba(102, 126, 234, 0.3);
+    overflow: hidden;
+    position: relative;
+}
+
+.referral-hero-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 300px;
+    height: 300px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    transform: translate(100px, -100px);
+}
+
+.referral-hero-card .card-body {
+    padding: 3rem;
+    position: relative;
+    z-index: 2;
+}
+
+.hero-badge .badge {
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+}
+
+.hero-code {
+    font-family: 'Courier New', monospace;
+    letter-spacing: 2px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.hero-description {
+    font-weight: 300;
+    line-height: 1.6;
+}
+
+.hero-features {
+    margin-top: 2rem;
+}
+
+.feature-item {
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+}
+
+/* Referral Link Card */
+.referral-link-card {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    backdrop-filter: blur(10px);
+}
+
+.link-card-header {
+    margin-bottom: 1.5rem;
+}
+
+.link-card-header h5 {
+    color: #2c3e50;
+    font-weight: 600;
+    margin: 0;
+}
+
+.referral-link-input {
+    border-radius: 15px;
+    border: 2px solid #e9ecef;
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    background: #f8f9fa;
+}
+
+.link-stats {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+}
+
+.stat {
+    text-align: center;
+}
+
+.stat .number {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.stat .label {
+    font-size: 0.85rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+/* Share Section */
+.share-section {
+    padding: 2rem 0;
+}
+
+.section-header h3 {
+    color: #2c3e50;
+}
+
+.share-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem;
+    border-radius: 20px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border: none;
+    background: white;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+}
+
+.share-btn:hover {
+    text-decoration: none;
+    transform: translateY(-5px);
+}
+
+.share-icon {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: white;
+}
+
+.share-label {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.whatsapp-btn .share-icon { background: #25D366; }
+.facebook-btn .share-icon { background: #1877F2; }
+.twitter-btn .share-icon { background: #1DA1F2; }
+.telegram-btn .share-icon { background: #0088CC; }
+.copy-btn .share-icon { background: #667eea; }
+
+.whatsapp-btn:hover { box-shadow: 0 10px 25px rgba(37, 211, 102, 0.3); }
+.facebook-btn:hover { box-shadow: 0 10px 25px rgba(24, 119, 242, 0.3); }
+.twitter-btn:hover { box-shadow: 0 10px 25px rgba(29, 161, 242, 0.3); }
+.telegram-btn:hover { box-shadow: 0 10px 25px rgba(0, 136, 204, 0.3); }
+.copy-btn:hover { box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3); }
+
+/* Earnings Cards */
+.earning-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    border: none;
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.earning-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+}
+
+.earning-card .card-body {
+    padding: 2rem;
+}
+
+.earning-content {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.earning-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: white;
+}
+
+.total-referrals .earning-icon { background: linear-gradient(135deg, #667eea, #764ba2); }
+.total-earnings .earning-icon { background: linear-gradient(135deg, #28a745, #20c997); }
+.per-referral .earning-icon { background: linear-gradient(135deg, #ffc107, #fd7e14); }
+
+.earning-value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+    line-height: 1;
+}
+
+.earning-label {
+    color: #6c757d;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.earning-trend {
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.total-referrals .earning-trend { color: #667eea; }
+.total-earnings .earning-trend { color: #28a745; }
+.per-referral .earning-trend { color: #ffc107; }
+
+/* Referrals Table */
+.referrals-table-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    overflow: hidden;
+}
+
+.referrals-table {
+    margin: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.referrals-table thead th {
+    background: #f8f9fa;
+    border: none;
+    padding: 1.5rem 1rem;
+    font-weight: 600;
+    color: #2c3e50;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+
+.referrals-table tbody tr {
+    transition: all 0.3s ease;
+}
+
+.referrals-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.referrals-table tbody td {
+    padding: 1.5rem 1rem;
+    border-bottom: 1px solid #e9ecef;
+    vertical-align: middle;
+}
+
+.user-cell .user-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.user-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.25rem;
+}
+
+.user-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.username {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.user-email {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.date-cell .date-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.date {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.time {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.earning-cell .earning-amount {
+    display: flex;
+    align-items: center;
+    font-weight: 700;
+    color: #28a745;
+}
+
+.status-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-active {
+    background: rgba(40, 167, 69, 0.1);
+    color: #28a745;
+    border: 1px solid rgba(40, 167, 69, 0.2);
+}
+
+.status-pending {
+    background: rgba(255, 193, 7, 0.1);
+    color: #ffc107;
+    border: 1px solid rgba(255, 193, 7, 0.2);
+}
+
+/* Empty State */
+.empty-referrals {
+    background: white;
+    border-radius: 20px;
+    padding: 4rem 2rem;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+}
+
+.empty-icon {
+    opacity: 0.7;
+}
+
+.empty-actions .btn {
+    border-radius: 15px;
+    padding: 0.75rem 2rem;
+    font-weight: 600;
+}
+
+/* Animations */
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .referral-header {
+        padding: 1.5rem;
+    }
+    
+    .icon-circle {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .referral-hero-card .card-body {
+        padding: 2rem 1.5rem;
+    }
+    
+    .hero-code {
+        font-size: 2rem;
+    }
+    
+    .link-stats {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .earning-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+    
+    .earning-value {
+        font-size: 2rem;
+    }
+    
+    .user-cell .user-info {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.5rem;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,590 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - ReferralNinja{% endblock %}
+
+{% block content %}
+<div class="settings-container">
+    <!-- Header Section -->
+    <div class="settings-header mb-5">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center">
+                    <div class="settings-icon me-4">
+                        <div class="icon-circle bg-gradient-primary">
+                            <i class="fas fa-cog fa-lg"></i>
+                        </div>
+                    </div>
+                    <div class="header-content">
+                        <h1 class="display-6 fw-bold text-gradient mb-1">Account Settings ⚙️</h1>
+                        <p class="text-muted mb-0">Manage your profile, security, and account preferences</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="status-indicator">
+                    <span class="badge bg-success-subtle text-success fs-6 p-3">
+                        <i class="fas fa-shield-check me-2"></i>Account Active
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column - Forms -->
+        <div class="col-lg-8">
+            <!-- Profile Settings Card -->
+            <div class="settings-card mb-4">
+                <div class="card-header-gradient">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-user-edit fa-lg me-3"></i>
+                        <h4 class="mb-0">Profile Information</h4>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('settings') }}">
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="email" class="form-control" id="email" name="email" 
+                                           value="{{ current_user.email }}" required>
+                                    <label for="email"><i class="fas fa-envelope me-2"></i>Email Address</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="tel" class="form-control" id="phone_number" name="phone_number" 
+                                           value="{{ current_user.phone_number }}" required>
+                                    <label for="phone_number"><i class="fas fa-phone me-2"></i>Phone Number</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-floating mt-3">
+                            <input type="text" class="form-control" value="{{ current_user.username }}" readonly>
+                            <label><i class="fas fa-user me-2"></i>Username</label>
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>Username cannot be changed
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg px-4">
+                                <i class="fas fa-save me-2"></i>Update Profile
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Security Settings Card -->
+            <div class="settings-card mb-4">
+                <div class="card-header-gradient">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-lock fa-lg me-3"></i>
+                        <h4 class="mb-0">Security Settings</h4>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('settings') }}">
+                        <div class="row g-4">
+                            <div class="col-md-4">
+                                <div class="form-floating">
+                                    <input type="password" class="form-control" id="current_password" name="current_password">
+                                    <label for="current_password"><i class="fas fa-key me-2"></i>Current Password</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-floating">
+                                    <input type="password" class="form-control" id="new_password" name="new_password">
+                                    <label for="new_password"><i class="fas fa-lock me-2"></i>New Password</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-floating">
+                                    <input type="password" class="form-control" id="confirm_password" name="confirm_password">
+                                    <label for="confirm_password"><i class="fas fa-redo me-2"></i>Confirm Password</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="password-requirements mt-3">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Password must be at least 6 characters long
+                            </small>
+                        </div>
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-warning btn-lg px-4">
+                                <i class="fas fa-lock me-2"></i>Change Password
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Info & Danger Zone -->
+        <div class="col-lg-4">
+            <!-- Account Overview Card -->
+            <div class="settings-card mb-4">
+                <div class="card-header-gradient">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-chart-pie fa-lg me-3"></i>
+                        <h4 class="mb-0">Account Overview</h4>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="account-stats">
+                        <div class="stat-item d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <span class="stat-label">
+                                <i class="fas fa-user-check me-2 text-success"></i>Status
+                            </span>
+                            <span class="stat-value">
+                                {% if current_user.is_verified %}
+                                <span class="badge bg-success">Verified</span>
+                                {% else %}
+                                <span class="badge bg-warning">Pending</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                        
+                        <div class="stat-item d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <span class="stat-label">
+                                <i class="fas fa-calendar me-2 text-primary"></i>Member Since
+                            </span>
+                            <span class="stat-value">{{ current_user.created_at.strftime('%Y-%m-%d') }}</span>
+                        </div>
+                        
+                        <div class="stat-item d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <span class="stat-label">
+                                <i class="fas fa-trophy me-2 text-warning"></i>User Rank
+                            </span>
+                            <span class="stat-value">
+                                <span class="rank-badge rank-{{ current_user.user_rank|lower }}">
+                                    {{ current_user.user_rank }}
+                                </span>
+                            </span>
+                        </div>
+                        
+                        <div class="stat-item d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <span class="stat-label">
+                                <i class="fas fa-users me-2 text-info"></i>Total Referrals
+                            </span>
+                            <span class="stat-value fw-bold">{{ current_user.referral_count }}</span>
+                        </div>
+                        
+                        <div class="stat-item d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <span class="stat-label">
+                                <i class="fas fa-money-bill-wave me-2 text-success"></i>Total Commission
+                            </span>
+                            <span class="stat-value fw-bold text-success">
+                                KSH {{ "%.2f"|format(current_user.total_commission) }}
+                            </span>
+                        </div>
+                        
+                        <div class="stat-item d-flex justify-content-between align-items-center py-2">
+                            <span class="stat-label">
+                                <i class="fas fa-code me-2 text-secondary"></i>Referral Code
+                            </span>
+                            <span class="stat-value">
+                                <code class="referral-code">{{ current_user.referral_code }}</code>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions Card -->
+            <div class="settings-card mb-4">
+                <div class="card-header-gradient">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-bolt fa-lg me-3"></i>
+                        <h4 class="mb-0">Quick Actions</h4>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="quick-actions">
+                        <a href="{{ url_for('referral_system') }}" class="btn btn-outline-primary w-100 mb-3 py-3">
+                            <i class="fas fa-share-alt me-2"></i>Referral System
+                        </a>
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-success w-100 mb-3 py-3">
+                            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                        </a>
+                        <a href="{{ url_for('withdraw') }}" class="btn btn-outline-info w-100 py-3">
+                            <i class="fas fa-money-bill-wave me-2"></i>Withdraw Funds
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Danger Zone Card -->
+            <div class="settings-card danger-zone">
+                <div class="card-header-danger">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-exclamation-triangle fa-lg me-3"></i>
+                        <h4 class="mb-0">Danger Zone</h4>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="danger-content text-center">
+                        <div class="danger-icon mb-3">
+                            <i class="fas fa-skull-crossbones fa-2x text-danger"></i>
+                        </div>
+                        <h5 class="text-danger mb-3">Proceed with Caution</h5>
+                        <p class="text-muted mb-4">
+                            Once you delete your account, there is no going back. All your data will be permanently removed.
+                        </p>
+                        <button class="btn btn-danger btn-lg w-100 py-3" disabled>
+                            <i class="fas fa-trash-alt me-2"></i>Delete Account
+                        </button>
+                        <small class="form-text text-muted mt-2 d-block">
+                            <i class="fas fa-info-circle me-1"></i>Account deletion is temporarily disabled
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.settings-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+.settings-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 2rem;
+    border-radius: 20px;
+    color: white;
+    margin-top: 1rem;
+}
+
+.text-gradient {
+    background: linear-gradient(45deg, #fff, #e3f2fd);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.settings-icon {
+    position: relative;
+}
+
+.icon-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.settings-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 4px 25px rgba(0,0,0,0.08);
+    border: none;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.settings-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 35px rgba(0,0,0,0.12);
+}
+
+.card-header-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem;
+    border-bottom: none;
+}
+
+.card-header-danger {
+    background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
+    color: white;
+    padding: 1.5rem;
+    border-bottom: none;
+}
+
+.card-header-gradient h4,
+.card-header-danger h4 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.card-body {
+    padding: 2rem;
+}
+
+.form-floating {
+    position: relative;
+}
+
+.form-control {
+    border-radius: 12px;
+    border: 2px solid #e9ecef;
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    transform: translateY(-2px);
+}
+
+.form-label {
+    font-weight: 500;
+}
+
+.btn {
+    border-radius: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.btn-warning:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(245, 87, 108, 0.4);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+    color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(255, 107, 107, 0.4);
+}
+
+.btn-outline-primary {
+    border: 2px solid #667eea;
+    color: #667eea;
+    background: transparent;
+}
+
+.btn-outline-primary:hover {
+    background: #667eea;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.btn-outline-success {
+    border: 2px solid #28a745;
+    color: #28a745;
+    background: transparent;
+}
+
+.btn-outline-success:hover {
+    background: #28a745;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.btn-outline-info {
+    border: 2px solid #17a2b8;
+    color: #17a2b8;
+    background: transparent;
+}
+
+.btn-outline-info:hover {
+    background: #17a2b8;
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* Account Stats */
+.account-stats {
+    margin: 0;
+}
+
+.stat-item {
+    transition: background-color 0.3s ease;
+}
+
+.stat-item:hover {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+}
+
+.stat-label {
+    font-weight: 500;
+    color: #495057;
+}
+
+.stat-value {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+/* Rank Badges */
+.rank-badge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.rank-bronze {
+    background: linear-gradient(135deg, #cd7f32, #8b4513);
+    color: white;
+}
+
+.rank-silver {
+    background: linear-gradient(135deg, #c0c0c0, #808080);
+    color: white;
+}
+
+.rank-gold {
+    background: linear-gradient(135deg, #ffd700, #daa520);
+    color: white;
+}
+
+.rank-platinum {
+    background: linear-gradient(135deg, #e5e4e2, #8a8a8a);
+    color: white;
+}
+
+.rank-diamond {
+    background: linear-gradient(135deg, #b9f2ff, #4fc3f7);
+    color: white;
+}
+
+/* Referral Code */
+.referral-code {
+    background: #f8f9fa;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    color: #667eea;
+}
+
+/* Danger Zone */
+.danger-zone {
+    border: 2px solid transparent;
+    background: linear-gradient(white, white), 
+                linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
+    background-origin: border-box;
+    background-clip: content-box, border-box;
+}
+
+.danger-content {
+    padding: 1rem 0;
+}
+
+.danger-icon {
+    opacity: 0.8;
+}
+
+/* Quick Actions */
+.quick-actions .btn {
+    transition: all 0.3s ease;
+    border-radius: 12px;
+}
+
+/* Password Requirements */
+.password-requirements {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .settings-header {
+        padding: 1.5rem;
+    }
+    
+    .icon-circle {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .card-body {
+        padding: 1.5rem;
+    }
+    
+    .btn-lg {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+    }
+}
+
+/* Animation for interactive elements */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.settings-card:hover .card-header-gradient,
+.settings-card:hover .card-header-danger {
+    animation: pulse 2s infinite;
+}
+</style>
+
+<script>
+// Add interactive animations
+document.addEventListener('DOMContentLoaded', function() {
+    const statItems = document.querySelectorAll('.stat-item');
+    
+    statItems.forEach(item => {
+        item.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateX(5px)';
+        });
+        
+        item.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateX(0)';
+        });
+    });
+
+    // Add focus effects to form inputs
+    const formInputs = document.querySelectorAll('.form-control');
+    
+    formInputs.forEach(input => {
+        input.addEventListener('focus', function() {
+            this.parentElement.classList.add('focused');
+        });
+        
+        input.addEventListener('blur', function() {
+            this.parentElement.classList.remove('focused');
+        });
+    });
+});
+</script>
+{% endblock %}

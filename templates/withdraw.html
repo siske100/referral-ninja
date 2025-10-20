@@ -1,0 +1,1052 @@
+{% extends "base.html" %}
+
+{% block title %}Withdraw Earnings - ReferralNinja{% endblock %}
+
+{% block content %}
+<div class="withdraw-container">
+    <!-- Header Section -->
+    <div class="withdraw-header mb-5">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center">
+                    <div class="withdraw-icon me-4">
+                        <div class="icon-circle bg-gradient-primary">
+                            <i class="fas fa-money-bill-wave fa-lg"></i>
+                        </div>
+                    </div>
+                    <div class="header-content">
+                        <h1 class="display-6 fw-bold text-gradient mb-1">Cash Out Your Earnings 💰</h1>
+                        <p class="text-muted mb-0">Withdraw your earnings directly to your M-Pesa account instantly</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="withdraw-badge">
+                    <span class="badge bg-success-subtle text-success fs-6 p-3">
+                        <i class="fas fa-bolt me-2"></i>Instant Processing
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'error' %}exclamation-triangle{% elif category == 'warning' %}exclamation-circle{% else %}info-circle{% endif %} me-2"></i>
+                        <span>{{ message }}</span>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="row">
+        <!-- Main Withdrawal Card -->
+        <div class="col-lg-8 mb-4">
+            <div class="withdraw-card">
+                <div class="card-header-gradient">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-wallet fa-lg me-3"></i>
+                        <h3 class="mb-0">Withdraw to M-Pesa</h3>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Balance Display -->
+                    <div class="balance-hero mb-4">
+                        <div class="balance-content text-center">
+                            <div class="balance-badge mb-3">
+                                <span class="badge bg-primary-subtle text-primary fs-6">
+                                    <i class="fas fa-coins me-2"></i>Available Balance
+                                </span>
+                            </div>
+                            <h2 class="balance-amount display-4 fw-bold text-success mb-2">
+                                KES {{ "%.2f"|format(current_user.balance) }}
+                            </h2>
+                            <p class="balance-note text-muted">
+                                Ready to transfer to your M-Pesa account
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Withdrawal Form -->
+                    <form method="POST" action="{{ url_for('withdraw') }}" class="withdraw-form" id="withdrawalForm">
+                        <!-- Amount Section -->
+                        <div class="form-section mb-4">
+                            <div class="section-header mb-3">
+                                <h5><i class="fas fa-money-bill me-2"></i>Withdrawal Amount</h5>
+                            </div>
+                            
+                            <div class="form-floating mb-3">
+                                <input type="number" class="form-control" id="amount" name="amount" 
+                                       min="100" max="{{ current_user.balance }}" step="10" required
+                                       placeholder="Enter amount">
+                                <label for="amount"><i class="fas fa-keyboard me-2"></i>Enter Amount (KES)</label>
+                            </div>
+                            
+                            <div class="form-text mb-3">
+                                <i class="fas fa-info-circle me-1"></i>Minimum withdrawal: KES 100
+                            </div>
+                            
+                            <!-- Quick Amount Buttons -->
+                            <div class="quick-amounts-section">
+                                <label class="form-label-small mb-2">Quick Select:</label>
+                                <div class="quick-amounts-grid">
+                                    {% set quick_amounts = [100, 200, 500, 1000] %}
+                                    {% for quick_amount in quick_amounts %}
+                                        {% if quick_amount <= current_user.balance %}
+                                        <button type="button" class="quick-amount-btn" 
+                                                data-amount="{{ quick_amount }}">
+                                            <span class="amount">KES {{ quick_amount }}</span>
+                                            <small>Instant</small>
+                                        </button>
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% if current_user.balance > 1000 %}
+                                    <button type="button" class="quick-amount-btn max-amount" 
+                                            data-amount="{{ current_user.balance }}">
+                                        <span class="amount">MAX</span>
+                                        <small>KES {{ "%.0f"|format(current_user.balance) }}</small>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Phone Number Section -->
+                        <div class="form-section mb-4">
+                            <div class="section-header mb-3">
+                                <h5><i class="fas fa-mobile-alt me-2"></i>M-Pesa Details</h5>
+                            </div>
+                            
+                            <div class="form-floating">
+                                <input type="tel" class="form-control" id="phone_number" name="phone_number" 
+                                       required placeholder="07XX XXX XXX" 
+                                       value="{{ current_user.phone_number if current_user.phone_number else '' }}"
+                                       pattern="[0-9+]{10,15}">
+                                <label for="phone_number"><i class="fas fa-phone me-2"></i>M-Pesa Phone Number</label>
+                            </div>
+                            
+                            <div class="form-text mt-2">
+                                <i class="fas fa-shield-alt me-1"></i>We'll send the money securely to this number
+                            </div>
+                        </div>
+
+                        <!-- Process Info -->
+                        <div class="process-info-card mb-4">
+                            <div class="info-header">
+                                <i class="fas fa-info-circle text-primary me-2"></i>
+                                <h6 class="mb-0">Withdrawal Process</h6>
+                            </div>
+                            <div class="info-content">
+                                <div class="process-steps">
+                                    <div class="process-step">
+                                        <div class="step-icon">
+                                            <i class="fas fa-paper-plane"></i>
+                                        </div>
+                                        <div class="step-content">
+                                            <h6>Submit Request</h6>
+                                            <p>Your request is sent to admin for verification</p>
+                                        </div>
+                                    </div>
+                                    <div class="process-step">
+                                        <div class="step-icon">
+                                            <i class="fas fa-user-shield"></i>
+                                        </div>
+                                        <div class="step-content">
+                                            <h6>Admin Review</h6>
+                                            <p>We verify your account and transaction details</p>
+                                        </div>
+                                    </div>
+                                    <div class="process-step">
+                                        <div class="step-icon">
+                                            <i class="fas fa-check-circle"></i>
+                                        </div>
+                                        <div class="step-content">
+                                            <h6>Approved & Sent</h6>
+                                            <p>Funds are transferred to your M-Pesa account</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Terms Agreement -->
+                        <div class="terms-card mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="withdrawal_terms" name="withdrawal_terms" required>
+                                <label class="form-check-label" for="withdrawal_terms">
+                                    <strong>I confirm that:</strong>
+                                    <ul class="mb-0 mt-2">
+                                        <li>The M-Pesa number provided is correct and registered in my name</li>
+                                        <li>I understand this withdrawal requires admin verification</li>
+                                        <li>Funds will be processed manually within 24 hours</li>
+                                    </ul>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit" class="btn btn-primary btn-lg w-100 py-3 withdraw-submit-btn" 
+                                id="submitButton" {% if current_user.balance < 100 %}disabled{% endif %}>
+                            <i class="fas fa-paper-plane me-2"></i>
+                            {% if current_user.balance < 100 %}
+                                <span>Insufficient Balance</span>
+                            {% else %}
+                                <span>Submit Withdrawal Request</span>
+                            {% endif %}
+                        </button>
+                    </form>
+
+                    <div class="text-center mt-4">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar - Status & History -->
+        <div class="col-lg-4">
+            <!-- Status Timeline -->
+            <div class="status-timeline-card mb-4">
+                <div class="card-header-gradient">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-list-ol fa-lg me-3"></i>
+                        <h4 class="mb-0">Withdrawal Status</h4>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="status-timeline">
+                        <div class="status-item active">
+                            <div class="status-dot"></div>
+                            <div class="status-content">
+                                <h6>Request Submitted</h6>
+                                <p>Your withdrawal request is sent to admin</p>
+                            </div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-dot"></div>
+                            <div class="status-content">
+                                <h6>Under Review</h6>
+                                <p>Admin is verifying your details</p>
+                            </div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-dot"></div>
+                            <div class="status-content">
+                                <h6>Processing</h6>
+                                <p>Preparing M-Pesa transfer</p>
+                            </div>
+                        </div>
+                        <div class="status-item">
+                            <div class="status-dot"></div>
+                            <div class="status-content">
+                                <h6>Completed</h6>
+                                <p>Funds sent to your M-Pesa</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Withdrawals -->
+            <div class="recent-withdrawals-card">
+                <div class="card-header-gradient">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-history fa-lg me-3"></i>
+                            <h4 class="mb-0">Recent Withdrawals</h4>
+                        </div>
+                        <span class="badge bg-light text-primary">{{ transactions|length }}</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if transactions %}
+                    <div class="withdrawals-list">
+                        {% for transaction in transactions %}
+                        <div class="withdrawal-item">
+                            <div class="withdrawal-main">
+                                <div class="withdrawal-amount">
+                                    <i class="fas fa-money-bill-wave text-success me-2"></i>
+                                    <strong>KES {{ "%.2f"|format(transaction.amount|abs) }}</strong>
+                                </div>
+                                <div class="withdrawal-status">
+                                    <span class="status-badge status-{{ transaction.status }}">
+                                        {{ transaction.status|title }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="withdrawal-details">
+                                <div class="withdrawal-meta">
+                                    <small class="text-muted">
+                                        <i class="fas fa-mobile-alt me-1"></i>
+                                        {{ transaction.phone_number }}
+                                    </small>
+                                    <small class="text-muted">
+                                        <i class="far fa-clock me-1"></i>
+                                        {{ transaction.created_at.strftime('%d %b, %H:%M') }}
+                                    </small>
+                                </div>
+                                {% if transaction.description %}
+                                <div class="withdrawal-note">
+                                    <small class="text-muted">{{ transaction.description }}</small>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="empty-withdrawals text-center py-4">
+                        <div class="empty-icon mb-3">
+                            <i class="fas fa-money-bill-wave fa-3x text-muted opacity-50"></i>
+                        </div>
+                        <h6 class="text-muted mb-2">No Withdrawals Yet</h6>
+                        <p class="text-muted small">Your withdrawal history will appear here</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.withdraw-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+.withdraw-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 2rem;
+    border-radius: 20px;
+    color: white;
+    margin-top: 1rem;
+}
+
+.text-gradient {
+    background: linear-gradient(45deg, #fff, #e3f2fd);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.withdraw-icon {
+    position: relative;
+}
+
+.icon-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Cards */
+.withdraw-card, .status-timeline-card, .recent-withdrawals-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 4px 25px rgba(0,0,0,0.08);
+    border: none;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.withdraw-card:hover, .status-timeline-card:hover, .recent-withdrawals-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 35px rgba(0,0,0,0.12);
+}
+
+.card-header-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem;
+    border-bottom: none;
+}
+
+.card-header-gradient h3, .card-header-gradient h4 {
+    margin: 0;
+    font-weight: 600;
+}
+
+.card-body {
+    padding: 2rem;
+}
+
+/* Balance Hero */
+.balance-hero {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-radius: 20px;
+    padding: 2rem;
+    text-align: center;
+    border: 2px solid #e9ecef;
+    position: relative;
+    overflow: hidden;
+}
+
+.balance-hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+}
+
+.balance-badge .badge {
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+}
+
+.balance-amount {
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+}
+
+.balance-note {
+    font-size: 1.1rem;
+}
+
+/* Form Sections */
+.form-section {
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 15px;
+    border-left: 4px solid #667eea;
+}
+
+.section-header h5 {
+    color: #2c3e50;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+
+.form-floating {
+    position: relative;
+}
+
+.form-control {
+    border-radius: 12px;
+    border: 2px solid #e9ecef;
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    transform: translateY(-2px);
+}
+
+.form-text {
+    color: #6c757d;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+}
+
+/* Quick Amounts */
+.quick-amounts-section {
+    margin-top: 1.5rem;
+}
+
+.form-label-small {
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+.quick-amounts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 0.75rem;
+}
+
+.quick-amount-btn {
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 1rem 0.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.quick-amount-btn:hover {
+    border-color: #667eea;
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+}
+
+.quick-amount-btn .amount {
+    font-weight: 700;
+    color: #2c3e50;
+    font-size: 0.9rem;
+}
+
+.quick-amount-btn small {
+    color: #6c757d;
+    font-size: 0.75rem;
+}
+
+.quick-amount-btn.max-amount {
+    border-color: #28a745;
+    background: rgba(40, 167, 69, 0.05);
+}
+
+.quick-amount-btn.max-amount:hover {
+    border-color: #28a745;
+    box-shadow: 0 5px 15px rgba(40, 167, 69, 0.2);
+}
+
+/* Process Info */
+.process-info-card {
+    background: rgba(102, 126, 234, 0.05);
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    border-radius: 15px;
+    padding: 1.5rem;
+}
+
+.info-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.info-header h6 {
+    margin: 0;
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+.process-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.process-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.step-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #667eea;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.step-content h6 {
+    margin: 0 0 0.25rem 0;
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 0.9rem;
+}
+
+.step-content p {
+    margin: 0;
+    color: #6c757d;
+    font-size: 0.8rem;
+}
+
+/* Terms Card */
+.terms-card {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 15px;
+    padding: 1.5rem;
+}
+
+.form-check-input {
+    margin-top: 0.3rem;
+}
+
+.form-check-label {
+    color: #856404;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.form-check-label ul {
+    padding-left: 1.5rem;
+}
+
+.form-check-label li {
+    margin-bottom: 0.5rem;
+}
+
+/* Buttons */
+.btn {
+    border-radius: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+}
+
+.btn-primary:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-outline-primary {
+    border: 2px solid #667eea;
+    color: #667eea;
+    background: transparent;
+}
+
+.btn-outline-primary:hover {
+    background: #667eea;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.withdraw-submit-btn {
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+}
+
+/* Status Timeline */
+.status-timeline {
+    position: relative;
+}
+
+.status-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+.status-item:last-child {
+    margin-bottom: 0;
+}
+
+.status-dot {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #e9ecef;
+    border: 3px solid white;
+    box-shadow: 0 0 0 2px #e9ecef;
+    margin-right: 1rem;
+    margin-top: 0.2rem;
+    flex-shrink: 0;
+    z-index: 2;
+}
+
+.status-item.active .status-dot {
+    background: #667eea;
+    box-shadow: 0 0 0 2px #667eea;
+}
+
+.status-item::after {
+    content: '';
+    position: absolute;
+    top: 25px;
+    left: 9px;
+    width: 2px;
+    height: calc(100% - 15px);
+    background: #e9ecef;
+    z-index: 1;
+}
+
+.status-item:last-child::after {
+    display: none;
+}
+
+.status-content h6 {
+    margin: 0 0 0.25rem 0;
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 0.9rem;
+}
+
+.status-content p {
+    margin: 0;
+    color: #6c757d;
+    font-size: 0.8rem;
+}
+
+.status-item.active .status-content h6 {
+    color: #667eea;
+}
+
+/* Withdrawals List */
+.withdrawals-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.withdrawal-item {
+    padding: 1rem;
+    border-radius: 12px;
+    background: #f8f9fa;
+    margin-bottom: 0.75rem;
+    transition: all 0.3s ease;
+    border-left: 4px solid #667eea;
+}
+
+.withdrawal-item:hover {
+    background: #e9ecef;
+    transform: translateX(5px);
+}
+
+.withdrawal-item:last-child {
+    margin-bottom: 0;
+}
+
+.withdrawal-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.withdrawal-amount {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+}
+
+.withdrawal-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.withdrawal-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.withdrawal-meta small {
+    font-size: 0.75rem;
+}
+
+.withdrawal-note {
+    margin-top: 0.25rem;
+}
+
+/* Status Badges */
+.status-badge {
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-pending {
+    background: rgba(255, 193, 7, 0.1);
+    color: #ffc107;
+    border: 1px solid rgba(255, 193, 7, 0.2);
+}
+
+.status-processing {
+    background: rgba(102, 126, 234, 0.1);
+    color: #667eea;
+    border: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+.status-approved, .status-completed {
+    background: rgba(40, 167, 69, 0.1);
+    color: #28a745;
+    border: 1px solid rgba(40, 167, 69, 0.2);
+}
+
+.status-rejected {
+    background: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+    border: 1px solid rgba(220, 53, 69, 0.2);
+}
+
+/* Empty States */
+.empty-withdrawals {
+    padding: 2rem 1rem;
+}
+
+.empty-icon {
+    opacity: 0.7;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .withdraw-header {
+        padding: 1.5rem;
+    }
+    
+    .icon-circle {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .card-body {
+        padding: 1.5rem;
+    }
+    
+    .balance-hero {
+        padding: 1.5rem;
+    }
+    
+    .balance-amount {
+        font-size: 2.5rem;
+    }
+    
+    .quick-amounts-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .withdrawal-meta {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+    
+    .process-step {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.5rem;
+    }
+    
+    .step-icon {
+        align-self: center;
+    }
+}
+
+/* Animations */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.withdraw-submit-btn:not(:disabled):hover {
+    animation: pulse 2s infinite;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const amountInput = document.getElementById('amount');
+    const phoneInput = document.getElementById('phone_number');
+    const submitButton = document.getElementById('submitButton');
+    const termsCheckbox = document.getElementById('withdrawal_terms');
+    const withdrawalForm = document.getElementById('withdrawalForm');
+    
+    // Quick amount buttons
+    document.querySelectorAll('.quick-amount-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const amount = this.getAttribute('data-amount');
+            amountInput.value = amount;
+            amountInput.focus();
+            updateSubmitButton();
+            
+            // Add visual feedback
+            this.style.background = '#667eea';
+            this.style.color = 'white';
+            this.style.borderColor = '#667eea';
+            
+            // Reset other buttons
+            document.querySelectorAll('.quick-amount-btn').forEach(btn => {
+                if (btn !== this) {
+                    btn.style.background = 'white';
+                    btn.style.color = '#2c3e50';
+                    btn.style.borderColor = '#e9ecef';
+                }
+            });
+        });
+    });
+    
+    // Amount validation
+    if (amountInput) {
+        amountInput.addEventListener('input', function() {
+            updateSubmitButton();
+            
+            // Reset quick amount buttons when typing manually
+            document.querySelectorAll('.quick-amount-btn').forEach(btn => {
+                btn.style.background = 'white';
+                btn.style.color = '#2c3e50';
+                btn.style.borderColor = '#e9ecef';
+            });
+        });
+    }
+    
+    // Phone number formatting
+    if (phoneInput) {
+        phoneInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            
+            // Auto-format for Kenyan numbers
+            if (value.startsWith('254')) {
+                value = value.substring(3);
+            }
+            if (value.startsWith('0')) {
+                value = value.substring(1);
+            }
+            
+            if (value.length > 0) {
+                value = '0' + value;
+            }
+            if (value.length > 4) {
+                value = value.substring(0, 4) + ' ' + value.substring(4);
+            }
+            if (value.length > 8) {
+                value = value.substring(0, 8) + ' ' + value.substring(8);
+            }
+            
+            e.target.value = value.substring(0, 12);
+        });
+    }
+    
+    // Terms agreement
+    if (termsCheckbox) {
+        termsCheckbox.addEventListener('change', updateSubmitButton);
+    }
+    
+    // Form submission
+    if (withdrawalForm) {
+        withdrawalForm.addEventListener('submit', function(e) {
+            const amount = parseFloat(amountInput.value) || 0;
+            const balance = {{ current_user.balance }};
+            
+            if (amount > balance) {
+                e.preventDefault();
+                showAlert('Amount cannot exceed your available balance', 'error');
+                return;
+            }
+            
+            if (amount < 100) {
+                e.preventDefault();
+                showAlert('Minimum withdrawal amount is KES 100', 'error');
+                return;
+            }
+            
+            // Format phone number before submission
+            if (phoneInput) {
+                phoneInput.value = phoneInput.value.replace(/\s/g, '');
+            }
+            
+            // Show loading state
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing Request...';
+        });
+    }
+    
+    function updateSubmitButton() {
+        const amount = parseFloat(amountInput.value) || 0;
+        const balance = {{ current_user.balance }};
+        const termsAgreed = termsCheckbox.checked;
+        
+        if (amount > balance) {
+            amountInput.setCustomValidity('Amount cannot exceed your balance');
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Amount exceeds balance';
+        } else if (amount < 100 && amount > 0) {
+            amountInput.setCustomValidity('Minimum withdrawal is KES 100');
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Minimum: KES 100';
+        } else if (!termsAgreed) {
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Accept terms to continue';
+        } else {
+            amountInput.setCustomValidity('');
+            submitButton.disabled = false;
+            submitButton.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Submit Withdrawal Request';
+        }
+    }
+    
+    function showAlert(message, type) {
+        // Remove any existing custom alerts
+        const existingAlert = document.querySelector('.custom-alert');
+        if (existingAlert) {
+            existingAlert.remove();
+        }
+        
+        const alertClass = type === 'error' ? 'alert-danger' : 'alert-info';
+        const icon = type === 'error' ? 'exclamation-triangle' : 'info-circle';
+        
+        const alert = document.createElement('div');
+        alert.className = `alert ${alertClass} alert-dismissible fade show custom-alert`;
+        alert.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas fa-${icon} me-2"></i>
+                <span>${message}</span>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.querySelector('.withdraw-container').insertBefore(alert, document.querySelector('.withdraw-header').nextSibling);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (alert.parentNode) {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            }
+        }, 5000);
+    }
+    
+    // Initialize button state
+    updateSubmitButton();
+    
+    // Add animation to balance display
+    const balanceAmount = document.querySelector('.balance-amount');
+    if (balanceAmount) {
+        setTimeout(() => {
+            balanceAmount.style.transform = 'scale(1.05)';
+            setTimeout(() => {
+                balanceAmount.style.transform = 'scale(1)';
+            }, 300);
+        }, 500);
+    }
+});
+</script>
+{% endblock %}

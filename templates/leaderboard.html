@@ -1,0 +1,958 @@
+{% extends "base.html" %}
+
+{% block title %}Leaderboard - ReferralNinja{% endblock %}
+
+{% block content %}
+<div class="leaderboard-container">
+    <!-- Header Section -->
+    <div class="leaderboard-header mb-5">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center">
+                    <div class="leaderboard-icon me-4">
+                        <div class="icon-circle bg-gradient-primary">
+                            <i class="fas fa-trophy fa-lg"></i>
+                        </div>
+                    </div>
+                    <div class="header-content">
+                        <h1 class="display-6 fw-bold text-gradient mb-1">Top Performers 🏆</h1>
+                        <p class="text-muted mb-0">Compete with other ninjas and climb the ranks to earn more!</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end">
+                {% if user_ranking %}
+                <div class="user-rank-badge">
+                    <span class="badge bg-primary-subtle text-primary fs-6 p-3">
+                        <i class="fas fa-user me-2"></i>Your Rank: #{{ user_ranking.position }}
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- User Ranking Card -->
+    {% if user_ranking %}
+    <div class="user-ranking-card mb-5">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="user-ranking-content">
+                        <div class="ranking-badge mb-3">
+                            <span class="badge bg-warning-subtle text-warning fs-6">
+                                <i class="fas fa-chart-line me-2"></i>Your Performance
+                            </span>
+                        </div>
+                        <div class="ranking-stats">
+                            <div class="stat">
+                                <div class="stat-value display-6 fw-bold text-primary">#{{ user_ranking.position }}</div>
+                                <div class="stat-label">Global Position</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value display-6 fw-bold text-success">{{ user_ranking.user_rank }}</div>
+                                <div class="stat-label">Current Rank</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value display-6 fw-bold text-warning">{{ user_ranking.total_users }}</div>
+                                <div class="stat-label">Total Ninjas</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="progress-section text-center">
+                        <div class="progress-circle">
+                            <div class="circle-bg">
+                                <div class="circle-fill" style="transform: rotate({{ (user_ranking.position / user_ranking.total_users * 180) }}deg);"></div>
+                            </div>
+                            <div class="progress-text">
+                                <span class="percentage">{{ ((user_ranking.total_users - user_ranking.position) / user_ranking.total_users * 100)|round|int }}%</span>
+                                <small>Top Percentile</small>
+                            </div>
+                        </div>
+                        <p class="mt-3 text-muted small">You're doing better than {{ ((user_ranking.total_users - user_ranking.position) / user_ranking.total_users * 100)|round|int }}% of users!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Leaderboard Section -->
+    <div class="leaderboard-section mb-5">
+        <div class="section-header d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h3 class="fw-bold mb-1">Top Performers Leaderboard 🎯</h3>
+                <p class="text-muted mb-0">The most successful referral ninjas this month</p>
+            </div>
+            <div class="leaderboard-meta">
+                <span class="badge bg-primary fs-6 p-3">
+                    {{ top_users|length }} Top Performers
+                </span>
+            </div>
+        </div>
+
+        <div class="leaderboard-card">
+            <div class="table-responsive">
+                <table class="table leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th class="rank-col">Rank</th>
+                            <th class="user-col">Ninja</th>
+                            <th class="earnings-col">Total Earnings</th>
+                            <th class="referrals-col">Referrals</th>
+                            <th class="level-col">Rank Tier</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in top_users %}
+                        <tr class="leaderboard-row {% if user.id == current_user.id %}current-user{% endif %}">
+                            <td class="rank-cell">
+                                <div class="rank-badge rank-{{ loop.index }}">
+                                    {% if loop.index == 1 %}
+                                    <i class="fas fa-crown"></i>
+                                    {% elif loop.index == 2 %}
+                                    <i class="fas fa-medal"></i>
+                                    {% elif loop.index == 3 %}
+                                    <i class="fas fa-award"></i>
+                                    {% else %}
+                                    <span>#{{ loop.index }}</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="user-cell">
+                                <div class="user-info">
+                                    <div class="user-avatar">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                    <div class="user-details">
+                                        <span class="username">{{ user.username }}</span>
+                                        {% if user.id == current_user.id %}
+                                        <span class="user-badge">You</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="earnings-cell">
+                                <div class="earnings-amount">
+                                    <i class="fas fa-coins text-warning me-2"></i>
+                                    <span class="amount">KES {{ "%.2f"|format(user.total_commission) }}</span>
+                                </div>
+                                <div class="earnings-growth">
+                                    <i class="fas fa-chart-line text-success me-1"></i>
+                                    <span>Active earner</span>
+                                </div>
+                            </td>
+                            <td class="referrals-cell">
+                                <div class="referrals-count">
+                                    <i class="fas fa-users text-info me-2"></i>
+                                    <span>{{ user.referral_count }} people</span>
+                                </div>
+                            </td>
+                            <td class="level-cell">
+                                <div class="rank-tier rank-tier-{{ user.user_rank|lower }}">
+                                    <div class="tier-icon">
+                                        <i class="fas fa-gem"></i>
+                                    </div>
+                                    <div class="tier-info">
+                                        <span class="tier-name">{{ user.user_rank }}</span>
+                                        <small class="tier-requirement">
+                                            {% if user.user_rank == 'Bronze' %}Start your journey
+                                            {% elif user.user_rank == 'Silver' %}KES 1,000+ earned
+                                            {% elif user.user_rank == 'Gold' %}KES 2,000+ earned
+                                            {% elif user.user_rank == 'Platinum' %}KES 5,000+ earned
+                                            {% else %}KES 10,000+ earned
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if not top_users %}
+            <div class="empty-leaderboard text-center py-5">
+                <div class="empty-icon mb-4">
+                    <i class="fas fa-trophy fa-4x text-muted opacity-50"></i>
+                </div>
+                <h4 class="text-muted mb-3">No Rankings Yet</h4>
+                <p class="text-muted mb-4">Start referring friends to climb the leaderboard and earn rewards!</p>
+                <a href="{{ url_for('referral_system') }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-share-alt me-2"></i>Start Referring
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Rank Tiers Section -->
+    <div class="rank-tiers-section">
+        <div class="section-header text-center mb-5">
+            <h3 class="fw-bold mb-2">Rank Tiers & Rewards 💎</h3>
+            <p class="text-muted">Climb through the ranks and unlock greater earning potential</p>
+        </div>
+
+        <div class="rank-tiers-grid">
+            <div class="rank-tier-card bronze-tier">
+                <div class="tier-header">
+                    <div class="tier-icon">
+                        <i class="fas fa-gem"></i>
+                    </div>
+                    <h4>Bronze</h4>
+                    <div class="tier-badge">Starter</div>
+                </div>
+                <div class="tier-body">
+                    <div class="tier-requirement">
+                        <i class="fas fa-coins text-warning me-2"></i>
+                        <span>KES 0+ Earned</span>
+                    </div>
+                    <div class="tier-features">
+                        <div class="feature">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <span>Basic earnings</span>
+                        </div>
+                        <div class="feature">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <span>Standard referral bonus</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="tier-footer">
+                    <div class="progress">
+                        <div class="progress-bar" style="width: 20%"></div>
+                    </div>
+                    <small>Start your journey</small>
+                </div>
+            </div>
+
+            <div class="rank-tier-card silver-tier">
+                <div class="tier-header">
+                    <div class="tier-icon">
+                        <i class="fas fa-gem"></i>
+                    </div>
+                    <h4>Silver</h4>
+                    <div class="tier-badge">Achiever</div>
+                </div>
+                <div class="tier-body">
+                    <div class="tier-requirement">
+                        <i class="fas fa-coins text-warning me-2"></i>
+                        <span>KES 1,000+ Earned</span>
+                    </div>
+                    <div class="tier-features">
+                        <div class="feature">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <span>Enhanced visibility</span>
+                        </div>
+                        <div class="feature">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <span>Priority support</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="tier-footer">
+                    <div class="progress">
+                        <div class="progress-bar" style="width: 40%"></div>
+                    </div>
+                    <small>Growing strong</small>
+                </div>
+            </div>
+
+            <div class="rank-tier-card gold-tier">
+                <div class="tier-header">
+                    <div class="tier-icon">
+                        <i class="fas fa-gem"></i>
+                    </div>
+                    <h4>Gold</h4>
+                    <div class="tier-badge">Expert</div>
+                </div>
+                <div class="tier-body">
+                    <div class="tier-requirement">
+                        <i class="fas fa-coins text-warning me-2"></i>
+                        <span>KES 2,000+ Earned</span>
+                    </div>
+                    <div class="tier-features">
+                        <div class="feature">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <span>Featured in leaderboard</span>
+                        </div>
+                        <div class="feature">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <span>Exclusive tips</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="tier-footer">
+                    <div class="progress">
+                        <div class="progress-bar" style="width: 60%"></div>
+                    </div>
+                    <small>Top performer</small>
+                </div>
+            </div>
+
+            <div class="rank-tier-card platinum-tier">
+                <div class="tier-header">
+                    <div class="tier-icon">
+                        <i class="fas fa-gem"></i>
+                    </div>
+                    <h4>Platinum</h4>
+                    <div class="tier-badge">Elite</div>
+                </div>
+                <div class="tier-body">
+                    <div class="tier-requirement">
+                        <i class="fas fa-coins text-warning me-2"></i>
+                        <span>KES 5,000+ Earned</span>
+                    </div>
+                    <div class="tier-features">
+                        <div class="feature">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <span>VIP support</span>
+                        </div>
+                        <div class="feature">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <span>Early access features</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="tier-footer">
+                    <div class="progress">
+                        <div class="progress-bar" style="width: 80%"></div>
+                    </div>
+                    <small>Elite status</small>
+                </div>
+            </div>
+
+            <div class="rank-tier-card diamond-tier">
+                <div class="tier-header">
+                    <div class="tier-icon">
+                        <i class="fas fa-gem"></i>
+                    </div>
+                    <h4>Diamond</h4>
+                    <div class="tier-badge">Master</div>
+                </div>
+                <div class="tier-body">
+                    <div class="tier-requirement">
+                        <i class="fas fa-coins text-warning me-2"></i>
+                        <span>KES 10,000+ Earned</span>
+                    </div>
+                    <div class="tier-features">
+                        <div class="feature">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <span>Legend status</span>
+                        </div>
+                        <div class="feature">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <span>Mentor opportunities</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="tier-footer">
+                    <div class="progress">
+                        <div class="progress-bar" style="width: 100%"></div>
+                    </div>
+                    <small>The pinnacle</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.leaderboard-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+.leaderboard-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 2rem;
+    border-radius: 20px;
+    color: white;
+    margin-top: 1rem;
+}
+
+.text-gradient {
+    background: linear-gradient(45deg, #fff, #e3f2fd);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.leaderboard-icon {
+    position: relative;
+}
+
+.icon-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* User Ranking Card */
+.user-ranking-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 25px;
+    color: white;
+    box-shadow: 0 20px 40px rgba(102, 126, 234, 0.3);
+    overflow: hidden;
+    position: relative;
+}
+
+.user-ranking-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 200px;
+    height: 200px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    transform: translate(100px, -100px);
+}
+
+.user-ranking-card .card-body {
+    padding: 3rem;
+    position: relative;
+    z-index: 2;
+}
+
+.ranking-badge .badge {
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+}
+
+.ranking-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+    margin-top: 1.5rem;
+}
+
+.stat {
+    text-align: center;
+}
+
+.stat-value {
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 500;
+}
+
+/* Progress Circle */
+.progress-circle {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto;
+}
+
+.circle-bg {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.circle-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #ffd700, #ff6b6b);
+    clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 50%);
+    transform-origin: center;
+    transition: transform 1s ease;
+}
+
+.progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.percentage {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: white;
+}
+
+.progress-text small {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.7rem;
+}
+
+/* Leaderboard Table */
+.leaderboard-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    overflow: hidden;
+}
+
+.leaderboard-table {
+    margin: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.leaderboard-table thead th {
+    background: #f8f9fa;
+    border: none;
+    padding: 1.5rem 1rem;
+    font-weight: 600;
+    color: #2c3e50;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+
+.leaderboard-table tbody tr {
+    transition: all 0.3s ease;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.leaderboard-table tbody tr:hover {
+    background: #f8f9fa;
+    transform: translateX(5px);
+}
+
+.leaderboard-table tbody tr.current-user {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+    border-left: 4px solid #667eea;
+}
+
+.leaderboard-table tbody td {
+    padding: 1.5rem 1rem;
+    vertical-align: middle;
+}
+
+/* Rank Cells */
+.rank-badge {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: white;
+    margin: 0 auto;
+}
+
+.rank-1 {
+    background: linear-gradient(135deg, #ffd700, #ff6b6b);
+    box-shadow: 0 5px 15px rgba(255, 215, 0, 0.4);
+}
+
+.rank-2 {
+    background: linear-gradient(135deg, #c0c0c0, #808080);
+    box-shadow: 0 5px 15px rgba(192, 192, 192, 0.4);
+}
+
+.rank-3 {
+    background: linear-gradient(135deg, #cd7f32, #8b4513);
+    box-shadow: 0 5px 15px rgba(205, 127, 50, 0.4);
+}
+
+.rank-4, .rank-5, .rank-6, .rank-7, .rank-8, .rank-9, .rank-10 {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+/* User Cells */
+.user-cell .user-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.user-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.25rem;
+}
+
+.user-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.username {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 0.25rem;
+}
+
+.user-badge {
+    background: #667eea;
+    color: white;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+/* Earnings Cells */
+.earnings-amount {
+    display: flex;
+    align-items: center;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 0.25rem;
+}
+
+.earnings-growth {
+    font-size: 0.8rem;
+    color: #28a745;
+    display: flex;
+    align-items: center;
+}
+
+/* Referrals Cells */
+.referrals-count {
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+/* Rank Tier Cells */
+.rank-tier {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border-radius: 12px;
+    background: #f8f9fa;
+}
+
+.tier-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.9rem;
+}
+
+.rank-tier-bronze .tier-icon { background: linear-gradient(135deg, #cd7f32, #8b4513); }
+.rank-tier-silver .tier-icon { background: linear-gradient(135deg, #c0c0c0, #808080); }
+.rank-tier-gold .tier-icon { background: linear-gradient(135deg, #ffd700, #daa520); }
+.rank-tier-platinum .tier-icon { background: linear-gradient(135deg, #e5e4e2, #8a8a8a); }
+.rank-tier-diamond .tier-icon { background: linear-gradient(135deg, #b9f2ff, #4fc3f7); }
+
+.tier-info {
+    flex: 1;
+}
+
+.tier-name {
+    font-weight: 700;
+    color: #2c3e50;
+    display: block;
+    margin-bottom: 0.1rem;
+}
+
+.tier-requirement {
+    font-size: 0.7rem;
+    color: #6c757d;
+}
+
+/* Rank Tiers Grid */
+.rank-tiers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.rank-tier-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    border: 3px solid transparent;
+}
+
+.rank-tier-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+}
+
+.bronze-tier { border-color: #cd7f32; }
+.silver-tier { border-color: #c0c0c0; }
+.gold-tier { border-color: #ffd700; }
+.platinum-tier { border-color: #e5e4e2; }
+.diamond-tier { border-color: #b9f2ff; }
+
+.rank-tier-card .tier-header {
+    padding: 2rem 1.5rem 1rem;
+    text-align: center;
+    position: relative;
+}
+
+.rank-tier-card .tier-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin: 0 auto 1rem;
+    color: white;
+}
+
+.bronze-tier .tier-icon { background: linear-gradient(135deg, #cd7f32, #8b4513); }
+.silver-tier .tier-icon { background: linear-gradient(135deg, #c0c0c0, #808080); }
+.gold-tier .tier-icon { background: linear-gradient(135deg, #ffd700, #daa520); }
+.platinum-tier .tier-icon { background: linear-gradient(135deg, #e5e4e2, #8a8a8a); }
+.diamond-tier .tier-icon { background: linear-gradient(135deg, #b9f2ff, #4fc3f7); }
+
+.tier-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: #667eea;
+    color: white;
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.tier-body {
+    padding: 1.5rem;
+}
+
+.tier-requirement {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.tier-features {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.feature {
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.tier-footer {
+    padding: 1rem 1.5rem;
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+}
+
+.tier-footer .progress {
+    height: 6px;
+    background: #e9ecef;
+    border-radius: 3px;
+    margin-bottom: 0.5rem;
+}
+
+.tier-footer .progress-bar {
+    background: #667eea;
+    border-radius: 3px;
+}
+
+.tier-footer small {
+    color: #6c757d;
+    font-size: 0.8rem;
+}
+
+/* Empty States */
+.empty-leaderboard {
+    padding: 4rem 2rem;
+}
+
+.empty-icon {
+    opacity: 0.7;
+}
+
+/* Section Headers */
+.section-header h3 {
+    color: #2c3e50;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .leaderboard-header {
+        padding: 1.5rem;
+    }
+    
+    .icon-circle {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .user-ranking-card .card-body {
+        padding: 2rem 1.5rem;
+    }
+    
+    .ranking-stats {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .stat-value {
+        font-size: 2.5rem;
+    }
+    
+    .leaderboard-table thead {
+        display: none;
+    }
+    
+    .leaderboard-table tbody tr {
+        display: block;
+        margin-bottom: 1rem;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+    }
+    
+    .leaderboard-table tbody td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        border: none;
+    }
+    
+    .leaderboard-table tbody td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #6c757d;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+    }
+    
+    .rank-tiers-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .user-cell .user-info {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.5rem;
+    }
+    
+    .rank-tier {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+
+/* Animation for leaderboard rows */
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.leaderboard-row {
+    animation: slideInUp 0.6s ease;
+}
+
+.leaderboard-row:nth-child(1) { animation-delay: 0.1s; }
+.leaderboard-row:nth-child(2) { animation-delay: 0.2s; }
+.leaderboard-row:nth-child(3) { animation-delay: 0.3s; }
+.leaderboard-row:nth-child(4) { animation-delay: 0.4s; }
+.leaderboard-row:nth-child(5) { animation-delay: 0.5s; }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add interactive animations
+    const leaderboardRows = document.querySelectorAll('.leaderboard-row');
+    const tierCards = document.querySelectorAll('.rank-tier-card');
+    
+    leaderboardRows.forEach((row, index) => {
+        row.style.animationDelay = `${(index + 1) * 0.1}s`;
+        
+        row.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateX(10px)';
+        });
+        
+        row.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateX(0)';
+        });
+    });
+    
+    tierCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-15px) scale(1.02)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0) scale(1)';
+        });
+    });
+
+    // Add scroll animation for rank tiers
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, observerOptions);
+
+    tierCards.forEach(card => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        card.style.transition = 'all 0.6s ease';
+        observer.observe(card);
+    });
+});
+</script>
+{% endblock %}

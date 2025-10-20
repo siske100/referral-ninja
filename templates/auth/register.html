@@ -1,0 +1,190 @@
+{% extends "auth/base.html" %}
+
+{% block title %}Join - Referral Ninja{% endblock %}
+
+{% block auth_content %}
+<div class="auth-card">
+    <div class="auth-header">
+        <div class="auth-logo">
+            <i class="fas fa-user-ninja"></i>
+        </div>
+        <h2 class="fw-bold mb-2">Join Referral Ninja</h2>
+        <p class="auth-subtitle mb-0">Earn KSH 50 for every friend who joins!</p>
+        <div class="ninja-badge">
+            <i class="fas fa-bolt me-1"></i>INSTANT COMMISSIONS
+        </div>
+    </div>
+    
+    <div class="auth-body">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+                        <i class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' }} me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <form method="POST" action="{{ url_for('register') }}">
+            <div class="row">
+                <div class="col-12 mb-3">
+                    <label for="username" class="form-label fw-semibold">Username</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0">
+                            <i class="fas fa-user text-danger"></i>
+                        </span>
+                        <input type="text" class="form-control border-start-0" id="username" name="username" 
+                               required placeholder="Choose a username" value="{{ request.form.username if request.form }}">
+                    </div>
+                    <div class="form-text">3-20 characters, letters and numbers only</div>
+                </div>
+                
+                <div class="col-12 mb-3">
+                    <label for="email" class="form-label fw-semibold">Email</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0">
+                            <i class="fas fa-envelope text-danger"></i>
+                        </span>
+                        <input type="email" class="form-control border-start-0" id="email" name="email" 
+                               required placeholder="Enter your email" value="{{ request.form.email if request.form }}">
+                    </div>
+                </div>
+                
+                <div class="col-12 mb-3">
+                    <label for="phone_number" class="form-label fw-semibold">Phone Number</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0">
+                            <i class="fas fa-phone text-danger"></i>
+                        </span>
+                        <input type="tel" class="form-control border-start-0" id="phone_number" name="phone_number" 
+                               required placeholder="07XX XXX XXX or 2547XX XXX XXX" value="{{ request.form.phone_number if request.form }}">
+                    </div>
+                    <div class="form-text">We'll use this for M-Pesa payments and your referral code</div>
+                </div>
+                
+                <div class="col-12 mb-3">
+                    <label for="password" class="form-label fw-semibold">Password</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0">
+                            <i class="fas fa-lock text-danger"></i>
+                        </span>
+                        <input type="password" class="form-control border-start-0" id="password" name="password" 
+                               required placeholder="Create a password" minlength="6">
+                        <button type="button" class="btn btn-outline-secondary password-toggle border-start-0">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Password strength meter -->
+                    <div class="mt-2">
+                        <div class="progress" style="height: 6px;">
+                            <div id="password-strength" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <small id="password-feedback" class="form-text"></small>
+                    </div>
+                </div>
+                
+                <div class="col-12 mb-4">
+                    <label for="referral_code" class="form-label fw-semibold">Referral Code (Optional)</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0">
+                            <i class="fas fa-user-friends text-danger"></i>
+                        </span>
+                        <input type="text" class="form-control border-start-0" id="referral_code" name="referral_code" 
+                               placeholder="Enter friend's referral code" value="{{ request.form.referral_code if request.form }}">
+                    </div>
+                    <div class="form-text">Get KSH 50 bonus when you join with a referral code</div>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="terms" name="terms" required>
+                    <label class="form-check-label" for="terms">
+                        I agree to the <a href="#" class="text-danger">Terms of Service</a> and <a href="#" class="text-danger">Privacy Policy</a>
+                    </label>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary w-100 py-3 fw-semibold">
+                <i class="fas fa-user-plus me-2"></i>Become a Ninja
+            </button>
+        </form>
+        
+        <div class="auth-footer">
+            <p class="mb-0 text-muted">
+                Already a ninja? 
+                <a href="{{ url_for('login') }}" class="text-danger fw-semibold text-decoration-none">Sign In</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Focus on username field
+        document.getElementById('username').focus();
+        
+        // Password toggle
+        const passwordToggle = document.querySelector('.password-toggle');
+        const passwordInput = document.getElementById('password');
+        
+        if (passwordToggle && passwordInput) {
+            passwordToggle.addEventListener('click', function() {
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                this.innerHTML = type === 'password' ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
+            });
+        }
+        
+        // Password strength indicator
+        if (passwordInput) {
+            passwordInput.addEventListener('input', function() {
+                const password = this.value;
+                const strengthBar = document.getElementById('password-strength');
+                const feedback = document.getElementById('password-feedback');
+                
+                let strength = 0;
+                let feedbackText = '';
+                
+                if (password.length >= 6) strength += 25;
+                if (password.match(/[a-z]/)) strength += 25;
+                if (password.match(/[A-Z]/)) strength += 25;
+                if (password.match(/[0-9]/)) strength += 25;
+                
+                strengthBar.style.width = strength + '%';
+                
+                if (strength < 50) {
+                    strengthBar.className = 'progress-bar bg-danger';
+                    feedbackText = 'Weak password';
+                } else if (strength < 75) {
+                    strengthBar.className = 'progress-bar bg-warning';
+                    feedbackText = 'Medium password';
+                } else {
+                    strengthBar.className = 'progress-bar bg-success';
+                    feedbackText = 'Strong password';
+                }
+                
+                feedback.textContent = feedbackText;
+            });
+        }
+        
+        // Phone number formatting
+        const phoneInput = document.getElementById('phone_number');
+        if (phoneInput) {
+            phoneInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.startsWith('0')) {
+                    value = '254' + value.substring(1);
+                }
+                e.target.value = value;
+            });
+        }
+    });
+</script>
+{% endblock %}

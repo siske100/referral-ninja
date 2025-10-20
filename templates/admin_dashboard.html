@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Referral Ninja</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --info-color: #2980b9;
+            --dark-color: #34495e;
+            --light-color: #ecf0f1;
+            --telegram-color: #0088cc;
+        }
+        
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--dark-color) 100%);
+            box-shadow: 3px 0 10px rgba(0,0,0,0.1);
+        }
+        
+        .sidebar .nav-link {
+            color: var(--light-color);
+            padding: 12px 20px;
+            margin: 5px 10px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            background-color: rgba(255,255,255,0.1);
+            color: white;
+            transform: translateX(5px);
+        }
+        
+        .sidebar .nav-link i {
+            width: 20px;
+            text-align: center;
+        }
+        
+        .stat-card {
+            border-radius: 15px;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .stat-card .card-body {
+            padding: 25px;
+        }
+        
+        .border-left-primary { border-left: 4px solid var(--primary-color) !important; }
+        .border-left-success { border-left: 4px solid var(--success-color) !important; }
+        .border-left-info { border-left: 4px solid var(--info-color) !important; }
+        .border-left-warning { border-left: 4px solid var(--warning-color) !important; }
+        .border-left-telegram { border-left: 4px solid var(--telegram-color) !important; }
+        
+        .bg-gradient-primary { background: linear-gradient(135deg, var(--primary-color), var(--dark-color)); }
+        .bg-gradient-success { background: linear-gradient(135deg, var(--success-color), #2ecc71); }
+        .bg-gradient-info { background: linear-gradient(135deg, var(--info-color), #3498db); }
+        .bg-gradient-warning { background: linear-gradient(135deg, var(--warning-color), #f1c40f); }
+        .bg-gradient-telegram { background: linear-gradient(135deg, var(--telegram-color), #00aced); }
+        
+        .main-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--dark-color));
+            color: white;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            border-radius: 0 0 20px 20px;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--dark-color));
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 15px 25px;
+            border: none;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--dark-color));
+            border: none;
+            border-radius: 8px;
+            padding: 8px 20px;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, var(--success-color), #2ecc71);
+            border: none;
+            border-radius: 8px;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, var(--accent-color), #c0392b);
+            border: none;
+            border-radius: 8px;
+        }
+        
+        .btn-info {
+            background: linear-gradient(135deg, var(--info-color), #3498db);
+            border: none;
+            border-radius: 8px;
+        }
+        
+        .btn-telegram {
+            background: linear-gradient(135deg, var(--telegram-color), #00aced);
+            border: none;
+            border-radius: 8px;
+            color: white;
+        }
+        
+        .table th {
+            background-color: var(--light-color);
+            color: var(--primary-color);
+            font-weight: 600;
+            border: none;
+            padding: 15px;
+        }
+        
+        .table td {
+            padding: 12px 15px;
+            vertical-align: middle;
+            border-color: #f8f9fa;
+        }
+        
+        .table tbody tr:hover {
+            background-color: rgba(52, 152, 219, 0.05);
+        }
+        
+        .alert {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .text-primary { color: var(--primary-color) !important; }
+        .text-success { color: var(--success-color) !important; }
+        .text-info { color: var(--info-color) !important; }
+        .text-warning { color: var(--warning-color) !important; }
+        .text-telegram { color: var(--telegram-color) !important; }
+        
+        .badge-success { background-color: var(--success-color); }
+        .badge-warning { background-color: var(--warning-color); }
+        .badge-danger { background-color: var(--accent-color); }
+        .badge-info { background-color: var(--info-color); }
+        .badge-telegram { background-color: var(--telegram-color); }
+        
+        .logo-text {
+            font-weight: 700;
+            font-size: 1.5rem;
+            background: linear-gradient(135deg, #3498db, #2c3e50);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .mpesa-message {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 0.9em;
+            max-height: 120px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        
+        .message-preview {
+            max-width: 300px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--accent-color);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .telegram-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            background: rgba(0, 136, 204, 0.1);
+            color: var(--telegram-color);
+            font-size: 0.85rem;
+        }
+        
+        .status-online { color: var(--success-color); }
+        .status-offline { color: var(--accent-color); }
+        
+        .refresh-btn {
+            background: transparent;
+            border: 2px solid var(--light-color);
+            color: var(--light-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        
+        .refresh-btn:hover {
+            background: rgba(255,255,255,0.1);
+            transform: rotate(180deg);
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color), var(--dark-color));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        
+        .activity-feed {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .activity-item {
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+        
+        .activity-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .activity-registration { background: var(--success-color); }
+        .activity-payment { background: var(--info-color); }
+        .activity-withdrawal { background: var(--warning-color); }
+        .activity-telegram { background: var(--telegram-color); }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                min-height: auto;
+            }
+            
+            .stat-card .card-body {
+                padding: 15px;
+            }
+            
+            .main-header {
+                padding: 15px 0;
+                margin-bottom: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <div class="text-center mb-4">
+                        <h4 class="logo-text">
+                            <i class="fas fa-user-secret me-2"></i>Referral Ninja
+                        </h4>
+                        <small class="text-light opacity-75">Admin Panel</small>
+                    </div>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="{{ url_for('admin_dashboard') }}">
+                                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('admin_users') }}">
+                                <i class="fas fa-users me-2"></i>User Management
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('admin_withdrawals') }}">
+                                <i class="fas fa-money-bill-wave me-2"></i>Withdrawal Requests
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('logout') }}">
+                                <i class="fas fa-sign-out-alt me-2"></i>Logout
+                            </a>
+                        </li>
+                    </ul>
+                    
+                    <!-- Telegram Status -->
+                    <div class="mt-4 p-3">
+                        <div class="telegram-status">
+                            <i class="fab fa-telegram"></i>
+                            <span>Telegram Connected</span>
+                            <i class="fas fa-circle status-online"></i>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <!-- Header -->
+                <div class="main-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h1 class="h3 mb-0">
+                                <i class="fas fa-tachometer-alt me-2"></i>Admin Dashboard
+                            </h1>
+                            <small class="opacity-75">Real-time monitoring & management</small>
+                        </div>
+                        <div class="text-end d-flex align-items-center gap-3">
+                            <button class="refresh-btn" onclick="location.reload()" title="Refresh Dashboard">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                            <span class="badge bg-light text-dark">
+                                <i class="fas fa-user me-1"></i>Admin
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Flash Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                                <i class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' }} me-2"></i>
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Statistics Cards -->
+                <div class="row mb-4">
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card stat-card border-left-primary">
+                            <div class="card-body bg-gradient-primary text-white">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-uppercase mb-1 opacity-75">Total Users</div>
+                                        <div class="h2 mb-0 font-weight-bold">{{ total_users }}</div>
+                                        <small class="opacity-75">{{ total_verified }} verified</small>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-users fa-3x opacity-75"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card stat-card border-left-success">
+                            <div class="card-body bg-gradient-success text-white">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-uppercase mb-1 opacity-75">Total Commission</div>
+                                        <div class="h2 mb-0 font-weight-bold">Ksh {{ "%.2f"|format(total_commission) }}</div>
+                                        <small class="opacity-75">Earned by users</small>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-money-bill fa-3x opacity-75"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card stat-card border-left-info">
+                            <div class="card-body bg-gradient-info text-white">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-uppercase mb-1 opacity-75">Pending Actions</div>
+                                        <div class="h2 mb-0 font-weight-bold">{{ pending_payments + pending_withdrawals }}</div>
+                                        <small class="opacity-75">Require attention</small>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-bell fa-3x opacity-75"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-xl-3 col-md-6 mb-4">
+                        <div class="card stat-card border-left-telegram">
+                            <div class="card-body bg-gradient-telegram text-white">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-uppercase mb-1 opacity-75">Today's Registrations</div>
+                                        <div class="h2 mb-0 font-weight-bold">
+                                            {% set today_count = namespace(value=0) %}
+                                            {% for user in recent_users %}
+                                                {% if user.created_at.date() == now().date() %}
+                                                    {% set today_count.value = today_count.value + 1 %}
+                                                {% endif %}
+                                            {% endfor %}
+                                            {{ today_count.value }}
+                                        </div>
+                                        <small class="opacity-75">New users today</small>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fab fa-telegram fa-3x opacity-75"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Pending Payments Section -->
+                    <div class="col-lg-8 mb-4">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h6 class="m-0 font-weight-bold">
+                                    <i class="fas fa-clock me-2"></i>Pending Payment Verifications
+                                </h6>
+                                <div>
+                                    <span class="badge bg-warning">{{ pending_transactions|length }}</span>
+                                    <button class="btn btn-telegram btn-sm ms-2" onclick="sendTelegramSummary()">
+                                        <i class="fab fa-telegram me-1"></i>Send Summary
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                {% if pending_transactions %}
+                                    <div class="table-responsive">
+                                        <table class="table table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>User</th>
+                                                    <th>Phone</th>
+                                                    <th>MPESA Code</th>
+                                                    <th>Message Preview</th>
+                                                    <th>Date</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for transaction, user in pending_transactions %}
+                                                <tr>
+                                                    <td>
+                                                        <div class="d-flex align-items-center">
+                                                            <div class="user-avatar me-3">
+                                                                {{ user.username[0]|upper }}
+                                                            </div>
+                                                            <div>
+                                                                <strong>{{ user.username }}</strong>
+                                                                <br><small class="text-muted">{{ user.email }}</small>
+                                                                {% if user.referred_by %}
+                                                                    <br><small class="text-info">Referred by: {{ user.referred_by }}</small>
+                                                                {% endif %}
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td>{{ transaction.phone_number }}</td>
+                                                    <td>
+                                                        <span class="badge bg-light text-dark">{{ transaction.mpesa_code }}</span>
+                                                    </td>
+                                                    <td>
+                                                        {% if transaction.mpesa_message %}
+                                                            <div class="message-preview" data-bs-toggle="tooltip" title="Click to view full message">
+                                                                <small>{{ transaction.mpesa_message|truncate(50) }}</small>
+                                                            </div>
+                                                            <button class="btn btn-sm btn-info mt-1" 
+                                                                    data-bs-toggle="modal" 
+                                                                    data-bs-target="#messageModal{{ transaction.id }}">
+                                                                <i class="fas fa-eye me-1"></i>View Full
+                                                            </button>
+                                                        {% else %}
+                                                            <span class="text-muted">No message</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        <small>{{ transaction.created_at.strftime('%Y-%m-%d') }}</small>
+                                                        <br>
+                                                        <small class="text-muted">{{ transaction.created_at.strftime('%H:%M') }}</small>
+                                                    </td>
+                                                    <td>
+                                                        <div class="btn-group btn-group-sm">
+                                                            <button class="btn btn-success" 
+                                                                    onclick="approvePayment({{ transaction.id }})" 
+                                                                    title="Approve Payment">
+                                                                <i class="fas fa-check"></i>
+                                                            </button>
+                                                            <button class="btn btn-danger" 
+                                                                    onclick="rejectPayment({{ transaction.id }})" 
+                                                                    title="Reject Payment">
+                                                                <i class="fas fa-times"></i>
+                                                            </button>
+                                                            <button class="btn btn-telegram" 
+                                                                    onclick="sendSingleNotification({{ transaction.id }})" 
+                                                                    title="Send Telegram Alert">
+                                                                <i class="fab fa-telegram"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+
+                                                <!-- Message Modal for each transaction -->
+                                                <div class="modal fade" id="messageModal{{ transaction.id }}" tabindex="-1" aria-labelledby="messageModalLabel{{ transaction.id }}" aria-hidden="true">
+                                                    <div class="modal-dialog modal-lg">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header">
+                                                                <h5 class="modal-title" id="messageModalLabel{{ transaction.id }}">
+                                                                    <i class="fas fa-envelope me-2"></i>
+                                                                    MPESA Message from {{ user.username }}
+                                                                </h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <div class="mb-3">
+                                                                    <strong>Transaction Details:</strong>
+                                                                    <ul class="list-unstyled mt-2">
+                                                                        <li><strong>User:</strong> {{ user.username }} ({{ user.phone_number }})</li>
+                                                                        <li><strong>Email:</strong> {{ user.email }}</li>
+                                                                        <li><strong>MPESA Code:</strong> <code>{{ transaction.mpesa_code }}</code></li>
+                                                                        <li><strong>Date Submitted:</strong> {{ transaction.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</li>
+                                                                        {% if user.referred_by %}
+                                                                            <li><strong>Referral Code Used:</strong> {{ user.referred_by }}</li>
+                                                                        {% endif %}
+                                                                    </ul>
+                                                                </div>
+                                                                <div>
+                                                                    <strong>Full MPESA Message:</strong>
+                                                                    <div class="mpesa-message mt-2">
+                                                                        {{ transaction.mpesa_message }}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                                                <button type="button" class="btn btn-telegram" onclick="sendSingleNotification({{ transaction.id }})">
+                                                                    <i class="fab fa-telegram me-1"></i>Send Alert
+                                                                </button>
+                                                                <button type="button" class="btn btn-success" onclick="approvePayment({{ transaction.id }})">
+                                                                    <i class="fas fa-check me-1"></i>Approve
+                                                                </button>
+                                                                <button type="button" class="btn btn-danger" onclick="rejectPayment({{ transaction.id }})">
+                                                                    <i class="fas fa-times me-1"></i>Reject
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                {% else %}
+                                    <div class="text-center py-4">
+                                        <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                                        <p class="text-muted">No pending payments to verify</p>
+                                        <small class="text-info">All payments have been processed</small>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Recent Activity Section -->
+                        <div class="card mt-4">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold">
+                                    <i class="fas fa-history me-2"></i>Recent Activity
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="activity-feed">
+                                    {% if recent_activity %}
+                                        {% for activity in recent_activity %}
+                                        <div class="activity-item">
+                                            <div class="activity-icon 
+                                                {% if activity.transaction_type == 'registration_fee' %}activity-registration
+                                                {% elif activity.transaction_type == 'withdrawal' %}activity-withdrawal
+                                                {% elif activity.transaction_type == 'referral_commission' %}activity-payment
+                                                {% else %}activity-telegram{% endif %}">
+                                                <i class="fas 
+                                                    {% if activity.transaction_type == 'registration_fee' %}fa-user-plus
+                                                    {% elif activity.transaction_type == 'withdrawal' %}fa-money-bill-wave
+                                                    {% elif activity.transaction_type == 'referral_commission' %}fa-hand-holding-usd
+                                                    {% else %}fa-bell{% endif %}">
+                                                </i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex justify-content-between">
+                                                    <strong>
+                                                        {% if activity.transaction_type == 'registration_fee' %}
+                                                            New Registration
+                                                        {% elif activity.transaction_type == 'withdrawal' %}
+                                                            Withdrawal Request
+                                                        {% elif activity.transaction_type == 'referral_commission' %}
+                                                            Referral Commission
+                                                        {% else %}
+                                                            System Activity
+                                                        {% endif %}
+                                                    </strong>
+                                                    <small class="text-muted">{{ activity.created_at.strftime('%H:%M') }}</small>
+                                                </div>
+                                                <small class="text-muted">
+                                                    {% if activity.transaction_type == 'registration_fee' %}
+                                                        User payment verification submitted
+                                                    {% elif activity.transaction_type == 'withdrawal' %}
+                                                        Ksh {{ "%.2f"|format(activity.amount|abs) }} withdrawal
+                                                    {% elif activity.transaction_type == 'referral_commission' %}
+                                                        Ksh {{ "%.2f"|format(activity.amount) }} commission paid
+                                                    {% else %}
+                                                        {{ activity.description }}
+                                                    {% endif %}
+                                                </small>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <div class="text-center py-3">
+                                            <i class="fas fa-history fa-2x text-muted mb-2"></i>
+                                            <p class="text-muted">No recent activity</p>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Sidebar -->
+                    <div class="col-lg-4 mb-4">
+                        <!-- Recent Users Section -->
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h6 class="m-0 font-weight-bold">
+                                    <i class="fas fa-user-plus me-2"></i>Recent Verified Users
+                                </h6>
+                                <a href="{{ url_for('admin_users') }}" class="btn btn-primary btn-sm">View All</a>
+                            </div>
+                            <div class="card-body">
+                                {% if recent_users %}
+                                    <div class="table-responsive">
+                                        <table class="table table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>User</th>
+                                                    <th>Joined</th>
+                                                    <th>Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for user in recent_users %}
+                                                <tr>
+                                                    <td>
+                                                        <div class="d-flex align-items-center">
+                                                            <div class="user-avatar me-2">
+                                                                {{ user.username[0]|upper }}
+                                                            </div>
+                                                            <div>
+                                                                <strong>{{ user.username }}</strong>
+                                                                <br>
+                                                                <small class="text-muted">{{ user.phone_number }}</small>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td><small>{{ user.created_at.strftime('%m/%d') }}</small></td>
+                                                    <td>
+                                                        {% if user.is_verified %}
+                                                            <span class="badge bg-success">Verified</span>
+                                                        {% else %}
+                                                            <span class="badge bg-warning">Pending</span>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                {% else %}
+                                    <div class="text-center py-4">
+                                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                                        <p class="text-muted">No users found</p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Quick Stats -->
+                        <div class="card mt-4">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold">
+                                    <i class="fas fa-chart-bar me-2"></i>Quick Stats
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row text-center">
+                                    <div class="col-6 mb-3">
+                                        <div class="text-primary fw-bold h5">Ksh {{ "%.2f"|format(total_balance) }}</div>
+                                        <small class="text-muted">Total Balance</small>
+                                    </div>
+                                    <div class="col-6 mb-3">
+                                        <div class="text-warning fw-bold h5">{{ pending_withdrawals }}</div>
+                                        <small class="text-muted">Pending Withdrawals</small>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-info fw-bold h5">{{ pending_payments }}</div>
+                                        <small class="text-muted">Pending Payments</small>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="text-success fw-bold h5">{{ total_referrals }}</div>
+                                        <small class="text-muted">Total Referrals</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Telegram Actions -->
+                        <div class="card mt-4">
+                            <div class="card-header">
+                                <h6 class="m-0 font-weight-bold">
+                                    <i class="fab fa-telegram me-2"></i>Telegram Actions
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-telegram" onclick="sendTelegramSummary()">
+                                        <i class="fab fa-telegram me-2"></i>Send Daily Summary
+                                    </button>
+                                    <button class="btn btn-outline-telegram" onclick="testTelegramConnection()">
+                                        <i class="fas fa-bolt me-2"></i>Test Connection
+                                    </button>
+                                </div>
+                                <div class="mt-3">
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Telegram notifications are automatically sent for new registrations.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Bootstrap & JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+
+        function approvePayment(transactionId) {
+            if (confirm('Are you sure you want to approve this payment? This will activate the user account and credit any referral commissions.')) {
+                fetch(`/admin/approve-payment/${transactionId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification('success', data.message);
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        showNotification('error', 'Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification('error', 'An error occurred while approving payment');
+                });
+            }
+        }
+
+        function rejectPayment(transactionId) {
+            if (confirm('Are you sure you want to reject this payment? The user will need to submit a new payment message.')) {
+                fetch(`/admin/reject-payment/${transactionId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification('success', data.message);
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        showNotification('error', 'Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification('error', 'An error occurred while rejecting payment');
+                });
+            }
+        }
+
+        function sendSingleNotification(transactionId) {
+            fetch(`/admin/send-telegram-alert/${transactionId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('success', 'Telegram alert sent successfully!');
+                } else {
+                    showNotification('error', 'Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('error', 'An error occurred while sending Telegram alert');
+            });
+        }
+
+        function sendTelegramSummary() {
+            fetch('/admin/send-telegram-summary', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('success', 'Daily summary sent to Telegram!');
+                showNotification('info', data.message);
+                setTimeout(() => location.reload(), 2000);
+                } else {
+                    showNotification('error', 'Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('error', 'An error occurred while sending Telegram summary');
+            });
+        }
+
+        function testTelegramConnection() {
+            showNotification('info', 'Testing Telegram connection...');
+            fetch('/admin/test-telegram', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('success', 'Telegram connection test successful!');
+                    showNotification('info', data.message);
+                } else {
+                    showNotification('error', 'Telegram connection failed: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('error', 'An error occurred while testing Telegram connection');
+            });
+        }
+
+        function showNotification(type, message) {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 5000);
+        }
+
+        // Auto-refresh the page every 30 seconds to check for new payments
+        setInterval(() => {
+            // Only refresh if no modals are open and user is active
+            if (document.querySelectorAll('.modal.show').length === 0) {
+                location.reload();
+            }
+        }, 30000);
+
+        // Add keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl + R to refresh
+            if (e.ctrlKey && e.key === 'r') {
+                e.preventDefault();
+                location.reload();
+            }
+            // Escape to close modals
+            if (e.key === 'Escape') {
+                const modals = document.querySelectorAll('.modal');
+                modals.forEach(modal => {
+                    const modalInstance = bootstrap.Modal.getInstance(modal);
+                    if (modalInstance) {
+                        modalInstance.hide();
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
