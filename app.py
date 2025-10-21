@@ -13,6 +13,7 @@ from telegram import Bot
 import threading
 import requests
 import secrets
+from sqlalchemy import text  # ADD THIS IMPORT
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'referral-ninja-secret-key-2025'
@@ -23,6 +24,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
 app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 
 # Telegram Configuration - REPLACE WITH YOUR ACTUAL CREDENTIALS
 TELEGRAM_BOT_TOKEN = '7870070553:AAGjMBMB2oDhmA7bxrm0ibzNya_D3hTM2Ec'  # Replace with your actual token
@@ -45,10 +47,10 @@ def utility_processor():
         'len': len
     }
 
-# FIX: Add context processor for 'now' function
+# FIXED: Context processor for 'now' function - UPDATED to use timezone-aware datetime
 @app.context_processor
 def inject_now():
-    return {'now': datetime.utcnow}
+    return {'now': datetime.now(timezone.utc)}
 
 # Database Models
 class User(UserMixin, db.Model):
@@ -130,9 +132,24 @@ class Transaction(db.Model):
     
     user = db.relationship('User', backref='transactions')
 
+# FIXED: Enhanced user loader with error handling
 @login_manager.user_loader
 def load_user(user_id):
-    return db.session.get(User, int(user_id))
+    try:
+        return db.session.get(User, int(user_id))
+    except Exception as e:
+        print(f"Error loading user {user_id}: {e}")
+        return None
+
+# FIXED: Database connection health check with text() wrapper
+@app.before_request
+def before_request():
+    try:
+        # Test database connection with text() wrapper
+        db.session.execute(text('SELECT 1'))
+    except Exception as e:
+        print(f"Database connection error: {e}")
+        db.session.rollback()
 
 # Telegram Functions
 async def send_telegram_message_async(message):
@@ -293,13 +310,9 @@ def generate_reset_token():
     """Generate a secure random token for password reset"""
     return secrets.token_urlsafe(32)
 
-def send_password_reset_email(user, token):
+def send_password_reset_email(user, reset_url):
     """Send password reset email to user"""
     try:
-        reset_url = f"{request.host_url}reset-password/{token}"
-        
-        # In production, you would send an actual email
-        # For now, we'll print it to console and send Telegram notification
         print(f"Password reset for {user.email}: {reset_url}")
         
         # Send Telegram notification
@@ -430,6 +443,7 @@ def get_user_ranking(user_id):
             }
     return None
 
+# FIXED: Login route with enhanced error handling and debugging
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
@@ -440,21 +454,36 @@ def login():
         password = request.form.get('password')
         remember_me = bool(request.form.get('remember_me'))
         
+        print(f"Login attempt for username: {username}")  # Debug
+        
+        # Input validation
+        if not username or not password:
+            flash('Please enter both username and password.', 'error')
+            return render_template('auth/login.html')
+        
+        # Find user by username
         user = User.query.filter_by(username=username).first()
         
-        if user and user.check_password(password):
-            if not user.is_verified:
-                flash('Please complete your payment verification before logging in.', 'warning')
-                # Use session instead of URL parameter for security
-                session['pending_verification_user'] = user.id
-                return redirect(url_for('payment_instructions'))
-            
-            login_user(user, remember=remember_me)
-            next_page = request.args.get('next')
-            
-            flash('Login successful!', 'success')
-            return redirect(next_page) if next_page else redirect(url_for('dashboard'))
+        if user:
+            print(f"User found: {user.username}, is_verified: {user.is_verified}")  # Debug
+            if user.check_password(password):
+                if not user.is_verified:
+                    flash('Please complete your payment verification before logging in.', 'warning')
+                    # Store user ID in session for payment flow
+                    session['pending_verification_user'] = user.id
+                    return redirect(url_for('payment_instructions'))
+                
+                # Login successful
+                login_user(user, remember=remember_me)
+                next_page = request.args.get('next')
+                
+                flash('Login successful!', 'success')
+                return redirect(next_page) if next_page else redirect(url_for('dashboard'))
+            else:
+                print("Password incorrect")  # Debug
+                flash('Invalid username or password.', 'error')
         else:
+            print("User not found")  # Debug
             flash('Invalid username or password.', 'error')
     
     return render_template('auth/login.html')
@@ -553,14 +582,14 @@ def logout():
     flash('You have been logged out successfully.', 'success')
     return redirect(url_for('login'))
 
-# Password Reset Routes
+# UPDATED: Password Reset Routes with proper URL generation
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
     
     if request.method == 'POST':
-        email = request.form.get('email', '').strip()
+        email = request.form.get('email', '').strip().lower()
         
         if not email:
             flash('Please enter your email address.', 'error')
@@ -577,14 +606,18 @@ def forgot_password():
             try:
                 db.session.commit()
                 
-                # Send reset email (in production, use actual email service)
-                send_password_reset_email(user, reset_token)
+                # Generate reset URL
+                reset_url = url_for('reset_password', token=reset_token, _external=True)
+                
+                # Send reset notification
+                send_password_reset_email(user, reset_url)
                 
                 flash('Password reset instructions have been sent to your email.', 'success')
                 return redirect(url_for('login'))
                 
             except Exception as e:
                 db.session.rollback()
+                print(f"Error in forgot_password: {str(e)}")
                 flash('Error generating reset token. Please try again.', 'error')
                 return render_template('auth/forgot_password.html')
         else:
@@ -638,6 +671,7 @@ def reset_password(token):
             
         except Exception as e:
             db.session.rollback()
+            print(f"Error in reset_password: {str(e)}")
             flash('Error resetting password. Please try again.', 'error')
             return render_template('auth/reset_password.html', token=token)
     
@@ -1027,66 +1061,74 @@ def admin_dashboard():
         flash('Access denied. Admin privileges required.', 'error')
         return redirect(url_for('dashboard'))
     
-    # Admin statistics
-    total_users = User.query.count()
-    total_verified = User.query.filter_by(is_verified=True).count()
-    total_referrals = Referral.query.count()
-    total_commission = db.session.query(db.func.sum(User.total_commission)).scalar() or 0
+    print(f"Admin access attempt by: {current_user.username}, is_admin: {current_user.is_admin}")
     
-    # Calculate total withdrawn amount
-    total_withdrawn_amount = db.session.query(db.func.sum(User.total_withdrawn)).scalar() or 0
-    
-    # Calculate total balance across all users
-    total_balance = db.session.query(db.func.sum(User.balance)).scalar() or 0
-    
-    # Pending withdrawals
-    pending_withdrawals = Transaction.query.filter_by(
-        transaction_type='withdrawal', 
-        status='pending'
-    ).count()
-    
-    # Pending registration payments
-    pending_payments = Transaction.query.filter_by(
-        transaction_type='registration_fee', 
-        status='pending'
-    ).count()
-    
-    # Get recent users for leaderboard
-    recent_users = User.query.filter(User.is_verified == True)\
-        .order_by(User.created_at.desc())\
-        .limit(10)\
-        .all()
-    
-    # Get pending payment transactions with user information
-    pending_transactions = db.session.query(Transaction, User)\
-        .join(User, Transaction.user_id == User.id)\
-        .filter(Transaction.transaction_type == 'registration_fee', 
-                Transaction.status == 'pending')\
-        .order_by(Transaction.created_at.desc())\
-        .all()
-    
-    # Get recent activity for admin dashboard
-    recent_activity = Transaction.query\
-        .order_by(Transaction.created_at.desc())\
-        .limit(10)\
-        .all()
-    
-    # FIX: Pass current_time to template to avoid 'now' function issues
-    current_time = datetime.utcnow()
-    
-    return render_template('admin_dashboard.html',
-                         total_users=total_users,
-                         total_verified=total_verified,
-                         total_referrals=total_referrals,
-                         total_commission=total_commission,
-                         total_withdrawn_amount=total_withdrawn_amount,
-                         total_balance=total_balance,
-                         pending_withdrawals=pending_withdrawals,
-                         pending_payments=pending_payments,
-                         recent_users=recent_users,
-                         pending_transactions=pending_transactions,
-                         recent_activity=recent_activity,
-                         current_time=current_time)  # Pass current_time to template
+    try:
+        # Admin statistics
+        total_users = User.query.count()
+        total_verified = User.query.filter_by(is_verified=True).count()
+        total_referrals = Referral.query.count()
+        total_commission = db.session.query(db.func.sum(User.total_commission)).scalar() or 0
+        
+        # Calculate total withdrawn amount
+        total_withdrawn_amount = db.session.query(db.func.sum(User.total_withdrawn)).scalar() or 0
+        
+        # Calculate total balance across all users
+        total_balance = db.session.query(db.func.sum(User.balance)).scalar() or 0
+        
+        # Pending withdrawals
+        pending_withdrawals = Transaction.query.filter_by(
+            transaction_type='withdrawal', 
+            status='pending'
+        ).count()
+        
+        # Pending registration payments
+        pending_payments = Transaction.query.filter_by(
+            transaction_type='registration_fee', 
+            status='pending'
+        ).count()
+        
+        # Get recent users for leaderboard
+        recent_users = User.query.filter(User.is_verified == True)\
+            .order_by(User.created_at.desc())\
+            .limit(10)\
+            .all()
+        
+        # Get pending payment transactions with user information
+        pending_transactions = db.session.query(Transaction, User)\
+            .join(User, Transaction.user_id == User.id)\
+            .filter(Transaction.transaction_type == 'registration_fee', 
+                    Transaction.status == 'pending')\
+            .order_by(Transaction.created_at.desc())\
+            .all()
+        
+        # Get recent activity for admin dashboard
+        recent_activity = Transaction.query\
+            .order_by(Transaction.created_at.desc())\
+            .limit(10)\
+            .all()
+        
+        # FIXED: Use timezone-aware datetime
+        current_time = datetime.now(timezone.utc)
+        
+        return render_template('admin_dashboard.html',
+                             total_users=total_users,
+                             total_verified=total_verified,
+                             total_referrals=total_referrals,
+                             total_commission=total_commission,
+                             total_withdrawn_amount=total_withdrawn_amount,
+                             total_balance=total_balance,
+                             pending_withdrawals=pending_withdrawals,
+                             pending_payments=pending_payments,
+                             recent_users=recent_users,
+                             pending_transactions=pending_transactions,
+                             recent_activity=recent_activity,
+                             current_time=current_time)  # Pass current_time to template
+                             
+    except Exception as e:
+        print(f"Error in admin_dashboard: {str(e)}")
+        flash('Error accessing admin dashboard.', 'error')
+        return redirect(url_for('dashboard'))
 
 @app.route('/admin/approve-payment/<int:transaction_id>', methods=['POST'])
 @login_required
@@ -1331,7 +1373,26 @@ def api_user_ranking():
     ranking = get_user_ranking(current_user.id)
     return jsonify(ranking or {})
 
-# SIMPLIFIED ERROR HANDLERS - REMOVE TEMPLATE DEPENDENCIES
+# Debug route for testing
+@app.route('/debug')
+def debug_route():
+    """Debug route to check database and user status"""
+    try:
+        # Test database
+        user_count = User.query.count()
+        return jsonify({
+            'database_status': 'connected',
+            'user_count': user_count,
+            'current_user': current_user.is_authenticated,
+            'session_keys': list(session.keys())
+        })
+    except Exception as e:
+        return jsonify({
+            'database_status': 'error',
+            'error': str(e)
+        })
+
+# Enhanced error handlers
 @app.errorhandler(404)
 def not_found_error(error):
     return "Page not found", 404
@@ -1339,39 +1400,55 @@ def not_found_error(error):
 @app.errorhandler(500)
 def internal_error(error):
     db.session.rollback()
+    print(f"Internal Server Error: {error}")  # Debug print
     return "Internal server error", 500
+
+@app.errorhandler(Exception)
+def handle_exception(error):
+    db.session.rollback()
+    print(f"Unhandled Exception: {error}")  # Debug print
+    return "An internal error occurred", 500
 
 # Favicon route to prevent 404 errors
 @app.route('/favicon.ico')
 def favicon():
     return '', 204
 
-# Initialize database
+# Initialize database with error handling
 def init_db():
-    with app.app_context():
-        db.create_all()
-        
-        # Create admin user if none exists
-        if User.query.filter_by(is_admin=True).first() is None:
-            admin = User(
-                username='admin',
-                email='admin@referralninja.com',
-                phone_number='254799326074',
-                is_admin=True,
-                is_verified=True,
-                is_active=True
-            )
-            admin.set_password('admin123')
-            admin.generate_phone_linked_referral_code()
-            db.session.add(admin)
-            db.session.commit()
-            print("Admin user created successfully!")
+    try:
+        with app.app_context():
+            db.create_all()
+            
+            # Create admin user if none exists
+            if User.query.filter_by(is_admin=True).first() is None:
+                admin = User(
+                    username='admin',
+                    email='admin@referralninja.com',
+                    phone_number='254799326074',
+                    is_admin=True,
+                    is_verified=True,
+                    is_active=True
+                )
+                admin.set_password('admin123')
+                admin.generate_phone_linked_referral_code()
+                db.session.add(admin)
+                db.session.commit()
+                print("Admin user created successfully!")
+            else:
+                print("Admin user already exists: admin")
+    except Exception as e:
+        print(f"Database initialization error: {e}")
 
 if __name__ == '__main__':
-    init_db()
-    app.run(
-        debug=True, 
-        host='0.0.0.0', 
-        port=5000,
-        threaded=True  # Handle multiple connections
-    )
+    try:
+        init_db()
+        print("Starting Flask application...")
+        app.run(
+            debug=True, 
+            host='0.0.0.0', 
+            port=5000,
+            threaded=True  # Handle multiple connections
+        )
+    except Exception as e:
+        print(f"Failed to start application: {e}")
