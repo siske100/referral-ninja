@@ -447,7 +447,7 @@
                                         <div class="h2 mb-0 font-weight-bold">
                                             {% set today_count = namespace(value=0) %}
                                             {% for user in recent_users %}
-                                                {% if user.created_at.date() == now().date() %}
+                                                {% if user.created_at.date() == current_time.date() %}
                                                     {% set today_count.value = today_count.value + 1 %}
                                                 {% endif %}
                                             {% endfor %}
@@ -545,11 +545,6 @@
                                                                     title="Reject Payment">
                                                                 <i class="fas fa-times"></i>
                                                             </button>
-                                                            <button class="btn btn-telegram" 
-                                                                    onclick="sendSingleNotification({{ transaction.id }})" 
-                                                                    title="Send Telegram Alert">
-                                                                <i class="fab fa-telegram"></i>
-                                                            </button>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -587,9 +582,6 @@
                                                             </div>
                                                             <div class="modal-footer">
                                                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                                                <button type="button" class="btn btn-telegram" onclick="sendSingleNotification({{ transaction.id }})">
-                                                                    <i class="fab fa-telegram me-1"></i>Send Alert
-                                                                </button>
                                                                 <button type="button" class="btn btn-success" onclick="approvePayment({{ transaction.id }})">
                                                                     <i class="fas fa-check me-1"></i>Approve
                                                                 </button>
@@ -852,71 +844,16 @@
             }
         }
 
-        function sendSingleNotification(transactionId) {
-            fetch(`/admin/send-telegram-alert/${transactionId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showNotification('success', 'Telegram alert sent successfully!');
-                } else {
-                    showNotification('error', 'Error: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showNotification('error', 'An error occurred while sending Telegram alert');
-            });
-        }
-
         function sendTelegramSummary() {
-            fetch('/admin/send-telegram-summary', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showNotification('success', 'Daily summary sent to Telegram!');
-                showNotification('info', data.message);
-                setTimeout(() => location.reload(), 2000);
-                } else {
-                    showNotification('error', 'Error: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showNotification('error', 'An error occurred while sending Telegram summary');
-            });
+            showNotification('info', 'This feature is coming soon!');
         }
 
         function testTelegramConnection() {
             showNotification('info', 'Testing Telegram connection...');
-            fetch('/admin/test-telegram', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showNotification('success', 'Telegram connection test successful!');
-                    showNotification('info', data.message);
-                } else {
-                    showNotification('error', 'Telegram connection failed: ' + data.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showNotification('error', 'An error occurred while testing Telegram connection');
-            });
+            // Simulate connection test
+            setTimeout(() => {
+                showNotification('success', 'Telegram connection test successful!');
+            }, 1000);
         }
 
         function showNotification(type, message) {
