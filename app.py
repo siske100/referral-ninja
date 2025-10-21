@@ -27,7 +27,6 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 TELEGRAM_BOT_TOKEN = '7870070553:AAGjMBMB2oDhmA7bxrm0ibzNya_D3hTM2Ec'  # Replace with your actual token
 TELEGRAM_CHAT_ID = '7716238167'
 
-
 # Initialize extensions
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
@@ -72,6 +71,9 @@ class User(UserMixin, db.Model):
     # Ranking system fields
     user_rank = db.Column(db.String(20), default='Bronze')
     total_commission = db.Column(db.Float, default=0.0)
+    
+    # Referral source tracking
+    referral_source = db.Column(db.String(20), default='direct')  # 'direct', 'referral_link', 'manual_entry'
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -198,7 +200,7 @@ def send_registration_notification_to_telegram(user, referral_code=None):
 • Username: {user.username}
 • Email: {user.email} 
 • Phone: {user.phone_number}
-• Referral Code: {user.referral_code}
+• User Referral Code: {user.referral_code}
 
 🕒 <b>Registration Time:</b>
 {user.created_at.strftime('%Y-%m-%d %H:%M:%S')}
@@ -207,9 +209,15 @@ def send_registration_notification_to_telegram(user, referral_code=None):
         if referral_code:
             referrer = User.query.filter_by(referral_code=referral_code).first()
             if referrer:
-                message += f"\n🔗 <b>Referred by:</b> {referral_code} (User: {referrer.username})"
+                message += f"\n🔗 <b>Referred by:</b> {referral_code} (User: {referrer.username} - ID: {referrer.id})"
+                message += f"\n💰 <b>Referral Status:</b> ✅ Valid - Commission will be awarded after payment"
+            else:
+                message += f"\n⚠️ <b>Referral Code:</b> {referral_code} (Invalid - No referrer found)"
+        else:
+            message += "\n📝 <b>Referral:</b> No referral code used"
         
-        message += "\n\n⚠️ <i>Waiting for payment verification.</i>"
+        message += f"\n📊 <b>Referral Source:</b> {user.referral_source}"
+        message += "\n\n💳 <i>Waiting for payment verification.</i>"
         
         # Send notification in background thread
         thread = threading.Thread(target=send_telegram_notification, args=(message,))
@@ -274,6 +282,21 @@ def send_admin_action_notification(action, user, transaction, admin_user):
     except Exception as e:
         print(f"Error sending admin action notification to Telegram: {str(e)}")
         return False
+
+# Helper Functions
+def validate_referral_code(code):
+    """Validate if a referral code exists and belongs to a verified user"""
+    if not code:
+        return None
+    
+    referrer = User.query.filter_by(referral_code=code).first()
+    if not referrer:
+        return None
+    
+    if not referrer.is_verified:
+        return None
+    
+    return referrer
 
 # Routes
 @app.route('/')
@@ -367,6 +390,9 @@ def register():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
     
+    # Get referral code from URL parameter or form
+    referral_code = request.args.get('ref', '')
+    
     if request.method == 'POST':
         username = request.form.get('username')
         email = request.form.get('email')
@@ -377,7 +403,7 @@ def register():
         # Validate phone number format (Kenyan)
         if not re.match(r'^254[0-9]{9}$', phone_number) and not re.match(r'^07[0-9]{8}$', phone_number):
             flash('Please enter a valid Kenyan phone number.', 'error')
-            return render_template('auth/register.html')
+            return render_template('auth/register.html', referral_code=referral_code)
         
         # Convert phone number to standard format (254...)
         if phone_number.startswith('07'):
@@ -386,16 +412,24 @@ def register():
         # Check if phone number already exists
         if User.query.filter_by(phone_number=phone_number).first():
             flash('Phone number already registered.', 'error')
-            return render_template('auth/register.html')
+            return render_template('auth/register.html', referral_code=referral_code)
         
         # Validate input
         if User.query.filter_by(username=username).first():
             flash('Username already exists.', 'error')
-            return render_template('auth/register.html')
+            return render_template('auth/register.html', referral_code=referral_code)
         
         if User.query.filter_by(email=email).first():
             flash('Email already registered.', 'error')
-            return render_template('auth/register.html')
+            return render_template('auth/register.html', referral_code=referral_code)
+        
+        # Validate referral code if provided
+        referrer = None
+        if referral_code:
+            referrer = validate_referral_code(referral_code)
+            if not referrer:
+                flash('Invalid referral code. Please check and try again.', 'error')
+                return render_template('auth/register.html', referral_code=referral_code)
         
         # Create new user (unverified until payment)
         user = User(
@@ -407,12 +441,18 @@ def register():
         user.set_password(password)
         user.generate_phone_linked_referral_code()
         
-        # Handle referral
-        referrer = None
+        # Handle referral - only set if referrer exists and is valid
+        if referrer:
+            user.referred_by = referral_code
+        
+        # Track referral source
         if referral_code:
-            referrer = User.query.filter_by(referral_code=referral_code).first()
-            if referrer:
-                user.referred_by = referral_code
+            if request.args.get('ref'):  # Came from referral link
+                user.referral_source = 'referral_link'
+            else:  # Manually entered
+                user.referral_source = 'manual_entry'
+        else:
+            user.referral_source = 'direct'
         
         try:
             db.session.add(user)
@@ -428,10 +468,8 @@ def register():
         except Exception as e:
             db.session.rollback()
             flash(f'Error during registration: {str(e)}', 'error')
-            return render_template('auth/register.html')
+            return render_template('auth/register.html', referral_code=referral_code)
     
-    # Get referral code from URL parameter
-    referral_code = request.args.get('ref', '')
     return render_template('auth/register.html', referral_code=referral_code)
 
 @app.route('/logout')
@@ -466,7 +504,17 @@ def payment_instructions():
         session.pop('pending_verification_user', None)
         return redirect(url_for('login'))
     
-    return render_template('payment_instructions.html', user=user)
+    # Get referrer information if applicable
+    referrer_info = None
+    if user.referred_by:
+        referrer = User.query.filter_by(referral_code=user.referred_by).first()
+        if referrer:
+            referrer_info = {
+                'username': referrer.username,
+                'referral_code': referrer.referral_code
+            }
+    
+    return render_template('payment_instructions.html', user=user, referrer_info=referrer_info)
 
 @app.route('/submit-mpesa-message', methods=['POST'])
 def submit_mpesa_message():
