@@ -12,6 +12,7 @@ import asyncio
 from telegram import Bot
 import threading
 import requests
+import secrets
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'referral-ninja-secret-key-2025'
@@ -74,6 +75,10 @@ class User(UserMixin, db.Model):
     
     # Referral source tracking
     referral_source = db.Column(db.String(20), default='direct')  # 'direct', 'referral_link', 'manual_entry'
+    
+    # Password reset fields
+    reset_token = db.Column(db.String(100), unique=True)
+    reset_token_expires = db.Column(db.DateTime)
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -283,6 +288,75 @@ def send_admin_action_notification(action, user, transaction, admin_user):
         print(f"Error sending admin action notification to Telegram: {str(e)}")
         return False
 
+# Password Reset Functions
+def generate_reset_token():
+    """Generate a secure random token for password reset"""
+    return secrets.token_urlsafe(32)
+
+def send_password_reset_email(user, token):
+    """Send password reset email to user"""
+    try:
+        reset_url = f"{request.host_url}reset-password/{token}"
+        
+        # In production, you would send an actual email
+        # For now, we'll print it to console and send Telegram notification
+        print(f"Password reset for {user.email}: {reset_url}")
+        
+        # Send Telegram notification
+        message = f"""
+🔐 <b>Password Reset Request</b>
+
+👤 <b>User Details:</b>
+• Username: {user.username}
+• Email: {user.email}
+• User ID: #{user.id}
+
+🔄 <b>Reset Link:</b>
+<code>{reset_url}</code>
+
+🕒 <b>Request Time:</b>
+{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}
+
+⚠️ <i>This link will expire in 1 hour.</i>
+"""
+        
+        thread = threading.Thread(target=send_telegram_notification, args=(message,))
+        thread.daemon = True
+        thread.start()
+        
+        return True
+    except Exception as e:
+        print(f"Error sending password reset email: {str(e)}")
+        return False
+
+def send_password_reset_confirmation(user):
+    """Send confirmation that password was reset"""
+    try:
+        message = f"""
+✅ <b>Password Reset Successful</b>
+
+👤 <b>User Details:</b>
+• Username: {user.username}
+• Email: {user.email}
+• User ID: #{user.id}
+
+🕒 <b>Reset Time:</b>
+{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}
+
+📍 <b>Location:</b> {request.remote_addr}
+
+🔒 <i>If you did not perform this action, please contact support immediately.</i>
+"""
+        
+        thread = threading.Thread(target=send_telegram_notification, args=(message,))
+        thread.daemon = True
+        thread.start()
+        
+        return True
+    except Exception as e:
+        print(f"Error sending password reset confirmation: {str(e)}")
+        return False
+
 # Helper Functions
 def validate_referral_code(code):
     """Validate if a referral code exists and belongs to a verified user"""
@@ -478,6 +552,96 @@ def logout():
     logout_user()
     flash('You have been logged out successfully.', 'success')
     return redirect(url_for('login'))
+
+# Password Reset Routes
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip()
+        
+        if not email:
+            flash('Please enter your email address.', 'error')
+            return render_template('auth/forgot_password.html')
+        
+        user = User.query.filter_by(email=email).first()
+        
+        if user:
+            # Generate reset token
+            reset_token = generate_reset_token()
+            user.reset_token = reset_token
+            user.reset_token_expires = datetime.now(timezone.utc) + timedelta(hours=1)
+            
+            try:
+                db.session.commit()
+                
+                # Send reset email (in production, use actual email service)
+                send_password_reset_email(user, reset_token)
+                
+                flash('Password reset instructions have been sent to your email.', 'success')
+                return redirect(url_for('login'))
+                
+            except Exception as e:
+                db.session.rollback()
+                flash('Error generating reset token. Please try again.', 'error')
+                return render_template('auth/forgot_password.html')
+        else:
+            # Don't reveal whether email exists for security
+            flash('If an account with that email exists, reset instructions have been sent.', 'success')
+            return redirect(url_for('login'))
+    
+    return render_template('auth/forgot_password.html')
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    
+    # Validate token
+    user = User.query.filter_by(reset_token=token).first()
+    
+    if not user or not user.reset_token_expires or user.reset_token_expires < datetime.now(timezone.utc):
+        flash('Invalid or expired reset token.', 'error')
+        return redirect(url_for('forgot_password'))
+    
+    if request.method == 'POST':
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+        
+        if not password or not confirm_password:
+            flash('Please fill in all fields.', 'error')
+            return render_template('auth/reset_password.html', token=token)
+        
+        if password != confirm_password:
+            flash('Passwords do not match.', 'error')
+            return render_template('auth/reset_password.html', token=token)
+        
+        if len(password) < 6:
+            flash('Password must be at least 6 characters long.', 'error')
+            return render_template('auth/reset_password.html', token=token)
+        
+        # Update password
+        user.set_password(password)
+        user.reset_token = None
+        user.reset_token_expires = None
+        
+        try:
+            db.session.commit()
+            
+            # Send confirmation notification
+            send_password_reset_confirmation(user)
+            
+            flash('Your password has been reset successfully! You can now login with your new password.', 'success')
+            return redirect(url_for('login'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash('Error resetting password. Please try again.', 'error')
+            return render_template('auth/reset_password.html', token=token)
+    
+    return render_template('auth/reset_password.html', token=token)
 
 @app.route('/payment-instructions')
 def payment_instructions():
