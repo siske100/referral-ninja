@@ -26,10 +26,16 @@
             --gold: #ffd700;
             --platinum: #e5e4e2;
             --diamond: #b9f2ff;
+            --info: #3498db;
         }
 
         * {
             font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: var(--light-bg);
+            overflow-x: hidden;
         }
 
         .app-container {
@@ -41,36 +47,99 @@
         .main-content {
             flex: 1;
             margin-left: 0;
-            transition: margin-left 0.3s ease;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .main-content.sidebar-expanded {
+            margin-left: 280px;
         }
 
         .header {
-            background: white;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
             border-bottom: 1px solid var(--border-light);
             padding: 1rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
         }
 
         .menu-toggle {
-            background: none;
+            background: var(--primary-red);
             border: none;
             font-size: 1.2rem;
             cursor: pointer;
-            color: var(--text-dark);
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
+            color: white;
+            width: 45px;
+            height: 45px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
             transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
         }
 
         .menu-toggle:hover {
-            background: var(--light-bg);
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(231, 76, 60, 0.4);
+        }
+
+        .header-title {
+            font-weight: 700;
+            color: var(--text-dark);
+            font-size: 1.5rem;
+            background: linear-gradient(135deg, var(--primary-red), var(--accent-orange));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .rank-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .rank-bronze {
+            background: linear-gradient(135deg, var(--bronze), #b5651d);
+            color: white;
+        }
+
+        .rank-silver {
+            background: linear-gradient(135deg, var(--silver), #a8a8a8);
+            color: #2c3e50;
+        }
+
+        .rank-gold {
+            background: linear-gradient(135deg, var(--gold), #ffc400);
+            color: #2c3e50;
+        }
+
+        .rank-platinum {
+            background: linear-gradient(135deg, var(--platinum), #d4d4d4);
+            color: #2c3e50;
+        }
+
+        .rank-diamond {
+            background: linear-gradient(135deg, var(--diamond), #87ceeb);
+            color: #2c3e50;
         }
 
         .content {
@@ -79,32 +148,77 @@
             min-height: calc(100vh - 80px);
         }
 
+        /* Enhanced Flash Messages */
         .flash-message {
-            padding: 1rem 1.5rem;
+            padding: 1.25rem 1.5rem;
             margin-bottom: 1.5rem;
-            border-radius: 8px;
+            border-radius: 12px;
             font-weight: 500;
             display: flex;
             align-items: center;
             border: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .flash-message:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
         }
 
         .flash-message.success {
-            background: #d4edda;
+            background: linear-gradient(135deg, #d4edda, #c3e6cb);
             color: #155724;
             border-left: 4px solid var(--success);
         }
 
         .flash-message.error {
-            background: #f8d7da;
+            background: linear-gradient(135deg, #f8d7da, #f1b0b7);
             color: #721c24;
             border-left: 4px solid var(--danger);
         }
 
         .flash-message.warning {
-            background: #fff3cd;
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
             color: #856404;
             border-left: 4px solid var(--warning);
+        }
+
+        .flash-message.info {
+            background: linear-gradient(135deg, #d1ecf1, #b8e6f1);
+            color: #0c5460;
+            border-left: 4px solid var(--info);
+        }
+
+        .flash-icon {
+            font-size: 1.2rem;
+            margin-right: 0.75rem;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .main-content.sidebar-expanded {
+                margin-left: 0;
+            }
+
+            .header {
+                padding: 1rem;
+            }
+
+            .content {
+                padding: 1rem;
+            }
+
+            .header-title {
+                font-size: 1.25rem;
+            }
+
+            .menu-toggle {
+                width: 40px;
+                height: 40px;
+                font-size: 1rem;
+            }
         }
 
         @media (min-width: 769px) {
@@ -113,22 +227,69 @@
             }
         }
 
-        /* Custom scrollbar */
+        /* Enhanced Scrollbar */
         ::-webkit-scrollbar {
-            width: 6px;
+            width: 8px;
         }
 
         ::-webkit-scrollbar-track {
             background: #f1f1f1;
+            border-radius: 10px;
         }
 
         ::-webkit-scrollbar-thumb {
-            background: var(--primary-red);
-            border-radius: 3px;
+            background: linear-gradient(135deg, var(--primary-red), var(--primary-dark));
+            border-radius: 10px;
         }
 
         ::-webkit-scrollbar-thumb:hover {
-            background: var(--primary-dark);
+            background: linear-gradient(135deg, var(--primary-dark), #a2352a);
+        }
+
+        /* Loading Animation */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary-red);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Card Enhancements */
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            border-left: 4px solid var(--primary-red);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        }
+
+        /* Button Enhancements */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-red), var(--primary-dark));
+            border: none;
+            border-radius: 10px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
         }
     </style>
     {% block styles %}{% endblock %}
@@ -142,10 +303,13 @@
                 <button class="menu-toggle" id="menuToggle">
                     <i class="fas fa-bars"></i>
                 </button>
-                <h1 class="h3 mb-0">{% block header %}Referral Ninja{% endblock %}</h1>
+                <h1 class="header-title">{% block header %}Referral Ninja{% endblock %}</h1>
                 <div class="user-info">
                     {% if current_user.is_authenticated %}
-                    <span class="badge bg-primary">{{ current_user.user_rank }}</span>
+                    <span class="rank-badge rank-{{ current_user.user_rank|lower }}">
+                        <i class="fas fa-{% if current_user.user_rank == 'Bronze' %}award{% elif current_user.user_rank == 'Silver' %}star{% elif current_user.user_rank == 'Gold' %}crown{% elif current_user.user_rank == 'Platinum' %}gem{% else %}diamond{% endif %} me-1"></i>
+                        {{ current_user.user_rank }}
+                    </span>
                     {% endif %}
                 </div>
             </header>
@@ -154,10 +318,10 @@
                 {% with messages = get_flashed_messages(with_categories=true) %}
                     {% if messages %}
                         {% for category, message in messages %}
-                            <div class="flash-message {{ category }}">
-                                <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'error' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
-                                {{ message }}
-                                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+                            <div class="flash-message {{ category }}" role="alert">
+                                <i class="flash-icon fas fa-{% if category == 'success' %}check-circle{% elif category == 'error' %}exclamation-triangle{% elif category == 'warning' %}exclamation-circle{% else %}info-circle{% endif %}"></i>
+                                <span>{{ message }}</span>
+                                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
                             </div>
                         {% endfor %}
                     {% endif %}
@@ -169,16 +333,21 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{{ url_for('static', filename='js/referral-ninja.js') }}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const menuToggle = document.getElementById('menuToggle');
             const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
             const sidebarOverlay = document.getElementById('sidebarOverlay');
 
             function toggleSidebar() {
-                if (sidebar) sidebar.classList.toggle('active');
-                if (sidebarOverlay) sidebarOverlay.classList.toggle('active');
+                if (sidebar) {
+                    sidebar.classList.toggle('active');
+                    mainContent.classList.toggle('sidebar-expanded');
+                }
+                if (sidebarOverlay) {
+                    sidebarOverlay.classList.toggle('active');
+                }
             }
 
             if (menuToggle) {
@@ -188,8 +357,76 @@
             if (sidebarOverlay) {
                 sidebarOverlay.addEventListener('click', toggleSidebar);
             }
+
+            // Auto-dismiss flash messages after 5 seconds
+            const flashMessages = document.querySelectorAll('.flash-message');
+            flashMessages.forEach(message => {
+                setTimeout(() => {
+                    const closeButton = message.querySelector('.btn-close');
+                    if (closeButton) {
+                        closeButton.click();
+                    }
+                }, 5000);
+            });
+
+            // Add loading state to buttons with loading class
+            const loadingButtons = document.querySelectorAll('.btn-loading');
+            loadingButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const originalText = this.innerHTML;
+                    this.innerHTML = '<span class="loading-spinner"></span> Loading...';
+                    this.disabled = true;
+                    
+                    // Revert after 3 seconds if still loading
+                    setTimeout(() => {
+                        this.innerHTML = originalText;
+                        this.disabled = false;
+                    }, 3000);
+                });
+            });
+
+            // Smooth scrolling for anchor links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
         });
+
+        // Utility function for AJAX requests
+        function makeRequest(url, options = {}) {
+            const defaultOptions = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            };
+
+            const mergedOptions = { ...defaultOptions, ...options };
+            
+            return fetch(url, mergedOptions)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                });
+        }
+
+        // Utility function to show toast notifications
+        function showToast(message, type = 'info') {
+            // Implementation for toast notifications
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
     </script>
+    
     {% block scripts %}{% endblock %}
 </body>
 </html>
