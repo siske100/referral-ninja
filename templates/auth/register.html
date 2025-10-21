@@ -88,15 +88,38 @@
                 </div>
                 
                 <div class="col-12 mb-4">
-                    <label for="referral_code" class="form-label fw-semibold">Referral Code (Optional)</label>
+                    <label for="referral_code" class="form-label fw-semibold">
+                        Referral Code 
+                        {% if referral_code %}
+                        <span class="badge bg-success ms-1">Pre-filled</span>
+                        {% else %}
+                        <span class="text-muted">(Optional)</span>
+                        {% endif %}
+                    </label>
                     <div class="input-group">
                         <span class="input-group-text bg-light border-end-0">
                             <i class="fas fa-user-friends text-danger"></i>
                         </span>
-                        <input type="text" class="form-control border-start-0" id="referral_code" name="referral_code" 
-                               placeholder="Enter friend's referral code" value="{{ request.form.referral_code if request.form }}">
+                        <input type="text" 
+                               class="form-control border-start-0 {% if referral_code %}bg-light{% endif %}" 
+                               id="referral_code" 
+                               name="referral_code" 
+                               placeholder="{% if referral_code %}Referral code pre-filled{% else %}Enter friend's referral code{% endif %}" 
+                               value="{{ referral_code if referral_code else (request.form.referral_code if request.form.referral_code else '') }}"
+                               {% if referral_code %}readonly{% endif %}>
+                        {% if referral_code %}
+                        <span class="input-group-text bg-success text-white">
+                            <i class="fas fa-lock"></i>
+                        </span>
+                        {% endif %}
                     </div>
-                    <div class="form-text">Get KSH 50 bonus when you join with a referral code</div>
+                    <div class="form-text">
+                        {% if referral_code %}
+                        <i class="fas fa-info-circle text-success me-1"></i>Referral code pre-filled and locked
+                        {% else %}
+                        Get KSH 50 bonus when you join with a referral code
+                        {% endif %}
+                    </div>
                 </div>
             </div>
             
@@ -184,6 +207,24 @@
                 }
                 e.target.value = value;
             });
+        }
+
+        // Check URL for referral code parameter and auto-fill if present
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            const results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+
+        // Auto-fill referral code from URL parameter if not already set
+        const urlReferralCode = getUrlParameter('ref');
+        const currentReferralCode = document.getElementById('referral_code').value;
+        
+        if (urlReferralCode && !currentReferralCode) {
+            document.getElementById('referral_code').value = urlReferralCode;
+            // Optionally, you can also make it readonly when filled from URL
+            // document.getElementById('referral_code').readOnly = true;
         }
     });
 </script>
