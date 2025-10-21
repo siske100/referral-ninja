@@ -946,7 +946,49 @@ def settings():
     
     return render_template('settings.html')
 
-# FIXED: Admin Dashboard Route
+# NEW: Debug Admin Route
+@app.route('/debug-admin')
+@login_required
+def debug_admin():
+    if not current_user.is_admin:
+        return "Not admin"
+    
+    try:
+        # Test each database query individually
+        print("Testing User.query.count()...")
+        total_users = User.query.count()
+        print(f"Total users: {total_users}")
+        
+        print("Testing User.query.filter_by(is_verified=True).count()...")
+        total_verified = User.query.filter_by(is_verified=True).count()
+        print(f"Total verified: {total_verified}")
+        
+        print("Testing Referral.query.count()...")
+        total_referrals = Referral.query.count()
+        print(f"Total referrals: {total_referrals}")
+        
+        print("Testing commission sum...")
+        total_commission = db.session.query(db.func.sum(User.total_commission)).scalar() or 0
+        print(f"Total commission: {total_commission}")
+        
+        return jsonify({
+            'status': 'success',
+            'total_users': total_users,
+            'total_verified': total_verified,
+            'total_referrals': total_referrals,
+            'total_commission': total_commission
+        })
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Debug error: {error_details}")
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'traceback': error_details
+        })
+
+# UPDATED: Admin Dashboard Route with Better Error Handling
 @app.route('/admin/dashboard')
 @login_required
 def admin_dashboard():
@@ -957,44 +999,109 @@ def admin_dashboard():
     print(f"Admin access attempt by: {current_user.username}, is_admin: {current_user.is_admin}")
     
     try:
-        # Admin statistics
-        total_users = User.query.count()
-        total_verified = User.query.filter_by(is_verified=True).count()
-        total_referrals = Referral.query.count()
-        total_commission = db.session.query(db.func.sum(User.total_commission)).scalar() or 0
+        # Test database connection first
+        db.session.execute(text('SELECT 1'))
+        print("Database connection test passed")
         
-        total_withdrawn_amount = db.session.query(db.func.sum(User.total_withdrawn)).scalar() or 0
-        total_balance = db.session.query(db.func.sum(User.balance)).scalar() or 0
+        # Admin statistics with individual error handling
+        try:
+            total_users = User.query.count()
+            print(f"Total users: {total_users}")
+        except Exception as e:
+            print(f"Error counting users: {e}")
+            total_users = 0
         
-        pending_withdrawals = Transaction.query.filter_by(
-            transaction_type='withdrawal', 
-            status='pending'
-        ).count()
+        try:
+            total_verified = User.query.filter_by(is_verified=True).count()
+            print(f"Total verified: {total_verified}")
+        except Exception as e:
+            print(f"Error counting verified users: {e}")
+            total_verified = 0
         
-        pending_payments = Transaction.query.filter_by(
-            transaction_type='registration_fee', 
-            status='pending'
-        ).count()
+        try:
+            total_referrals = Referral.query.count()
+            print(f"Total referrals: {total_referrals}")
+        except Exception as e:
+            print(f"Error counting referrals: {e}")
+            total_referrals = 0
         
-        recent_users = User.query.filter(User.is_verified == True)\
-            .order_by(User.created_at.desc())\
-            .limit(10)\
-            .all()
+        try:
+            total_commission = db.session.query(db.func.sum(User.total_commission)).scalar() or 0
+            print(f"Total commission: {total_commission}")
+        except Exception as e:
+            print(f"Error calculating total commission: {e}")
+            total_commission = 0
         
-        pending_transactions = db.session.query(Transaction, User)\
-            .join(User, Transaction.user_id == User.id)\
-            .filter(Transaction.transaction_type == 'registration_fee', 
-                    Transaction.status == 'pending')\
-            .order_by(Transaction.created_at.desc())\
-            .all()
+        try:
+            total_withdrawn_amount = db.session.query(db.func.sum(User.total_withdrawn)).scalar() or 0
+            print(f"Total withdrawn: {total_withdrawn_amount}")
+        except Exception as e:
+            print(f"Error calculating total withdrawn: {e}")
+            total_withdrawn_amount = 0
         
-        recent_activity = Transaction.query\
-            .order_by(Transaction.created_at.desc())\
-            .limit(10)\
-            .all()
+        try:
+            total_balance = db.session.query(db.func.sum(User.balance)).scalar() or 0
+            print(f"Total balance: {total_balance}")
+        except Exception as e:
+            print(f"Error calculating total balance: {e}")
+            total_balance = 0
+        
+        try:
+            pending_withdrawals = Transaction.query.filter_by(
+                transaction_type='withdrawal', 
+                status='pending'
+            ).count()
+            print(f"Pending withdrawals: {pending_withdrawals}")
+        except Exception as e:
+            print(f"Error counting pending withdrawals: {e}")
+            pending_withdrawals = 0
+        
+        try:
+            pending_payments = Transaction.query.filter_by(
+                transaction_type='registration_fee', 
+                status='pending'
+            ).count()
+            print(f"Pending payments: {pending_payments}")
+        except Exception as e:
+            print(f"Error counting pending payments: {e}")
+            pending_payments = 0
+        
+        try:
+            recent_users = User.query.filter(User.is_verified == True)\
+                .order_by(User.created_at.desc())\
+                .limit(10)\
+                .all()
+            print(f"Recent users: {len(recent_users)}")
+        except Exception as e:
+            print(f"Error fetching recent users: {e}")
+            recent_users = []
+        
+        try:
+            pending_transactions = db.session.query(Transaction, User)\
+                .join(User, Transaction.user_id == User.id)\
+                .filter(Transaction.transaction_type == 'registration_fee', 
+                        Transaction.status == 'pending')\
+                .order_by(Transaction.created_at.desc())\
+                .all()
+            print(f"Pending transactions: {len(pending_transactions)}")
+        except Exception as e:
+            print(f"Error fetching pending transactions: {e}")
+            pending_transactions = []
+        
+        try:
+            recent_activity = Transaction.query\
+                .order_by(Transaction.created_at.desc())\
+                .limit(10)\
+                .all()
+            print(f"Recent activity: {len(recent_activity)}")
+        except Exception as e:
+            print(f"Error fetching recent activity: {e}")
+            recent_activity = []
         
         # FIXED: Use timezone-aware datetime
         current_time = datetime.now(timezone.utc)
+        
+        print("All queries successful, rendering template...")
         
         return render_template('admin_dashboard.html',
                              total_users=total_users,
@@ -1014,10 +1121,8 @@ def admin_dashboard():
         print(f"Error in admin_dashboard: {str(e)}")
         import traceback
         traceback.print_exc()
-        flash('Error accessing admin dashboard.', 'error')
+        flash(f'Error accessing admin dashboard: {str(e)}', 'error')
         return redirect(url_for('dashboard'))
-
-# Keep all your other admin routes the same...
 
 @app.route('/admin/approve-payment/<int:transaction_id>', methods=['POST'])
 @login_required
@@ -1093,8 +1198,6 @@ def reject_payment(transaction_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)})
-
-# Keep all your other routes the same...
 
 @app.route('/admin/withdrawals')
 @login_required
