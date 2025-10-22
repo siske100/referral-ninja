@@ -36,12 +36,15 @@
         body {
             background: var(--light-bg);
             overflow-x: hidden;
+            margin: 0;
+            padding: 0;
         }
 
         .app-container {
             display: flex;
             min-height: 100vh;
             background: var(--light-bg);
+            position: relative;
         }
 
         .main-content {
@@ -49,6 +52,7 @@
             margin-left: 0;
             transition: all 0.3s ease;
             position: relative;
+            min-height: 100vh;
         }
 
         .main-content.sidebar-expanded {
@@ -99,6 +103,7 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            margin: 0;
         }
 
         .user-info {
@@ -160,6 +165,7 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             backdrop-filter: blur(10px);
             transition: all 0.3s ease;
+            position: relative;
         }
 
         .flash-message:hover {
@@ -204,6 +210,8 @@
 
             .header {
                 padding: 1rem;
+                flex-wrap: wrap;
+                gap: 1rem;
             }
 
             .content {
@@ -218,6 +226,11 @@
                 width: 40px;
                 height: 40px;
                 font-size: 1rem;
+            }
+
+            .user-info {
+                flex-wrap: wrap;
+                justify-content: flex-end;
             }
         }
 
@@ -291,6 +304,105 @@
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
         }
+
+        /* Error State Styles */
+        .error-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            margin: 2rem 0;
+        }
+
+        .error-state i {
+            font-size: 4rem;
+            color: var(--danger);
+            margin-bottom: 1.5rem;
+        }
+
+        .error-state h3 {
+            color: var(--text-dark);
+            margin-bottom: 1rem;
+        }
+
+        .error-state p {
+            color: var(--text-light);
+            margin-bottom: 2rem;
+        }
+
+        /* Maintenance Mode */
+        .maintenance-mode {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            border-radius: 10px;
+            margin: 1rem 0;
+        }
+
+        /* Connection Status */
+        .connection-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            font-weight: 600;
+            z-index: 1000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .connection-status.online {
+            background: var(--success);
+            color: white;
+        }
+
+        .connection-status.offline {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* Accessibility Improvements */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        /* Focus styles for better accessibility */
+        button:focus,
+        a:focus,
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: 2px solid var(--primary-red);
+            outline-offset: 2px;
+        }
+
+        /* Print Styles */
+        @media print {
+            .header,
+            .menu-toggle,
+            .rank-badge {
+                display: none !important;
+            }
+            
+            .main-content {
+                margin-left: 0 !important;
+            }
+            
+            .content {
+                padding: 0;
+            }
+        }
     </style>
     {% block styles %}{% endblock %}
 </head>
@@ -300,8 +412,9 @@
         
         <div class="main-content" id="mainContent">
             <header class="header">
-                <button class="menu-toggle" id="menuToggle">
+                <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation menu">
                     <i class="fas fa-bars"></i>
+                    <span class="sr-only">Toggle navigation menu</span>
                 </button>
                 <h1 class="header-title">{% block header %}Referral Ninja{% endblock %}</h1>
                 <div class="user-info">
@@ -315,6 +428,12 @@
             </header>
 
             <main class="content">
+                <!-- Connection Status Indicator -->
+                <div class="connection-status online" id="connectionStatus" style="display: none;">
+                    <i class="fas fa-wifi me-2"></i>
+                    <span>Connected</span>
+                </div>
+
                 {% with messages = get_flashed_messages(with_categories=true) %}
                     {% if messages %}
                         {% for category, message in messages %}
@@ -327,6 +446,16 @@
                     {% endif %}
                 {% endwith %}
 
+                <!-- Error State Fallback -->
+                <div class="error-state" id="errorState" style="display: none;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>We're experiencing an issue</h3>
+                    <p>Please try again later. If the problem persists, contact support.</p>
+                    <button class="btn btn-primary" onclick="location.reload()">
+                        <i class="fas fa-redo me-2"></i>Reload Page
+                    </button>
+                </div>
+
                 {% block content %}{% endblock %}
             </main>
         </div>
@@ -334,97 +463,273 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Enhanced JavaScript with better error handling
         document.addEventListener('DOMContentLoaded', function() {
             const menuToggle = document.getElementById('menuToggle');
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('mainContent');
             const sidebarOverlay = document.getElementById('sidebarOverlay');
+            const connectionStatus = document.getElementById('connectionStatus');
+            const errorState = document.getElementById('errorState');
+
+            // Initialize components safely
+            function initializeApp() {
+                try {
+                    setupSidebar();
+                    setupFlashMessages();
+                    setupConnectionMonitor();
+                    setupErrorHandling();
+                    setupAccessibility();
+                } catch (error) {
+                    console.error('Error initializing app:', error);
+                    showErrorState();
+                }
+            }
+
+            function setupSidebar() {
+                if (menuToggle && sidebar) {
+                    menuToggle.addEventListener('click', toggleSidebar);
+                }
+
+                if (sidebarOverlay) {
+                    sidebarOverlay.addEventListener('click', toggleSidebar);
+                }
+            }
 
             function toggleSidebar() {
-                if (sidebar) {
-                    sidebar.classList.toggle('active');
-                    mainContent.classList.toggle('sidebar-expanded');
-                }
-                if (sidebarOverlay) {
-                    sidebarOverlay.classList.toggle('active');
-                }
-            }
-
-            if (menuToggle) {
-                menuToggle.addEventListener('click', toggleSidebar);
-            }
-
-            if (sidebarOverlay) {
-                sidebarOverlay.addEventListener('click', toggleSidebar);
-            }
-
-            // Auto-dismiss flash messages after 5 seconds
-            const flashMessages = document.querySelectorAll('.flash-message');
-            flashMessages.forEach(message => {
-                setTimeout(() => {
-                    const closeButton = message.querySelector('.btn-close');
-                    if (closeButton) {
-                        closeButton.click();
+                try {
+                    if (sidebar) {
+                        sidebar.classList.toggle('active');
+                        mainContent.classList.toggle('sidebar-expanded');
                     }
-                }, 5000);
-            });
+                    if (sidebarOverlay) {
+                        sidebarOverlay.classList.toggle('active');
+                    }
+                } catch (error) {
+                    console.error('Error toggling sidebar:', error);
+                }
+            }
 
-            // Add loading state to buttons with loading class
-            const loadingButtons = document.querySelectorAll('.btn-loading');
-            loadingButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    const originalText = this.innerHTML;
-                    this.innerHTML = '<span class="loading-spinner"></span> Loading...';
-                    this.disabled = true;
-                    
-                    // Revert after 3 seconds if still loading
+            function setupFlashMessages() {
+                const flashMessages = document.querySelectorAll('.flash-message');
+                flashMessages.forEach(message => {
                     setTimeout(() => {
-                        this.innerHTML = originalText;
-                        this.disabled = false;
-                    }, 3000);
+                        const closeButton = message.querySelector('.btn-close');
+                        if (closeButton) {
+                            closeButton.click();
+                        }
+                    }, 5000);
                 });
+            }
+
+            function setupConnectionMonitor() {
+                // Monitor online/offline status
+                window.addEventListener('online', () => {
+                    if (connectionStatus) {
+                        connectionStatus.classList.remove('offline');
+                        connectionStatus.classList.add('online');
+                        connectionStatus.innerHTML = '<i class="fas fa-wifi me-2"></i><span>Connected</span>';
+                        connectionStatus.style.display = 'block';
+                        setTimeout(() => {
+                            connectionStatus.style.display = 'none';
+                        }, 3000);
+                    }
+                });
+
+                window.addEventListener('offline', () => {
+                    if (connectionStatus) {
+                        connectionStatus.classList.remove('online');
+                        connectionStatus.classList.add('offline');
+                        connectionStatus.innerHTML = '<i class="fas fa-wifi-slash me-2"></i><span>Offline</span>';
+                        connectionStatus.style.display = 'block';
+                    }
+                });
+            }
+
+            function setupErrorHandling() {
+                // Global error handler
+                window.addEventListener('error', function(e) {
+                    console.error('Global error:', e.error);
+                    // Don't show error state for minor errors
+                });
+
+                // Network request error handling
+                const originalFetch = window.fetch;
+                window.fetch = function(...args) {
+                    return originalFetch.apply(this, args)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response;
+                        })
+                        .catch(error => {
+                            console.error('Fetch error:', error);
+                            throw error;
+                        });
+                };
+            }
+
+            function setupAccessibility() {
+                // Add skip to main content link
+                const skipLink = document.createElement('a');
+                skipLink.href = '#mainContent';
+                skipLink.className = 'sr-only';
+                skipLink.innerHTML = 'Skip to main content';
+                document.body.insertBefore(skipLink, document.body.firstChild);
+
+                // Handle focus for modal dialogs
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') {
+                        const openModal = document.querySelector('.modal.show');
+                        if (openModal) {
+                            const closeBtn = openModal.querySelector('[data-bs-dismiss="modal"]');
+                            if (closeBtn) closeBtn.click();
+                        }
+                    }
+                });
+            }
+
+            function showErrorState() {
+                if (errorState) {
+                    errorState.style.display = 'block';
+                }
+            }
+
+            function hideErrorState() {
+                if (errorState) {
+                    errorState.style.display = 'none';
+                }
+            }
+
+            // Utility functions
+            window.makeRequest = function(url, options = {}) {
+                const defaultOptions = {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                };
+
+                const mergedOptions = { ...defaultOptions, ...options };
+                
+                return fetch(url, mergedOptions)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .catch(error => {
+                        console.error('Request failed:', error);
+                        throw error;
+                    });
+            };
+
+            window.showToast = function(message, type = 'info') {
+                // Create toast element
+                const toast = document.createElement('div');
+                toast.className = `toast align-items-center text-bg-${type} border-0`;
+                toast.innerHTML = `
+                    <div class="d-flex">
+                        <div class="toast-body">${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                `;
+
+                // Add to toast container
+                let container = document.getElementById('toastContainer');
+                if (!container) {
+                    container = document.createElement('div');
+                    container.id = 'toastContainer';
+                    container.className = 'toast-container position-fixed top-0 end-0 p-3';
+                    container.style.zIndex = '9999';
+                    document.body.appendChild(container);
+                }
+
+                container.appendChild(toast);
+                const bsToast = new bootstrap.Toast(toast);
+                bsToast.show();
+
+                // Remove after hide
+                toast.addEventListener('hidden.bs.toast', () => {
+                    toast.remove();
+                });
+            };
+
+            // Initialize the application
+            initializeApp();
+
+            // Add loading state to buttons
+            document.addEventListener('click', function(e) {
+                const button = e.target.closest('.btn-loading');
+                if (button) {
+                    const originalText = button.innerHTML;
+                    button.innerHTML = '<span class="loading-spinner"></span> Loading...';
+                    button.disabled = true;
+                    
+                    // Revert after 10 seconds if still loading
+                    setTimeout(() => {
+                        if (button.disabled) {
+                            button.innerHTML = originalText;
+                            button.disabled = false;
+                            showToast('Request timed out. Please try again.', 'warning');
+                        }
+                    }, 10000);
+                }
             });
 
             // Smooth scrolling for anchor links
             document.querySelectorAll('a[href^="#"]').forEach(anchor => {
                 anchor.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    const target = document.querySelector(this.getAttribute('href'));
-                    if (target) {
-                        target.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'start'
-                        });
+                    const href = this.getAttribute('href');
+                    if (href !== '#') {
+                        e.preventDefault();
+                        const target = document.querySelector(href);
+                        if (target) {
+                            target.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'start'
+                            });
+                        }
                     }
                 });
             });
+
+            // Handle form submissions with loading states
+            document.addEventListener('submit', function(e) {
+                const form = e.target;
+                const submitButton = form.querySelector('button[type="submit"], input[type="submit"]');
+                
+                if (submitButton && !form.classList.contains('no-loading')) {
+                    const originalText = submitButton.innerHTML;
+                    submitButton.innerHTML = '<span class="loading-spinner"></span> Processing...';
+                    submitButton.disabled = true;
+
+                    // Revert if form submission fails
+                    form.addEventListener('ajax:error', function() {
+                        submitButton.innerHTML = originalText;
+                        submitButton.disabled = false;
+                    });
+
+                    // Note: For actual form submission, the page will reload so we don't need to revert
+                }
+            });
         });
 
-        // Utility function for AJAX requests
-        function makeRequest(url, options = {}) {
-            const defaultOptions = {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            };
+        // Global error handler for uncaught errors
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('Unhandled promise rejection:', event.reason);
+        });
 
-            const mergedOptions = { ...defaultOptions, ...options };
-            
-            return fetch(url, mergedOptions)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                });
-        }
-
-        // Utility function to show toast notifications
-        function showToast(message, type = 'info') {
-            // Implementation for toast notifications
-            console.log(`[${type.toUpperCase()}] ${message}`);
-        }
+        // Page visibility API for better resource management
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                // Page is hidden - could pause animations or heavy operations
+            } else {
+                // Page is visible
+            }
+        });
     </script>
     
     {% block scripts %}{% endblock %}

@@ -1002,49 +1002,281 @@ def profile():
                          balance=balance,
                          referred_count=referred_count)
 
+# UPDATED SETTINGS ROUTE WITH FIXES
 @app.route('/settings', methods=['GET', 'POST'])
 @login_required
 def settings():
+    """Simple settings route with better error handling"""
+    try:
+        # Quick database health check
+        db.session.execute(text('SELECT 1'))
+    except Exception as e:
+        print(f"Database error in settings: {e}")
+        flash('Database connection issue. Please try again later.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    # Check if user is verified
+    if not current_user.is_verified:
+        flash('Please complete payment verification to access settings.', 'warning')
+        return redirect(url_for('payment_instructions'))
+    
+    # Handle POST requests
     if request.method == 'POST':
+        return handle_settings_post()
+    
+    # Render settings page
+    return render_template('settings.html')
+
+def handle_settings_post():
+    """Handle settings form submission"""
+    try:
         email = request.form.get('email', '').strip()
         phone_number = request.form.get('phone_number', '').strip()
         
-        if not email:
-            flash('Email is required.', 'error')
+        # Basic validation
+        if not email or not phone_number:
+            flash('Email and phone number are required.', 'error')
             return redirect(url_for('settings'))
         
-        if not phone_number:
-            flash('Phone number is required.', 'error')
+        # Check for duplicate email/phone
+        existing_user = User.query.filter(
+            (User.email == email) | (User.phone_number == phone_number)
+        ).filter(User.id != current_user.id).first()
+        
+        if existing_user:
+            if existing_user.email == email:
+                flash('Email already registered.', 'error')
+            else:
+                flash('Phone number already registered.', 'error')
             return redirect(url_for('settings'))
         
+        # Update user info
         current_user.email = email
         current_user.phone_number = phone_number
         
+        # Handle password change if provided
         current_password = request.form.get('current_password')
         new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_password')
         
         if new_password:
-            if not current_password:
-                flash('Current password is required to set a new password.', 'error')
-                return redirect(url_for('settings'))
-            
-            if current_user.check_password(current_password):
-                current_user.set_password(new_password)
-                flash('Password updated successfully!', 'success')
-            else:
-                flash('Current password is incorrect.', 'error')
+            if not handle_password_change(current_password, new_password, confirm_password):
                 return redirect(url_for('settings'))
         
-        try:
-            db.session.commit()
-            flash('Settings updated successfully!', 'success')
-            return redirect(url_for('settings'))
-        except Exception as e:
-            db.session.rollback()
-            flash('Error updating settings. Please try again.', 'error')
-            return redirect(url_for('settings'))
+        # Save changes
+        db.session.commit()
+        flash('Settings updated successfully!', 'success')
+        return redirect(url_for('settings'))
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error updating settings: {e}")
+        flash('Error updating settings. Please try again.', 'error')
+        return redirect(url_for('settings'))
+
+def handle_password_change(current_password, new_password, confirm_password):
+    """Handle password change logic"""
+    if not current_password:
+        flash('Current password is required to change password.', 'error')
+        return False
     
-    return render_template('settings.html')
+    if not current_user.check_password(current_password):
+        flash('Current password is incorrect.', 'error')
+        return False
+    
+    if new_password != confirm_password:
+        flash('New passwords do not match.', 'error')
+        return False
+    
+    if len(new_password) < 6:
+        flash('Password must be at least 6 characters long.', 'error')
+        return False
+    
+    current_user.set_password(new_password)
+    flash('Password updated successfully!', 'success')
+    return True
+
+# ADDED: Quick Password Change Route
+@app.route('/change-password', methods=['POST'])
+@login_required
+def change_password():
+    if not current_user.is_verified:
+        return jsonify({'success': False, 'message': 'Please complete payment verification first.'})
+    
+    new_password = request.form.get('new_password')
+    confirm_password = request.form.get('confirm_password')
+    
+    if not new_password or not confirm_password:
+        return jsonify({'success': False, 'message': 'Please fill in all password fields.'})
+    
+    if new_password != confirm_password:
+        return jsonify({'success': False, 'message': 'Passwords do not match.'})
+    
+    if len(new_password) < 6:
+        return jsonify({'success': False, 'message': 'Password must be at least 6 characters long.'})
+    
+    try:
+        current_user.set_password(new_password)
+        db.session.commit()
+        
+        # Send notification
+        try:
+            message = f"""
+✅ <b>Password Changed Successfully</b>
+
+👤 <b>User:</b> {current_user.username}
+📧 <b>Email:</b> {current_user.email}
+🆔 <b>User ID:</b> #{current_user.id}
+
+🕒 <b>Time:</b> {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}
+📍 <b>IP Address:</b> {request.remote_addr}
+
+🔒 <i>Password was changed successfully via quick password change.</i>
+"""
+            thread = threading.Thread(target=send_telegram_notification, args=(message,))
+            thread.daemon = True
+            thread.start()
+        except Exception as e:
+            print(f"Error sending password change notification: {e}")
+        
+        return jsonify({'success': True, 'message': 'Password changed successfully!'})
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Error changing password: {str(e)}'})
+
+# ADDED: Test Settings Route
+@app.route('/test-settings')
+@login_required
+def test_settings():
+    try:
+        # Test database connection
+        db.session.execute(text('SELECT 1'))
+        
+        # Test user data access
+        user_data = {
+            'username': current_user.username,
+            'email': current_user.email,
+            'phone': current_user.phone_number,
+            'is_verified': current_user.is_verified
+        }
+        
+        return jsonify({
+            'status': 'success',
+            'user': user_data,
+            'database': 'connected'
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'error': str(e)
+        }), 500
+
+# ADDED: Debug Settings Route
+@app.route('/debug-settings')
+@login_required
+def debug_settings():
+    """Debug settings access issues"""
+    try:
+        # Test database
+        db.session.execute(text('SELECT 1'))
+        db_ok = True
+        db_error = None
+    except Exception as e:
+        db_ok = False
+        db_error = str(e)
+    
+    # Test template
+    try:
+        template_ok = True
+        # This will test if the template exists and can be rendered
+    except Exception as e:
+        template_ok = False
+        template_error = str(e)
+    
+    # Test user data
+    user_data = {
+        'id': current_user.id,
+        'username': current_user.username,
+        'email': current_user.email,
+        'is_verified': current_user.is_verified,
+        'is_active': current_user.is_active
+    }
+    
+    return jsonify({
+        'database_connection': db_ok,
+        'database_error': db_error,
+        'template_available': template_ok,
+        'user': user_data,
+        'session_keys': list(session.keys()),
+        'timestamp': datetime.now(timezone.utc).isoformat()
+    })
+
+# ADDED: Emergency Database Repair
+@app.route('/repair-db')
+def repair_database():
+    """Emergency database repair route"""
+    try:
+        # Close all connections
+        db.session.remove()
+        
+        # Recreate tables if needed
+        db.create_all()
+        
+        # Test connection
+        db.session.execute(text('SELECT 1'))
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Database connection reset successfully'
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Repair failed: {str(e)}'
+        }), 500
+
+# ADDED: Simple Settings Fallback
+@app.route('/simple-settings')
+@login_required
+def simple_settings():
+    """Minimal settings page that should always work"""
+    return '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Settings - ReferralNinja</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    </head>
+    <body>
+        <div class="container mt-5">
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h4>Account Settings</h4>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" action="/settings">
+                                <div class="mb-3">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-control" name="email" value="''' + current_user.email + '''" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Phone</label>
+                                    <input type="tel" class="form-control" name="phone_number" value="''' + current_user.phone_number + '''" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Update</button>
+                                <a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+    '''
 
 # Updated Admin Dashboard Route with Better Error Handling
 @app.route('/admin/dashboard')

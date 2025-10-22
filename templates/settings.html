@@ -30,6 +30,24 @@
         </div>
     </div>
 
+    <!-- Emergency Access Links (Hidden by default) -->
+    <div class="alert alert-info mb-4" id="emergencyLinks" style="display: none;">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Having issues?</strong> Try our alternative settings pages:
+            </div>
+            <div>
+                <a href="{{ url_for('simple_settings') }}" class="btn btn-sm btn-outline-primary me-2">
+                    Simple Settings
+                </a>
+                <a href="{{ url_for('debug_settings') }}" class="btn btn-sm btn-outline-secondary">
+                    Debug Info
+                </a>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
         <!-- Left Column - Forms -->
         <div class="col-lg-8">
@@ -42,7 +60,7 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="{{ url_for('settings') }}">
+                    <form method="POST" action="{{ url_for('settings') }}" id="profileForm">
                         <div class="row g-4">
                             <div class="col-md-6">
                                 <div class="form-floating">
@@ -69,8 +87,11 @@
                         </div>
 
                         <div class="mt-4">
-                            <button type="submit" class="btn btn-primary btn-lg px-4">
+                            <button type="submit" class="btn btn-primary btn-lg px-4" id="profileSubmitBtn">
                                 <i class="fas fa-save me-2"></i>Update Profile
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-lg px-4 ms-2" onclick="testSettings()">
+                                <i class="fas fa-bug me-2"></i>Test Connection
                             </button>
                         </div>
                     </form>
@@ -94,7 +115,7 @@
                         </div>
                     </div>
 
-                    <form method="POST" action="{{ url_for('change_password') }}" id="quickPasswordForm">
+                    <form method="POST" id="quickPasswordForm">
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <div class="form-floating">
@@ -168,50 +189,43 @@
                 </div>
             </div>
 
-            <!-- Security Settings Card -->
+            <!-- Database Health Card -->
             <div class="settings-card mb-4">
                 <div class="card-header-gradient">
                     <div class="d-flex align-items-center">
-                        <i class="fas fa-lock fa-lg me-3"></i>
-                        <h4 class="mb-0">Security Settings</h4>
+                        <i class="fas fa-database fa-lg me-3"></i>
+                        <h4 class="mb-0">System Status</h4>
                     </div>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="{{ url_for('settings') }}">
-                        <div class="row g-4">
-                            <div class="col-md-4">
-                                <div class="form-floating">
-                                    <input type="password" class="form-control" id="current_password" name="current_password">
-                                    <label for="current_password"><i class="fas fa-key me-2"></i>Current Password</label>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-floating">
-                                    <input type="password" class="form-control" id="new_password" name="new_password">
-                                    <label for="new_password"><i class="fas fa-lock me-2"></i>New Password</label>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-floating">
-                                    <input type="password" class="form-control" id="confirm_password" name="confirm_password">
-                                    <label for="confirm_password"><i class="fas fa-redo me-2"></i>Confirm Password</label>
-                                </div>
+                    <div class="row text-center">
+                        <div class="col-md-4">
+                            <div class="system-status-item">
+                                <i class="fas fa-database fa-2x text-primary mb-2"></i>
+                                <h5 id="dbStatus">Checking...</h5>
+                                <p class="text-muted">Database</p>
                             </div>
                         </div>
-
-                        <div class="password-requirements mt-3">
-                            <small class="text-muted">
-                                <i class="fas fa-info-circle me-1"></i>
-                                Password must be at least 6 characters long
-                            </small>
+                        <div class="col-md-4">
+                            <div class="system-status-item">
+                                <i class="fas fa-server fa-2x text-success mb-2"></i>
+                                <h5 id="appStatus">Checking...</h5>
+                                <p class="text-muted">Application</p>
+                            </div>
                         </div>
-
-                        <div class="mt-4">
-                            <button type="submit" class="btn btn-warning btn-lg px-4">
-                                <i class="fas fa-lock me-2"></i>Change Password
-                            </button>
+                        <div class="col-md-4">
+                            <div class="system-status-item">
+                                <i class="fas fa-user-check fa-2x text-info mb-2"></i>
+                                <h5 id="userStatus">Checking...</h5>
+                                <p class="text-muted">User Session</p>
+                            </div>
                         </div>
-                    </form>
+                    </div>
+                    <div class="mt-3 text-center">
+                        <button class="btn btn-outline-primary" onclick="checkSystemStatus()">
+                            <i class="fas fa-sync-alt me-2"></i>Refresh Status
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -650,6 +664,18 @@
     opacity: 1 !important;
 }
 
+/* System Status */
+.system-status-item {
+    padding: 1rem;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.system-status-item:hover {
+    background-color: #f8f9fa;
+    transform: translateY(-2px);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .settings-header {
@@ -668,6 +694,10 @@
     .btn-lg {
         padding: 0.75rem 1.5rem;
         font-size: 1rem;
+    }
+
+    .system-status-item {
+        margin-bottom: 1rem;
     }
 }
 
@@ -696,6 +726,23 @@
 
 .password-toggle:hover {
     color: #495057;
+}
+
+/* Status indicators */
+.status-good {
+    color: #28a745;
+}
+
+.status-warning {
+    color: #ffc107;
+}
+
+.status-error {
+    color: #dc3545;
+}
+
+.status-checking {
+    color: #6c757d;
 }
 </style>
 
@@ -809,15 +856,202 @@ function togglePasswordVisibility() {
     });
 }
 
-// Form validation
+// System status check
+async function checkSystemStatus() {
+    const dbStatus = document.getElementById('dbStatus');
+    const appStatus = document.getElementById('appStatus');
+    const userStatus = document.getElementById('userStatus');
+
+    // Reset status
+    dbStatus.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Checking...';
+    dbStatus.className = 'status-checking';
+    appStatus.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Checking...';
+    appStatus.className = 'status-checking';
+    userStatus.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Checking...';
+    userStatus.className = 'status-checking';
+
+    try {
+        // Check database status
+        const healthResponse = await fetch('/health');
+        const healthData = await healthResponse.json();
+        
+        if (healthData.status === 'healthy') {
+            dbStatus.innerHTML = '<i class="fas fa-check-circle me-2"></i>Connected';
+            dbStatus.className = 'status-good';
+        } else {
+            dbStatus.innerHTML = '<i class="fas fa-times-circle me-2"></i>Error';
+            dbStatus.className = 'status-error';
+        }
+
+        // Check app status
+        const debugResponse = await fetch('/debug-settings');
+        const debugData = await debugResponse.json();
+        
+        if (debugResponse.ok) {
+            appStatus.innerHTML = '<i class="fas fa-check-circle me-2"></i>Running';
+            appStatus.className = 'status-good';
+        } else {
+            appStatus.innerHTML = '<i class="fas fa-times-circle me-2"></i>Error';
+            appStatus.className = 'status-error';
+        }
+
+        // Check user status
+        if (debugData.user && debugData.user.is_verified) {
+            userStatus.innerHTML = '<i class="fas fa-check-circle me-2"></i>Verified';
+            userStatus.className = 'status-good';
+        } else {
+            userStatus.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Unverified';
+            userStatus.className = 'status-warning';
+        }
+
+    } catch (error) {
+        console.error('Status check failed:', error);
+        dbStatus.innerHTML = '<i class="fas fa-times-circle me-2"></i>Offline';
+        dbStatus.className = 'status-error';
+        appStatus.innerHTML = '<i class="fas fa-times-circle me-2"></i>Offline';
+        appStatus.className = 'status-error';
+        userStatus.innerHTML = '<i class="fas fa-times-circle me-2"></i>Unknown';
+        userStatus.className = 'status-error';
+    }
+}
+
+// Test settings functionality
+async function testSettings() {
+    const testBtn = document.querySelector('button[onclick="testSettings()"]');
+    const originalText = testBtn.innerHTML;
+    
+    testBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Testing...';
+    testBtn.disabled = true;
+
+    try {
+        const response = await fetch('/test-settings');
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            showToast('Settings test passed! All systems operational.', 'success');
+        } else {
+            showToast('Settings test failed: ' + data.error, 'error');
+            document.getElementById('emergencyLinks').style.display = 'block';
+        }
+    } catch (error) {
+        showToast('Settings test failed: Network error', 'error');
+        document.getElementById('emergencyLinks').style.display = 'block';
+    } finally {
+        testBtn.innerHTML = originalText;
+        testBtn.disabled = false;
+    }
+}
+
+// Quick password change with AJAX
+async function handleQuickPasswordChange(event) {
+    event.preventDefault();
+    
+    const form = document.getElementById('quickPasswordForm');
+    const submitBtn = document.getElementById('quickPasswordBtn');
+    const originalText = submitBtn.innerHTML;
+    
+    const formData = new FormData(form);
+    const passwordData = {
+        new_password: formData.get('new_password'),
+        confirm_password: formData.get('confirm_password')
+    };
+
+    // Validation
+    if (passwordData.new_password !== passwordData.confirm_password) {
+        showToast('Passwords do not match!', 'error');
+        return;
+    }
+
+    if (passwordData.new_password.length < 6) {
+        showToast('Password must be at least 6 characters long!', 'error');
+        return;
+    }
+
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Changing...';
+    submitBtn.disabled = true;
+
+    try {
+        const response = await fetch('/change-password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams(passwordData)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showToast('Password changed successfully!', 'success');
+            form.reset();
+            updatePasswordStrength(); // Reset strength indicator
+        } else {
+            showToast('Password change failed: ' + result.message, 'error');
+        }
+    } catch (error) {
+        showToast('Network error. Please try again.', 'error');
+    } finally {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+// Toast notification function
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast align-items-center text-bg-${type} border-0`;
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">${message}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.className = 'toast-container position-fixed top-0 end-0 p-3';
+        container.style.zIndex = '9999';
+        document.body.appendChild(container);
+    }
+
+    container.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+
+    // Remove after hide
+    toast.addEventListener('hidden.bs.toast', () => {
+        toast.remove();
+    });
+}
+
+// Form validation and event handlers
 document.addEventListener('DOMContentLoaded', function() {
+    // Password strength indicators
     const passwordInput = document.getElementById('new_password_quick');
     const confirmInput = document.getElementById('confirm_password_quick');
-    const form = document.getElementById('quickPasswordForm');
+    const quickPasswordForm = document.getElementById('quickPasswordForm');
 
     if (passwordInput && confirmInput) {
         passwordInput.addEventListener('input', updatePasswordStrength);
         confirmInput.addEventListener('input', updatePasswordStrength);
+    }
+
+    // Quick password form handler
+    if (quickPasswordForm) {
+        quickPasswordForm.addEventListener('submit', handleQuickPasswordChange);
+    }
+
+    // Profile form loading state
+    const profileForm = document.getElementById('profileForm');
+    const profileSubmitBtn = document.getElementById('profileSubmitBtn');
+    
+    if (profileForm && profileSubmitBtn) {
+        profileForm.addEventListener('submit', function() {
+            profileSubmitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+            profileSubmitBtn.disabled = true;
+        });
     }
 
     // Add interactive animations
@@ -846,30 +1080,22 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Form submission handler
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            const password = document.getElementById('new_password_quick').value;
-            const confirmPassword = document.getElementById('confirm_password_quick').value;
-            
-            if (password !== confirmPassword) {
-                e.preventDefault();
-                alert('Passwords do not match!');
-                return;
-            }
+    // Check system status on page load
+    setTimeout(checkSystemStatus, 1000);
 
-            if (password.length < 6) {
-                e.preventDefault();
-                alert('Password must be at least 6 characters long!');
-                return;
-            }
+    // Show emergency links if there are any errors after 3 seconds
+    setTimeout(() => {
+        const errorElements = document.querySelectorAll('.text-danger, .status-error');
+        if (errorElements.length > 0) {
+            document.getElementById('emergencyLinks').style.display = 'block';
+        }
+    }, 3000);
+});
 
-            // Show loading state
-            const submitBtn = document.getElementById('quickPasswordBtn');
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Changing Password...';
-            submitBtn.disabled = true;
-        });
-    }
+// Global error handler for settings page
+window.addEventListener('error', function(e) {
+    console.error('Settings page error:', e.error);
+    document.getElementById('emergencyLinks').style.display = 'block';
 });
 </script>
 {% endblock %}
