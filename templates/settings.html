@@ -77,6 +77,97 @@
                 </div>
             </div>
 
+            <!-- Quick Password Change Card -->
+            <div class="settings-card mb-4">
+                <div class="card-header-gradient">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-key fa-lg me-3"></i>
+                        <h4 class="mb-0">Quick Password Change</h4>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info d-flex align-items-center">
+                        <i class="fas fa-info-circle me-3 fa-lg"></i>
+                        <div>
+                            <strong>Quick & Easy:</strong> Change your login password instantly without email verification. 
+                            Simply enter your new password below.
+                        </div>
+                    </div>
+
+                    <form method="POST" action="{{ url_for('change_password') }}" id="quickPasswordForm">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="password" class="form-control" id="new_password_quick" 
+                                           name="new_password" required minlength="6">
+                                    <label for="new_password_quick">
+                                        <i class="fas fa-lock me-2"></i>New Password
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <input type="password" class="form-control" id="confirm_password_quick" 
+                                           name="confirm_password" required minlength="6">
+                                    <label for="confirm_password_quick">
+                                        <i class="fas fa-redo me-2"></i>Confirm New Password
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="password-strength mt-3">
+                            <div class="progress mb-2" style="height: 8px;">
+                                <div class="progress-bar" id="passwordStrengthBar" role="progressbar" 
+                                     style="width: 0%; background-color: #dc3545;"></div>
+                            </div>
+                            <small class="text-muted" id="passwordStrengthText">
+                                Password strength: Very Weak
+                            </small>
+                        </div>
+
+                        <div class="password-requirements mt-3">
+                            <small class="text-muted d-block mb-2">
+                                <i class="fas fa-info-circle me-1"></i>
+                                <strong>Password Requirements:</strong>
+                            </small>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <small class="text-muted d-block">
+                                        <i class="fas fa-check-circle text-success me-1" id="reqLength"></i>
+                                        At least 6 characters
+                                    </small>
+                                    <small class="text-muted d-block">
+                                        <i class="fas fa-check-circle text-success me-1" id="reqUppercase"></i>
+                                        One uppercase letter
+                                    </small>
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-muted d-block">
+                                        <i class="fas fa-check-circle text-success me-1" id="reqLowercase"></i>
+                                        One lowercase letter
+                                    </small>
+                                    <small class="text-muted d-block">
+                                        <i class="fas fa-check-circle text-success me-1" id="reqNumber"></i>
+                                        One number
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-success btn-lg px-4" id="quickPasswordBtn">
+                                <i class="fas fa-key me-2"></i>Change Password
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-lg px-4 ms-2" 
+                                    onclick="togglePasswordVisibility()">
+                                <i class="fas fa-eye me-2"></i>Show Passwords
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             <!-- Security Settings Card -->
             <div class="settings-card mb-4">
                 <div class="card-header-gradient">
@@ -376,6 +467,16 @@
     box-shadow: 0 5px 20px rgba(245, 87, 108, 0.4);
 }
 
+.btn-success {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+}
+
+.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(40, 167, 69, 0.4);
+}
+
 .btn-danger {
     background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
     color: white;
@@ -418,6 +519,18 @@
 
 .btn-outline-info:hover {
     background: #17a2b8;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.btn-outline-secondary {
+    border: 2px solid #6c757d;
+    color: #6c757d;
+    background: transparent;
+}
+
+.btn-outline-secondary:hover {
+    background: #6c757d;
     color: white;
     transform: translateY(-2px);
 }
@@ -524,6 +637,19 @@
     border-left: 4px solid #667eea;
 }
 
+.password-strength .progress {
+    border-radius: 10px;
+}
+
+/* Password requirement icons */
+.fa-check-circle.text-success {
+    opacity: 0.3;
+}
+
+.requirement-met {
+    opacity: 1 !important;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .settings-header {
@@ -556,11 +682,145 @@
 .settings-card:hover .card-header-danger {
     animation: pulse 2s infinite;
 }
+
+/* Password visibility toggle */
+.password-toggle {
+    cursor: pointer;
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    color: #6c757d;
+}
+
+.password-toggle:hover {
+    color: #495057;
+}
 </style>
 
 <script>
-// Add interactive animations
+// Password strength checker
+function checkPasswordStrength(password) {
+    let strength = 0;
+    const requirements = {
+        length: false,
+        uppercase: false,
+        lowercase: false,
+        number: false
+    };
+
+    // Length requirement
+    if (password.length >= 6) {
+        strength += 25;
+        requirements.length = true;
+    }
+
+    // Uppercase requirement
+    if (/[A-Z]/.test(password)) {
+        strength += 25;
+        requirements.uppercase = true;
+    }
+
+    // Lowercase requirement
+    if (/[a-z]/.test(password)) {
+        strength += 25;
+        requirements.lowercase = true;
+    }
+
+    // Number requirement
+    if (/[0-9]/.test(password)) {
+        strength += 25;
+        requirements.number = true;
+    }
+
+    return { strength, requirements };
+}
+
+// Update password strength indicator
+function updatePasswordStrength() {
+    const password = document.getElementById('new_password_quick').value;
+    const confirmPassword = document.getElementById('confirm_password_quick').value;
+    const strengthBar = document.getElementById('passwordStrengthBar');
+    const strengthText = document.getElementById('passwordStrengthText');
+    const submitBtn = document.getElementById('quickPasswordBtn');
+
+    const { strength, requirements } = checkPasswordStrength(password);
+
+    // Update progress bar
+    strengthBar.style.width = strength + '%';
+    
+    // Update progress bar color
+    if (strength < 25) {
+        strengthBar.style.backgroundColor = '#dc3545';
+        strengthText.textContent = 'Password strength: Very Weak';
+        strengthText.className = 'text-danger';
+    } else if (strength < 50) {
+        strengthBar.style.backgroundColor = '#fd7e14';
+        strengthText.textContent = 'Password strength: Weak';
+        strengthText.className = 'text-warning';
+    } else if (strength < 75) {
+        strengthBar.style.backgroundColor = '#ffc107';
+        strengthText.textContent = 'Password strength: Fair';
+        strengthText.className = 'text-warning';
+    } else if (strength < 100) {
+        strengthBar.style.backgroundColor = '#20c997';
+        strengthText.textContent = 'Password strength: Good';
+        strengthText.className = 'text-success';
+    } else {
+        strengthBar.style.backgroundColor = '#198754';
+        strengthText.textContent = 'Password strength: Strong';
+        strengthText.className = 'text-success';
+    }
+
+    // Update requirement icons
+    document.getElementById('reqLength').className = requirements.length ? 
+        'fas fa-check-circle text-success requirement-met me-1' : 
+        'fas fa-check-circle text-success me-1';
+    
+    document.getElementById('reqUppercase').className = requirements.uppercase ? 
+        'fas fa-check-circle text-success requirement-met me-1' : 
+        'fas fa-check-circle text-success me-1';
+    
+    document.getElementById('reqLowercase').className = requirements.lowercase ? 
+        'fas fa-check-circle text-success requirement-met me-1' : 
+        'fas fa-check-circle text-success me-1';
+    
+    document.getElementById('reqNumber').className = requirements.number ? 
+        'fas fa-check-circle text-success requirement-met me-1' : 
+        'fas fa-check-circle text-success me-1';
+
+    // Enable/disable submit button based on password match and strength
+    const passwordsMatch = password === confirmPassword && password.length > 0;
+    submitBtn.disabled = !passwordsMatch || strength < 25;
+}
+
+// Toggle password visibility
+function togglePasswordVisibility() {
+    const passwordFields = [
+        document.getElementById('new_password_quick'),
+        document.getElementById('confirm_password_quick')
+    ];
+
+    passwordFields.forEach(field => {
+        if (field) {
+            field.type = field.type === 'password' ? 'text' : 'password';
+        }
+    });
+}
+
+// Form validation
 document.addEventListener('DOMContentLoaded', function() {
+    const passwordInput = document.getElementById('new_password_quick');
+    const confirmInput = document.getElementById('confirm_password_quick');
+    const form = document.getElementById('quickPasswordForm');
+
+    if (passwordInput && confirmInput) {
+        passwordInput.addEventListener('input', updatePasswordStrength);
+        confirmInput.addEventListener('input', updatePasswordStrength);
+    }
+
+    // Add interactive animations
     const statItems = document.querySelectorAll('.stat-item');
     
     statItems.forEach(item => {
@@ -585,6 +845,31 @@ document.addEventListener('DOMContentLoaded', function() {
             this.parentElement.classList.remove('focused');
         });
     });
+
+    // Form submission handler
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const password = document.getElementById('new_password_quick').value;
+            const confirmPassword = document.getElementById('confirm_password_quick').value;
+            
+            if (password !== confirmPassword) {
+                e.preventDefault();
+                alert('Passwords do not match!');
+                return;
+            }
+
+            if (password.length < 6) {
+                e.preventDefault();
+                alert('Password must be at least 6 characters long!');
+                return;
+            }
+
+            // Show loading state
+            const submitBtn = document.getElementById('quickPasswordBtn');
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Changing Password...';
+            submitBtn.disabled = true;
+        });
+    }
 });
 </script>
 {% endblock %}

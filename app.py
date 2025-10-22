@@ -210,40 +210,7 @@ def send_mpesa_notification_to_telegram(user, transaction):
         print(f"Error sending M-PESA notification to Telegram: {str(e)}")
         return False
 
-def send_registration_notification_to_telegram(user, referral_code=None):
-    try:
-        message = f"""
-🎯 <b>New User Registration</b>
-
-👤 <b>User Details:</b>
-• Username: {user.username}
-• Email: {user.email} 
-• Phone: {user.phone_number}
-• User Referral Code: {user.referral_code}
-
-🕒 <b>Registration Time:</b>
-{user.created_at.strftime('%Y-%m-%d %H:%M:%S')}
-"""
-        if referral_code:
-            referrer = User.query.filter_by(referral_code=referral_code).first()
-            if referrer:
-                message += f"\n🔗 <b>Referred by:</b> {referral_code} (User: {referrer.username} - ID: {referrer.id})"
-                message += f"\n💰 <b>Referral Status:</b> ✅ Valid - Commission will be awarded after payment"
-            else:
-                message += f"\n⚠️ <b>Referral Code:</b> {referral_code} (Invalid - No referrer found)"
-        else:
-            message += "\n📝 <b>Referral:</b> No referral code used"
-        
-        message += f"\n📊 <b>Referral Source:</b> {user.referral_source}"
-        message += "\n\n💳 <i>Waiting for payment verification.</i>"
-        
-        thread = threading.Thread(target=send_telegram_notification, args=(message,))
-        thread.daemon = True
-        thread.start()
-        return True
-    except Exception as e:
-        print(f"Error sending registration notification to Telegram: {str(e)}")
-        return False
+# REMOVED: Registration notification function - we only want payment notifications
 
 def send_admin_action_notification(action, user, transaction, admin_user):
     try:
@@ -299,57 +266,7 @@ def send_admin_action_notification(action, user, transaction, admin_user):
 def generate_reset_token():
     return secrets.token_urlsafe(32)
 
-def send_password_reset_email(user, reset_url):
-    try:
-        print(f"Password reset for {user.email}: {reset_url}")
-        message = f"""
-🔐 <b>Password Reset Request</b>
-
-👤 <b>User Details:</b>
-• Username: {user.username}
-• Email: {user.email}
-• User ID: #{user.id}
-
-🔄 <b>Reset Link:</b>
-<code>{reset_url}</code>
-
-🕒 <b>Request Time:</b>
-{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}
-
-⚠️ <i>This link will expire in 1 hour.</i>
-"""
-        thread = threading.Thread(target=send_telegram_notification, args=(message,))
-        thread.daemon = True
-        thread.start()
-        return True
-    except Exception as e:
-        print(f"Error sending password reset email: {str(e)}")
-        return False
-
-def send_password_reset_confirmation(user):
-    try:
-        message = f"""
-✅ <b>Password Reset Successful</b>
-
-👤 <b>User Details:</b>
-• Username: {user.username}
-• Email: {user.email}
-• User ID: #{user.id}
-
-🕒 <b>Reset Time:</b>
-{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}
-
-📍 <b>Location:</b> {request.remote_addr}
-
-🔒 <i>If you did not perform this action, please contact support immediately.</i>
-"""
-        thread = threading.Thread(target=send_telegram_notification, args=(message,))
-        thread.daemon = True
-        thread.start()
-        return True
-    except Exception as e:
-        print(f"Error sending password reset confirmation: {str(e)}")
-        return False
+# REMOVED: Password reset notification functions - we only want payment notifications
 
 # Helper Functions
 def validate_referral_code(code):
@@ -614,7 +531,8 @@ def register():
             db.session.add(user)
             db.session.commit()
             
-            send_registration_notification_to_telegram(user, referral_code)
+            # REMOVED: Registration notification - we only want payment notifications
+            # send_registration_notification_to_telegram(user, referral_code)
             
             flash('Registration successful! Please complete KSH 200 payment to activate your account.', 'success')
             session['pending_verification_user'] = user.id
@@ -656,7 +574,8 @@ def forgot_password():
                 db.session.commit()
                 
                 reset_url = url_for('reset_password', token=reset_token, _external=True)
-                send_password_reset_email(user, reset_url)
+                # REMOVED: Password reset email notification
+                # send_password_reset_email(user, reset_url)
                 
                 flash('Password reset instructions have been sent to your email.', 'success')
                 return redirect(url_for('login'))
@@ -705,7 +624,8 @@ def reset_password(token):
         
         try:
             db.session.commit()
-            send_password_reset_confirmation(user)
+            # REMOVED: Password reset confirmation notification
+            # send_password_reset_confirmation(user)
             flash('Your password has been reset successfully! You can now login with your new password.', 'success')
             return redirect(url_for('login'))
             
@@ -716,6 +636,36 @@ def reset_password(token):
             return render_template('auth/reset_password.html', token=token)
     
     return render_template('auth/reset_password.html', token=token)
+
+# NEW: Quick Password Change Route
+@app.route('/change-password', methods=['POST'])
+@login_required
+def change_password():
+    """Quick password change without current password verification"""
+    new_password = request.form.get('new_password')
+    confirm_password = request.form.get('confirm_password')
+    
+    if not new_password or not confirm_password:
+        flash('Please fill in all password fields.', 'error')
+        return redirect(url_for('settings'))
+    
+    if new_password != confirm_password:
+        flash('Passwords do not match.', 'error')
+        return redirect(url_for('settings'))
+    
+    if len(new_password) < 6:
+        flash('Password must be at least 6 characters long.', 'error')
+        return redirect(url_for('settings'))
+    
+    try:
+        current_user.set_password(new_password)
+        db.session.commit()
+        flash('Password changed successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('Error changing password. Please try again.', 'error')
+    
+    return redirect(url_for('settings'))
 
 @app.route('/payment-instructions')
 def payment_instructions():
@@ -793,6 +743,8 @@ def submit_mpesa_message():
             db.session.add(transaction)
         
         db.session.commit()
+        
+        # ONLY SEND TELEGRAM NOTIFICATION FOR PAYMENT MESSAGES
         send_mpesa_notification_to_telegram(user, transaction)
         
         return jsonify({
@@ -1165,7 +1117,8 @@ def approve_payment(transaction_id):
                 db.session.add(commission_tx)
         
         db.session.commit()
-        send_admin_action_notification('approved', user, transaction, current_user)
+        # REMOVED: Admin action notification for approval
+        # send_admin_action_notification('approved', user, transaction, current_user)
         
         return jsonify({'success': True, 'message': 'Payment approved and user activated'})
     
@@ -1185,7 +1138,8 @@ def reject_payment(transaction_id):
         transaction.description = 'Account registration fee - Rejected'
         
         db.session.commit()
-        send_admin_action_notification('rejected', user, transaction, current_user)
+        # REMOVED: Admin action notification for rejection
+        # send_admin_action_notification('rejected', user, transaction, current_user)
         
         return jsonify({'success': True, 'message': 'Payment rejected'})
     
