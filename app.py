@@ -145,36 +145,7 @@ def load_user(user_id):
         print(f"Error loading user {user_id}: {e}")
         return None
 
-# Database initialization and health check
-@app.before_first_request
-def create_tables():
-    try:
-        print("Creating database tables...")
-        db.create_all()
-        print("Database tables created successfully!")
-        
-        # Create admin user if it doesn't exist
-        if not User.query.filter_by(is_admin=True).first():
-            admin = User(
-                username='admin',
-                email='admin@referralninja.com',
-                phone_number='254799326074',
-                is_admin=True,
-                is_verified=True,
-                is_active=True
-            )
-            admin.set_password('admin123')
-            admin.generate_phone_linked_referral_code()
-            db.session.add(admin)
-            db.session.commit()
-            print("Admin user created successfully!")
-        else:
-            print("Admin user already exists")
-            
-    except Exception as e:
-        print(f"Error creating database tables: {e}")
-        db.session.rollback()
-
+# Database health check
 @app.before_request
 def before_request():
     try:
@@ -183,11 +154,6 @@ def before_request():
     except Exception as e:
         print(f"Database connection error: {e}")
         db.session.rollback()
-        # Try to recreate tables if there's an error
-        try:
-            db.create_all()
-        except Exception as create_error:
-            print(f"Failed to recreate tables: {create_error}")
 
 # Telegram Functions
 async def send_telegram_message_async(message):
@@ -557,7 +523,157 @@ def submit_mpesa_message():
         print(f"Error in submit_mpesa_message: {str(e)}")
         return jsonify({'success': False, 'message': f'Error submitting payment: {str(e)}'})
 
-# Add other routes (logout, forgot-password, reset-password, etc.) following the same pattern...
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('You have been logged out successfully.', 'success')
+    return redirect(url_for('login'))
+
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        
+        if not email:
+            flash('Please enter your email address.', 'error')
+            return render_template('auth/forgot_password.html')
+        
+        user = User.query.filter_by(email=email).first()
+        
+        if user:
+            reset_token = generate_reset_token()
+            user.reset_token = reset_token
+            user.reset_token_expires = datetime.now(timezone.utc) + timedelta(hours=1)
+            
+            try:
+                db.session.commit()
+                flash('Password reset instructions have been sent to your email.', 'success')
+                return redirect(url_for('login'))
+            except Exception as e:
+                db.session.rollback()
+                flash('Error generating reset token. Please try again.', 'error')
+                return render_template('auth/forgot_password.html')
+        else:
+            flash('If an account with that email exists, reset instructions have been sent.', 'success')
+            return redirect(url_for('login'))
+    
+    return render_template('auth/forgot_password.html')
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    
+    user = User.query.filter_by(reset_token=token).first()
+    
+    if not user or not user.reset_token_expires or user.reset_token_expires < datetime.now(timezone.utc):
+        flash('Invalid or expired reset token.', 'error')
+        return redirect(url_for('forgot_password'))
+    
+    if request.method == 'POST':
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+        
+        if not password or not confirm_password:
+            flash('Please fill in all fields.', 'error')
+            return render_template('auth/reset_password.html', token=token)
+        
+        if password != confirm_password:
+            flash('Passwords do not match.', 'error')
+            return render_template('auth/reset_password.html', token=token)
+        
+        if len(password) < 6:
+            flash('Password must be at least 6 characters long.', 'error')
+            return render_template('auth/reset_password.html', token=token)
+        
+        user.set_password(password)
+        user.reset_token = None
+        user.reset_token_expires = None
+        
+        try:
+            db.session.commit()
+            flash('Your password has been reset successfully! You can now login with your new password.', 'success')
+            return redirect(url_for('login'))
+        except Exception as e:
+            db.session.rollback()
+            flash('Error resetting password. Please try again.', 'error')
+            return render_template('auth/reset_password.html', token=token)
+    
+    return render_template('auth/reset_password.html', token=token)
+
+@app.route('/referral-system')
+@login_required
+def referral_system():
+    if not current_user.is_verified:
+        flash('Please complete payment verification to access referral system.', 'warning')
+        return redirect(url_for('payment_instructions'))
+    
+    referrals = Referral.query.filter_by(referrer_id=current_user.id)\
+        .order_by(Referral.created_at.desc())\
+        .all()
+    
+    base_url = request.host_url.rstrip('/')
+    referral_url = f"{base_url}/register?ref={current_user.referral_code}"
+    
+    share_links = {
+        'whatsapp': f"https://wa.me/?text=Join Referral Ninja and earn money! Use my code: {current_user.referral_code} - {referral_url}",
+        'facebook': f"https://www.facebook.com/sharer/sharer.php?u={referral_url}",
+        'twitter': f"https://twitter.com/intent/tweet?text=Join Referral Ninja! Use my code: {current_user.referral_code}&url={referral_url}",
+        'telegram': f"https://t.me/share/url?url={referral_url}&text=Join Referral Ninja! Use my code: {current_user.referral_code}"
+    }
+    
+    return render_template('referral_system.html',
+                         referrals=referrals,
+                         share_links=share_links,
+                         referral_url=referral_url)
+
+@app.route('/withdraw', methods=['GET', 'POST'])
+@login_required
+def withdraw():
+    if not current_user.is_verified:
+        flash('Please complete payment verification to withdraw funds.', 'warning')
+        return redirect(url_for('payment_instructions'))
+    
+    if request.method == 'POST':
+        amount = float(request.form.get('amount'))
+        phone_number = request.form.get('phone_number')
+        
+        if amount < 100:
+            flash('Minimum withdrawal amount is KSH 100.', 'error')
+            return redirect(url_for('withdraw'))
+        
+        if amount > current_user.balance:
+            flash('Insufficient balance.', 'error')
+            return redirect(url_for('withdraw'))
+        
+        transaction = Transaction(
+            user_id=current_user.id,
+            amount=-amount,
+            transaction_type='withdrawal',
+            status='pending',
+            phone_number=phone_number,
+            description=f'M-Pesa withdrawal to {phone_number}'
+        )
+        
+        current_user.balance -= amount
+        current_user.total_withdrawn += amount
+        
+        db.session.add(transaction)
+        db.session.commit()
+        
+        flash('Withdrawal request submitted! It will be processed within 24 hours.', 'success')
+        return redirect(url_for('dashboard'))
+    
+    transactions = Transaction.query.filter_by(
+        user_id=current_user.id, 
+        transaction_type='withdrawal'
+    ).order_by(Transaction.created_at.desc()).limit(5).all()
+    
+    return render_template('withdraw.html', transactions=transactions)
 
 # Admin Routes
 @app.route('/admin/dashboard')
@@ -659,7 +775,23 @@ def approve_payment(transaction_id):
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)})
 
-# Add other admin routes...
+@app.route('/admin/reject-payment/<int:transaction_id>', methods=['POST'])
+@login_required
+@admin_required
+def reject_payment(transaction_id):
+    try:
+        transaction = Transaction.query.get_or_404(transaction_id)
+        user = User.query.get(transaction.user_id)
+        
+        transaction.status = 'rejected'
+        transaction.description = 'Account registration fee - Rejected'
+        
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Payment rejected'})
+    
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)})
 
 # Initialize the application
 def init_app():
@@ -693,21 +825,21 @@ def init_app():
         print(f"✗ Database initialization failed: {e}")
         return False
 
+# Initialize the database when the app starts
+with app.app_context():
+    init_app()
+
 if __name__ == '__main__':
     print("Starting Referral Ninja Application...")
     
-    # Initialize the application
-    if init_app():
-        port = int(os.environ.get('PORT', 10000))
-        host = '0.0.0.0'
-        
-        print(f"✓ Application initialized successfully")
-        print(f"✓ Starting server on {host}:{port}")
-        
-        app.run(
-            host=host,
-            port=port,
-            debug=False
-        )
-    else:
-        print("✗ Failed to initialize application")
+    port = int(os.environ.get('PORT', 10000))
+    host = '0.0.0.0'
+    
+    print(f"✓ Application initialized successfully")
+    print(f"✓ Starting server on {host}:{port}")
+    
+    app.run(
+        host=host,
+        port=port,
+        debug=False
+    )
