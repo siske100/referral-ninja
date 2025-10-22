@@ -1074,6 +1074,7 @@ def admin_dashboard():
         flash(f'Error accessing admin dashboard: {str(e)}', 'error')
         return redirect(url_for('dashboard'))
 
+# FIXED: Corrected the methods parameter syntax
 @app.route('/admin/approve-payment/<int:transaction_id>', methods=['POST'])
 @login_required
 @admin_required
@@ -1325,38 +1326,33 @@ def init_db():
     except Exception as e:
         print(f"Database initialization error: {e}")
 
+# FIXED: Render-compatible app runner
 if __name__ == '__main__':
     try:
         print("Initializing database...")
         init_db()
         
         print("Starting Flask application...")
-        print(f"Debug mode: {app.debug}")
         print(f"Database URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
         
         # Test database connection
         with app.app_context():
             db.session.execute(text('SELECT 1'))
             print("Database connection test: SUCCESS")
+        
+        # Render-compatible configuration
+        port = int(os.environ.get('PORT', 10000))
+        host = '0.0.0.0'
+        
+        print(f"Starting server on {host}:{port}")
             
         app.run(
-            debug=True, 
-            host='0.0.0.0', 
-            port=5000,
-            threaded=True,
-            use_reloader=True
+            host=host,
+            port=port,
+            debug=False,  # Important: False in production
+            threaded=True
         )
     except Exception as e:
         print(f"Failed to start application: {e}")
         import traceback
         traceback.print_exc()
-        
-        # Try to start with basic configuration
-        print("Attempting to start with basic configuration...")
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///basic_referral.db'
-        try:
-            with app.app_context():
-                db.create_all()
-            app.run(debug=True, host='0.0.0.0', port=5000)
-        except Exception as e2:
-            print(f"Complete startup failure: {e2}")
