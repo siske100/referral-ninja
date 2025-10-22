@@ -14,6 +14,7 @@ import threading
 import requests
 import secrets
 from sqlalchemy import text
+from functools import wraps
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'referral-ninja-secret-key-2025'
@@ -35,6 +36,16 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message_category = 'info'
+
+# Admin Required Decorator
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_admin:
+            flash('Access denied. Admin privileges required.', 'error')
+            return redirect(url_for('dashboard'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 # Add utility functions to Jinja2 context
 @app.context_processor
@@ -1039,159 +1050,53 @@ def settings():
     
     return render_template('settings.html')
 
-# Debug Admin Route
-@app.route('/debug-admin')
-@login_required
-def debug_admin():
-    if not current_user.is_admin:
-        return "Not admin"
-    
-    try:
-        # Test each database query individually
-        print("Testing User.query.count()...")
-        total_users = User.query.count()
-        print(f"Total users: {total_users}")
-        
-        print("Testing User.query.filter_by(is_verified=True).count()...")
-        total_verified = User.query.filter_by(is_verified=True).count()
-        print(f"Total verified: {total_verified}")
-        
-        print("Testing Referral.query.count()...")
-        total_referrals = Referral.query.count()
-        print(f"Total referrals: {total_referrals}")
-        
-        print("Testing commission sum...")
-        total_commission = db.session.query(db.func.sum(User.total_commission)).scalar() or 0
-        print(f"Total commission: {total_commission}")
-        
-        return jsonify({
-            'status': 'success',
-            'total_users': total_users,
-            'total_verified': total_verified,
-            'total_referrals': total_referrals,
-            'total_commission': total_commission
-        })
-    except Exception as e:
-        import traceback
-        error_details = traceback.format_exc()
-        print(f"Debug error: {error_details}")
-        return jsonify({
-            'status': 'error',
-            'error': str(e),
-            'traceback': error_details
-        })
-
-# Admin Dashboard Route with Better Error Handling
+# Admin Routes with @admin_required decorator
 @app.route('/admin/dashboard')
 @login_required
+@admin_required
 def admin_dashboard():
-    if not current_user.is_admin:
-        flash('Access denied. Admin privileges required.', 'error')
-        return redirect(url_for('dashboard'))
-    
-    print(f"Admin access attempt by: {current_user.username}, is_admin: {current_user.is_admin}")
+    print(f"Admin access by: {current_user.username}")
     
     try:
         # Test database connection first
         db.session.execute(text('SELECT 1'))
         print("Database connection test passed")
         
-        # Admin statistics with individual error handling
-        try:
-            total_users = User.query.count()
-            print(f"Total users: {total_users}")
-        except Exception as e:
-            print(f"Error counting users: {e}")
-            total_users = 0
+        # Admin statistics
+        total_users = User.query.count()
+        total_verified = User.query.filter_by(is_verified=True).count()
+        total_referrals = Referral.query.count()
+        total_commission = db.session.query(db.func.sum(User.total_commission)).scalar() or 0
+        total_withdrawn_amount = db.session.query(db.func.sum(User.total_withdrawn)).scalar() or 0
+        total_balance = db.session.query(db.func.sum(User.balance)).scalar() or 0
         
-        try:
-            total_verified = User.query.filter_by(is_verified=True).count()
-            print(f"Total verified: {total_verified}")
-        except Exception as e:
-            print(f"Error counting verified users: {e}")
-            total_verified = 0
+        pending_withdrawals = Transaction.query.filter_by(
+            transaction_type='withdrawal', 
+            status='pending'
+        ).count()
         
-        try:
-            total_referrals = Referral.query.count()
-            print(f"Total referrals: {total_referrals}")
-        except Exception as e:
-            print(f"Error counting referrals: {e}")
-            total_referrals = 0
+        pending_payments = Transaction.query.filter_by(
+            transaction_type='registration_fee', 
+            status='pending'
+        ).count()
         
-        try:
-            total_commission = db.session.query(db.func.sum(User.total_commission)).scalar() or 0
-            print(f"Total commission: {total_commission}")
-        except Exception as e:
-            print(f"Error calculating total commission: {e}")
-            total_commission = 0
+        recent_users = User.query.filter(User.is_verified == True)\
+            .order_by(User.created_at.desc())\
+            .limit(10)\
+            .all()
         
-        try:
-            total_withdrawn_amount = db.session.query(db.func.sum(User.total_withdrawn)).scalar() or 0
-            print(f"Total withdrawn: {total_withdrawn_amount}")
-        except Exception as e:
-            print(f"Error calculating total withdrawn: {e}")
-            total_withdrawn_amount = 0
+        pending_transactions = db.session.query(Transaction, User)\
+            .join(User, Transaction.user_id == User.id)\
+            .filter(Transaction.transaction_type == 'registration_fee', 
+                    Transaction.status == 'pending')\
+            .order_by(Transaction.created_at.desc())\
+            .all()
         
-        try:
-            total_balance = db.session.query(db.func.sum(User.balance)).scalar() or 0
-            print(f"Total balance: {total_balance}")
-        except Exception as e:
-            print(f"Error calculating total balance: {e}")
-            total_balance = 0
+        recent_activity = Transaction.query\
+            .order_by(Transaction.created_at.desc())\
+            .limit(10)\
+            .all()
         
-        try:
-            pending_withdrawals = Transaction.query.filter_by(
-                transaction_type='withdrawal', 
-                status='pending'
-            ).count()
-            print(f"Pending withdrawals: {pending_withdrawals}")
-        except Exception as e:
-            print(f"Error counting pending withdrawals: {e}")
-            pending_withdrawals = 0
-        
-        try:
-            pending_payments = Transaction.query.filter_by(
-                transaction_type='registration_fee', 
-                status='pending'
-            ).count()
-            print(f"Pending payments: {pending_payments}")
-        except Exception as e:
-            print(f"Error counting pending payments: {e}")
-            pending_payments = 0
-        
-        try:
-            recent_users = User.query.filter(User.is_verified == True)\
-                .order_by(User.created_at.desc())\
-                .limit(10)\
-                .all()
-            print(f"Recent users: {len(recent_users)}")
-        except Exception as e:
-            print(f"Error fetching recent users: {e}")
-            recent_users = []
-        
-        try:
-            pending_transactions = db.session.query(Transaction, User)\
-                .join(User, Transaction.user_id == User.id)\
-                .filter(Transaction.transaction_type == 'registration_fee', 
-                        Transaction.status == 'pending')\
-                .order_by(Transaction.created_at.desc())\
-                .all()
-            print(f"Pending transactions: {len(pending_transactions)}")
-        except Exception as e:
-            print(f"Error fetching pending transactions: {e}")
-            pending_transactions = []
-        
-        try:
-            recent_activity = Transaction.query\
-                .order_by(Transaction.created_at.desc())\
-                .limit(10)\
-                .all()
-            print(f"Recent activity: {len(recent_activity)}")
-        except Exception as e:
-            print(f"Error fetching recent activity: {e}")
-            recent_activity = []
-        
-        # FIXED: Use timezone-aware datetime
         current_time = datetime.now(timezone.utc)
         
         print("All queries successful, rendering template...")
@@ -1219,10 +1124,8 @@ def admin_dashboard():
 
 @app.route('/admin/approve-payment/<int:transaction_id>', methods=['POST'])
 @login_required
+@admin_required
 def approve_payment(transaction_id):
-    if not current_user.is_admin:
-        return jsonify({'success': False, 'message': 'Admin access required'})
-    
     transaction = Transaction.query.get_or_404(transaction_id)
     user = User.query.get(transaction.user_id)
     
@@ -1272,10 +1175,8 @@ def approve_payment(transaction_id):
 
 @app.route('/admin/reject-payment/<int:transaction_id>', methods=['POST'])
 @login_required
+@admin_required
 def reject_payment(transaction_id):
-    if not current_user.is_admin:
-        return jsonify({'success': False, 'message': 'Admin access required'})
-    
     transaction = Transaction.query.get_or_404(transaction_id)
     user = User.query.get(transaction.user_id)
     
@@ -1294,11 +1195,8 @@ def reject_payment(transaction_id):
 
 @app.route('/admin/withdrawals')
 @login_required
+@admin_required
 def admin_withdrawals():
-    if not current_user.is_admin:
-        flash('Access denied. Admin privileges required.', 'error')
-        return redirect(url_for('dashboard'))
-    
     withdrawals = db.session.query(Transaction, User)\
         .join(User, Transaction.user_id == User.id)\
         .filter(Transaction.transaction_type == 'withdrawal')\
@@ -1315,10 +1213,8 @@ def admin_withdrawals():
 
 @app.route('/admin/approve-withdrawal/<int:transaction_id>', methods=['POST'])
 @login_required
+@admin_required
 def approve_withdrawal(transaction_id):
-    if not current_user.is_admin:
-        return jsonify({'success': False, 'message': 'Admin access required'})
-    
     transaction = Transaction.query.get_or_404(transaction_id)
     
     if transaction.transaction_type != 'withdrawal':
@@ -1337,10 +1233,8 @@ def approve_withdrawal(transaction_id):
 
 @app.route('/admin/reject-withdrawal/<int:transaction_id>', methods=['POST'])
 @login_required
+@admin_required
 def reject_withdrawal(transaction_id):
-    if not current_user.is_admin:
-        return jsonify({'success': False, 'message': 'Admin access required'})
-    
     transaction = Transaction.query.get_or_404(transaction_id)
     user = User.query.get(transaction.user_id)
     
@@ -1367,11 +1261,8 @@ def reject_withdrawal(transaction_id):
 
 @app.route('/admin/users')
 @login_required
+@admin_required
 def admin_users():
-    if not current_user.is_admin:
-        flash('Access denied. Admin privileges required.', 'error')
-        return redirect(url_for('dashboard'))
-    
     users = User.query.all()
     
     for user in users:
@@ -1386,10 +1277,8 @@ def admin_users():
 
 @app.route('/admin/toggle-user-status/<int:user_id>', methods=['POST'])
 @login_required
+@admin_required
 def toggle_user_status(user_id):
-    if not current_user.is_admin:
-        return jsonify({'success': False, 'message': 'Admin access required'})
-    
     user = User.query.get_or_404(user_id)
     
     try:
@@ -1405,10 +1294,8 @@ def toggle_user_status(user_id):
 
 @app.route('/api/admin/stats')
 @login_required
+@admin_required
 def api_admin_stats():
-    if not current_user.is_admin:
-        return jsonify({'error': 'Admin access required'}), 403
-    
     stats = {
         'total_users': User.query.count(),
         'total_verified': User.query.filter_by(is_verified=True).count(),

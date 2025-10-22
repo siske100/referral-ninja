@@ -307,7 +307,8 @@
 <body>
     <div class="container-fluid">
         <div class="row">
-            <!-- Sidebar -->
+            <!-- Sidebar - Only show if user is admin -->
+            {% if current_user.is_admin %}
             <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
                 <div class="position-sticky pt-3">
                     <div class="text-center mb-4">
@@ -349,9 +350,10 @@
                     </div>
                 </div>
             </nav>
+            {% endif %}
 
             <!-- Main content -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <main class="{% if current_user.is_admin %}col-md-9 ms-sm-auto col-lg-10{% else %}col-12{% endif %} px-md-4">
                 <!-- Header -->
                 <div class="main-header">
                     <div class="d-flex justify-content-between align-items-center">
