@@ -1318,11 +1318,7 @@ if __name__ == '__main__':
     except Exception as e:
         print(f"Failed to start application: {e}")
 
-with this
 
-Add this debug route to your app.py:
-
-python
 @app.route('/debug-admin')
 @login_required
 def debug_admin():
@@ -1363,10 +1359,7 @@ def debug_admin():
             'error': str(e),
             'traceback': error_details
         })
-Updated Admin Dashboard Route with Better Error Handling:
-Replace your current admin_dashboard route with this improved version:
 
-python
 @app.route('/admin/dashboard')
 @login_required
 def admin_dashboard():
