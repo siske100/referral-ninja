@@ -147,7 +147,7 @@ def before_request():
         print(f"Database connection error: {e}")
         db.session.rollback()
 
-# Telegram Functions (keep all your existing functions the same)
+# Telegram Functions
 async def send_telegram_message_async(message):
     try:
         if TELEGRAM_BOT_TOKEN == 'your_bot_token_here' or TELEGRAM_CHAT_ID == 'your_chat_id_here':
@@ -351,8 +351,101 @@ def validate_referral_code(code):
         return None
     return referrer
 
-# Routes (keep all your existing routes the same until admin_dashboard)
+# Debug and Error Handling Routes
+@app.route('/debug-error')
+def debug_error():
+    """Debug route to check what's causing the internal error"""
+    try:
+        # Test database connection
+        db.session.execute(text('SELECT 1'))
+        
+        # Test basic queries
+        user_count = User.query.count()
+        admin_exists = User.query.filter_by(is_admin=True).first()
+        
+        return jsonify({
+            'status': 'success',
+            'database_connected': True,
+            'user_count': user_count,
+            'admin_exists': admin_exists is not None,
+            'current_time': datetime.now(timezone.utc).isoformat()
+        })
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
 
+@app.route('/reset-db')
+def reset_db():
+    """Emergency route to reset database (use only in development)"""
+    try:
+        # Drop all tables and recreate
+        db.drop_all()
+        db.create_all()
+        
+        # Create admin user
+        admin = User(
+            username='admin',
+            email='admin@referralninja.com',
+            phone_number='254799326074',
+            is_admin=True,
+            is_verified=True,
+            is_active=True
+        )
+        admin.set_password('admin123')
+        admin.generate_phone_linked_referral_code()
+        db.session.add(admin)
+        db.session.commit()
+        
+        return jsonify({'status': 'success', 'message': 'Database reset successfully'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+# Error Handlers
+@app.errorhandler(404)
+def not_found_error(error):
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'error': 'Not found'}), 404
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    db.session.rollback()
+    print(f"Internal Server Error: {error}")
+    print(f"Error type: {type(error)}")
+    
+    # Log the full traceback
+    import traceback
+    traceback.print_exc()
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'error': 'Internal server error'}), 500
+    return render_template('500.html'), 500
+
+@app.errorhandler(Exception)
+def handle_exception(error):
+    db.session.rollback()
+    print(f"Unhandled Exception: {error}")
+    print(f"Exception type: {type(error)}")
+    
+    import traceback
+    error_traceback = traceback.format_exc()
+    print(f"Traceback: {error_traceback}")
+    
+    # Log to file for production
+    with open('error_log.txt', 'a') as f:
+        f.write(f"{datetime.now(timezone.utc)} - {error}\n")
+        f.write(f"Traceback: {error_traceback}\n")
+        f.write("="*50 + "\n")
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'error': 'An internal error occurred'}), 500
+    return render_template('500.html'), 500
+
+# Application Routes
 @app.route('/')
 def index():
     if current_user.is_authenticated:
@@ -946,7 +1039,7 @@ def settings():
     
     return render_template('settings.html')
 
-# NEW: Debug Admin Route
+# Debug Admin Route
 @app.route('/debug-admin')
 @login_required
 def debug_admin():
@@ -988,7 +1081,7 @@ def debug_admin():
             'traceback': error_details
         })
 
-# UPDATED: Admin Dashboard Route with Better Error Handling
+# Admin Dashboard Route with Better Error Handling
 @app.route('/admin/dashboard')
 @login_required
 def admin_dashboard():
@@ -1363,22 +1456,6 @@ def debug_route():
             'error': str(e)
         })
 
-@app.errorhandler(404)
-def not_found_error(error):
-    return "Page not found", 404
-
-@app.errorhandler(500)
-def internal_error(error):
-    db.session.rollback()
-    print(f"Internal Server Error: {error}")
-    return "Internal server error", 500
-
-@app.errorhandler(Exception)
-def handle_exception(error):
-    db.session.rollback()
-    print(f"Unhandled Exception: {error}")
-    return "An internal error occurred", 500
-
 @app.route('/favicon.ico')
 def favicon():
     return '', 204
@@ -1409,13 +1486,36 @@ def init_db():
 
 if __name__ == '__main__':
     try:
+        print("Initializing database...")
         init_db()
+        
         print("Starting Flask application...")
+        print(f"Debug mode: {app.debug}")
+        print(f"Database URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
+        
+        # Test database connection
+        with app.app_context():
+            db.session.execute(text('SELECT 1'))
+            print("Database connection test: SUCCESS")
+            
         app.run(
             debug=True, 
             host='0.0.0.0', 
             port=5000,
-            threaded=True
+            threaded=True,
+            use_reloader=True
         )
     except Exception as e:
         print(f"Failed to start application: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        # Try to start with basic configuration
+        print("Attempting to start with basic configuration...")
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///basic_referral.db'
+        try:
+            with app.app_context():
+                db.create_all()
+            app.run(debug=True, host='0.0.0.0', port=5000)
+        except Exception as e2:
+            print(f"Complete startup failure: {e2}")
