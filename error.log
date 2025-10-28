@@ -1,0 +1,62 @@
+2025-10-25 07:43:27,502 ERROR: Unhandled Exception: (sqlite3.OperationalError) no such column: transaction.checkout_request_id
+[SQL: SELECT count(*) AS count_1 
+FROM (SELECT "transaction".id AS transaction_id, "transaction".user_id AS transaction_user_id, "transaction".amount AS transaction_amount, "transaction".transaction_type AS transaction_transaction_type, "transaction".status AS transaction_status, "transaction".mpesa_code AS transaction_mpesa_code, "transaction".phone_number AS transaction_phone_number, "transaction".description AS transaction_description, "transaction".mpesa_message AS transaction_mpesa_message, "transaction".created_at AS transaction_created_at, "transaction".checkout_request_id AS transaction_checkout_request_id, "transaction".merchant_request_id AS transaction_merchant_request_id 
+FROM "transaction" 
+WHERE "transaction".user_id = ? AND "transaction".transaction_type = ? AND "transaction".status = ?) AS anon_1]
+[parameters: (1, 'withdrawal', 'pending')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8) [in c:\Users\HP PRO\Desktop\referral ninja\app.py:361]
+2025-10-25 07:43:38,294 ERROR: Unhandled Exception: (sqlite3.OperationalError) no such column: transaction.checkout_request_id
+[SQL: SELECT count(*) AS count_1 
+FROM (SELECT "transaction".id AS transaction_id, "transaction".user_id AS transaction_user_id, "transaction".amount AS transaction_amount, "transaction".transaction_type AS transaction_transaction_type, "transaction".status AS transaction_status, "transaction".mpesa_code AS transaction_mpesa_code, "transaction".phone_number AS transaction_phone_number, "transaction".description AS transaction_description, "transaction".mpesa_message AS transaction_mpesa_message, "transaction".created_at AS transaction_created_at, "transaction".checkout_request_id AS transaction_checkout_request_id, "transaction".merchant_request_id AS transaction_merchant_request_id 
+FROM "transaction" 
+WHERE "transaction".user_id = ? AND "transaction".transaction_type = ? AND "transaction".status = ?) AS anon_1]
+[parameters: (1, 'withdrawal', 'pending')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8) [in c:\Users\HP PRO\Desktop\referral ninja\app.py:361]
+2025-10-25 07:44:57,475 ERROR: Unhandled Exception: (sqlite3.OperationalError) no such column: transaction.checkout_request_id
+[SQL: SELECT count(*) AS count_1 
+FROM (SELECT "transaction".id AS transaction_id, "transaction".user_id AS transaction_user_id, "transaction".amount AS transaction_amount, "transaction".transaction_type AS transaction_transaction_type, "transaction".status AS transaction_status, "transaction".mpesa_code AS transaction_mpesa_code, "transaction".phone_number AS transaction_phone_number, "transaction".description AS transaction_description, "transaction".mpesa_message AS transaction_mpesa_message, "transaction".created_at AS transaction_created_at, "transaction".checkout_request_id AS transaction_checkout_request_id, "transaction".merchant_request_id AS transaction_merchant_request_id 
+FROM "transaction" 
+WHERE "transaction".user_id = ? AND "transaction".transaction_type = ? AND "transaction".status = ?) AS anon_1]
+[parameters: (1, 'withdrawal', 'pending')]
+(Background on this error at: https://sqlalche.me/e/20/e3q8) [in c:\Users\HP PRO\Desktop\referral ninja\app.py:361]
+2025-10-25 07:49:25,965 ERROR: M-PESA token error:  [in c:\Users\HP PRO\Desktop\referral ninja\app.py:201]
+2025-10-25 12:43:01,664 ERROR: Unhandled Exception: Could not build url for endpoint 'simple_settings'. Did you mean 'settings' instead? [in c:\Users\HP PRO\Desktop\referral ninja\app.py:421]
+2025-10-25 12:49:32,147 ERROR: Error in admin_dashboard: 'pending_payments' is undefined [in c:\Users\HP PRO\Desktop\referral ninja\app.py:1273]
+2025-10-25 12:49:52,506 ERROR: Error in admin_dashboard: 'pending_payments' is undefined [in c:\Users\HP PRO\Desktop\referral ninja\app.py:1273]
+2025-10-25 13:00:18,798 ERROR: Error in admin_dashboard: 'pending_payments' is undefined [in c:\Users\HP PRO\Desktop\referral ninja\app.py:1379]
+2025-10-25 14:02:20,794 ERROR: M-PESA token error: 400 -  [in c:\Users\HP PRO\Desktop\referral ninja\app.py:204]
+2025-10-25 14:02:20,815 ERROR: Failed to get M-PESA access token [in c:\Users\HP PRO\Desktop\referral ninja\app.py:215]
+2025-10-25 17:22:02,605 ERROR: M-PESA token error: 400 -  [in c:\Users\HP PRO\Desktop\referral ninja\app.py:204]
+2025-10-25 17:22:02,637 ERROR: Failed to get M-PESA access token [in c:\Users\HP PRO\Desktop\referral ninja\app.py:215]
+2025-10-26 01:59:03,905 ERROR: M-PESA token error: 400 -  [in c:\Users\HP PRO\Desktop\referral ninja\app.py:228]
+2025-10-26 01:59:03,923 ERROR: Failed to get M-PESA access token [in c:\Users\HP PRO\Desktop\referral ninja\app.py:239]
+2025-10-26 12:49:54,955 ERROR: Error during registration: (sqlite3.IntegrityError) NOT NULL constraint failed: user.name
+[SQL: INSERT INTO user (id, username, email, password_hash, phone, name, balance, total_earned, total_withdrawn, referral_code, referred_by, referral_balance, referral_count, is_admin, is_verified, is_active, created_at, last_login, login_attempts, locked_until, two_factor_enabled, user_rank, total_commission, referral_source, reset_token, reset_token_expires) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('e1cee63c-8c94-47c0-840f-cd658047a47a', 'yycomedian', 'yycomedian@gmail.com', '$2b$12$q/MXTvuR7zP08ISURK21c.OzJsok4ukHy8j5L8lJ24sNXKH5cxMhm', '254766558778', None, 0.0, 0.0, 0.0, 'RNBDC991', None, 0.0, 0, 0, 0, 1, '2025-10-26 19:49:54.418779', None, 0, None, 0, 'Bronze', 0.0, 'direct', None, None)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj) [in c:\Users\HP PRO\Desktop\referral ninja\app.py:1315]
+2025-10-26 13:00:02,571 ERROR: Error during registration: (sqlite3.IntegrityError) NOT NULL constraint failed: user.name
+[SQL: INSERT INTO user (id, username, email, password_hash, phone, name, balance, total_earned, total_withdrawn, referral_code, referred_by, referral_balance, referral_count, is_admin, is_verified, is_active, created_at, last_login, login_attempts, locked_until, two_factor_enabled, user_rank, total_commission, referral_source, reset_token, reset_token_expires) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)]
+[parameters: ('d2ffd5da-dfb8-4eee-9361-2150e631c69c', 'yycomedian', 'yycomedian@gmail.com', '$2b$12$Y33FGgAF.MSOI7ppSBwpfeXNFwmn/UlP8sVyGzD6YYioTVqEUvNj2', '254766558778', None, 0.0, 0.0, 0.0, 'RNBDC991', None, 0.0, 0, 0, 0, 1, '2025-10-26 20:00:00.641172', None, 0, None, 0, 'Bronze', 0.0, 'direct', None, None)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj) [in c:\Users\HP PRO\Desktop\referral ninja\app.py:1315]
+2025-10-26 13:46:08,253 ERROR: M-PESA token error: 400 -  [in c:\Users\HP PRO\Desktop\referral ninja\app.py:2515]
+2025-10-26 13:46:08,268 ERROR: Failed to get M-PESA access token [in c:\Users\HP PRO\Desktop\referral ninja\app.py:2396]
+2025-10-26 13:51:50,779 ERROR: M-PESA token error: 400 -  [in c:\Users\HP PRO\Desktop\referral ninja\app.py:2515]
+2025-10-26 13:51:50,812 ERROR: Failed to get M-PESA access token [in c:\Users\HP PRO\Desktop\referral ninja\app.py:2396]
+2025-10-27 04:47:48,123 ERROR: Unhandled Exception: account_activation.html [in c:\Users\HP PRO\Desktop\referral ninja\app.py:1032]
+2025-10-27 04:55:41,005 ERROR: M-PESA token error: 400 -  [in c:\Users\HP PRO\Desktop\referral ninja\app.py:2521]
+2025-10-27 04:55:41,020 ERROR: Failed to get M-PESA access token [in c:\Users\HP PRO\Desktop\referral ninja\app.py:2402]
+2025-10-27 04:55:49,100 ERROR: M-PESA token error: 400 -  [in c:\Users\HP PRO\Desktop\referral ninja\app.py:2521]
+2025-10-27 04:55:49,106 ERROR: Failed to get M-PESA access token [in c:\Users\HP PRO\Desktop\referral ninja\app.py:2402]
+2025-10-27 14:31:53,726 ERROR: Error during registration: {'message': 'new row violates row-level security policy for table "security_logs"', 'code': '42501', 'hint': None, 'details': None} [in c:\Users\HP PRO\Desktop\referral ninja\app.py:1636]
+2025-10-28 05:31:06,242 ERROR:  Database schema creation failed [in c:\Users\HP PRO\Desktop\referral ninja\app.py:1957]
+2025-10-28 05:31:09,707 ERROR:  Database schema creation failed [in c:\Users\HP PRO\Desktop\referral ninja\app.py:1957]
+2025-10-28 05:39:00,827 ERROR:  Database schema creation failed [in c:\Users\HP PRO\Desktop\referral ninja\app.py:1957]
+2025-10-28 05:39:04,223 ERROR:  Database schema creation failed [in c:\Users\HP PRO\Desktop\referral ninja\app.py:1957]
+2025-10-28 06:54:30,383 ERROR:  Database schema creation failed [in c:\Users\HP PRO\Desktop\referral ninja\app.py:1957]
+2025-10-28 06:54:33,873 ERROR:  Database schema creation failed [in c:\Users\HP PRO\Desktop\referral ninja\app.py:1957]
+2025-10-28 07:42:17,191 ERROR:  Database schema creation failed [in c:\Users\HP PRO\Desktop\referral ninja\app.py:1979]
+2025-10-28 07:42:20,651 ERROR:  Database schema creation failed [in c:\Users\HP PRO\Desktop\referral ninja\app.py:1979]
+2025-10-28 08:08:16,218 ERROR:  Database schema creation failed [in c:\Users\HP PRO\Desktop\referral ninja\app.py:1979]
+2025-10-28 08:08:19,683 ERROR:  Database schema creation failed [in c:\Users\HP PRO\Desktop\referral ninja\app.py:1979]
+2025-10-28 08:11:23,731 ERROR:  Database schema creation failed [in c:\Users\HP PRO\Desktop\referral ninja\app.py:1979]
+2025-10-28 08:11:27,183 ERROR:  Database schema creation failed [in c:\Users\HP PRO\Desktop\referral ninja\app.py:1979]

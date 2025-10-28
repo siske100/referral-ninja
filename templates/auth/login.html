@@ -53,7 +53,7 @@
             
             <div class="mb-4">
                 <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="remember_me" name="remember_me">
+                    <input class="form-check-input" type="checkbox" id="remember_me" name="remember_me" value="true">
                     <label class="form-check-label" for="remember_me">
                         Remember me
                     </label>
@@ -65,7 +65,9 @@
             </button>
             
             <div class="text-center">
-                <a href="{{ url_for('forgot_password') }}" class="text-muted text-decoration-none small">Forgot your password?</a>
+                <a href="{{ url_for('forgot_password') }}" class="text-muted text-decoration-none small">
+                    <i class="fas fa-key me-1"></i>Forgot your password?
+                </a>
             </div>
         </form>
         
@@ -83,9 +85,12 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Focus on username field
-        document.getElementById('username').focus();
+        const usernameField = document.getElementById('username');
+        if (usernameField) {
+            usernameField.focus();
+        }
         
-        // Password toggle
+        // Password toggle functionality
         const passwordToggle = document.querySelector('.password-toggle');
         const passwordInput = document.getElementById('password');
         
@@ -97,14 +102,112 @@
             });
         }
         
-        // Add enter key submission
+        // Form validation
+        const form = document.querySelector('form');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+                
+                if (!username.trim()) {
+                    e.preventDefault();
+                    showError('Please enter your username.');
+                    return false;
+                }
+                
+                if (!password.trim()) {
+                    e.preventDefault();
+                    showError('Please enter your password.');
+                    return false;
+                }
+                
+                // Add loading state to button
+                const submitBtn = this.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Signing in...';
+                    submitBtn.disabled = true;
+                }
+            });
+        }
+        
+        // Show error message function
+        function showError(message) {
+            // Remove any existing error alerts
+            const existingAlerts = document.querySelectorAll('.alert-danger');
+            existingAlerts.forEach(alert => alert.remove());
+            
+            // Create new error alert
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+            alertDiv.innerHTML = `
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            // Insert at the top of the form
+            const form = document.querySelector('form');
+            if (form) {
+                form.insertBefore(alertDiv, form.firstChild);
+            }
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+        
+        // Check for URL parameters that might indicate errors
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('error')) {
+            showError('Invalid username or password. Please try again.');
+        }
+        
+        // Auto-fill username if provided in URL (for redirects)
+        if (urlParams.has('username')) {
+            const usernameField = document.getElementById('username');
+            if (usernameField) {
+                usernameField.value = urlParams.get('username');
+            }
+        }
+        
+        // Enter key submission
         document.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 const form = document.querySelector('form');
                 if (form) {
-                    form.dispatchEvent(new Event('submit'));
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn && !submitBtn.disabled) {
+                        submitBtn.click();
+                    }
                 }
             }
+        });
+        
+        // Enhanced input validation with real-time feedback
+        const inputs = document.querySelectorAll('input[required]');
+        inputs.forEach(input => {
+            input.addEventListener('blur', function() {
+                if (!this.value.trim()) {
+                    this.style.borderColor = '#e74c3c';
+                    this.style.boxShadow = '0 0 0 3px rgba(231, 76, 60, 0.1)';
+                } else {
+                    this.style.borderColor = '#e2e8f0';
+                    this.style.boxShadow = 'none';
+                }
+            });
+            
+            input.addEventListener('input', function() {
+                if (this.value.trim()) {
+                    this.style.borderColor = '#48bb78';
+                    this.style.boxShadow = '0 0 0 3px rgba(72, 187, 120, 0.1)';
+                } else {
+                    this.style.borderColor = '#e2e8f0';
+                    this.style.boxShadow = 'none';
+                }
+            });
         });
     });
 </script>

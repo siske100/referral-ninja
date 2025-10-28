@@ -1,394 +1,300 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Withdrawal Requests - Referral Ninja</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --primary-color: #2c3e50;
-            --secondary-color: #3498db;
-            --accent-color: #e74c3c;
-            --success-color: #27ae60;
-            --warning-color: #f39c12;
-            --info-color: #2980b9;
-            --dark-color: #34495e;
-            --light-color: #ecf0f1;
-        }
-        
-        .sidebar {
-            min-height: 100vh;
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--dark-color) 100%);
-            box-shadow: 3px 0 10px rgba(0,0,0,0.1);
-        }
-        
-        .sidebar .nav-link {
-            color: var(--light-color);
-            padding: 12px 20px;
-            margin: 5px 10px;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-        }
-        
-        .sidebar .nav-link:hover,
-        .sidebar .nav-link.active {
-            background-color: rgba(255,255,255,0.1);
-            color: white;
-            transform: translateX(5px);
-        }
-        
-        .sidebar .nav-link i {
-            width: 20px;
-            text-align: center;
-        }
-        
-        .main-header {
-            background: linear-gradient(135deg, var(--primary-color), var(--dark-color));
-            color: white;
-            padding: 20px 0;
-            margin-bottom: 30px;
-            border-radius: 0 0 20px 20px;
-        }
-        
-        .card {
-            border: none;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            margin-bottom: 25px;
-        }
-        
-        .card-header {
-            background: linear-gradient(135deg, var(--primary-color), var(--dark-color));
-            color: white;
-            border-radius: 15px 15px 0 0 !important;
-            padding: 15px 25px;
-            border: none;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary-color), var(--dark-color));
-            border: none;
-            border-radius: 8px;
-            padding: 8px 20px;
-        }
-        
-        .btn-success {
-            background: linear-gradient(135deg, var(--success-color), #2ecc71);
-            border: none;
-            border-radius: 8px;
-        }
-        
-        .btn-danger {
-            background: linear-gradient(135deg, var(--accent-color), #c0392b);
-            border: none;
-            border-radius: 8px;
-        }
-        
-        .table th {
-            background-color: var(--light-color);
-            color: var(--primary-color);
-            font-weight: 600;
-            border: none;
-            padding: 15px;
-        }
-        
-        .table td {
-            padding: 12px 15px;
-            vertical-align: middle;
-            border-color: #f8f9fa;
-        }
-        
-        .table tbody tr:hover {
-            background-color: rgba(52, 152, 219, 0.05);
-        }
-        
-        .alert {
-            border: none;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
-        .logo-text {
-            font-weight: 700;
-            font-size: 1.5rem;
-            background: linear-gradient(135deg, #3498db, #2c3e50);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        
-        .badge-success { background-color: var(--success-color); }
-        .badge-warning { background-color: var(--warning-color); }
-        .badge-danger { background-color: var(--accent-color); }
-        .badge-info { background-color: var(--info-color); }
-        
-        .stat-card {
-            border-radius: 10px;
-            border: none;
-            color: white;
-            padding: 20px;
-            text-align: center;
-        }
-    </style>
-</head>
-<body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
-                <div class="position-sticky pt-3">
-                    <div class="text-center mb-4">
-                        <h4 class="logo-text">
-                            <i class="fas fa-user-secret me-2"></i>Referral Ninja
-                        </h4>
-                        <small class="text-light opacity-75">Admin Panel</small>
-                    </div>
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('admin_dashboard') }}">
-                                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('admin_users') }}">
-                                <i class="fas fa-users me-2"></i>User Management
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link active" href="{{ url_for('admin_withdrawals') }}">
-                                <i class="fas fa-money-bill-wave me-2"></i>Withdrawal Requests
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('logout') }}">
-                                <i class="fas fa-sign-out-alt me-2"></i>Logout
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </nav>
+{% extends "base.html" %}
 
-            <!-- Main content -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-                <!-- Header -->
-                <div class="main-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h1 class="h3 mb-0">
-                            <i class="fas fa-money-bill-wave me-2"></i>Withdrawal Requests
-                        </h1>
-                        <div class="text-end">
-                            <span class="badge bg-light text-dark">
-                                <i class="fas fa-clock me-1"></i>Pending: Ksh {{ "%.2f"|format(total_pending_withdrawals) }}
-                            </span>
-                        </div>
-                    </div>
-                </div>
+{% block title %}Withdrawal Requests - ReferralNinja{% endblock %}
 
-                <!-- Flash Messages -->
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        {% for category, message in messages %}
-                            <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
-                                <i class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' }} me-2"></i>
-                                {{ message }}
-                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
-                {% endwith %}
-
-                <!-- Statistics Cards -->
-                <div class="row mb-4">
-                    <div class="col-md-4">
-                        <div class="stat-card bg-warning">
-                            <h3>{{ withdrawals|selectattr('status', 'equalto', 'pending')|list|length }}</h3>
-                            <p>Pending Requests</p>
-                            <i class="fas fa-clock fa-2x"></i>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="stat-card bg-success">
-                            <h3>{{ withdrawals|selectattr('status', 'equalto', 'completed')|list|length }}</h3>
-                            <p>Completed</p>
-                            <i class="fas fa-check-circle fa-2x"></i>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="stat-card bg-danger">
-                            <h3>{{ withdrawals|selectattr('status', 'equalto', 'rejected')|list|length }}</h3>
-                            <p>Rejected</p>
-                            <i class="fas fa-times-circle fa-2x"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Withdrawals Table -->
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h6 class="m-0 font-weight-bold">
-                            <i class="fas fa-list me-2"></i>All Withdrawal Requests
-                        </h6>
-                        <span class="badge bg-primary">{{ withdrawals|length }} Total</span>
-                    </div>
-                    <div class="card-body">
-                        {% if withdrawals %}
-                            <div class="table-responsive">
-                                <table class="table table-hover">
-                                    <thead>
-                                        <tr>
-                                            <th>User</th>
-                                            <th>Amount</th>
-                                            <th>Phone</th>
-                                            <th>Status</th>
-                                            <th>Date</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for withdrawal in withdrawals %}
-                                        <tr>
-                                            <td>
-                                                <strong>{{ withdrawal.user.username }}</strong>
-                                                <br>
-                                                <small class="text-muted">{{ withdrawal.user.email }}</small>
-                                            </td>
-                                            <td>
-                                                <span class="fw-bold text-success">Ksh {{ "%.2f"|format(abs(withdrawal.amount)) }}</span>
-                                            </td>
-                                            <td>
-                                                {{ withdrawal.phone_number }}
-                                            </td>
-                                            <td>
-                                                {% if withdrawal.status == 'pending' %}
-                                                    <span class="badge bg-warning">
-                                                        <i class="fas fa-clock me-1"></i>Pending
-                                                    </span>
-                                                {% elif withdrawal.status == 'completed' %}
-                                                    <span class="badge bg-success">
-                                                        <i class="fas fa-check me-1"></i>Completed
-                                                    </span>
-                                                {% elif withdrawal.status == 'rejected' %}
-                                                    <span class="badge bg-danger">
-                                                        <i class="fas fa-times me-1"></i>Rejected
-                                                    </span>
-                                                {% else %}
-                                                    <span class="badge bg-secondary">{{ withdrawal.status|title }}</span>
-                                                {% endif %}
-                                            </td>
-                                            <td>
-                                                <small>{{ withdrawal.created_at.strftime('%Y-%m-%d') }}</small>
-                                                <br>
-                                                <small class="text-muted">{{ withdrawal.created_at.strftime('%H:%M') }}</small>
-                                            </td>
-                                            <td>
-                                                {% if withdrawal.status == 'pending' %}
-                                                    <div class="btn-group-vertical btn-group-sm">
-                                                        <button class="btn btn-success" 
-                                                                onclick="approveWithdrawal({{ withdrawal.id }})"
-                                                                title="Approve Withdrawal">
-                                                            <i class="fas fa-check"></i> Approve
-                                                        </button>
-                                                        <button class="btn btn-danger mt-1" 
-                                                                onclick="rejectWithdrawal({{ withdrawal.id }})"
-                                                                title="Reject Withdrawal">
-                                                            <i class="fas fa-times"></i> Reject
-                                                        </button>
-                                                    </div>
-                                                {% else %}
-                                                    <span class="text-muted">Processed</span>
-                                                {% endif %}
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        {% else %}
-                            <div class="text-center py-4">
-                                <i class="fas fa-money-bill-wave fa-3x text-muted mb-3"></i>
-                                <p class="text-muted">No withdrawal requests found</p>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </main>
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">
+            <i class="fas fa-money-bill-wave me-2"></i>Withdrawal Requests
+        </h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <span class="badge bg-warning text-dark me-2">
+                <i class="fas fa-clock me-1"></i>Pending: Ksh {{ "%.2f"|format(total_pending_withdrawals) }}
+            </span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refreshPage()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        function approveWithdrawal(transactionId) {
-            const action = confirm('Are you sure you want to approve this withdrawal? The amount will be sent to the user\'s M-Pesa.');
-            if (action) {
-                fetch(`/admin/approve-withdrawal/${transactionId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        showNotification('success', data.message);
-                        setTimeout(() => location.reload(), 1500);
-                    } else {
-                        showNotification('error', 'Error: ' + data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showNotification('error', 'An error occurred while approving withdrawal');
-                });
-            }
-        }
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                    <i class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' }} me-2"></i>
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
 
-        function rejectWithdrawal(transactionId) {
-            const action = confirm('Are you sure you want to reject this withdrawal? The amount will be refunded to the user\'s balance.');
-            if (action) {
-                fetch(`/admin/reject-withdrawal/${transactionId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        showNotification('success', data.message);
-                        setTimeout(() => location.reload(), 1500);
-                    } else {
-                        showNotification('error', 'Error: ' + data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showNotification('error', 'An error occurred while rejecting withdrawal');
-                });
-            }
-        }
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Pending Requests</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ withdrawals|selectattr('status', 'equalto', 'pending')|list|length }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clock fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-        function showNotification(type, message) {
-            // Create notification element
-            const notification = document.createElement('div');
-            notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-            notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-            notification.innerHTML = `
-                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            `;
-            
-            document.body.appendChild(notification);
-            
-            // Auto remove after 5 seconds
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Completed</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ withdrawals|selectattr('status', 'equalto', 'completed')|list|length }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                Rejected</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ withdrawals|selectattr('status', 'equalto', 'rejected')|list|length }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-times-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Total Requests</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ withdrawals|length }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-list fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Withdrawals Table -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-list me-2"></i>All Withdrawal Requests
+            </h6>
+            <span class="badge bg-primary">{{ withdrawals|length }} Total</span>
+        </div>
+        <div class="card-body">
+            {% if withdrawals %}
+                <div class="table-responsive">
+                    <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Amount</th>
+                                <th>Phone</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for withdrawal in withdrawals %}
+                            <tr>
+                                <td>
+                                    <strong>{{ withdrawal.user.username }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ withdrawal.user.email }}</small>
+                                </td>
+                                <td>
+                                    <span class="fw-bold text-success">Ksh {{ "%.2f"|format(abs(withdrawal.amount)) }}</span>
+                                </td>
+                                <td>
+                                    {{ withdrawal.phone_number }}
+                                </td>
+                                <td>
+                                    {% if withdrawal.status == 'pending' %}
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="fas fa-clock me-1"></i>Pending
+                                        </span>
+                                    {% elif withdrawal.status == 'completed' %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check me-1"></i>Completed
+                                        </span>
+                                    {% elif withdrawal.status == 'rejected' %}
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-times me-1"></i>Rejected
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ withdrawal.status|title }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small>{{ withdrawal.created_at.strftime('%Y-%m-%d') }}</small>
+                                    <br>
+                                    <small class="text-muted">{{ withdrawal.created_at.strftime('%H:%M') }}</small>
+                                </td>
+                                <td>
+                                    {% if withdrawal.status == 'pending' %}
+                                        <div class="btn-group-vertical btn-group-sm">
+                                            <button class="btn btn-success" 
+                                                    onclick="approveWithdrawal({{ withdrawal.id }})"
+                                                    title="Approve Withdrawal">
+                                                <i class="fas fa-check"></i> Approve
+                                            </button>
+                                            <button class="btn btn-danger mt-1" 
+                                                    onclick="rejectWithdrawal({{ withdrawal.id }})"
+                                                    title="Reject Withdrawal">
+                                                <i class="fas fa-times"></i> Reject
+                                            </button>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">Processed</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-money-bill-wave fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No withdrawal requests found</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function refreshPage() {
+    window.location.reload();
+}
+
+function approveWithdrawal(transactionId) {
+    const action = confirm('Are you sure you want to approve this withdrawal? The amount will be sent to the user\'s M-Pesa.');
+    if (action) {
+        fetch(`/admin/approve-withdrawal/${transactionId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('success', data.message);
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showNotification('error', 'Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('error', 'An error occurred while approving withdrawal');
+        });
+    }
+}
+
+function rejectWithdrawal(transactionId) {
+    const action = confirm('Are you sure you want to reject this withdrawal? The amount will be refunded to the user\'s balance.');
+    if (action) {
+        fetch(`/admin/reject-withdrawal/${transactionId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
                 }
-            }, 5000);
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('success', data.message);
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showNotification('error', 'Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('error', 'An error occurred while rejecting withdrawal');
+        });
+    }
+}
+
+function showNotification(type, message) {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
         }
-    </script>
-</body>
-</html>
+    }, 5000);
+}
+
+// Auto-refresh every 30 seconds
+setTimeout(refreshPage, 30000);
+</script>
+
+<style>
+.btn-group-vertical .btn {
+    margin-bottom: 2px;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+</style>
+{% endblock %}

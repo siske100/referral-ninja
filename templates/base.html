@@ -59,94 +59,6 @@
             margin-left: 280px;
         }
 
-        .header {
-            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-            border-bottom: 1px solid var(--border-light);
-            padding: 1rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            backdrop-filter: blur(10px);
-        }
-
-        .menu-toggle {
-            background: var(--primary-red);
-            border: none;
-            font-size: 1.2rem;
-            cursor: pointer;
-            color: white;
-            width: 45px;
-            height: 45px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
-        }
-
-        .menu-toggle:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(231, 76, 60, 0.4);
-        }
-
-        .header-title {
-            font-weight: 700;
-            color: var(--text-dark);
-            font-size: 1.5rem;
-            background: linear-gradient(135deg, var(--primary-red), var(--accent-orange));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin: 0;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .rank-badge {
-            padding: 0.5rem 1rem;
-            border-radius: 25px;
-            font-weight: 600;
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        .rank-bronze {
-            background: linear-gradient(135deg, var(--bronze), #b5651d);
-            color: white;
-        }
-
-        .rank-silver {
-            background: linear-gradient(135deg, var(--silver), #a8a8a8);
-            color: #2c3e50;
-        }
-
-        .rank-gold {
-            background: linear-gradient(135deg, var(--gold), #ffc400);
-            color: #2c3e50;
-        }
-
-        .rank-platinum {
-            background: linear-gradient(135deg, var(--platinum), #d4d4d4);
-            color: #2c3e50;
-        }
-
-        .rank-diamond {
-            background: linear-gradient(135deg, var(--diamond), #87ceeb);
-            color: #2c3e50;
-        }
-
         .content {
             padding: 2rem;
             background: var(--light-bg);
@@ -208,29 +120,8 @@
                 margin-left: 0;
             }
 
-            .header {
-                padding: 1rem;
-                flex-wrap: wrap;
-                gap: 1rem;
-            }
-
             .content {
                 padding: 1rem;
-            }
-
-            .header-title {
-                font-size: 1.25rem;
-            }
-
-            .menu-toggle {
-                width: 40px;
-                height: 40px;
-                font-size: 1rem;
-            }
-
-            .user-info {
-                flex-wrap: wrap;
-                justify-content: flex-end;
             }
         }
 
@@ -389,8 +280,6 @@
 
         /* Print Styles */
         @media print {
-            .header,
-            .menu-toggle,
             .rank-badge {
                 display: none !important;
             }
@@ -411,22 +300,6 @@
         {% include 'sidebar.html' %}
         
         <div class="main-content" id="mainContent">
-            <header class="header">
-                <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation menu">
-                    <i class="fas fa-bars"></i>
-                    <span class="sr-only">Toggle navigation menu</span>
-                </button>
-                <h1 class="header-title">{% block header %}Referral Ninja{% endblock %}</h1>
-                <div class="user-info">
-                    {% if current_user.is_authenticated %}
-                    <span class="rank-badge rank-{{ current_user.user_rank|lower }}">
-                        <i class="fas fa-{% if current_user.user_rank == 'Bronze' %}award{% elif current_user.user_rank == 'Silver' %}star{% elif current_user.user_rank == 'Gold' %}crown{% elif current_user.user_rank == 'Platinum' %}gem{% else %}diamond{% endif %} me-1"></i>
-                        {{ current_user.user_rank }}
-                    </span>
-                    {% endif %}
-                </div>
-            </header>
-
             <main class="content">
                 <!-- Connection Status Indicator -->
                 <div class="connection-status online" id="connectionStatus" style="display: none;">
@@ -465,7 +338,6 @@
     <script>
         // Enhanced JavaScript with better error handling
         document.addEventListener('DOMContentLoaded', function() {
-            const menuToggle = document.getElementById('menuToggle');
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('mainContent');
             const sidebarOverlay = document.getElementById('sidebarOverlay');
@@ -475,7 +347,6 @@
             // Initialize components safely
             function initializeApp() {
                 try {
-                    setupSidebar();
                     setupFlashMessages();
                     setupConnectionMonitor();
                     setupErrorHandling();
@@ -483,30 +354,6 @@
                 } catch (error) {
                     console.error('Error initializing app:', error);
                     showErrorState();
-                }
-            }
-
-            function setupSidebar() {
-                if (menuToggle && sidebar) {
-                    menuToggle.addEventListener('click', toggleSidebar);
-                }
-
-                if (sidebarOverlay) {
-                    sidebarOverlay.addEventListener('click', toggleSidebar);
-                }
-            }
-
-            function toggleSidebar() {
-                try {
-                    if (sidebar) {
-                        sidebar.classList.toggle('active');
-                        mainContent.classList.toggle('sidebar-expanded');
-                    }
-                    if (sidebarOverlay) {
-                        sidebarOverlay.classList.toggle('active');
-                    }
-                } catch (error) {
-                    console.error('Error toggling sidebar:', error);
                 }
             }
 

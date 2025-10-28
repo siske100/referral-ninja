@@ -28,7 +28,7 @@
             {% endif %}
         {% endwith %}
         
-        <form method="POST" action="{{ url_for('register') }}">
+        <form method="POST" action="{{ url_for('register') }}" id="registerForm">
             <div class="row">
                 <div class="col-12 mb-3">
                     <label for="username" class="form-label fw-semibold">Username</label>
@@ -40,6 +40,19 @@
                                required placeholder="Choose a username" value="{{ request.form.username if request.form }}">
                     </div>
                     <div class="form-text">3-20 characters, letters and numbers only</div>
+                </div>
+
+                <!-- Full Name Field Added Here -->
+                <div class="col-12 mb-3">
+                    <label for="full_name" class="form-label fw-semibold">Full Name</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0">
+                            <i class="fas fa-id-card text-danger"></i>
+                        </span>
+                        <input type="text" class="form-control border-start-0" id="full_name" name="full_name" 
+                               required placeholder="Enter your full name" value="{{ request.form.full_name if request.form }}">
+                    </div>
+                    <div class="form-text">Your complete name as it should appear on your account</div>
                 </div>
                 
                 <div class="col-12 mb-3">
@@ -223,8 +236,45 @@
         
         if (urlReferralCode && !currentReferralCode) {
             document.getElementById('referral_code').value = urlReferralCode;
-            // Optionally, you can also make it readonly when filled from URL
-            // document.getElementById('referral_code').readOnly = true;
+        }
+
+        // Simple form validation and loading state
+        const registerForm = document.getElementById('registerForm');
+        if (registerForm) {
+            registerForm.addEventListener('submit', function(e) {
+                // Basic validation
+                const username = document.getElementById('username').value;
+                const phone = document.getElementById('phone_number').value;
+                const email = document.getElementById('email').value;
+                const fullName = document.getElementById('full_name').value;
+                const password = document.getElementById('password').value;
+                const terms = document.getElementById('terms').checked;
+
+                if (!username || !phone || !email || !fullName || !password) {
+                    alert('Please fill in all required fields');
+                    e.preventDefault();
+                    return;
+                }
+
+                if (!terms) {
+                    alert('You must agree to the Terms of Service and Privacy Policy');
+                    e.preventDefault();
+                    return;
+                }
+
+                if (password.length < 6) {
+                    alert('Password must be at least 6 characters long');
+                    e.preventDefault();
+                    return;
+                }
+
+                // Show loading state
+                const submitBtn = this.querySelector('button[type="submit"]');
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+                
+                // Form will submit normally to Flask, which will redirect to account_activation
+            });
         }
     });
 </script>

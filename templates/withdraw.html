@@ -83,20 +83,20 @@
                             
                             <div class="form-floating mb-3">
                                 <input type="number" class="form-control" id="amount" name="amount" 
-                                       min="100" max="{{ current_user.balance }}" step="10" required
+                                       min="400" max="{{ current_user.balance }}" step="10" required
                                        placeholder="Enter amount">
                                 <label for="amount"><i class="fas fa-keyboard me-2"></i>Enter Amount (KES)</label>
                             </div>
                             
                             <div class="form-text mb-3">
-                                <i class="fas fa-info-circle me-1"></i>Minimum withdrawal: KES 100
+                                <i class="fas fa-info-circle me-1"></i>Minimum withdrawal: KES 400
                             </div>
                             
                             <!-- Quick Amount Buttons -->
                             <div class="quick-amounts-section">
                                 <label class="form-label-small mb-2">Quick Select:</label>
                                 <div class="quick-amounts-grid">
-                                    {% set quick_amounts = [100, 200, 500, 1000] %}
+                                    {% set quick_amounts = [400, 500, 1000, 2000] %}
                                     {% for quick_amount in quick_amounts %}
                                         {% if quick_amount <= current_user.balance %}
                                         <button type="button" class="quick-amount-btn" 
@@ -106,7 +106,7 @@
                                         </button>
                                         {% endif %}
                                     {% endfor %}
-                                    {% if current_user.balance > 1000 %}
+                                    {% if current_user.balance > 2000 %}
                                     <button type="button" class="quick-amount-btn max-amount" 
                                             data-amount="{{ current_user.balance }}">
                                         <span class="amount">MAX</span>
@@ -192,9 +192,9 @@
 
                         <!-- Submit Button -->
                         <button type="submit" class="btn btn-primary btn-lg w-100 py-3 withdraw-submit-btn" 
-                                id="submitButton" {% if current_user.balance < 100 %}disabled{% endif %}>
+                                id="submitButton" {% if current_user.balance < 400 %}disabled{% endif %}>
                             <i class="fas fa-paper-plane me-2"></i>
-                            {% if current_user.balance < 100 %}
+                            {% if current_user.balance < 400 %}
                                 <span>Insufficient Balance</span>
                             {% else %}
                                 <span>Submit Withdrawal Request</span>
@@ -963,9 +963,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            if (amount < 100) {
+            if (amount < 400) {
                 e.preventDefault();
-                showAlert('Minimum withdrawal amount is KES 100', 'error');
+                showAlert('Minimum withdrawal amount is KES 400', 'error');
                 return;
             }
             
@@ -989,10 +989,10 @@ document.addEventListener('DOMContentLoaded', function() {
             amountInput.setCustomValidity('Amount cannot exceed your balance');
             submitButton.disabled = true;
             submitButton.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Amount exceeds balance';
-        } else if (amount < 100 && amount > 0) {
-            amountInput.setCustomValidity('Minimum withdrawal is KES 100');
+        } else if (amount < 400 && amount > 0) {
+            amountInput.setCustomValidity('Minimum withdrawal is KES 400');
             submitButton.disabled = true;
-            submitButton.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Minimum: KES 100';
+            submitButton.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Minimum: KES 400';
         } else if (!termsAgreed) {
             submitButton.disabled = true;
             submitButton.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Accept terms to continue';

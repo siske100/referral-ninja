@@ -784,7 +784,7 @@
                         <i class="fas fa-user"></i>
                     </div>
                     <div class="profile-info">
-                        <h3 id="username">Loading...</h3>
+                        <h3 id="username">{{ user_data.username }}</h3>
                         <p>Ready for Activation</p>
                     </div>
                 </div>
@@ -796,7 +796,7 @@
                         </div>
                         <div class="detail-content">
                             <h6>Phone Number</h6>
-                            <p id="phone-number">Loading...</p>
+                            <p id="phone-number">{{ user_data.phone }}</p>
                         </div>
                     </div>
                     
@@ -806,7 +806,7 @@
                         </div>
                         <div class="detail-content">
                             <h6>Email Address</h6>
-                            <p id="email">Loading...</p>
+                            <p id="email">{{ user_data.email }}</p>
                         </div>
                     </div>
                     
@@ -816,7 +816,7 @@
                         </div>
                         <div class="detail-content">
                             <h6>Referral Code</h6>
-                            <p><span class="referral-badge"><i class="fas fa-code"></i> <span id="referral-code">Loading...</span></span></p>
+                            <p><span class="referral-badge"><i class="fas fa-code"></i> <span id="referral-code">{{ user_data.referral_code }}</span></span></p>
                         </div>
                     </div>
                 </div>
@@ -1018,115 +1018,6 @@
                 progress.style.width = ((activeCircles.length - 1) / (circles.length - 1)) * 100 + '%';
             }
 
-            // Load user data from registration
-            function loadUserData() {
-                // Method 1: Check URL parameters (if coming from registration with data in URL)
-                const urlParams = new URLSearchParams(window.location.search);
-                
-                // Method 2: Check localStorage (if registration stored data there)
-                const registrationData = localStorage.getItem('referralNinjaRegistration');
-                
-                // Method 3: Check sessionStorage
-                const sessionData = sessionStorage.getItem('referralNinjaRegistration');
-                
-                // Method 4: Check for form data in the page (if registration form is on same page)
-                const formData = getFormData();
-                
-                let userData = {};
-                
-                // Priority 1: URL Parameters (most common method)
-                if (urlParams.has('username') || urlParams.has('phone') || urlParams.has('email') || urlParams.has('referral')) {
-                    userData = {
-                        username: decodeURIComponent(urlParams.get('username') || 'User'),
-                        phone_number: decodeURIComponent(urlParams.get('phone') || 'Not provided'),
-                        email: decodeURIComponent(urlParams.get('email') || 'Not provided'),
-                        referral_code: decodeURIComponent(urlParams.get('referral') || generateReferralCode())
-                    };
-                    console.log("Loaded user data from URL parameters:", userData);
-                }
-                // Priority 2: Local Storage
-                else if (registrationData) {
-                    userData = JSON.parse(registrationData);
-                    console.log("Loaded user data from localStorage:", userData);
-                }
-                // Priority 3: Session Storage
-                else if (sessionData) {
-                    userData = JSON.parse(sessionData);
-                    console.log("Loaded user data from sessionStorage:", userData);
-                }
-                // Priority 4: Form Data
-                else if (formData) {
-                    userData = formData;
-                    console.log("Loaded user data from form:", userData);
-                }
-                // Priority 5: Default/fallback data
-                else {
-                    // If no data found, try to get from the server
-                    fetchUserDataFromServer();
-                    return;
-                }
-                
-                // Update the UI with user data
-                updateUserDisplay(userData);
-            }
-            
-            // Get form data if registration form is on the same page
-            function getFormData() {
-                // Check if there's a registration form on the page
-                const usernameInput = document.querySelector('input[name="username"], input[name="name"]');
-                const phoneInput = document.querySelector('input[name="phone"], input[name="phone_number"], input[name="mobile"]');
-                const emailInput = document.querySelector('input[name="email"]');
-                const referralInput = document.querySelector('input[name="referral"], input[name="referral_code"]');
-                
-                if (usernameInput || phoneInput || emailInput) {
-                    return {
-                        username: usernameInput ? usernameInput.value : 'User',
-                        phone_number: phoneInput ? phoneInput.value : 'Not provided',
-                        email: emailInput ? emailInput.value : 'Not provided',
-                        referral_code: referralInput ? referralInput.value : generateReferralCode()
-                    };
-                }
-                
-                return null;
-            }
-            
-            // Generate a random referral code if none is provided
-            function generateReferralCode() {
-                return 'REF' + Math.floor(10000 + Math.random() * 90000);
-            }
-            
-            // Fetch user data from server API
-            function fetchUserDataFromServer() {
-                fetch('/api/user-data')
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Network response was not ok');
-                        }
-                        return response.json();
-                    })
-                    .then(userData => {
-                        updateUserDisplay(userData);
-                    })
-                    .catch(error => {
-                        console.error('Error fetching user data:', error);
-                        // Use default data as fallback
-                        updateUserDisplay({
-                            username: 'User',
-                            phone_number: 'Phone number not available',
-                            email: 'Email not available',
-                            referral_code: generateReferralCode()
-                        });
-                    });
-            }
-            
-            // Update the display with user data
-            function updateUserDisplay(userData) {
-                document.getElementById('username').textContent = userData.username || 'User';
-                document.getElementById('phone-number').textContent = userData.phone_number || 'Not provided';
-                document.getElementById('email').textContent = userData.email || 'Not provided';
-                document.getElementById('referral-code').textContent = userData.referral_code || generateReferralCode();
-            }
-
             // Activation button handler
             activateBtn.addEventListener('click', function() {
                 // Show loading state
@@ -1154,7 +1045,7 @@
                     return;
                 }
 
-                // Initiate STK push
+                // Initiate STK push via Flask route
                 fetch('/initiate-stk-push', {
                     method: 'POST',
                     headers: {
@@ -1162,8 +1053,7 @@
                         'X-CSRFToken': getCsrfToken()
                     },
                     body: JSON.stringify({
-                        phone_number: phoneNumber,
-                        amount: 200
+                        phone_number: phoneNumber
                     })
                 })
                 .then(response => {
@@ -1286,14 +1176,17 @@
             }
             
             function getCsrfToken() {
-                return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                // Get CSRF token from meta tag or form input
+                const metaTag = document.querySelector('meta[name="csrf-token"]');
+                if (metaTag) {
+                    return metaTag.getAttribute('content');
+                }
+                return '';
             }
 
             // Check if user is already verified (in case page was refreshed)
-            checkInitialStatus();
-
             function checkInitialStatus() {
-                fetch(`/api/payment-status`)
+                fetch('/api/payment-status')
                 .then(response => response.json())
                 .then(data => {
                     if (data.verified) {
@@ -1316,11 +1209,11 @@
                 });
             });
 
-            // Load user data when page loads
-            loadUserData();
-
             // Initialize progress bar
             updateProgress();
+
+            // Check initial payment status
+            checkInitialStatus();
         });
     </script>
 </body>

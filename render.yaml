@@ -1,10 +1,167 @@
 # render.yaml
 services:
+  # Main Flask web service
   - type: web
     name: referral-ninja
     env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    plan: free
+    region: ohio
+    branch: main
+    
+    # Build configuration
+    buildCommand: |
+      pip install -r requirements.txt
+      python -c "import os; print('Environment variables:', list(os.environ.keys()))"
+    
+    # Start command
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120
+    
+    # Environment variables
     envVars:
       - key: FLASK_ENV
         value: production
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: FLASK_DEBUG
+        value: 0
+      - key: CREATE_ADMIN_USER
+        value: true
+      
+      # Supabase configuration (set these in Render dashboard)
+      - key: SUPABASE_URL
+        fromSecret: true
+      - key: SUPABASE_KEY
+        fromSecret: true
+      - key: SUPABASE_DB_URL
+        fromSecret: true
+      
+      # Security and session configuration
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      
+      # M-Pesa configuration (if applicable)
+      - key: MPESA_CONSUMER_KEY
+        fromSecret: true
+      - key: MPESA_CONSUMER_SECRET
+        fromSecret: true
+      - key: MPESA_PASSKEY
+        fromSecret: true
+      - key: MPESA_BUSINESS_SHORTCODE
+        fromSecret: true
+      
+      # SMS configuration (if applicable)
+      - key: AFRICASTALKING_API_KEY
+        fromSecret: true
+      - key: AFRICASTALKING_USERNAME
+        fromSecret: true
+
+    # Health check
+    healthCheckPath: /health
+    initialDeployHook: |
+      echo "Running initial deployment checks..."
+      python -c "
+      import os
+      print('Checking environment variables...')
+      required_vars = ['SUPABASE_URL', 'SUPABASE_KEY', 'SECRET_KEY']
+      for var in required_vars:
+          if var in os.environ:
+              print(f'✓ {var} is set')
+          else:
+              print(f'✗ {var} is missing')
+      "
+
+    # Auto-scale configuration (for paid plans)
+    # autoScaling:
+    #   minInstances: 1
+    #   maxInstances: 3
+    #   targetMemoryPercent: 70
+    #   targetCPUPercent: 70
+
+    # Disk configuration
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
+
+# Database (if you need a managed PostgreSQL database)
+# databases:
+#   - name: referralninja-db
+#     plan: free
+#     region: ohio
+#     databaseName: referralninja
+#     user: referralninja_user
+
+# Cron jobs for periodic tasks
+jobs:
+  # Clean up expired two-factor codes daily
+  - type: cron
+    name: cleanup-expired-codes
+    schedule: "0 2 * * *"  # Daily at 2 AM
+    env: python
+    plan: free
+    region: ohio
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    runCommand: |
+      python -c "
+      from app import app, supabase
+      with app.app_context():
+          # Delete expired two-factor codes
+          result = supabase.table('two_factor_codes').delete().lt('expires_at', 'now()').execute()
+          print(f'Cleaned up {len(result.data)} expired two-factor codes')
+      "
+
+  # Clean up old security logs weekly
+  - type: cron
+    name: cleanup-old-logs
+    schedule: "0 3 * * 0"  # Weekly on Sunday at 3 AM
+    env: python
+    plan: free
+    region: ohio
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    runCommand: |
+      python -c "
+      from app import app, supabase
+      with app.app_context():
+          # Delete security logs older than 30 days
+          result = supabase.table('security_logs').delete().lt('created_at', 'now() - interval \\\"30 days\\\"').execute()
+          print(f'Cleaned up {len(result.data)} old security logs')
+      "
+
+# Environment variables that apply to all services
+envVars:
+  - key: PYTHONPATH
+    value: "/opt/render/project/src"
+  - key: PYTHONUNBUFFERED
+    value: "true"
+  - key: WEB_CONCURRENCY
+    value: "2"
+
+# Build filters (optional)
+# buildFilter:
+#   paths:
+#     - app.py
+#     - requirements.txt
+#     - templates/**
+#     - static/**
+
+# Header rules for security and caching
+headers:
+  - path: /*
+    name: X-Frame-Options
+    value: DENY
+  - path: /*
+    name: X-Content-Type-Options
+    value: nosniff
+  - path: /*
+    name: X-XSS-Protection
+    value: 1; mode=block
+  - path: /static/*
+    name: Cache-Control
+    value: public, max-age=31536000
+  - path: /*
+    name: Strict-Transport-Security
+    value: max-age=31536000; includeSubDomains

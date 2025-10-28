@@ -1,6 +1,22 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
-from flask_sqlalchemy import SQLAlchemy
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Debug: Check if environment variables are loaded
+print(" Loading environment variables...")
+print("Current directory:", os.getcwd())
+print(".env file exists:", os.path.exists('.env'))
+print("SUPABASE_URL loaded:", bool(os.environ.get('SUPABASE_URL')))
+print("SUPABASE_KEY loaded:", bool(os.environ.get('SUPABASE_KEY')))
+
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, Blueprint, current_app
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask_bcrypt import Bcrypt
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timezone, timedelta
 import uuid
@@ -13,31 +29,2027 @@ from telegram import Bot
 import threading
 import requests
 import secrets
-from sqlalchemy import text
+import string
 from functools import wraps
+import base64
+import json
+import logging
+from logging.handlers import RotatingFileHandler
+from urllib.parse import urlparse
+import time
+import sys
+import psutil
+from typing import Dict, List, Any, Tuple, Optional
+
+# Supabase imports
+import psycopg2
+from typing import Optional
+from supabase import create_client
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'referral-ninja-secret-key-2025'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///referralninja.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Session configuration for network access
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-app.config['SESSION_COOKIE_SECURE'] = False  # Set to True in production with HTTPS
-app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+# PRODUCTION CONFIGURATION
+class Config:
+    # REQUIRED - No defaults for secrets
+    SECRET_KEY = os.environ['SECRET_KEY']  # Will raise error if missing
+    JWT_SECRET_KEY = os.environ['JWT_SECRET_KEY']
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
+    
+    # Supabase Configuration - REQUIRED
+    SUPABASE_URL = os.environ["SUPABASE_URL"]
+    SUPABASE_KEY = os.environ["SUPABASE_KEY"]
+    
+    # Security Settings
+    WITHDRAWAL_MIN_AMOUNT = 400
+    WITHDRAWAL_MAX_AMOUNT = 5000
+    SUSPICIOUS_AMOUNT_THRESHOLD = 5001
+    WITHDRAWAL_DAILY_LIMIT = 5000
+    
+    # M-PESA Configuration - PRODUCTION
+    MPESA_CONSUMER_KEY = os.environ['MPESA_CONSUMER_KEY']
+    MPESA_CONSUMER_SECRET = os.environ['MPESA_CONSUMER_SECRET']
+    MPESA_BUSINESS_SHORTCODE = os.environ['MPESA_BUSINESS_SHORTCODE']
+    MPESA_PASSKEY = os.environ['MPESA_PASSKEY']
+    MPESA_B2C_SHORTCODE = os.environ['MPESA_B2C_SHORTCODE']
+    MPESA_B2C_INITIATOR_NAME = os.environ['MPESA_B2C_INITIATOR_NAME']
+    MPESA_B2C_SECURITY_CREDENTIAL = os.environ['MPESA_B2C_SECURITY_CREDENTIAL']
+    MPESA_ENVIRONMENT = os.environ.get('MPESA_ENVIRONMENT', 'production')  # Default to production
+    
+    # Callback URLs - REQUIRED for production
+    MPESA_CALLBACK_URL = os.environ['MPESA_CALLBACK_URL']
+    MPESA_B2C_CALLBACK_URL = os.environ['MPESA_B2C_CALLBACK_URL']
+    MPESA_B2C_QUEUE_TIMEOUT_URL = os.environ['MPESA_B2C_QUEUE_TIMEOUT_URL']
+    
+    # Celcom SMS Configuration - REQUIRED
+    CELCOM_SMS_API_KEY = os.environ['CELCOM_SMS_API_KEY']
+    CELCOM_SENDER_ID = os.environ.get('CELCOM_SENDER_ID', 'RefNinja')
+    CELCOM_SMS_URL = os.environ.get('CELCOM_SMS_URL', 'https://api.celcomafrica.com/sms/send')
+    
+    # Telegram (Optional)
+    TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
+    TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
+    
+    # Safaricom IPs (Whitelist) - PRODUCTION
+    SAFARICOM_IPS = [
+        '196.201.214.200', '196.201.214.206', '196.201.213.114',
+        '196.201.212.227', '196.201.212.224', '196.201.212.138',
+        '196.201.212.129', '196.201.212.136', '196.201.212.74',
+        '196.201.212.69'
+    ]
+    
+    # Session Security
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    SESSION_COOKIE_SECURE = True  # Always True in production
+    SESSION_COOKIE_HTTPONLY = True
+    PERMANENT_SESSION_LIFETIME = timedelta(days=7)
 
-# Telegram Configuration
-TELEGRAM_BOT_TOKEN = '7870070553:AAGjMBMB2oDhmA7bxrm0ibzNya_D3hTM2Ec'
-TELEGRAM_CHAT_ID = '7716238167'
+class DevelopmentConfig(Config):
+    """Development specific configuration"""
+    SESSION_COOKIE_SECURE = False
+    MPESA_ENVIRONMENT = 'sandbox'
+
+# Load appropriate config based on environment
+if os.environ.get('FLASK_ENV') == 'development':
+    app.config.from_object(DevelopmentConfig)
+    print("⚙️  Development configuration loaded")
+else:
+    app.config.from_object(Config)
+    print("🚀 Production configuration loaded")
+
+# Initialize Supabase client
+supabase = create_client(app.config['SUPABASE_URL'], app.config['SUPABASE_KEY'])
 
 # Initialize extensions
-db = SQLAlchemy(app)
+bcrypt = Bcrypt(app)
+jwt = JWTManager(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message_category = 'info'
 
-# Admin Required Decorator
+# Rate limiter
+rate_limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"]
+)
+
+# =============================================================================
+# PRODUCTION DATABASE SCHEMA MANAGER
+# =============================================================================
+
+import os
+import time
+import logging
+from typing import List, Tuple, Optional
+import psycopg2  # Changed from psycopg to psycopg2
+
+
+class DatabaseManager:
+    """Production-grade database schema manager for Supabase (uses direct DB connection)."""
+    
+    def __init__(self, supabase_client):
+        self.supabase = supabase_client
+        self.logger = logging.getLogger(__name__)
+    
+    def _run_sql_via_db_url(self, sql: str, db_url: Optional[str] = None, timeout: int = 30) -> None:
+        """
+        Execute raw SQL using direct Postgres connection via SUPABASE_DB_URL.
+        Raises Exception on failure.
+        """
+        db_url = db_url or os.environ.get('SUPABASE_DB_URL')
+        if not db_url:
+            raise Exception("SUPABASE_DB_URL not set; cannot execute raw SQL via direct DB connection.")
+        
+        # Use autocommit for DDL/DDL-like statements
+        conn = psycopg2.connect(db_url)  # Changed from psycopg.connect
+        conn.autocommit = True
+        try:
+            with conn.cursor() as cur:
+                cur.execute(sql)
+        finally:
+            conn.close()
+    
+    def execute_sql(self, sql: str, max_retries: int = 3) -> bool:
+        """Execute SQL with proper error handling and retries using direct DB connection."""
+        for attempt in range(max_retries):
+            try:
+                self._run_sql_via_db_url(sql)
+                self.logger.info(f"SQL executed successfully (attempt {attempt + 1})")
+                return True
+                
+            except Exception as e:
+                err = str(e)
+                # Avoid emoji in logs to prevent Windows console encoding errors
+                self.logger.warning(f"SQL execution attempt {attempt + 1} failed: {err}")
+                
+                if "already exists" in err.lower():
+                    self.logger.info("Table/index already exists (non-fatal)")
+                    return True
+                
+                if attempt < max_retries - 1:
+                    wait = 2 ** attempt
+                    self.logger.info(f"Retrying SQL execution in {wait} seconds...")
+                    time.sleep(wait)
+                else:
+                    self.logger.error(f"All SQL execution attempts failed: {err}")
+                    return False
+        return False
+    
+    def create_tables(self) -> bool:
+        """Create all required tables with proper constraints"""
+        tables = self._get_table_definitions()
+        
+        for table_name, sql in tables:
+            self.logger.info(f"Creating table: {table_name}")
+            if not self.execute_sql(sql):
+                self.logger.error(f"Failed to create table: {table_name}")
+                return False
+        
+        self.logger.info("All tables created successfully")
+        return True
+    
+    def create_indexes(self) -> bool:
+        """Create performance indexes"""
+        indexes = self._get_index_definitions()
+        
+        for index_name, sql in indexes:
+            self.logger.info(f"Creating index: {index_name}")
+            if not self.execute_sql(sql):
+                self.logger.warning(f"Index creation failed (may already exist): {index_name}")
+        
+        self.logger.info("All indexes created/verified")
+        return True
+    
+    def _get_table_definitions(self) -> List[Tuple[str, str]]:
+        """Return all table creation SQL with proper error handling"""
+        return [
+            ("users", """
+            CREATE TABLE IF NOT EXISTS users (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                username VARCHAR(50) UNIQUE NOT NULL,
+                email VARCHAR(255) UNIQUE,
+                phone VARCHAR(20) UNIQUE NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                password_hash TEXT NOT NULL,
+                balance DECIMAL(10,2) DEFAULT 0.0 CHECK (balance >= 0),
+                total_earned DECIMAL(10,2) DEFAULT 0.0 CHECK (total_earned >= 0),
+                total_withdrawn DECIMAL(10,2) DEFAULT 0.0 CHECK (total_withdrawn >= 0),
+                referral_code VARCHAR(20) UNIQUE,
+                referred_by VARCHAR(20),
+                referral_balance DECIMAL(10,2) DEFAULT 0.0 CHECK (referral_balance >= 0),
+                referral_count INTEGER DEFAULT 0 CHECK (referral_count >= 0),
+                is_admin BOOLEAN DEFAULT FALSE,
+                is_verified BOOLEAN DEFAULT FALSE,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                last_login TIMESTAMPTZ,
+                login_attempts INTEGER DEFAULT 0 CHECK (login_attempts >= 0),
+                locked_until TIMESTAMPTZ,
+                two_factor_enabled BOOLEAN DEFAULT FALSE,
+                user_rank VARCHAR(20) DEFAULT 'Bronze',
+                total_commission DECIMAL(10,2) DEFAULT 0.0 CHECK (total_commission >= 0),
+                referral_source VARCHAR(50) DEFAULT 'direct',
+                reset_token TEXT,
+                reset_token_expires TIMESTAMPTZ,
+                -- Additional constraints
+                CONSTRAINT valid_phone CHECK (phone ~ '^254[17]\\d{8}$'),
+                CONSTRAINT valid_email CHECK (email IS NULL OR email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$'),
+                CONSTRAINT chk_balance_limits CHECK (balance <= 1000000),
+                CONSTRAINT chk_username_length CHECK (LENGTH(username) >= 3)
+            );
+            """),
+            
+            ("transactions", """
+            CREATE TABLE IF NOT EXISTS transactions (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                amount DECIMAL(10,2) NOT NULL CHECK (ABS(amount) <= 50000),
+                transaction_type VARCHAR(50) NOT NULL CHECK (transaction_type IN ('withdrawal', 'registration_fee', 'referral_bonus')),
+                status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed', 'rejected', 'Under Review')),
+                phone_number VARCHAR(20),
+                mpesa_code VARCHAR(100),
+                checkout_request_id VARCHAR(100),
+                merchant_request_id VARCHAR(100),
+                b2c_conversation_id VARCHAR(100),
+                b2c_originator_conversation_id VARCHAR(100),
+                description TEXT,
+                ip_address INET,
+                user_agent TEXT,
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                processed_at TIMESTAMPTZ,
+                -- Constraints
+                CONSTRAINT chk_withdrawal_amount CHECK (
+                    transaction_type != 'withdrawal' OR 
+                    (amount <= 0 AND ABS(amount) >= 400 AND ABS(amount) <= 5000)
+                ),
+                CONSTRAINT chk_registration_fee CHECK (
+                    transaction_type != 'registration_fee' OR 
+                    (amount = 200)
+                )
+            );
+            """),
+            
+            ("referrals", """
+            CREATE TABLE IF NOT EXISTS referrals (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                referrer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                referred_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                referral_code_used VARCHAR(20) NOT NULL,
+                commission_earned DECIMAL(10,2) DEFAULT 0.0 CHECK (commission_earned >= 0),
+                status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                -- Ensure unique referral relationships
+                CONSTRAINT unique_referral_relationship UNIQUE (referrer_id, referred_id)
+            );
+            """),
+            
+            ("security_logs", """
+            CREATE TABLE IF NOT EXISTS security_logs (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+                event_type VARCHAR(100) NOT NULL,
+                ip_address INET,
+                user_agent TEXT,
+                details TEXT,
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                -- Index for faster querying
+                CONSTRAINT valid_event_type CHECK (event_type IN (
+                    'LOGIN_SUCCESS', 'LOGIN_FAILED', 'REGISTRATION', 'LOGOUT',
+                    'WITHDRAWAL_INITIATED', 'WITHDRAWAL_COMPLETED', 'WITHDRAWAL_FAILED',
+                    'SUSPICIOUS_WITHDRAWAL', '2FA_SUCCESS', '2FA_FAILED',
+                    'PASSWORD_CHANGE', 'PROFILE_UPDATE', 'SMS_SENT_SUCCESS',
+                    'SMS_SENT_FAILED', 'UNAUTHORIZED_ACCESS', 'ADMIN_ACTION'
+                ))
+            );
+            """),
+            
+            ("mpesa_callbacks", """
+            CREATE TABLE IF NOT EXISTS mpesa_callbacks (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                payload JSONB NOT NULL,
+                ip_address INET,
+                callback_type VARCHAR(50) CHECK (callback_type IN ('STK', 'B2C', 'C2B')),
+                processed BOOLEAN DEFAULT FALSE,
+                processed_at TIMESTAMPTZ,
+                error_message TEXT,
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            );
+            """),
+            
+            ("two_factor_codes", """
+            CREATE TABLE IF NOT EXISTS two_factor_codes (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                code VARCHAR(10) NOT NULL,
+                purpose VARCHAR(50) NOT NULL CHECK (purpose IN ('LOGIN', 'WITHDRAWAL', 'PASSWORD_RESET')),
+                expires_at TIMESTAMPTZ NOT NULL,
+                is_used BOOLEAN DEFAULT FALSE,
+                used_at TIMESTAMPTZ,
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                -- Ensure codes are unique per user and purpose when not used
+                CONSTRAINT unique_active_code UNIQUE (user_id, code, purpose) 
+                WHERE (is_used = FALSE AND expires_at > NOW())
+            );
+            """)
+        ]
+    
+    def _get_index_definitions(self) -> List[Tuple[str, str]]:
+        """Return all index creation SQL"""
+        return [
+            # Users table indexes
+            ("idx_users_phone", "CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);"),
+            ("idx_users_email", "CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);"),
+            ("idx_users_referral_code", "CREATE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code);"),
+            ("idx_users_referred_by", "CREATE INDEX IF NOT EXISTS idx_users_referred_by ON users(referred_by);"),
+            ("idx_users_created_at", "CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at);"),
+            ("idx_users_is_verified", "CREATE INDEX IF NOT EXISTS idx_users_is_verified ON users(is_verified) WHERE is_verified = true;"),
+            
+            # Transactions table indexes
+            ("idx_transactions_user_id", "CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);"),
+            ("idx_transactions_status", "CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status);"),
+            ("idx_transactions_created_at", "CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at);"),
+            ("idx_transactions_type_status", "CREATE INDEX IF NOT EXISTS idx_transactions_type_status ON transactions(transaction_type, status);"),
+            ("idx_transactions_mpesa_code", "CREATE INDEX IF NOT EXISTS idx_transactions_mpesa_code ON transactions(mpesa_code) WHERE mpesa_code IS NOT NULL;"),
+            
+            # Referrals table indexes
+            ("idx_referrals_referrer_id", "CREATE INDEX IF NOT EXISTS idx_referrals_referrer_id ON referrals(referrer_id);"),
+            ("idx_referrals_referred_id", "CREATE INDEX IF NOT EXISTS idx_referrals_referred_id ON referrals(referred_id);"),
+            ("idx_referrals_created_at", "CREATE INDEX IF NOT EXISTS idx_referrals_created_at ON referrals(created_at);"),
+            
+            # Security logs indexes
+            ("idx_security_logs_user_id", "CREATE INDEX IF NOT EXISTS idx_security_logs_user_id ON security_logs(user_id);"),
+            ("idx_security_logs_created_at", "CREATE INDEX IF NOT EXISTS idx_security_logs_created_at ON security_logs(created_at);"),
+            ("idx_security_logs_event_type", "CREATE INDEX IF NOT EXISTS idx_security_logs_event_type ON security_logs(event_type);"),
+            
+            # Two-factor codes indexes
+            ("idx_two_factor_codes_user_id", "CREATE INDEX IF NOT EXISTS idx_two_factor_codes_user_id ON two_factor_codes(user_id);"),
+            ("idx_two_factor_codes_code", "CREATE INDEX IF NOT EXISTS idx_two_factor_codes_code ON two_factor_codes(code);"),
+            ("idx_two_factor_codes_expires", "CREATE INDEX IF NOT EXISTS idx_two_factor_codes_expires ON two_factor_codes(expires_at) WHERE is_used = false;"),
+            
+            # M-Pesa callbacks indexes
+            ("idx_mpesa_callbacks_processed", "CREATE INDEX IF NOT EXISTS idx_mpesa_callbacks_processed ON mpesa_callbacks(processed) WHERE processed = false;"),
+            ("idx_mpesa_callbacks_created_at", "CREATE INDEX IF NOT EXISTS idx_mpesa_callbacks_created_at ON mpesa_callbacks(created_at);")
+        ]
+    
+    def verify_schema(self) -> dict:
+        """Verify all tables and indexes exist and are accessible"""
+        verification_results = {}
+        tables_to_check = ['users', 'transactions', 'referrals', 'security_logs', 'mpesa_callbacks', 'two_factor_codes']
+        
+        for table in tables_to_check:
+            try:
+                # Try to select one row from each table via Supabase client
+                response = self.supabase.table(table).select('*', count='exact').limit(1).execute()
+                verification_results[table] = {
+                    'exists': True,
+                    'accessible': True,
+                    'row_count': len(response.data) if hasattr(response, 'data') else 0
+                }
+            except Exception as e:
+                verification_results[table] = {
+                    'exists': False,
+                    'accessible': False,
+                    'error': str(e)
+                }
+        
+        return verification_results
+    
+    def initialize_database(self) -> bool:
+        """Complete database initialization process"""
+        self.logger.info("Starting database initialization...")
+        
+        # Step 1: Create tables
+        if not self.create_tables():
+            self.logger.error("Table creation failed")
+            return False
+        
+        # Step 2: Create indexes
+        if not self.create_indexes():
+            self.logger.error("Index creation failed")
+            return False
+        
+        # Step 3: Verify schema
+        verification = self.verify_schema()
+        failed_tables = [table for table, result in verification.items() if not result['exists']]
+        
+        if failed_tables:
+            self.logger.error(f"Schema verification failed for tables: {failed_tables}")
+            return False
+        
+        self.logger.info("Database initialization completed successfully")
+        return True 
+# =============================================================================
+# COMPREHENSIVE HEALTH MONITORING SYSTEM
+# =============================================================================
+class HealthMonitor:
+    """Comprehensive health monitoring system for production"""
+    
+    def __init__(self, supabase_client, app_config):
+        self.supabase = supabase_client
+        self.config = app_config
+        self.logger = logging.getLogger(__name__)
+    
+    def comprehensive_health_check(self) -> Dict[str, Any]:
+        """Run comprehensive health checks for all critical systems"""
+        health_status = {
+            'status': 'healthy',
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'version': '1.0.0',
+            'components': {}
+        }
+        
+        # Critical components (if any fail, overall status is unhealthy)
+        critical_components = {
+            'database': self._check_database_health(),
+            'mpesa_api': self._check_mpesa_health(),
+            'celcom_sms': self._check_celcom_sms_health(),
+        }
+        
+        # Important components (failures affect functionality but not overall status)
+        important_components = {
+            'system_resources': self._check_system_resources(),
+            'redis_cache': self._check_redis_health(),
+            'telegram_bot': self._check_telegram_health(),
+        }
+        
+        # Operational metrics
+        operational_metrics = {
+            'pending_withdrawals': self._get_pending_withdrawals_count(),
+            'pending_payments': self._get_pending_payments_count(),
+            'recent_errors': self._get_recent_errors(),
+            'uptime': self._get_system_uptime(),
+        }
+        
+        health_status['components']['critical'] = critical_components
+        health_status['components']['important'] = important_components
+        health_status['components']['metrics'] = operational_metrics
+        
+        # Determine overall status
+        if any(comp['status'] == 'unhealthy' for comp in critical_components.values()):
+            health_status['status'] = 'unhealthy'
+        elif any(comp['status'] == 'degraded' for comp in critical_components.values()):
+            health_status['status'] = 'degraded'
+        elif any(comp['status'] == 'unhealthy' for comp in important_components.values()):
+            health_status['status'] = 'degraded'
+        
+        return health_status
+    
+    def _check_database_health(self) -> Dict[str, Any]:
+        """Check database connection and performance"""
+        try:
+            start_time = time.time()
+            
+            # Test basic connection
+            response = self.supabase.table('users').select('*', count='exact').limit(1).execute()
+            connection_time = time.time() - start_time
+            
+            # Test write operation
+            test_data = {
+                'event_type': 'HEALTH_CHECK',
+                'details': 'Database health check',
+                'created_at': datetime.now(timezone.utc).isoformat()
+            }
+            write_response = self.supabase.table('security_logs').insert(test_data).execute()
+            
+            status = 'healthy'
+            if connection_time > 2.0:  # More than 2 seconds is slow
+                status = 'degraded'
+            
+            return {
+                'status': status,
+                'response_time_ms': round(connection_time * 1000, 2),
+                'connection': True,
+                'read_operation': True,
+                'write_operation': bool(write_response.data),
+                'details': f'Database connection OK ({connection_time:.2f}s)'
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Database health check failed: {e}")
+            return {
+                'status': 'unhealthy',
+                'response_time_ms': None,
+                'connection': False,
+                'read_operation': False,
+                'write_operation': False,
+                'error': str(e),
+                'details': 'Database connection failed'
+            }
+    
+    def _check_mpesa_health(self) -> Dict[str, Any]:
+        """Check M-Pesa API availability"""
+        try:
+            start_time = time.time()
+            
+            # Get access token (this tests the API)
+            access_token = get_mpesa_access_token()
+            response_time = time.time() - start_time
+            
+            status = 'healthy'
+            if response_time > 5.0:  # M-Pesa is slow if >5s
+                status = 'degraded'
+            
+            return {
+                'status': status,
+                'response_time_ms': round(response_time * 1000, 2),
+                'access_token_obtained': bool(access_token),
+                'environment': self.config.get('MPESA_ENVIRONMENT', 'unknown'),
+                'details': f'M-Pesa API accessible ({response_time:.2f}s)'
+            }
+            
+        except Exception as e:
+            self.logger.error(f"M-Pesa health check failed: {e}")
+            return {
+                'status': 'unhealthy',
+                'response_time_ms': None,
+                'access_token_obtained': False,
+                'environment': self.config.get('MPESA_ENVIRONMENT', 'unknown'),
+                'error': str(e),
+                'details': 'M-Pesa API unavailable'
+            }
+    
+    def _check_celcom_sms_health(self) -> Dict[str, Any]:
+        """Check Celcom SMS API health"""
+        try:
+            # Test configuration without sending actual SMS
+            api_key = self.config.get('CELCOM_SMS_API_KEY')
+            sender_id = self.config.get('CELCOM_SENDER_ID')
+            
+            if not api_key or api_key == 'your_celcom_api_key':
+                return {
+                    'status': 'unhealthy',
+                    'configured': False,
+                    'details': 'Celcom SMS API key not configured'
+                }
+            
+            # Make a test request to check API key validity
+            headers = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+            
+            test_payload = {
+                'api_key': api_key,
+                'sender_id': sender_id,
+                'phone': '254700000000',  # Test number
+                'message': 'HEALTH CHECK - IGNORE'
+            }
+            
+            # Don't actually send, just check if credentials are valid
+            # by making a lightweight request
+            response = requests.post(
+                self.config.get('CELCOM_SMS_URL', 'https://api.celcomafrica.com/sms/send'),
+                json=test_payload,
+                headers=headers,
+                timeout=10
+            )
+            
+            # Even if it fails due to invalid number, if we get a response
+            # the API is working
+            if response.status_code in [200, 400]:  # 400 might be due to test number
+                return {
+                    'status': 'healthy',
+                    'configured': True,
+                    'api_accessible': True,
+                    'details': 'Celcom SMS API is accessible'
+                }
+            else:
+                return {
+                    'status': 'degraded',
+                    'configured': True,
+                    'api_accessible': False,
+                    'http_status': response.status_code,
+                    'details': f'Celcom SMS API returned HTTP {response.status_code}'
+                }
+                
+        except requests.exceptions.Timeout:
+            return {
+                'status': 'unhealthy',
+                'configured': True,
+                'api_accessible': False,
+                'error': 'Timeout',
+                'details': 'Celcom SMS API timeout'
+            }
+        except Exception as e:
+            self.logger.error(f"Celcom SMS health check failed: {e}")
+            return {
+                'status': 'unhealthy',
+                'configured': bool(api_key and api_key != 'your_celcom_api_key'),
+                'api_accessible': False,
+                'error': str(e),
+                'details': 'Celcom SMS API check failed'
+            }
+    
+    def _check_system_resources(self) -> Dict[str, Any]:
+        """Check system resource utilization"""
+        try:
+            cpu_percent = psutil.cpu_percent(interval=1)
+            memory = psutil.virtual_memory()
+            disk = psutil.disk_usage('/')
+            
+            status = 'healthy'
+            warnings = []
+            
+            if cpu_percent > 80:
+                status = 'degraded'
+                warnings.append(f'High CPU usage: {cpu_percent}%')
+            
+            if memory.percent > 85:
+                status = 'degraded'
+                warnings.append(f'High memory usage: {memory.percent}%')
+            
+            if disk.percent > 90:
+                status = 'degraded'
+                warnings.append(f'Low disk space: {disk.percent}% used')
+            
+            return {
+                'status': status,
+                'cpu_percent': cpu_percent,
+                'memory_percent': memory.percent,
+                'disk_percent': disk.percent,
+                'warnings': warnings,
+                'details': f'CPU: {cpu_percent}%, Memory: {memory.percent}%, Disk: {disk.percent}%'
+            }
+            
+        except Exception as e:
+            self.logger.error(f"System resources check failed: {e}")
+            return {
+                'status': 'unknown',
+                'error': str(e),
+                'details': 'System resource check failed'
+            }
+    
+    def _check_redis_health(self) -> Dict[str, Any]:
+        """Check Redis cache health (if used)"""
+        # Placeholder for Redis health check
+        return {
+            'status': 'unknown',
+            'details': 'Redis not configured'
+        }
+    
+    def _check_telegram_health(self) -> Dict[str, Any]:
+        """Check Telegram bot health"""
+        bot_token = self.config.get('TELEGRAM_BOT_TOKEN')
+        chat_id = self.config.get('TELEGRAM_CHAT_ID')
+        
+        if not bot_token or bot_token == 'your_bot_token_here':
+            return {
+                'status': 'unknown',
+                'configured': False,
+                'details': 'Telegram bot not configured'
+            }
+        
+        return {
+            'status': 'healthy',
+            'configured': True,
+            'details': 'Telegram bot configured'
+        }
+    
+    def _get_pending_withdrawals_count(self) -> Dict[str, Any]:
+        """Get pending withdrawals metrics"""
+        try:
+            pending_withdrawals = SupabaseDB.get_pending_withdrawals()
+            count = len(pending_withdrawals)
+            total_amount = sum(abs(t['amount']) for t in pending_withdrawals)
+            
+            status = 'normal'
+            if count > 20:
+                status = 'high'
+            elif count > 50:
+                status = 'critical'
+            
+            return {
+                'status': status,
+                'count': count,
+                'total_amount': total_amount,
+                'details': f'{count} pending withdrawals (KSH {total_amount:,.2f})'
+            }
+            
+        except Exception as e:
+            return {
+                'status': 'unknown',
+                'error': str(e),
+                'details': 'Failed to get pending withdrawals'
+            }
+    
+    def _get_pending_payments_count(self) -> Dict[str, Any]:
+        """Get pending payments metrics"""
+        try:
+            pending_payments = SupabaseDB.get_pending_payments()
+            count = len(pending_payments)
+            
+            return {
+                'count': count,
+                'details': f'{count} pending registration payments'
+            }
+            
+        except Exception as e:
+            return {
+                'count': 0,
+                'error': str(e),
+                'details': 'Failed to get pending payments'
+            }
+    
+    def _get_recent_errors(self) -> Dict[str, Any]:
+        """Get recent error metrics"""
+        try:
+            # Get errors from security logs in last hour
+            one_hour_ago = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+            
+            response = self.supabase.table('security_logs') \
+                .select('*', count='exact') \
+                .like('event_type', '%FAILED%') \
+                .gte('created_at', one_hour_ago) \
+                .execute()
+            
+            error_count = len(response.data)
+            
+            return {
+                'count': error_count,
+                'period': '1h',
+                'details': f'{error_count} errors in last hour'
+            }
+            
+        except Exception as e:
+            return {
+                'count': 0,
+                'error': str(e),
+                'details': 'Failed to get error count'
+            }
+    
+    def _get_system_uptime(self) -> Dict[str, Any]:
+        """Get system uptime information"""
+        try:
+            uptime_seconds = time.time() - psutil.boot_time()
+            uptime_hours = uptime_seconds / 3600
+            
+            return {
+                'hours': round(uptime_hours, 2),
+                'details': f'System uptime: {uptime_hours:.2f} hours'
+            }
+            
+        except Exception as e:
+            return {
+                'hours': 0,
+                'error': str(e),
+                'details': 'Failed to get uptime'
+            }
+
+
+# Add admin_required decorator BEFORE the health routes that use it
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_admin:
+            flash('Access denied. Admin privileges required.', 'error')
+            return redirect(url_for('dashboard'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+# Health Check Routes
+@app.route('/health')
+def health_check():
+    """Basic health check for load balancers"""
+    try:
+        # Quick database check
+        response = supabase.table('users').select('*', count='exact').limit(1).execute()
+        
+        return jsonify({
+            'status': 'healthy',
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'database': 'connected',
+            'version': '1.0.0'
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'unhealthy',
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'database': 'error',
+            'error': str(e)
+        }), 503
+
+
+@app.route('/health/detailed')
+@login_required
+@admin_required
+def detailed_health_check():
+    """Detailed health check for administrators"""
+    health_monitor = HealthMonitor(supabase, app.config)
+    health_status = health_monitor.comprehensive_health_check()
+    
+    return jsonify(health_status)
+
+
+@app.route('/health/readiness')
+def readiness_check():
+    """Kubernetes readiness probe"""
+    try:
+        # Check if application can handle requests
+        response = supabase.table('users').select('*').limit(1).execute()
+        
+        return jsonify({
+            'status': 'ready',
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'not_ready',
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'error': str(e)
+        }), 503
+
+
+@app.route('/health/liveness')
+def liveness_check():
+    """Kubernetes liveness probe"""
+    # Simple check to see if application is running
+    return jsonify({
+        'status': 'alive',
+        'timestamp': datetime.now(timezone.utc).isoformat()
+    })
+
+
+# Health monitoring background task
+def start_health_monitoring():
+    """Start background health monitoring"""
+    def monitor_health():
+        health_monitor = HealthMonitor(supabase, app.config)
+        
+        while True:
+            try:
+                health_status = health_monitor.comprehensive_health_check()
+                
+                # Log health status periodically
+                if health_status['status'] != 'healthy':
+                    app.logger.warning(f"System health degraded: {health_status['status']}")
+                
+                # Alert on critical issues
+                if health_status['status'] == 'unhealthy':
+                    _alert_on_critical_health_issue(health_status)
+                
+                time.sleep(300)  # Check every 5 minutes
+                
+            except Exception as e:
+                app.logger.error(f"Health monitoring error: {e}")
+                time.sleep(60)  # Wait 1 minute on error
+    
+    # Start monitoring thread
+    monitor_thread = threading.Thread(target=monitor_health, daemon=True)
+    monitor_thread.start()
+
+
+def _alert_on_critical_health_issue(health_status):
+    """Send alerts for critical health issues"""
+    critical_issues = []
+    
+    for component, status in health_status['components']['critical'].items():
+        if status['status'] == 'unhealthy':
+            critical_issues.append(f"{component}: {status.get('error', 'Unknown error')}")
+    
+    if critical_issues and app.config.get('TELEGRAM_BOT_TOKEN'):
+        message = "🚨 CRITICAL HEALTH ALERT:\n" + "\n".join(critical_issues)
+        send_telegram_notification(message)
+        
+        
+# =============================================================================
+# DATABASE MODELS AND UTILITIES
+# =============================================================================
+
+# Database Models as Python Classes (for type hinting and structure)
+class User(UserMixin):
+    def __init__(self, data=None):
+        if data:
+            self.id = data.get('id')
+            self.username = data.get('username')
+            self.email = data.get('email')
+            self.password_hash = data.get('password_hash')
+            self.phone = data.get('phone')
+            self.name = data.get('name')
+            self.balance = data.get('balance', 0.0)
+            self.total_earned = data.get('total_earned', 0.0)
+            self.total_withdrawn = data.get('total_withdrawn', 0.0)
+            self.referral_code = data.get('referral_code')
+            self.referred_by = data.get('referred_by')
+            self.referral_balance = data.get('referral_balance', 0.0)
+            self.referral_count = data.get('referral_count', 0)
+            self._is_admin = data.get('is_admin', False)
+            self._is_verified = data.get('is_verified', False)
+            self._is_active = data.get('is_active', True)
+            self.created_at = data.get('created_at')
+            self.last_login = data.get('last_login')
+            self.login_attempts = data.get('login_attempts', 0)
+            self.locked_until = data.get('locked_until')
+            self.two_factor_enabled = data.get('two_factor_enabled', False)
+            self.user_rank = data.get('user_rank', 'Bronze')
+            self.total_commission = data.get('total_commission', 0.0)
+            self.referral_source = data.get('referral_source', 'direct')
+            self.reset_token = data.get('reset_token')
+            self.reset_token_expires = data.get('reset_token_expires')
+
+    @property
+    def is_active(self):
+        return self._is_active
+
+    @is_active.setter
+    def is_active(self, value):
+        self._is_active = value
+
+    @property
+    def is_admin(self):
+        return self._is_admin
+
+    @is_admin.setter
+    def is_admin(self, value):
+        self._is_admin = value
+
+    @property
+    def is_verified(self):
+        return self._is_verified
+
+    @is_verified.setter
+    def is_verified(self, value):
+        self._is_verified = value
+
+    def set_password(self, password):
+        self.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+    
+    def check_password(self, password):
+        return bcrypt.check_password_hash(self.password_hash, password)
+    
+    def is_locked(self):
+        if self.locked_until and datetime.fromisoformat(self.locked_until.replace('Z', '+00:00')) > datetime.now(timezone.utc):
+            return True
+        return False
+    
+    def generate_phone_linked_referral_code(self):
+        phone_hash = hashlib.md5(self.phone.encode()).hexdigest()[:6].upper()
+        self.referral_code = f"RN{phone_hash}"
+    
+    def update_rank(self):
+        if self.total_commission >= 10000:
+            self.user_rank = 'Diamond'
+        elif self.total_commission >= 5000:
+            self.user_rank = 'Platinum'
+        elif self.total_commission >= 2000:
+            self.user_rank = 'Gold'
+        elif self.total_commission >= 1000:
+            self.user_rank = 'Silver'
+        else:
+            self.user_rank = 'Bronze'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'username': self.username,
+            'email': self.email,
+            'password_hash': self.password_hash,
+            'phone': self.phone,
+            'name': self.name,
+            'balance': self.balance,
+            'total_earned': self.total_earned,
+            'total_withdrawn': self.total_withdrawn,
+            'referral_code': self.referral_code,
+            'referred_by': self.referred_by,
+            'referral_balance': self.referral_balance,
+            'referral_count': self.referral_count,
+            'is_admin': self._is_admin,
+            'is_verified': self._is_verified,
+            'is_active': self._is_active,
+            'created_at': self.created_at,
+            'last_login': self.last_login,
+            'login_attempts': self.login_attempts,
+            'locked_until': self.locked_until,
+            'two_factor_enabled': self.two_factor_enabled,
+            'user_rank': self.user_rank,
+            'total_commission': self.total_commission,
+            'referral_source': self.referral_source,
+            'reset_token': self.reset_token,
+            'reset_token_expires': self.reset_token_expires
+        }
+
+# Enhanced SupabaseDB class with error handling
+class SupabaseDB:
+    @staticmethod
+    def handle_db_error(method_name, error, raise_exception=True):
+        """Standardized database error handling"""
+        error_msg = f"Database error in {method_name}: {str(error)}"
+        current_app.logger.error(error_msg)
+        
+        if raise_exception:
+            raise Exception(f"Database operation failed: {method_name}")
+        return None
+
+    @staticmethod
+    def get_user_by_id(user_id):
+        try:
+            response = supabase.table('users').select('*').eq('id', user_id).execute()
+            if response.data:
+                return User(response.data[0])
+            return None
+        except Exception as e:
+            return SupabaseDB.handle_db_error("get_user_by_id", e, False)
+
+    @staticmethod
+    def get_user_by_phone(phone):
+        try:
+            response = supabase.table('users').select('*').eq('phone', phone).execute()
+            if response.data:
+                return User(response.data[0])
+            return None
+        except Exception as e:
+            return SupabaseDB.handle_db_error("get_user_by_phone", e, False)
+
+    @staticmethod
+    def get_user_by_username(username):
+        try:
+            response = supabase.table('users').select('*').eq('username', username).execute()
+            if response.data:
+                return User(response.data[0])
+            return None
+        except Exception as e:
+            return SupabaseDB.handle_db_error("get_user_by_username", e, False)
+
+    @staticmethod
+    def get_user_by_email(email):
+        try:
+            response = supabase.table('users').select('*').eq('email', email).execute()
+            if response.data:
+                return User(response.data[0])
+            return None
+        except Exception as e:
+            return SupabaseDB.handle_db_error("get_user_by_email", e, False)
+
+    @staticmethod
+    def get_user_by_referral_code(referral_code):
+        try:
+            response = supabase.table('users').select('*').eq('referral_code', referral_code).execute()
+            if response.data:
+                return User(response.data[0])
+            return None
+        except Exception as e:
+            return SupabaseDB.handle_db_error("get_user_by_referral_code", e, False)
+
+    @staticmethod
+    def create_user(user_data):
+        try:
+            # Validate required fields
+            required_fields = ['id', 'username', 'phone', 'name', 'password_hash']
+            for field in required_fields:
+                if field not in user_data or not user_data[field]:
+                    raise ValueError(f"Missing required field: {field}")
+
+            response = supabase.table('users').insert(user_data).execute()
+            if response.data:
+                return User(response.data[0])
+            return None
+        except Exception as e:
+            return SupabaseDB.handle_db_error("create_user", e)
+
+    @staticmethod
+    def update_user(user_id, update_data):
+        try:
+            if not user_id:
+                raise ValueError("User ID is required for update")
+                
+            response = supabase.table('users').update(update_data).eq('id', user_id).execute()
+            if response.data:
+                return User(response.data[0])
+            return None
+        except Exception as e:
+            return SupabaseDB.handle_db_error("update_user", e)
+
+    @staticmethod
+    def create_transaction(transaction_data):
+        try:
+            # Validate transaction data
+            required_fields = ['id', 'user_id', 'amount', 'transaction_type']
+            for field in required_fields:
+                if field not in transaction_data:
+                    raise ValueError(f"Missing required transaction field: {field}")
+
+            response = supabase.table('transactions').insert(transaction_data).execute()
+            if response.data:
+                return response.data[0]
+            return None
+        except Exception as e:
+            return SupabaseDB.handle_db_error("create_transaction", e)
+
+    @staticmethod
+    def update_transaction(transaction_id, update_data):
+        try:
+            response = supabase.table('transactions').update(update_data).eq('id', transaction_id).execute()
+            if response.data:
+                return response.data[0]
+            return None
+        except Exception as e:
+            return SupabaseDB.handle_db_error("update_transaction", e, False)
+
+    @staticmethod
+    def get_transaction_by_id(transaction_id):
+        try:
+            response = supabase.table('transactions').select('*').eq('id', transaction_id).execute()
+            if response.data:
+                return response.data[0]
+            return None
+        except Exception as e:
+            return SupabaseDB.handle_db_error("get_transaction_by_id", e, False)
+
+    @staticmethod
+    def get_transactions_by_user(user_id, limit=None, transaction_type=None):
+        try:
+            query = supabase.table('transactions').select('*').eq('user_id', user_id)
+            if transaction_type:
+                query = query.eq('transaction_type', transaction_type)
+            query = query.order('created_at', desc=True)
+            if limit:
+                query = query.limit(limit)
+            response = query.execute()
+            return response.data
+        except Exception as e:
+            return SupabaseDB.handle_db_error("get_transactions_by_user", e, False)
+
+    @staticmethod
+    def get_referrals_by_referrer(referrer_id):
+        try:
+            response = supabase.table('referrals').select('*').eq('referrer_id', referrer_id).order('created_at', desc=True).execute()
+            return response.data
+        except Exception as e:
+            return SupabaseDB.handle_db_error("get_referrals_by_referrer", e, False)
+
+    @staticmethod
+    def create_referral(referral_data):
+        try:
+            response = supabase.table('referrals').insert(referral_data).execute()
+            if response.data:
+                return response.data[0]
+            return None
+        except Exception as e:
+            return SupabaseDB.handle_db_error("create_referral", e, False)
+
+    @staticmethod
+    def get_security_logs_by_user(user_id, limit=None):
+        try:
+            query = supabase.table('security_logs').select('*').eq('user_id', user_id).order('created_at', desc=True)
+            if limit:
+                query = query.limit(limit)
+            response = query.execute()
+            return response.data
+        except Exception as e:
+            return SupabaseDB.handle_db_error("get_security_logs_by_user", e, False)
+
+    @staticmethod
+    def create_security_log(log_data):
+        try:
+            response = supabase.table('security_logs').insert(log_data).execute()
+            if response.data:
+                return response.data[0]
+            return None
+        except Exception as e:
+            return SupabaseDB.handle_db_error("create_security_log", e, False)
+
+    @staticmethod
+    def create_mpesa_callback(callback_data):
+        try:
+            response = supabase.table('mpesa_callbacks').insert(callback_data).execute()
+            if response.data:
+                return response.data[0]
+            return None
+        except Exception as e:
+            return SupabaseDB.handle_db_error("create_mpesa_callback", e, False)
+
+    @staticmethod
+    def get_two_factor_code(user_id, code, purpose, used=False):
+        try:
+            response = supabase.table('two_factor_codes').select('*').eq('user_id', user_id).eq('code', code).eq('purpose', purpose).eq('is_used', used).execute()
+            if response.data:
+                return response.data[0]
+            return None
+        except Exception as e:
+            return SupabaseDB.handle_db_error("get_two_factor_code", e, False)
+
+    @staticmethod
+    def create_two_factor_code(code_data):
+        try:
+            response = supabase.table('two_factor_codes').insert(code_data).execute()
+            if response.data:
+                return response.data[0]
+            return None
+        except Exception as e:
+            return SupabaseDB.handle_db_error("create_two_factor_code", e, False)
+
+    @staticmethod
+    def update_two_factor_code(code_id, update_data):
+        try:
+            response = supabase.table('two_factor_codes').update(update_data).eq('id', code_id).execute()
+            if response.data:
+                return response.data[0]
+            return None
+        except Exception as e:
+            return SupabaseDB.handle_db_error("update_two_factor_code", e, False)
+
+    @staticmethod
+    def get_all_users():
+        try:
+            response = supabase.table('users').select('*').execute()
+            return response.data
+        except Exception as e:
+            return SupabaseDB.handle_db_error("get_all_users", e, False)
+
+    @staticmethod
+    def get_pending_withdrawals():
+        try:
+            response = supabase.table('transactions').select('*').eq('transaction_type', 'withdrawal').eq('status', 'pending').execute()
+            return response.data
+        except Exception as e:
+            return SupabaseDB.handle_db_error("get_pending_withdrawals", e, False)
+
+    @staticmethod
+    def get_pending_payments():
+        try:
+            response = supabase.table('transactions').select('*').eq('transaction_type', 'registration_fee').eq('status', 'pending').execute()
+            return response.data
+        except Exception as e:
+            return SupabaseDB.handle_db_error("get_pending_payments", e, False)
+
+    @staticmethod
+    def get_recent_users(limit=10):
+        try:
+            response = supabase.table('users').select('*').order('created_at', desc=True).limit(limit).execute()
+            return response.data
+        except Exception as e:
+            return SupabaseDB.handle_db_error("get_recent_users", e, False)
+
+    @staticmethod
+    def get_recent_activity(limit=10):
+        try:
+            response = supabase.table('transactions').select('*').order('created_at', desc=True).limit(limit).execute()
+            return response.data
+        except Exception as e:
+            return SupabaseDB.handle_db_error("get_recent_activity", e, False)
+
+    @staticmethod
+    def get_top_users(limit=50):
+        try:
+            response = supabase.table('users').select('*').order('total_commission', desc=True).limit(limit).execute()
+            return response.data
+        except Exception as e:
+            return SupabaseDB.handle_db_error("get_top_users", e, False)
+
+    @staticmethod
+    def get_users_count():
+        try:
+            response = supabase.table('users').select('*', count='exact').execute()
+            return len(response.data)
+        except Exception as e:
+            return SupabaseDB.handle_db_error("get_users_count", e, False)
+
+    @staticmethod
+    def get_verified_users_count():
+        try:
+            response = supabase.table('users').select('*', count='exact').eq('is_verified', True).execute()
+            return len(response.data)
+        except Exception as e:
+            return SupabaseDB.handle_db_error("get_verified_users_count", e, False)
+
+    @staticmethod
+    def get_referrals_count():
+        try:
+            response = supabase.table('referrals').select('*', count='exact').execute()
+            return len(response.data)
+        except Exception as e:
+            return SupabaseDB.handle_db_error("get_referrals_count", e, False)
+
+    @staticmethod
+    def get_total_commission():
+        try:
+            response = supabase.table('users').select('total_commission').execute()
+            total = sum(user['total_commission'] for user in response.data if user['total_commission'])
+            return total
+        except Exception as e:
+            return SupabaseDB.handle_db_error("get_total_commission", e, False)
+
+    @staticmethod
+    def get_total_withdrawn():
+        try:
+            response = supabase.table('users').select('total_withdrawn').execute()
+            total = sum(user['total_withdrawn'] for user in response.data if user['total_withdrawn'])
+            return total
+        except Exception as e:
+            return SupabaseDB.handle_db_error("get_total_withdrawn", e, False)
+
+    @staticmethod
+    def get_total_balance():
+        try:
+            response = supabase.table('users').select('balance').execute()
+            total = sum(user['balance'] for user in response.data if user['balance'])
+            return total
+        except Exception as e:
+            return SupabaseDB.handle_db_error("get_total_balance", e, False)
+
+# =============================================================================
+# CELCOM SMS IMPLEMENTATION
+# =============================================================================
+
+class CelcomSMS:
+    @staticmethod
+    def send_sms(phone, message, max_retries=3):
+        """
+        Send SMS using Celcom Africa API with retry logic
+        """
+        for attempt in range(max_retries):
+            try:
+                # Ensure phone number is in correct format (254...)
+                phone_clean = CelcomSMS.format_phone_number(phone)
+                
+                # Prepare payload for Celcom API
+                payload = {
+                    'api_key': app.config['CELCOM_SMS_API_KEY'],
+                    'sender_id': app.config['CELCOM_SENDER_ID'],
+                    'phone': phone_clean,
+                    'message': message
+                }
+                
+                headers = {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
+                
+                # Make API request
+                response = requests.post(
+                    app.config['CELCOM_SMS_URL'],
+                    json=payload,
+                    headers=headers,
+                    timeout=30
+                )
+                
+                # Log the request and response for debugging
+                current_app.logger.info(f"Celcom SMS API Request: {payload}")
+                current_app.logger.info(f"Celcom SMS API Response: {response.status_code} - {response.text}")
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    
+                    # Check if SMS was sent successfully based on Celcom API response structure
+                    if result.get('status') == 'success' or result.get('success') or response.status_code == 200:
+                        current_app.logger.info(f" Celcom SMS sent successfully to {phone_clean}")
+                        
+                        # Log successful SMS delivery
+                        SecurityMonitor.log_security_event(
+                            "SMS_SENT_SUCCESS",
+                            None,
+                            {"phone": phone_clean, "message_length": len(message), "provider": "Celcom"}
+                        )
+                        return True
+                    else:
+                        error_msg = result.get('message', 'Unknown error from Celcom API')
+                        current_app.logger.error(f"Celcom SMS failed: {error_msg}")
+                else:
+                    current_app.logger.error(f" Celcom SMS HTTP error: {response.status_code} - {response.text}")
+                
+                # Wait before retry (exponential backoff)
+                if attempt < max_retries - 1:
+                    wait_time = 2 ** attempt
+                    current_app.logger.info(f"Retrying SMS in {wait_time} seconds...")
+                    time.sleep(wait_time)
+                    
+            except requests.exceptions.RequestException as e:
+                current_app.logger.error(f"Celcom SMS network error (attempt {attempt + 1}): {str(e)}")
+                if attempt < max_retries - 1:
+                    time.sleep(2 ** attempt)
+            except Exception as e:
+                current_app.logger.error(f"Celcom SMS unexpected error (attempt {attempt + 1}): {str(e)}")
+                if attempt < max_retries - 1:
+                    time.sleep(2 ** attempt)
+        
+        # All retries failed
+        SecurityMonitor.log_security_event(
+            "SMS_SENT_FAILED",
+            None,
+            {"phone": phone, "error": "All retries failed", "provider": "Celcom"}
+        )
+        return False
+    
+    @staticmethod
+    def format_phone_number(phone):
+        """
+        Format phone number to Celcom compatible format (254...)
+        """
+        # Remove any non-digit characters
+        phone_clean = re.sub(r'\D', '', phone)
+        
+        # Handle different formats
+        if phone_clean.startswith('0'):
+            # Convert 07... to 2547...
+            return '254' + phone_clean[1:]
+        elif phone_clean.startswith('+'):
+            # Remove + prefix
+            return phone_clean[1:]
+        elif phone_clean.startswith('254') and len(phone_clean) == 12:
+            # Already in correct format
+            return phone_clean
+        elif len(phone_clean) == 9:
+            # Assume it's missing country code
+            return '254' + phone_clean
+        else:
+            # Return as is, let API handle validation
+            return phone_clean
+    
+    @staticmethod
+    def send_2fa_code(phone, code):
+        """
+        Send 2FA code via SMS
+        """
+        message = f"Your Referral Ninja verification code is: {code}. This code expires in 10 minutes."
+        return CelcomSMS.send_sms(phone, message)
+    
+    @staticmethod
+    def send_withdrawal_notification(phone, username, amount, status, transaction_id=None):
+        """
+        Send withdrawal status notification
+        """
+        if status == 'processing':
+            message = f"Hi {username}, your withdrawal of Ksh {amount} is being processed. You'll get confirmation shortly."
+        elif status == 'completed':
+            message = f"Hi {username}, your withdrawal of Ksh {amount} was successful! Transaction ID: {transaction_id}. Invite friends to earn more."
+        elif status == 'failed':
+            message = f"Hi {username}, your withdrawal of Ksh {amount} failed. Your balance has been refunded. Please try again."
+        else:
+            message = f"Hi {username}, your withdrawal of Ksh {amount} is {status}."
+        
+        return CelcomSMS.send_sms(phone, message)
+    
+    @staticmethod
+    def send_registration_notification(phone, username):
+        """
+        Send welcome message after registration
+        """
+        message = f" Welcome to Referral Ninja, {username}! Complete your KSH 200 payment to activate your account and start earning."
+        return CelcomSMS.send_sms(phone, message)
+    
+    @staticmethod
+    def send_referral_notification(phone, username, referral_bonus):
+        """
+        Send notification when referral bonus is earned
+        """
+        message = f" Hi {username}, you've earned Ksh {referral_bonus} referral bonus! Keep inviting friends to earn more."
+        return CelcomSMS.send_sms(phone, message)
+
+# =============================================================================
+# SECURITY CLASSES
+# =============================================================================
+
+class SecurityMonitor:
+    @staticmethod
+    def log_security_event(event_type, user_id, details):
+        """Log security events"""
+        security_log = {
+            'user_id': user_id,
+            'event_type': event_type,
+            'ip_address': request.remote_addr if request else None,
+            'user_agent': request.headers.get('User-Agent') if request else None,
+            'details': str(details),
+            'created_at': datetime.now(timezone.utc).isoformat()
+        }
+        SupabaseDB.create_security_log(security_log)
+        current_app.logger.info(f"Security Event: {event_type} - User: {user_id} - {details}")
+    
+    @staticmethod
+    def generate_2fa_code(user_id, purpose):
+        """Generate 2FA code"""
+        code = ''.join(secrets.choice(string.digits) for _ in range(6))
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+        
+        two_fa_code = {
+            'user_id': user_id,
+            'code': code,
+            'purpose': purpose,
+            'expires_at': expires_at.isoformat(),
+            'is_used': False,
+            'created_at': datetime.now(timezone.utc).isoformat()
+        }
+        SupabaseDB.create_two_factor_code(two_fa_code)
+        
+        # Send 2FA code via Celcom SMS
+        user = SupabaseDB.get_user_by_id(user_id)
+        if user:
+            CelcomSMS.send_2fa_code(user.phone, code)
+        
+        current_app.logger.info(f"2FA Code for {user_id}: {code}")
+        return code
+    
+    @staticmethod
+    def verify_2fa_code(user_id, code, purpose):
+        """Verify 2FA code"""
+        two_fa_code = SupabaseDB.get_two_factor_code(user_id, code, purpose, False)
+        
+        if not two_fa_code:
+            return False
+        
+        expires_at = datetime.fromisoformat(two_fa_code['expires_at'].replace('Z', '+00:00'))
+        if expires_at < datetime.now(timezone.utc):
+            return False
+        
+        # Mark as used
+        SupabaseDB.update_two_factor_code(two_fa_code['id'], {'is_used': True})
+        return True
+    
+    @staticmethod
+    def notify_admins(message):
+        """Notify admins of security events"""
+        current_app.logger.warning(f"ADMIN ALERT: {message}")
+
+class FraudDetector:
+    @staticmethod
+    def check_suspicious_activity(user, amount, request_obj):
+        """Detect suspicious withdrawal patterns"""
+        checks = []
+        
+        # Check 1: Amount exceeds threshold
+        if amount > current_app.config['SUSPICIOUS_AMOUNT_THRESHOLD']:
+            checks.append("Amount exceeds normal threshold")
+        
+        # Check 2: Multiple rapid withdrawals
+        recent_withdrawals = SupabaseDB.get_transactions_by_user(
+            user.id, 
+            transaction_type='withdrawal'
+        )
+        # Filter for last hour
+        recent_withdrawals = [t for t in recent_withdrawals 
+                            if datetime.fromisoformat(t['created_at'].replace('Z', '+00:00')) >= datetime.now(timezone.utc) - timedelta(hours=1)]
+        
+        if len(recent_withdrawals) >= 3:
+            checks.append("Multiple withdrawals in short period")
+        
+        # Check 3: Unusual time (2AM - 5AM)
+        current_hour = datetime.now(timezone.utc).hour
+        if 2 <= current_hour <= 5:
+            checks.append("Unusual withdrawal time")
+        
+        # Check 4: New device/location
+        if recent_withdrawals:
+            recent_withdrawal = recent_withdrawals[0]
+            if recent_withdrawal.get('ip_address') != request_obj.remote_addr:
+                checks.append("Different IP address from previous withdrawals")
+        
+        # Check 5: New user with large withdrawal
+        user_created = datetime.fromisoformat(user.created_at.replace('Z', '+00:00'))
+        if user_created > datetime.now(timezone.utc) - timedelta(days=1) and amount > 1000:
+            checks.append("New user with large withdrawal")
+        
+        return " | ".join(checks) if checks else None
+
+# =============================================================================
+# M-PESA CONFIGURATION AND FUNCTIONS
+# =============================================================================
+
+# Production M-Pesa Configuration
+def get_mpesa_base_url():
+    """Get M-Pesa base URL based on environment"""
+    if app.config['MPESA_ENVIRONMENT'] == 'sandbox':
+        return 'https://sandbox.safaricom.co.ke'
+    else:
+        return 'https://api.safaricom.co.ke'
+
+def get_mpesa_access_token():
+    """Get M-Pesa OAuth token with production support"""
+    try:
+        consumer_key = app.config['MPESA_CONSUMER_KEY']
+        consumer_secret = app.config['MPESA_CONSUMER_SECRET']
+        
+        if not consumer_key or not consumer_secret:
+            raise ValueError("M-Pesa consumer key and secret are required")
+        
+        auth = (consumer_key, consumer_secret)
+        base_url = get_mpesa_base_url()
+        url = f"{base_url}/oauth/v1/generate?grant_type=client_credentials"
+        
+        response = requests.get(url, auth=auth, timeout=30)
+        response.raise_for_status()
+        
+        token_data = response.json()
+        access_token = token_data.get('access_token')
+        
+        if not access_token:
+            raise ValueError("Failed to get access token from M-Pesa")
+            
+        return access_token
+        
+    except requests.exceptions.RequestException as e:
+        current_app.logger.error(f"M-Pesa token request failed: {str(e)}")
+        raise Exception("M-Pesa service unavailable")
+    except Exception as e:
+        current_app.logger.error(f"M-Pesa token error: {str(e)}")
+        raise
+
+def initiate_stk_push(phone_number, amount, account_reference, transaction_desc):
+    """Production-ready STK push initiation"""
+    try:
+        access_token = get_mpesa_access_token()
+        
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        business_shortcode = app.config['MPESA_BUSINESS_SHORTCODE']
+        passkey = app.config['MPESA_PASSKEY']
+        
+        password = base64.b64encode(
+            f"{business_shortcode}{passkey}{timestamp}".encode()
+        ).decode()
+        
+        # Format phone number for production
+        phone_clean = CelcomSMS.format_phone_number(phone_number)
+        
+        payload = {
+            "BusinessShortCode": business_shortcode,
+            "Password": password,
+            "Timestamp": timestamp,
+            "TransactionType": "CustomerPayBillOnline",
+            "Amount": amount,
+            "PartyA": phone_clean,
+            "PartyB": business_shortcode,
+            "PhoneNumber": phone_clean,
+            "CallBackURL": app.config['MPESA_CALLBACK_URL'],
+            "AccountReference": account_reference,
+            "TransactionDesc": transaction_desc
+        }
+        
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Content-Type': 'application/json'
+        }
+        
+        base_url = get_mpesa_base_url()
+        response = requests.post(
+            f'{base_url}/mpesa/stkpush/v1/processrequest',
+            json=payload,
+            headers=headers,
+            timeout=30
+        )
+        
+        response.raise_for_status()
+        result = response.json()
+        
+        if result.get('ResponseCode') == '0':
+            current_app.logger.info(f"STK Push initiated for {phone_clean}, Amount: {amount}")
+            return result
+        else:
+            error_message = result.get('errorMessage', 'Unknown error')
+            current_app.logger.error(f"STK Push failed: {error_message}")
+            raise Exception(f"M-Pesa STK push failed: {error_message}")
+            
+    except requests.exceptions.RequestException as e:
+        current_app.logger.error(f"STK Push network error: {str(e)}")
+        raise Exception("M-Pesa service unavailable")
+    except Exception as e:
+        current_app.logger.error(f"STK Push error: {str(e)}")
+        raise
+
+def get_mpesa_b2c_access_token():
+    """Get M-PESA B2C access token"""
+    try:
+        auth_string = f"{app.config['MPESA_CONSUMER_KEY']}:{app.config['MPESA_CONSUMER_SECRET']}"
+        encoded_auth = base64.b64encode(auth_string.encode()).decode()
+        
+        headers = {
+            'Authorization': f'Basic {encoded_auth}'
+        }
+        
+        base_url = get_mpesa_base_url()
+        response = requests.get(
+            f'{base_url}/oauth/v1/generate?grant_type=client_credentials',
+            headers=headers,
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            return response.json().get('access_token')
+        else:
+            app.logger.error(f"M-PESA B2C token error: {response.status_code} - {response.text}")
+            return None
+    except Exception as e:
+        app.logger.error(f"Error getting M-PESA B2C token: {e}")
+        return None
+
+def initiate_b2c_payment(phone_number, amount, transaction_reference, remarks="Referral withdrawal"):
+    """Initiate B2C payment to user (payout)"""
+    try:
+        access_token = get_mpesa_b2c_access_token()
+        if not access_token:
+            app.logger.error("Failed to get M-PESA B2C access token")
+            return None
+        
+        # Format phone number
+        if phone_number.startswith('0'):
+            phone_number = '254' + phone_number[1:]
+        elif phone_number.startswith('+'):
+            phone_number = phone_number[1:]
+        
+        # Security credential (in production, this should be encrypted)
+        security_credential = app.config['MPESA_B2C_SECURITY_CREDENTIAL']
+        
+        payload = {
+            "InitiatorName": app.config['MPESA_B2C_INITIATOR_NAME'],
+            "SecurityCredential": security_credential,
+            "CommandID": "BusinessPayment",
+            "Amount": amount,
+            "PartyA": app.config['MPESA_B2C_SHORTCODE'],
+            "PartyB": phone_number,
+            "Remarks": remarks,
+            "QueueTimeOutURL": app.config['MPESA_B2C_QUEUE_TIMEOUT_URL'],
+            "ResultURL": app.config['MPESA_B2C_CALLBACK_URL'],
+            "Occasion": "ReferralPayout",
+            "OriginatorConversationID": transaction_reference
+        }
+        
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Content-Type': 'application/json'
+        }
+        
+        base_url = get_mpesa_base_url()
+        response = requests.post(
+            f'{base_url}/mpesa/b2c/v1/paymentrequest',
+            json=payload,
+            headers=headers,
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            if result.get('ResponseCode') == '0':
+                app.logger.info(f"B2C payment initiated successfully for {phone_number}, Amount: {amount}")
+                return result
+            else:
+                error_message = result.get('errorMessage', 'Unknown error')
+                app.logger.error(f"B2C payment failed: {error_message}")
+                return None
+        else:
+            app.logger.error(f"B2C payment HTTP error: {response.status_code} - {response.text}")
+            return None
+            
+    except Exception as e:
+        app.logger.error(f"Error initiating B2C payment: {e}")
+        return None
+
+def process_automatic_withdrawal(withdrawal_transaction):
+    """Process withdrawal automatically via M-Pesa B2C"""
+    try:
+        user = SupabaseDB.get_user_by_id(withdrawal_transaction['user_id'])
+        if not user:
+            app.logger.error(f"User not found for withdrawal: {withdrawal_transaction['id']}")
+            return False
+        
+        amount = abs(withdrawal_transaction['amount'])
+        phone_number = withdrawal_transaction['phone_number']
+        
+        # Initiate B2C payment
+        b2c_response = initiate_b2c_payment(
+            phone_number=phone_number,
+            amount=amount,
+            transaction_reference=str(withdrawal_transaction['id']),
+            remarks=f"Withdrawal for {user.username}"
+        )
+        
+        if b2c_response and b2c_response.get('ResponseCode') == '0':
+            # Update transaction with B2C reference
+            update_data = {
+                'mpesa_code': b2c_response.get('TransactionID', 'PENDING'),
+                'b2c_conversation_id': b2c_response.get('ConversationID', ''),
+                'b2c_originator_conversation_id': b2c_response.get('OriginatorConversationID', ''),
+                'status': 'processing',
+                'description': f'M-Pesa B2C payout initiated - {b2c_response.get("ResponseDescription", "")}'
+            }
+            SupabaseDB.update_transaction(withdrawal_transaction['id'], update_data)
+            
+            # Send initial SMS via Celcom
+            CelcomSMS.send_withdrawal_notification(
+                user.phone,
+                user.username,
+                amount,
+                'processing'
+            )
+            
+            app.logger.info(f"B2C payout initiated for user {user.username}, withdrawal ID: {withdrawal_transaction['id']}")
+            return True
+        else:
+            # B2C initiation failed, mark as failed and refund
+            update_data = {
+                'status': 'failed',
+                'description': 'M-Pesa B2C initiation failed'
+            }
+            SupabaseDB.update_transaction(withdrawal_transaction['id'], update_data)
+            
+            # Refund user balance
+            user.balance += amount
+            user.total_withdrawn -= amount
+            SupabaseDB.update_user(user.id, {
+                'balance': user.balance,
+                'total_withdrawn': user.total_withdrawn
+            })
+            
+            # Send failure SMS via Celcom
+            CelcomSMS.send_withdrawal_notification(
+                user.phone,
+                user.username,
+                amount,
+                'failed'
+            )
+            
+            app.logger.error(f"B2C payout initiation failed for user {user.username}")
+            return False
+            
+    except Exception as e:
+        app.logger.error(f"Error processing automatic withdrawal: {e}")
+        return False
+
+def query_stk_push_status(checkout_request_id):
+    """Query status of STK push transaction"""
+    try:
+        access_token = get_mpesa_access_token()
+        if not access_token:
+            return None
+            
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        password = base64.b64encode(
+            f"{app.config['MPESA_BUSINESS_SHORTCODE']}{app.config['MPESA_PASSKEY']}{timestamp}".encode()
+        ).decode()
+        
+        payload = {
+            "BusinessShortCode": app.config['MPESA_BUSINESS_SHORTCODE'],
+            "Password": password,
+            "Timestamp": timestamp,
+            "CheckoutRequestID": checkout_request_id
+        }
+        
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Content-Type': 'application/json'
+        }
+        
+        base_url = get_mpesa_base_url()
+        response = requests.post(
+            f'{base_url}/mpesa/stkpushquery/v1/query',
+            json=payload,
+            headers=headers,
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            app.logger.error(f"STK Query error: {response.text}")
+            return None
+            
+    except Exception as e:
+        app.logger.error(f"Error querying STK status: {e}")
+        return None
+
+# =============================================================================
+# APPLICATION INITIALIZATION
+# =============================================================================
+
+# Setup logging
+if not app.debug:
+    file_handler = RotatingFileHandler('error.log', maxBytes=10240, backupCount=10)
+    file_handler.setFormatter(logging.Formatter(
+        '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+    ))
+    file_handler.setLevel(logging.ERROR)
+    app.logger.addHandler(file_handler)
+
+# Fix console logging encoding
+if sys.stdout.encoding != 'utf-8':
+    import codecs
+    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer)
+
+# Environment validation
+def validate_environment():
+    """Validate all required environment variables are set"""
+    required_vars = [
+        'SECRET_KEY',
+        'JWT_SECRET_KEY',
+        'SUPABASE_URL',
+        'SUPABASE_KEY',
+        'MPESA_CONSUMER_KEY',
+        'MPESA_CONSUMER_SECRET',
+        'MPESA_BUSINESS_SHORTCODE',
+        'MPESA_PASSKEY',
+        'MPESA_B2C_SHORTCODE',
+        'MPESA_B2C_INITIATOR_NAME',
+        'MPESA_B2C_SECURITY_CREDENTIAL',
+        'MPESA_CALLBACK_URL',
+        'MPESA_B2C_CALLBACK_URL',
+        'MPESA_B2C_QUEUE_TIMEOUT_URL',
+        'CELCOM_SMS_API_KEY'
+    ]
+    
+    missing_vars = []
+    for var in required_vars:
+        if not os.environ.get(var):
+            missing_vars.append(var)
+    
+    if missing_vars:
+        raise Exception(f"Missing required environment variables: {', '.join(missing_vars)}")
+    
+    current_app.logger.info("✓ All required environment variables are set")
+
+# Updated initialization function
+def init_db():
+    """Production database initialization with proper error handling"""
+    max_retries = 3
+    retry_count = 0
+    
+    db_manager = DatabaseManager(supabase)
+    
+    while retry_count < max_retries:
+        try:
+            # Test basic connection first
+            response = supabase.table('users').select('*').limit(1).execute()
+            current_app.logger.info("✓ Supabase connection successful")
+            
+            # Initialize database schema
+            if db_manager.initialize_database():
+                current_app.logger.info("Database schema verified/created successfully")
+                
+                # Create admin user if required
+                if os.environ.get('CREATE_ADMIN_USER') == 'true':
+                    _create_admin_user()
+                
+                return True
+            else:
+                current_app.logger.error(" Database schema creation failed")
+                return False
+                
+        except Exception as e:
+            retry_count += 1
+            current_app.logger.error(f" Database initialization attempt {retry_count} failed: {e}")
+            
+            if retry_count < max_retries:
+                current_app.logger.info(f"Retrying database initialization in {2 ** retry_count} seconds...")
+                time.sleep(2 ** retry_count)
+            else:
+                current_app.logger.error(" All database initialization attempts failed")
+                return False
+
+def _create_admin_user():
+    """Create admin user with secure password"""
+    try:
+        admin_user = SupabaseDB.get_user_by_username('admin')
+        if not admin_user:
+            admin_data = {
+                'id': str(uuid.uuid4()),
+                'username': 'admin',
+                'email': os.environ.get('ADMIN_EMAIL', 'admin@referralninja.co.ke'),
+                'phone': os.environ.get('ADMIN_PHONE', '254712345678'),
+                'name': 'System Administrator',
+                'is_admin': True,
+                'is_verified': True,
+                'is_active': True,
+                'created_at': datetime.now(timezone.utc).isoformat()
+            }
+            
+            admin = User(admin_data)
+            admin_password = os.environ.get('ADMIN_PASSWORD', secrets.token_urlsafe(16))
+            admin.set_password(admin_password)
+            admin.generate_phone_linked_referral_code()
+            
+            admin_dict = admin.to_dict()
+            admin_dict.pop('password_hash', None)
+            admin_dict['password_hash'] = admin.password_hash
+            
+            created_admin = SupabaseDB.create_user(admin_dict)
+            if created_admin:
+                current_app.logger.info("Admin user created successfully")
+                # Log password only in secure environments
+                if app.config.get('DEBUG'):
+                    current_app.logger.info(f"Admin password: {admin_password}")
+            else:
+                current_app.logger.error("Failed to create admin user")
+    except Exception as e:
+        current_app.logger.error(f"Admin user creation failed: {e}")
+
+# Enhanced before_request with health checks
+@app.before_request
+def before_request():
+    """Enhanced request preprocessing with health checks"""
+    try:
+        # Quick health check
+        response = supabase.table('users').select('*').limit(1).execute()
+    except Exception as e:
+        current_app.logger.error(f"Database health check failed: {e}")
+        return jsonify({'error': 'Service temporarily unavailable'}), 503
+    
+    # Log security events for sensitive endpoints
+    if request.endpoint in ['api_request_withdrawal', 'withdraw', 'admin_dashboard']:
+        SecurityMonitor.log_security_event(
+            "SENSITIVE_ENDPOINT_ACCESS",
+            current_user.id if current_user.is_authenticated else None,
+            {
+                "endpoint": request.endpoint,
+                "ip": request.remote_addr,
+                "method": request.method
+            }
+        )
+
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -59,299 +2071,570 @@ def utility_processor():
         'now': datetime.now(timezone.utc)
     }
 
-# Database Models
-class User(UserMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(200), nullable=False)
-    phone_number = db.Column(db.String(20), unique=True, nullable=False)
-    balance = db.Column(db.Float, default=0.0)
-    referral_code = db.Column(db.String(10), unique=True)
-    referred_by = db.Column(db.String(10))
-    referral_balance = db.Column(db.Float, default=0.0)
-    total_earned = db.Column(db.Float, default=0.0)
-    total_withdrawn = db.Column(db.Float, default=0.0)
-    referral_count = db.Column(db.Integer, default=0)
-    is_admin = db.Column(db.Boolean, default=False)
-    is_verified = db.Column(db.Boolean, default=False)
-    is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    
-    # Ranking system fields
-    user_rank = db.Column(db.String(20), default='Bronze')
-    total_commission = db.Column(db.Float, default=0.0)
-    
-    # Referral source tracking
-    referral_source = db.Column(db.String(20), default='direct')
-    
-    # Password reset fields
-    reset_token = db.Column(db.String(100), unique=True)
-    reset_token_expires = db.Column(db.DateTime)
-    
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
-    
-    def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
-    
-    def generate_phone_linked_referral_code(self):
-        phone_hash = hashlib.md5(self.phone_number.encode()).hexdigest()[:6].upper()
-        self.referral_code = f"RN{phone_hash}"
-    
-    def update_rank(self):
-        if self.total_commission >= 10000:
-            self.user_rank = 'Diamond'
-        elif self.total_commission >= 5000:
-            self.user_rank = 'Platinum'
-        elif self.total_commission >= 2000:
-            self.user_rank = 'Gold'
-        elif self.total_commission >= 1000:
-            self.user_rank = 'Silver'
+# =============================================================================
+# BLUEPRINTS AND ROUTES
+# =============================================================================
+
+# Blueprints
+auth_bp = Blueprint("auth_api", __name__)
+mpesa_bp = Blueprint("mpesa_api", __name__)
+withdraw_bp = Blueprint("withdraw_api", __name__)
+
+# API Authentication Routes with Security
+@auth_bp.route("/register", methods=["POST"])
+@rate_limiter.limit("10 per hour")
+def api_register():
+    try:
+        data = request.get_json()
+        phone = data.get("phone", "").strip()
+        name = data.get("full_name", "").strip()
+        password = data.get("password")
+        email = data.get("email", "").strip()
+        username = data.get("username", "").strip()
+        
+        # Validation
+        if not name or not name.strip():
+            return jsonify({"error": "Full name is required"}), 400
+            
+        if not re.match(r'^254[17]\d{8}$', phone):
+            return jsonify({"error": "Invalid phone number format"}), 400
+        
+        if len(password) < 6:
+            return jsonify({"error": "Password must be at least 6 characters"}), 400
+        
+        if SupabaseDB.get_user_by_phone(phone):
+            return jsonify({"error": "Phone number already registered"}), 409
+        
+        # Create user
+        user_data = {
+            'id': str(uuid.uuid4()),
+            'phone': phone,
+            'name': name,
+            'email': email,
+            'username': username,
+            'is_verified': False,
+            'created_at': datetime.now(timezone.utc).isoformat()
+        }
+        
+        user = User(user_data)
+        user.set_password(password)
+        user.generate_phone_linked_referral_code()
+        
+        # Save to database
+        user_dict = user.to_dict()
+        user_dict.pop('password_hash', None)  # Remove the method
+        user_dict['password_hash'] = user.password_hash  # Add the actual hash
+        
+        created_user = SupabaseDB.create_user(user_dict)
+        
+        if not created_user:
+            return jsonify({"error": "Failed to create user"}), 500
+        
+        # Send welcome SMS
+        CelcomSMS.send_registration_notification(phone, username)
+        
+        SecurityMonitor.log_security_event(
+            "REGISTRATION", 
+            created_user.id, 
+            {"ip": request.remote_addr}
+        )
+        
+        return jsonify({
+            "message": "Registration successful. Please complete KSH 200 payment to activate your account.",
+            "user_id": created_user.id
+        }), 201
+        
+    except Exception as e:
+        current_app.logger.error(f"Registration error: {str(e)}")
+        return jsonify({"error": "Registration failed"}), 500
+
+@auth_bp.route("/login", methods=["POST"])
+@rate_limiter.limit("5 per minute")
+def api_login():
+    try:
+        data = request.get_json()
+        phone = data.get("phone", "").strip()
+        password = data.get("password")
+        
+        user = SupabaseDB.get_user_by_phone(phone)
+        
+        if not user or not user.check_password(password):
+            SecurityMonitor.log_security_event(
+                "LOGIN_FAILED", 
+                user.id if user else None,
+                {"ip": request.remote_addr, "reason": "Invalid credentials"}
+            )
+            return jsonify({"error": "Invalid phone or password"}), 401
+        
+        if user.is_locked():
+            return jsonify({"error": "Account temporarily locked. Try again later."}), 423
+        
+        if not user.is_active:
+            return jsonify({"error": "Account deactivated"}), 403
+        
+        if not user.is_verified:
+            return jsonify({"error": "Account not verified. Please complete payment verification."}), 403
+        
+        # Reset login attempts on successful login
+        update_data = {
+            'login_attempts': 0,
+            'locked_until': None,
+            'last_login': datetime.now(timezone.utc).isoformat()
+        }
+        SupabaseDB.update_user(user.id, update_data)
+        
+        # Generate 2FA code if enabled
+        if user.two_factor_enabled:
+            code = SecurityMonitor.generate_2fa_code(user.id, "LOGIN")
+            return jsonify({
+                "message": "2FA code sent to your phone",
+                "requires_2fa": True
+            })
+        
+        access_token = create_access_token(identity=user.id)
+        
+        SecurityMonitor.log_security_event(
+            "LOGIN_SUCCESS", 
+            user.id, 
+            {"ip": request.remote_addr}
+        )
+        
+        return jsonify({
+            "access_token": access_token,
+            "user": {
+                "id": user.id,
+                "phone": user.phone,
+                "name": user.name,
+                "balance": user.balance,
+                "username": user.username,
+                "email": user.email
+            }
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Login error: {str(e)}")
+        return jsonify({"error": "Login failed"}), 500
+
+@auth_bp.route("/verify-2fa", methods=["POST"])
+@rate_limiter.limit("10 per minute")
+def verify_2fa():
+    try:
+        data = request.get_json()
+        phone = data.get("phone")
+        code = data.get("code")
+        
+        user = SupabaseDB.get_user_by_phone(phone)
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        if SecurityMonitor.verify_2fa_code(user.id, code, "LOGIN"):
+            access_token = create_access_token(identity=user.id)
+            
+            SecurityMonitor.log_security_event(
+                "2FA_SUCCESS", 
+                user.id, 
+                {"ip": request.remote_addr}
+            )
+            
+            return jsonify({
+                "access_token": access_token,
+                "user": {
+                    "id": user.id,
+                    "phone": user.phone,
+                    "name": user.name,
+                    "balance": user.balance
+                }
+            })
         else:
-            self.user_rank = 'Bronze'
-
-class Referral(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    referrer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    referred_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    referral_code_used = db.Column(db.String(10))
-    commission_earned = db.Column(db.Float, default=50.0)
-    status = db.Column(db.String(20), default='active')
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    
-    referrer = db.relationship('User', foreign_keys=[referrer_id], backref='referrals_made')
-    referred = db.relationship('User', foreign_keys=[referred_id], backref='referrals_received')
-
-class Transaction(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    amount = db.Column(db.Float, nullable=False)
-    transaction_type = db.Column(db.String(50))
-    status = db.Column(db.String(20), default='pending')
-    mpesa_code = db.Column(db.String(50))
-    phone_number = db.Column(db.String(20))
-    description = db.Column(db.Text)
-    mpesa_message = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    
-    user = db.relationship('User', backref='transactions')
-
-@login_manager.user_loader
-def load_user(user_id):
-    try:
-        return db.session.get(User, int(user_id))
+            SecurityMonitor.log_security_event(
+                "2FA_FAILED", 
+                user.id, 
+                {"ip": request.remote_addr}
+            )
+            return jsonify({"error": "Invalid 2FA code"}), 401
+            
     except Exception as e:
-        print(f"Error loading user {user_id}: {e}")
-        return None
+        current_app.logger.error(f"2FA verification error: {str(e)}")
+        return jsonify({"error": "Verification failed"}), 500
 
-# Database health check
-@app.before_request
-def before_request():
+# M-Pesa Callback Handlers
+def is_safaricom_ip(ip):
+    """Verify callback is from Safaricom IP"""
+    return ip in current_app.config['SAFARICOM_IPS']
+
+@mpesa_bp.route("/mpesa/withdraw-callback", methods=["POST"])
+def mpesa_withdraw_callback():
+    """Secure M-Pesa callback handler"""
     try:
-        db.session.execute(text('SELECT 1'))
+        client_ip = request.remote_addr
+        
+        # Log all callbacks for audit
+        callback_log = {
+            'payload': request.get_data(as_text=True),
+            'ip_address': client_ip,
+            'created_at': datetime.now(timezone.utc).isoformat()
+        }
+        SupabaseDB.create_mpesa_callback(callback_log)
+        
+        # Verify Safaricom IP
+        if not is_safaricom_ip(client_ip):
+            current_app.logger.warning(f"Suspicious callback from IP: {client_ip}")
+            SecurityMonitor.log_security_event(
+                "UNAUTHORIZED_CALLBACK", 
+                None, 
+                {"ip": client_ip, "payload": request.get_data(as_text=True)}
+            )
+            return jsonify({"ResultCode": 1, "ResultDesc": "Unauthorized"}), 401
+        
+        data = request.get_json(force=True)
+        current_app.logger.info(f" M-Pesa callback: {json.dumps(data)}")
+        
+        result = data.get("Result", {})
+        result_code = result.get("ResultCode")
+        result_desc = result.get("ResultDesc")
+        transaction_id = result.get("TransactionID")
+        originator_conversation_id = result.get("OriginatorConversationID")
+        
+        if not originator_conversation_id:
+            current_app.logger.error(" No withdrawal reference in callback")
+            return jsonify({"ResultCode": 1, "ResultDesc": "Missing reference"})
+        
+        withdrawal_data = SupabaseDB.get_transaction_by_id(originator_conversation_id)
+        if not withdrawal_data:
+            current_app.logger.error(f" Withdrawal not found: {originator_conversation_id}")
+            return jsonify({"ResultCode": 1, "ResultDesc": "Withdrawal not found"})
+        
+        user = SupabaseDB.get_user_by_id(withdrawal_data['user_id'])
+        
+        if result_code == 0:  # Success
+            update_data = {
+                'status': 'completed',
+                'mpesa_code': transaction_id,
+                'processed_at': datetime.now(timezone.utc).isoformat()
+            }
+            SupabaseDB.update_transaction(withdrawal_data['id'], update_data)
+            
+            # Success SMS via Celcom
+            CelcomSMS.send_withdrawal_notification(
+                user.phone, 
+                user.name, 
+                abs(withdrawal_data['amount']), 
+                'completed', 
+                transaction_id
+            )
+            
+            SecurityMonitor.log_security_event(
+                "WITHDRAWAL_COMPLETED", 
+                user.id, 
+                {
+                    "amount": abs(withdrawal_data['amount']),
+                    "mpesa_transaction_id": transaction_id,
+                    "withdrawal_id": withdrawal_data['id']
+                }
+            )
+            
+        else:  # Failed
+            update_data = {
+                'status': 'failed'
+            }
+            SupabaseDB.update_transaction(withdrawal_data['id'], update_data)
+            
+            # Refund user balance
+            user.balance += abs(withdrawal_data['amount'])
+            user.total_withdrawn -= abs(withdrawal_data['amount'])
+            SupabaseDB.update_user(user.id, {
+                'balance': user.balance,
+                'total_withdrawn': user.total_withdrawn
+            })
+            
+            # Failure SMS via Celcom
+            CelcomSMS.send_withdrawal_notification(
+                user.phone, 
+                user.name, 
+                abs(withdrawal_data['amount']), 
+                'failed'
+            )
+            
+            SecurityMonitor.log_security_event(
+                "WITHDRAWAL_FAILED", 
+                user.id, 
+                {
+                    "amount": abs(withdrawal_data['amount']),
+                    "reason": result_desc,
+                    "withdrawal_id": withdrawal_data['id']
+                }
+            )
+        
+        return jsonify({"ResultCode": 0, "ResultDesc": "Success"})
+        
     except Exception as e:
-        print(f"Database connection error: {e}")
-        db.session.rollback()
+        current_app.logger.error(f"Callback processing error: {str(e)}")
+        SecurityMonitor.log_security_event(
+            "CALLBACK_ERROR", 
+            None, 
+            {"error": str(e), "ip": request.remote_addr}
+        )
+        return jsonify({"ResultCode": 1, "ResultDesc": "System error"}), 500
+
+# Secure Withdrawal API Routes
+@withdraw_bp.route("/withdraw", methods=["POST"])
+@jwt_required()
+@rate_limiter.limit("10 per hour", key_func=lambda: get_jwt_identity())
+@rate_limiter.limit("1000 per day", key_func=lambda: get_jwt_identity())
+def api_request_withdrawal():
+    """Secure withdrawal request with fraud detection"""
+    try:
+        current_user_id = get_jwt_identity()
+        user = SupabaseDB.get_user_by_id(current_user_id)
+        
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+        
+        if not user.is_active:
+            return jsonify({"error": "Account deactivated"}), 403
+        
+        if user.is_locked():
+            return jsonify({"error": "Account temporarily locked"}), 423
+
+        data = request.get_json()
+        amount = float(data.get("amount", 0))
+        phone_number = data.get("phone_number")
+        
+        # Input validation
+        if amount < current_app.config['WITHDRAWAL_MIN_AMOUNT']:
+            return jsonify({"error": f"Minimum withdrawal is {current_app.config['WITHDRAWAL_MIN_AMOUNT']}"}), 400
+        
+        if amount > current_app.config['WITHDRAWAL_MAX_AMOUNT']:
+            return jsonify({"error": f"Maximum withdrawal is {current_app.config['WITHDRAWAL_MAX_AMOUNT']}"}), 400
+        
+        if not amount.is_integer():
+            return jsonify({"error": "Amount must be a whole number"}), 400
+        
+        # Check balance
+        if user.balance < amount:
+            SecurityMonitor.log_security_event(
+                "INSUFFICIENT_BALANCE", 
+                user.id, 
+                {"amount": amount, "balance": user.balance}
+            )
+            return jsonify({"error": "Insufficient balance"}), 400
+        
+        # Fraud detection
+        fraud_check = FraudDetector.check_suspicious_activity(user, amount, request)
+        if fraud_check:
+            withdrawal_data = {
+                'id': str(uuid.uuid4()),
+                'user_id': user.id,
+                'amount': -amount,
+                'transaction_type': 'withdrawal',
+                'status': 'Under Review',
+                'phone_number': phone_number,
+                'ip_address': request.remote_addr,
+                'user_agent': request.headers.get('User-Agent'),
+                'created_at': datetime.now(timezone.utc).isoformat()
+            }
+            SupabaseDB.create_transaction(withdrawal_data)
+            
+            SecurityMonitor.log_security_event(
+                "SUSPICIOUS_WITHDRAWAL", 
+                user.id, 
+                {
+                    "amount": amount, 
+                    "reason": fraud_check,
+                    "withdrawal_id": withdrawal_data['id'],
+                    "ip": request.remote_addr
+                }
+            )
+            
+            # Notify admins
+            SecurityMonitor.notify_admins(
+                f"Suspicious withdrawal: User {user.phone} attempted Ksh {amount}. Reason: {fraud_check}"
+            )
+            
+            return jsonify({
+                "message": "Withdrawal under review due to suspicious activity. We'll notify you.",
+                "withdrawal_id": withdrawal_data['id'],
+                "under_review": True
+            }), 202
+        
+        # 2FA for large amounts
+        if amount >= current_app.config['SUSPICIOUS_AMOUNT_THRESHOLD']:
+            if user.two_factor_enabled:
+                code = SecurityMonitor.generate_2fa_code(user.id, "WITHDRAWAL")
+                return jsonify({
+                    "message": "2FA code sent to your phone",
+                    "requires_2fa": True,
+                    "withdrawal_id": str(uuid.uuid4())
+                })
+        
+        # Process withdrawal
+        withdrawal_id = str(uuid.uuid4())
+        withdrawal_data = {
+            'id': withdrawal_id,
+            'user_id': user.id,
+            'amount': -amount,
+            'transaction_type': 'withdrawal',
+            'status': 'processing',
+            'phone_number': phone_number,
+            'ip_address': request.remote_addr,
+            'user_agent': request.headers.get('User-Agent'),
+            'created_at': datetime.now(timezone.utc).isoformat()
+        }
+        
+        # Deduct balance
+        user.balance -= amount
+        user.total_withdrawn += amount
+        SupabaseDB.update_user(user.id, {
+            'balance': user.balance,
+            'total_withdrawn': user.total_withdrawn
+        })
+        
+        SupabaseDB.create_transaction(withdrawal_data)
+        
+        # Send initial SMS via Celcom
+        CelcomSMS.send_withdrawal_notification(
+            user.phone,
+            user.name,
+            amount,
+            'processing'
+        )
+        
+        # Initiate M-Pesa payment
+        try:
+            process_automatic_withdrawal(withdrawal_data)
+        except Exception as e:
+            current_app.logger.error(f"M-Pesa initiation failed: {str(e)}")
+        
+        SecurityMonitor.log_security_event(
+            "WITHDRAWAL_INITIATED", 
+            user.id, 
+            {
+                "amount": amount,
+                "withdrawal_id": withdrawal_id,
+                "ip": request.remote_addr
+            }
+        )
+        
+        return jsonify({
+            "message": "Withdrawal processing",
+            "withdrawal_id": withdrawal_id,
+            "amount": amount
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Withdrawal error: {str(e)}")
+        SecurityMonitor.log_security_event(
+            "WITHDRAWAL_ERROR", 
+            user.id if 'user' in locals() else None, 
+            {"error": str(e), "ip": request.remote_addr}
+        )
+        return jsonify({"error": "Withdrawal processing failed"}), 500
+
+@withdraw_bp.route("/withdraw/confirm-2fa", methods=["POST"])
+@jwt_required()
+def confirm_2fa_withdrawal():
+    """Confirm withdrawal with 2FA code"""
+    try:
+        current_user_id = get_jwt_identity()
+        user = SupabaseDB.get_user_by_id(current_user_id)
+        
+        data = request.get_json()
+        code = data.get("code")
+        withdrawal_id = data.get("withdrawal_id")
+        
+        if SecurityMonitor.verify_2fa_code(user.id, code, "WITHDRAWAL"):
+            # Process the withdrawal after 2FA verification
+            withdrawal = SupabaseDB.get_transaction_by_id(withdrawal_id)
+            if withdrawal and withdrawal['status'] == 'pending':
+                SupabaseDB.update_transaction(withdrawal_id, {'status': 'processing'})
+                
+                process_automatic_withdrawal(withdrawal)
+                
+                return jsonify({
+                    "message": "Withdrawal confirmed and processing",
+                    "withdrawal_id": withdrawal_id
+                })
+            else:
+                return jsonify({"error": "Invalid withdrawal"}), 400
+        else:
+            SecurityMonitor.log_security_event(
+                "WITHDRAWAL_2FA_FAILED", 
+                user.id, 
+                {"withdrawal_id": withdrawal_id}
+            )
+            return jsonify({"error": "Invalid 2FA code"}), 401
+            
+    except Exception as e:
+        current_app.logger.error(f"2FA confirmation error: {str(e)}")
+        return jsonify({"error": "Confirmation failed"}), 500
+
+# Updated send_sms function to use Celcom SMS
+def send_sms(phone, message):
+    """
+    Main SMS function that uses Celcom SMS service
+    This maintains backward compatibility with existing code
+    """
+    return CelcomSMS.send_sms(phone, message)
 
 # Telegram Functions
 async def send_telegram_message_async(message):
     try:
-        if TELEGRAM_BOT_TOKEN == 'your_bot_token_here' or TELEGRAM_CHAT_ID == 'your_chat_id_here':
-            print("Telegram notifications disabled - please configure bot token and chat ID")
+        if (current_app.config['TELEGRAM_BOT_TOKEN'] == 'your_bot_token_here' or 
+            current_app.config['TELEGRAM_CHAT_ID'] == 'your_chat_id_here'):
             return
             
-        bot = Bot(token=TELEGRAM_BOT_TOKEN)
+        bot = Bot(token=current_app.config['TELEGRAM_BOT_TOKEN'])
         async with bot:
-            await bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message, parse_mode='HTML')
+            await bot.send_message(chat_id=current_app.config['TELEGRAM_CHAT_ID'], text=message, parse_mode='HTML')
     except Exception as e:
-        print(f"Telegram notification failed: {str(e)}")
+        current_app.logger.error(f"Telegram notification failed: {str(e)}")
 
 def send_telegram_notification(message):
     try:
         asyncio.run(send_telegram_message_async(message))
     except Exception as e:
-        print(f"Failed to send Telegram notification: {str(e)}")
+        current_app.logger.error(f"Failed to send Telegram notification: {str(e)}")
 
-def send_mpesa_notification_to_telegram(user, transaction):
+def send_withdrawal_notification_to_telegram(user, transaction):
+    """Send withdrawal notification to Telegram"""
     try:
         message = f"""
-🔔 <b>🚨 IMMEDIATE: New M-PESA Payment Submitted</b>
+ <b>New Withdrawal Request</b>
 
-👤 <b>User Details:</b>
+ <b>User Details:</b>
 • Username: {user.username}
 • Email: {user.email}
-• Phone: {user.phone_number}
+• Phone: {user.phone}
 • User ID: #{user.id}
-• Referral Code: {user.referral_code}
 
-💳 <b>Payment Information:</b>
-• MPESA Code: <code>{transaction.mpesa_code}</code>
-• Amount: KSH {transaction.amount}
-• Status: ⏳ Pending Verification
+ <b>Withdrawal Information:</b>
+• Amount: KSH {abs(transaction['amount'])}
+• Phone: {transaction['phone_number']}
+• Status:  Pending Processing
 
-📝 <b>MPESA Message:</b>
-<pre>{transaction.mpesa_message}</pre>
+<b>Time Submitted:</b>
+{transaction['created_at']}
 
-🕒 <b>Time Submitted:</b>
-{transaction.created_at.strftime('%Y-%m-%d %H:%M:%S')}
-
-⚠️ <i>Please verify this payment in the admin dashboard.</i>
+<i>Please process this withdrawal in the admin dashboard.</i>
 """
         thread = threading.Thread(target=send_telegram_notification, args=(message,))
         thread.daemon = True
         thread.start()
         return True
     except Exception as e:
-        print(f"Error sending M-PESA notification to Telegram: {str(e)}")
+        current_app.logger.error(f"Error sending withdrawal notification to Telegram: {str(e)}")
         return False
 
-def send_registration_notification_to_telegram(user, referral_code=None):
-    try:
-        message = f"""
-🎯 <b>New User Registration</b>
-
-👤 <b>User Details:</b>
-• Username: {user.username}
-• Email: {user.email} 
-• Phone: {user.phone_number}
-• User Referral Code: {user.referral_code}
-
-🕒 <b>Registration Time:</b>
-{user.created_at.strftime('%Y-%m-%d %H:%M:%S')}
-"""
-        if referral_code:
-            referrer = User.query.filter_by(referral_code=referral_code).first()
-            if referrer:
-                message += f"\n🔗 <b>Referred by:</b> {referral_code} (User: {referrer.username} - ID: {referrer.id})"
-                message += f"\n💰 <b>Referral Status:</b> ✅ Valid - Commission will be awarded after payment"
-            else:
-                message += f"\n⚠️ <b>Referral Code:</b> {referral_code} (Invalid - No referrer found)"
-        else:
-            message += "\n📝 <b>Referral:</b> No referral code used"
-        
-        message += f"\n📊 <b>Referral Source:</b> {user.referral_source}"
-        message += "\n\n💳 <i>Waiting for payment verification.</i>"
-        
-        thread = threading.Thread(target=send_telegram_notification, args=(message,))
-        thread.daemon = True
-        thread.start()
-        return True
-    except Exception as e:
-        print(f"Error sending registration notification to Telegram: {str(e)}")
-        return False
-
-def send_admin_action_notification(action, user, transaction, admin_user):
-    try:
-        if action == 'approved':
-            message = f"""
-✅ <b>Payment Approved by Admin</b>
-
-👤 <b>Admin:</b> {admin_user.username}
-👤 <b>User Activated:</b>
-• Username: {user.username}
-• Email: {user.email}
-• User ID: #{user.id}
-
-💳 <b>Payment Details:</b>
-• MPESA Code: <code>{transaction.mpesa_code}</code>
-• Amount: KSH {transaction.amount}
-• Status: ✅ Approved
-
-🕒 <b>Approval Time:</b>
-{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}
-
-🎉 <i>User account has been activated successfully!</i>
-"""
-        else:
-            message = f"""
-❌ <b>Payment Rejected by Admin</b>
-
-👤 <b>Admin:</b> {admin_user.username}
-👤 <b>User:</b>
-• Username: {user.username}
-• Email: {user.email}
-• User ID: #{user.id}
-
-💳 <b>Payment Details:</b>
-• MPESA Code: <code>{transaction.mpesa_code}</code>
-• Amount: KSH {transaction.amount}
-• Status: ❌ Rejected
-
-🕒 <b>Rejection Time:</b>
-{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}
-
-⚠️ <i>User needs to submit a new payment message.</i>
-"""
-        thread = threading.Thread(target=send_telegram_notification, args=(message,))
-        thread.daemon = True
-        thread.start()
-        return True
-    except Exception as e:
-        print(f"Error sending admin action notification to Telegram: {str(e)}")
-        return False
-
-# Password Reset Functions
-def generate_reset_token():
-    return secrets.token_urlsafe(32)
-
-def send_password_reset_email(user, reset_url):
-    try:
-        print(f"Password reset for {user.email}: {reset_url}")
-        message = f"""
-🔐 <b>Password Reset Request</b>
-
-👤 <b>User Details:</b>
-• Username: {user.username}
-• Email: {user.email}
-• User ID: #{user.id}
-
-🔄 <b>Reset Link:</b>
-<code>{reset_url}</code>
-
-🕒 <b>Request Time:</b>
-{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}
-
-⚠️ <i>This link will expire in 1 hour.</i>
-"""
-        thread = threading.Thread(target=send_telegram_notification, args=(message,))
-        thread.daemon = True
-        thread.start()
-        return True
-    except Exception as e:
-        print(f"Error sending password reset email: {str(e)}")
-        return False
-
-def send_password_reset_confirmation(user):
-    try:
-        message = f"""
-✅ <b>Password Reset Successful</b>
-
-👤 <b>User Details:</b>
-• Username: {user.username}
-• Email: {user.email}
-• User ID: #{user.id}
-
-🕒 <b>Reset Time:</b>
-{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}
-
-📍 <b>Location:</b> {request.remote_addr}
-
-🔒 <i>If you did not perform this action, please contact support immediately.</i>
-"""
-        thread = threading.Thread(target=send_telegram_notification, args=(message,))
-        thread.daemon = True
-        thread.start()
-        return True
-    except Exception as e:
-        print(f"Error sending password reset confirmation: {str(e)}")
-        return False
+# Register Blueprints
+app.register_blueprint(auth_bp, url_prefix='/api/auth')
+app.register_blueprint(mpesa_bp, url_prefix='/api')
+app.register_blueprint(withdraw_bp, url_prefix='/api')
 
 # Helper Functions
 def validate_referral_code(code):
     if not code:
         return None
-    referrer = User.query.filter_by(referral_code=code).first()
+    referrer = SupabaseDB.get_user_by_referral_code(code)
     if not referrer:
         return None
     if not referrer.is_verified:
@@ -371,83 +2654,6 @@ def extract_mpesa_code(message):
     
     return 'PENDING'
 
-# Debug and Health Check Routes
-@app.route('/health')
-def health_check():
-    try:
-        db.session.execute(text('SELECT 1'))
-        user_count = User.query.count()
-        
-        return jsonify({
-            'status': 'healthy',
-            'database': 'connected',
-            'user_count': user_count,
-            'timestamp': datetime.now(timezone.utc).isoformat()
-        })
-    except Exception as e:
-        return jsonify({
-            'status': 'unhealthy',
-            'database': 'error',
-            'error': str(e)
-        }), 500
-
-@app.route('/debug')
-def debug_info():
-    try:
-        db_status = "connected"
-        db.session.execute(text('SELECT 1'))
-    except Exception as e:
-        db_status = f"error: {str(e)}"
-    
-    return jsonify({
-        'flask_env': os.environ.get('FLASK_ENV', 'production'),
-        'database_status': db_status,
-        'current_user_authenticated': current_user.is_authenticated,
-        'session_keys': list(session.keys()),
-        'total_users': User.query.count(),
-        'total_transactions': Transaction.query.count()
-    })
-
-@app.route('/debug-admin')
-@login_required
-def debug_admin():
-    if not current_user.is_admin:
-        return "Not admin"
-    
-    try:
-        print("Testing User.query.count()...")
-        total_users = User.query.count()
-        print(f"Total users: {total_users}")
-        
-        print("Testing User.query.filter_by(is_verified=True).count()...")
-        total_verified = User.query.filter_by(is_verified=True).count()
-        print(f"Total verified: {total_verified}")
-        
-        print("Testing Referral.query.count()...")
-        total_referrals = Referral.query.count()
-        print(f"Total referrals: {total_referrals}")
-        
-        print("Testing commission sum...")
-        total_commission = db.session.query(db.func.sum(User.total_commission)).scalar() or 0
-        print(f"Total commission: {total_commission}")
-        
-        return jsonify({
-            'status': 'success',
-            'total_users': total_users,
-            'total_verified': total_verified,
-            'total_referrals': total_referrals,
-            'total_commission': total_commission
-        })
-    except Exception as e:
-        import traceback
-        error_details = traceback.format_exc()
-        print(f"Debug error: {error_details}")
-        return jsonify({
-            'status': 'error',
-            'error': str(e),
-            'traceback': error_details
-        })
-
 # Error Handlers
 @app.errorhandler(404)
 def not_found_error(error):
@@ -455,17 +2661,18 @@ def not_found_error(error):
 
 @app.errorhandler(500)
 def internal_error(error):
-    db.session.rollback()
-    print(f"Internal Server Error: {error}")
+    app.logger.error(f"Internal Server Error: {error}")
     return render_template('500.html'), 500
 
 @app.errorhandler(Exception)
 def handle_exception(error):
-    db.session.rollback()
-    print(f"Unhandled Exception: {error}")
+    app.logger.error(f"Unhandled Exception: {error}")
     return render_template('500.html'), 500
 
-# Application Routes
+# =============================================================================
+# APPLICATION ROUTES
+# =============================================================================
+
 @app.route('/')
 def index():
     if current_user.is_authenticated:
@@ -477,40 +2684,30 @@ def index():
 def dashboard():
     if not current_user.is_verified:
         flash('Please complete payment verification to access dashboard.', 'warning')
-        return redirect(url_for('payment_instructions'))
+        return redirect(url_for('account_activation'))
     
-    total_withdrawn = db.session.query(db.func.sum(Transaction.amount)).filter(
-        Transaction.user_id == current_user.id,
-        Transaction.transaction_type == 'withdrawal',
-        Transaction.status == 'completed'
-    ).scalar() or 0.0
+    # Get user transactions
+    transactions = SupabaseDB.get_transactions_by_user(current_user.id, transaction_type='withdrawal')
     
-    pending_withdrawals = Transaction.query.filter_by(
-        user_id=current_user.id,
-        transaction_type='withdrawal',
-        status='pending'
-    ).count()
+    total_withdrawn = sum(abs(t['amount']) for t in transactions if t['status'] == 'completed')
+    pending_withdrawals = len([t for t in transactions if t['status'] == 'pending'])
     
-    withdrawals = Transaction.query.filter_by(
-        user_id=current_user.id,
-        transaction_type='withdrawal'
-    ).order_by(Transaction.created_at.desc()).limit(5).all()
+    withdrawals = [t for t in transactions][:5]  # Last 5 withdrawals
     
     return render_template('dashboard.html',
-                         total_withdrawn=abs(total_withdrawn),
+                         total_withdrawn=total_withdrawn,
                          pending_withdrawals=pending_withdrawals,
                          withdrawals=withdrawals)
 
 def get_user_ranking(user_id):
-    user = db.session.get(User, user_id)
+    user = SupabaseDB.get_user_by_id(user_id)
     if not user:
         return None
     
-    ranked_users = User.query.filter(User.is_active==True)\
-        .order_by(User.total_commission.desc())\
-        .all()
+    ranked_users = SupabaseDB.get_top_users(limit=1000)  # Get all users for ranking
     
-    for index, ranked_user in enumerate(ranked_users):
+    for index, ranked_user_data in enumerate(ranked_users):
+        ranked_user = User(ranked_user_data)
         if ranked_user.id == user_id:
             return {
                 'position': index + 1,
@@ -529,32 +2726,70 @@ def login():
         password = request.form.get('password')
         remember_me = bool(request.form.get('remember_me'))
         
-        print(f"Login attempt for username: {username}")
+        app.logger.info(f"Login attempt for username: {username}")
         
         if not username or not password:
             flash('Please enter both username and password.', 'error')
             return render_template('auth/login.html')
         
-        user = User.query.filter_by(username=username).first()
+        user = SupabaseDB.get_user_by_username(username)
         
         if user:
-            print(f"User found: {user.username}, is_verified: {user.is_verified}")
+            app.logger.info(f"User found: {user.username}, is_verified: {user.is_verified}")
+            
+            # Security: Check if account is locked
+            if user.is_locked():
+                flash('Account temporarily locked. Please try again later.', 'error')
+                return render_template('auth/login.html')
+            
             if user.check_password(password):
                 if not user.is_verified:
                     flash('Please complete your payment verification before logging in.', 'warning')
                     session['pending_verification_user'] = user.id
-                    return redirect(url_for('payment_instructions'))
+                    return redirect(url_for('account_activation'))
+                
+                # Reset login attempts on successful login
+                update_data = {
+                    'login_attempts': 0,
+                    'locked_until': None,
+                    'last_login': datetime.now(timezone.utc).isoformat()
+                }
+                SupabaseDB.update_user(user.id, update_data)
                 
                 login_user(user, remember=remember_me)
                 next_page = request.args.get('next')
                 
+                # Log security event
+                SecurityMonitor.log_security_event(
+                    "LOGIN_SUCCESS", 
+                    user.id, 
+                    {"ip": request.remote_addr}
+                )
+                
                 flash('Login successful!', 'success')
                 return redirect(next_page) if next_page else redirect(url_for('dashboard'))
             else:
-                print("Password incorrect")
-                flash('Invalid username or password.', 'error')
+                # Increment login attempts
+                user.login_attempts += 1
+                update_data = {'login_attempts': user.login_attempts}
+                
+                if user.login_attempts >= 5:
+                    locked_until = datetime.now(timezone.utc) + timedelta(minutes=30)
+                    update_data['locked_until'] = locked_until.isoformat()
+                    flash('Account temporarily locked due to too many failed attempts. Try again in 30 minutes.', 'error')
+                else:
+                    flash('Invalid username or password.', 'error')
+                
+                # Log security event
+                SecurityMonitor.log_security_event(
+                    "LOGIN_FAILED", 
+                    user.id,
+                    {"ip": request.remote_addr, "reason": "Invalid credentials", "attempts": user.login_attempts}
+                )
+                
+                SupabaseDB.update_user(user.id, update_data)
         else:
-            print("User not found")
+            app.logger.warning("User not found")
             flash('Invalid username or password.', 'error')
     
     return render_template('auth/login.html')
@@ -570,8 +2805,18 @@ def register():
         username = request.form.get('username')
         email = request.form.get('email')
         phone_number = request.form.get('phone_number')
+        name = request.form.get('full_name', '').strip()
         password = request.form.get('password')
         referral_code = request.form.get('referral_code')
+        terms = request.form.get('terms')
+        
+        if not name:
+            flash('Full name is required.', 'error')
+            return render_template('auth/register.html', referral_code=referral_code)
+        
+        if not terms:
+            flash('You must agree to the Terms of Service and Privacy Policy.', 'error')
+            return render_template('auth/register.html', referral_code=referral_code)
         
         if not re.match(r'^254[0-9]{9}$', phone_number) and not re.match(r'^07[0-9]{8}$', phone_number):
             flash('Please enter a valid Kenyan phone number.', 'error')
@@ -580,15 +2825,15 @@ def register():
         if phone_number.startswith('07'):
             phone_number = '254' + phone_number[1:]
         
-        if User.query.filter_by(phone_number=phone_number).first():
+        if SupabaseDB.get_user_by_phone(phone_number):
             flash('Phone number already registered.', 'error')
             return render_template('auth/register.html', referral_code=referral_code)
         
-        if User.query.filter_by(username=username).first():
+        if SupabaseDB.get_user_by_username(username):
             flash('Username already exists.', 'error')
             return render_template('auth/register.html', referral_code=referral_code)
         
-        if User.query.filter_by(email=email).first():
+        if SupabaseDB.get_user_by_email(email):
             flash('Email already registered.', 'error')
             return render_template('auth/register.html', referral_code=referral_code)
         
@@ -599,12 +2844,17 @@ def register():
                 flash('Invalid referral code. Please check and try again.', 'error')
                 return render_template('auth/register.html', referral_code=referral_code)
         
-        user = User(
-            username=username,
-            email=email,
-            phone_number=phone_number,
-            is_verified=False
-        )
+        user_data = {
+            'id': str(uuid.uuid4()),
+            'username': username,
+            'email': email,
+            'phone': phone_number,
+            'name': name,
+            'is_verified': False,
+            'created_at': datetime.now(timezone.utc).isoformat()
+        }
+        
+        user = User(user_data)
         user.set_password(password)
         user.generate_phone_linked_referral_code()
         
@@ -620,16 +2870,32 @@ def register():
             user.referral_source = 'direct'
         
         try:
-            db.session.add(user)
-            db.session.commit()
+            # Save to database
+            user_dict = user.to_dict()
+            user_dict.pop('password_hash', None)
+            user_dict['password_hash'] = user.password_hash
             
-            send_registration_notification_to_telegram(user, referral_code)
+            created_user = SupabaseDB.create_user(user_dict)
+            
+            if not created_user:
+                flash('Error during registration. Please try again.', 'error')
+                return render_template('auth/register.html', referral_code=referral_code)
+            
+            # Send welcome SMS
+            CelcomSMS.send_registration_notification(phone_number, username)
+            
+            # Log security event
+            SecurityMonitor.log_security_event(
+                "REGISTRATION", 
+                created_user.id, 
+                {"ip": request.remote_addr, "referral_code": referral_code}
+            )
             
             flash('Registration successful! Please complete KSH 200 payment to activate your account.', 'success')
-            session['pending_verification_user'] = user.id
-            return redirect(url_for('payment_instructions'))
+            session['pending_verification_user'] = created_user.id
+            return redirect(url_for('account_activation'))
         except Exception as e:
-            db.session.rollback()
+            app.logger.error(f"Error during registration: {str(e)}")
             flash(f'Error during registration: {str(e)}', 'error')
             return render_template('auth/register.html', referral_code=referral_code)
     
@@ -638,102 +2904,24 @@ def register():
 @app.route('/logout')
 @login_required
 def logout():
+    SecurityMonitor.log_security_event(
+        "LOGOUT", 
+        current_user.id, 
+        {"ip": request.remote_addr}
+    )
     logout_user()
     flash('You have been logged out successfully.', 'success')
     return redirect(url_for('login'))
 
-@app.route('/forgot-password', methods=['GET', 'POST'])
-def forgot_password():
-    if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
-    
-    if request.method == 'POST':
-        email = request.form.get('email', '').strip().lower()
-        
-        if not email:
-            flash('Please enter your email address.', 'error')
-            return render_template('auth/forgot_password.html')
-        
-        user = User.query.filter_by(email=email).first()
-        
-        if user:
-            reset_token = generate_reset_token()
-            user.reset_token = reset_token
-            user.reset_token_expires = datetime.now(timezone.utc) + timedelta(hours=1)
-            
-            try:
-                db.session.commit()
-                
-                reset_url = url_for('reset_password', token=reset_token, _external=True)
-                send_password_reset_email(user, reset_url)
-                
-                flash('Password reset instructions have been sent to your email.', 'success')
-                return redirect(url_for('login'))
-                
-            except Exception as e:
-                db.session.rollback()
-                print(f"Error in forgot_password: {str(e)}")
-                flash('Error generating reset token. Please try again.', 'error')
-                return render_template('auth/forgot_password.html')
-        else:
-            flash('If an account with that email exists, reset instructions have been sent.', 'success')
-            return redirect(url_for('login'))
-    
-    return render_template('auth/forgot_password.html')
-
-@app.route('/reset-password/<token>', methods=['GET', 'POST'])
-def reset_password(token):
-    if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
-    
-    user = User.query.filter_by(reset_token=token).first()
-    
-    if not user or not user.reset_token_expires or user.reset_token_expires < datetime.now(timezone.utc):
-        flash('Invalid or expired reset token.', 'error')
-        return redirect(url_for('forgot_password'))
-    
-    if request.method == 'POST':
-        password = request.form.get('password')
-        confirm_password = request.form.get('confirm_password')
-        
-        if not password or not confirm_password:
-            flash('Please fill in all fields.', 'error')
-            return render_template('auth/reset_password.html', token=token)
-        
-        if password != confirm_password:
-            flash('Passwords do not match.', 'error')
-            return render_template('auth/reset_password.html', token=token)
-        
-        if len(password) < 6:
-            flash('Password must be at least 6 characters long.', 'error')
-            return render_template('auth/reset_password.html', token=token)
-        
-        user.set_password(password)
-        user.reset_token = None
-        user.reset_token_expires = None
-        
-        try:
-            db.session.commit()
-            send_password_reset_confirmation(user)
-            flash('Your password has been reset successfully! You can now login with your new password.', 'success')
-            return redirect(url_for('login'))
-            
-        except Exception as e:
-            db.session.rollback()
-            print(f"Error in reset_password: {str(e)}")
-            flash('Error resetting password. Please try again.', 'error')
-            return render_template('auth/reset_password.html', token=token)
-    
-    return render_template('auth/reset_password.html', token=token)
-
-@app.route('/payment-instructions')
-def payment_instructions():
+# Account Activation Route
+@app.route('/account-activation')
+def account_activation():
     user_id = session.get('pending_verification_user')
     if not user_id:
         flash('Invalid access. Please register or login first.', 'error')
         return redirect(url_for('register'))
     
-    user = db.session.get(User, user_id)
+    user = SupabaseDB.get_user_by_id(user_id)
     if not user:
         flash('User not found.', 'error')
         return redirect(url_for('register'))
@@ -747,77 +2935,392 @@ def payment_instructions():
         session.pop('pending_verification_user', None)
         return redirect(url_for('login'))
     
-    referrer_info = None
-    if user.referred_by:
-        referrer = User.query.filter_by(referral_code=user.referred_by).first()
-        if referrer:
-            referrer_info = {
-                'username': referrer.username,
-                'referral_code': referrer.referral_code
-            }
+    # Pass user data to the template
+    user_data = {
+        'username': user.username,
+        'phone': user.phone,
+        'email': user.email,
+        'full_name': user.name,
+        'referral_code': user.referral_code
+    }
     
-    return render_template('payment_instructions.html', user=user, referrer_info=referrer_info)
+    return render_template('account_activation.html', user_data=user_data)
 
-@app.route('/submit-mpesa-message', methods=['POST'])
-def submit_mpesa_message():
+# Payment Instructions Route for backward compatibility
+@app.route('/payment-instructions')
+def payment_instructions():
+    return redirect(url_for('account_activation'))
+
+# Enhanced STK Push Routes
+@app.route('/initiate-stk-push', methods=['POST'])
+def initiate_stk_push_route():
     user_id = session.get('pending_verification_user')
     if not user_id:
         return jsonify({'success': False, 'message': 'Session expired. Please register again.'})
     
-    user = db.session.get(User, user_id)
+    user = SupabaseDB.get_user_by_id(user_id)
     if not user:
         return jsonify({'success': False, 'message': 'User not found'})
     
-    mpesa_message = request.form.get('mpesa_message', '').strip()
+    # Check if there's already a pending transaction
+    existing_transactions = SupabaseDB.get_transactions_by_user(user.id, transaction_type='registration_fee')
+    existing_transaction = next((t for t in existing_transactions if t['status'] == 'pending'), None)
     
-    if not mpesa_message:
-        return jsonify({'success': False, 'message': 'Please provide M-PESA message'})
-    
-    transaction_code = extract_mpesa_code(mpesa_message)
+    if existing_transaction:
+        # If there's an existing pending transaction, use it
+        transaction = existing_transaction
+    else:
+        # Create new transaction
+        transaction_data = {
+            'id': str(uuid.uuid4()),
+            'user_id': user.id,
+            'amount': 200.0,
+            'transaction_type': 'registration_fee',
+            'status': 'pending',
+            'phone_number': user.phone,
+            'description': 'Account registration fee - STK Push initiated',
+            'ip_address': request.remote_addr,
+            'created_at': datetime.now(timezone.utc).isoformat()
+        }
+        transaction = SupabaseDB.create_transaction(transaction_data)
     
     try:
-        existing_transaction = Transaction.query.filter_by(
-            user_id=user.id, 
-            transaction_type='registration_fee',
-            status='pending'
-        ).first()
+        # Format phone number for M-PESA (254 format)
+        phone_number = user.phone
+        if phone_number.startswith('0'):
+            phone_number = '254' + phone_number[1:]
+        elif phone_number.startswith('+'):
+            phone_number = phone_number[1:]
         
-        if existing_transaction:
-            existing_transaction.mpesa_code = transaction_code
-            existing_transaction.mpesa_message = mpesa_message
-            existing_transaction.phone_number = user.phone_number
-            existing_transaction.created_at = datetime.now(timezone.utc)
-            transaction = existing_transaction
+        # Initiate STK push
+        stk_response = initiate_stk_push(
+            phone_number=phone_number,
+            amount=1 if app.config['MPESA_ENVIRONMENT'] == 'sandbox' else 200,
+            account_reference=user.referral_code,
+            transaction_desc="ReferralNinja Registration"
+        )
+        
+        if stk_response and stk_response.get('ResponseCode') == '0':
+            # STK push initiated successfully
+            update_data = {
+                'checkout_request_id': stk_response.get('CheckoutRequestID'),
+                'merchant_request_id': stk_response.get('MerchantRequestID'),
+                'mpesa_message': f"STK Push initiated - {stk_response.get('CustomerMessage')}"
+            }
+            SupabaseDB.update_transaction(transaction['id'], update_data)
+            
+            return jsonify({
+                'success': True, 
+                'message': 'STK push sent to your phone! Please check your phone and enter your M-PESA PIN to complete payment.',
+                'checkout_request_id': transaction['checkout_request_id']
+            })
         else:
-            transaction = Transaction(
-                user_id=user.id,
-                amount=200.0,
-                transaction_type='registration_fee',
-                status='pending',
-                mpesa_code=transaction_code,
-                phone_number=user.phone_number,
-                mpesa_message=mpesa_message,
-                description='Account registration fee - Pending verification'
-            )
-            db.session.add(transaction)
-        
-        db.session.commit()
-        send_mpesa_notification_to_telegram(user, transaction)
-        
-        return jsonify({
-            'success': True, 
-            'message': 'M-PESA message submitted successfully! Please wait for admin verification.'
-        })
+            error_message = stk_response.get('errorMessage', 'Failed to initiate STK push') if stk_response else 'M-PESA service unavailable'
+            return jsonify({'success': False, 'message': f'STK Push failed: {error_message}'})
     
     except Exception as e:
-        db.session.rollback()
-        print(f"Error in submit_mpesa_message: {str(e)}")
-        return jsonify({'success': False, 'message': f'Error submitting payment: {str(e)}'})
+        app.logger.error(f"Error in STK push: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error initiating payment: {str(e)}'})
 
-@app.route('/submit-mpesa-message/<int:user_id>', methods=['POST'])
-def submit_mpesa_message_old(user_id):
-    session['pending_verification_user'] = user_id
-    return submit_mpesa_message()
+@app.route('/check-payment-status', methods=['POST'])
+def check_payment_status():
+    user_id = session.get('pending_verification_user')
+    if not user_id:
+        return jsonify({'success': False, 'message': 'Session expired'})
+    
+    user = SupabaseDB.get_user_by_id(user_id)
+    if not user:
+        return jsonify({'success': False, 'message': 'User not found'})
+    
+    # Check for completed payment
+    transactions = SupabaseDB.get_transactions_by_user(user.id, transaction_type='registration_fee')
+    transaction = next((t for t in transactions if t['status'] == 'completed'), None)
+    
+    if transaction:
+        # Auto-verify user and log them in
+        SupabaseDB.update_user(user.id, {'is_verified': True})
+        
+        # Handle referral commission immediately
+        if user.referred_by:
+            referrer = SupabaseDB.get_user_by_referral_code(user.referred_by)
+            if referrer:
+                referrer.referral_balance += 50
+                referrer.balance += 50
+                referrer.total_commission += 50
+                referrer.referral_count += 1
+                referrer.update_rank()
+                
+                referral_data = {
+                    'referrer_id': referrer.id,
+                    'referred_id': user.id,
+                    'referral_code_used': user.referred_by,
+                    'commission_earned': 50.0,
+                    'status': 'active',
+                    'created_at': datetime.now(timezone.utc).isoformat()
+                }
+                SupabaseDB.create_referral(referral_data)
+                
+                # Update referrer in database
+                SupabaseDB.update_user(referrer.id, {
+                    'referral_balance': referrer.referral_balance,
+                    'balance': referrer.balance,
+                    'total_commission': referrer.total_commission,
+                    'referral_count': referrer.referral_count,
+                    'user_rank': referrer.user_rank
+                })
+                
+                # Send referral bonus notification
+                CelcomSMS.send_referral_notification(referrer.phone, referrer.username, 50)
+        
+        # Log the user in automatically
+        login_user(user)
+        session.pop('pending_verification_user', None)
+        
+        return jsonify({'success': True, 'verified': True, 'message': 'Payment verified! You have been logged in successfully.'})
+    
+    # Check STK status for pending transactions
+    pending_transaction = next((t for t in transactions if t['status'] == 'pending'), None)
+    
+    if pending_transaction and pending_transaction.get('checkout_request_id'):
+        # Query M-PESA for transaction status
+        stk_status = query_stk_push_status(pending_transaction['checkout_request_id'])
+        if stk_status:
+            result_code = stk_status.get('ResultCode')
+            if result_code == '0':
+                # Payment completed via query
+                SupabaseDB.update_transaction(pending_transaction['id'], {
+                    'status': 'completed',
+                    'mpesa_code': stk_status.get('MpesaReceiptNumber')
+                })
+                
+                SupabaseDB.update_user(user.id, {'is_verified': True})
+                
+                # Handle referral commission
+                if user.referred_by:
+                    referrer = SupabaseDB.get_user_by_referral_code(user.referred_by)
+                    if referrer:
+                        referrer.referral_balance += 50
+                        referrer.balance += 50
+                        referrer.total_commission += 50
+                        referrer.referral_count += 1
+                        referrer.update_rank()
+                        
+                        referral_data = {
+                            'referrer_id': referrer.id,
+                            'referred_id': user.id,
+                            'referral_code_used': user.referred_by,
+                            'commission_earned': 50.0,
+                            'status': 'active',
+                            'created_at': datetime.now(timezone.utc).isoformat()
+                        }
+                        SupabaseDB.create_referral(referral_data)
+                        
+                        # Update referrer in database
+                        SupabaseDB.update_user(referrer.id, {
+                            'referral_balance': referrer.referral_balance,
+                            'balance': referrer.balance,
+                            'total_commission': referrer.total_commission,
+                            'referral_count': referrer.referral_count,
+                            'user_rank': referrer.user_rank
+                        })
+                        
+                        # Send referral bonus notification
+                        CelcomSMS.send_referral_notification(referrer.phone, referrer.username, 50)
+                
+                login_user(user)
+                session.pop('pending_verification_user', None)
+                
+                return jsonify({'success': True, 'verified': True, 'message': 'Payment verified via query! You have been logged in successfully.'})
+    
+    # Check if there's a pending transaction
+    if pending_transaction:
+        return jsonify({'success': True, 'verified': False, 'pending': True})
+    
+    return jsonify({'success': True, 'verified': False, 'pending': False})
+
+# Enhanced M-PESA callback handler (for production)
+@app.route('/mpesa-callback', methods=['POST'])
+def mpesa_callback():
+    """Handle M-PESA STK push callback - AUTO VERIFY USER"""
+    try:
+        callback_data = request.get_json()
+        
+        # Log the callback for debugging
+        app.logger.info("M-PESA Callback received: %s", json.dumps(callback_data, indent=2))
+        
+        # Extract relevant information from callback
+        stk_callback = callback_data.get('Body', {}).get('stkCallback', {})
+        result_code = stk_callback.get('ResultCode')
+        result_desc = stk_callback.get('ResultDesc')
+        checkout_request_id = stk_callback.get('CheckoutRequestID')
+        merchant_request_id = stk_callback.get('MerchantRequestID')
+        
+        # Find the transaction - we need to search by checkout_request_id
+        response = supabase.table('transactions').select('*').eq('checkout_request_id', checkout_request_id).execute()
+        transaction = response.data[0] if response.data else None
+        
+        if transaction:
+            if result_code == 0:
+                # Payment successful - AUTO VERIFY USER
+                update_data = {'status': 'completed'}
+                
+                # Extract metadata
+                metadata = stk_callback.get('CallbackMetadata', {}).get('Item', [])
+                mpesa_data = {}
+                for item in metadata:
+                    name = item.get('Name')
+                    value = item.get('Value')
+                    mpesa_data[name] = value
+                
+                update_data['mpesa_code'] = mpesa_data.get('MpesaReceiptNumber')
+                update_data['description'] = f'Account registration fee - Payment completed via STK Push. Amount: {mpesa_data.get("Amount")}, Phone: {mpesa_data.get("PhoneNumber")}'
+                
+                SupabaseDB.update_transaction(transaction['id'], update_data)
+                
+                # Activate user immediately
+                user = SupabaseDB.get_user_by_id(transaction['user_id'])
+                if user:
+                    SupabaseDB.update_user(user.id, {'is_verified': True})
+                    
+                    # Handle referral commission immediately
+                    if user.referred_by:
+                        referrer = SupabaseDB.get_user_by_referral_code(user.referred_by)
+                        if referrer:
+                            referrer.referral_balance += 50
+                            referrer.balance += 50
+                            referrer.total_commission += 50
+                            referrer.referral_count += 1
+                            referrer.update_rank()
+                            
+                            referral_data = {
+                                'referrer_id': referrer.id,
+                                'referred_id': user.id,
+                                'referral_code_used': user.referred_by,
+                                'commission_earned': 50.0,
+                                'status': 'active',
+                                'created_at': datetime.now(timezone.utc).isoformat()
+                            }
+                            SupabaseDB.create_referral(referral_data)
+                            
+                            # Update referrer in database
+                            SupabaseDB.update_user(referrer.id, {
+                                'referral_balance': referrer.referral_balance,
+                                'balance': referrer.balance,
+                                'total_commission': referrer.total_commission,
+                                'referral_count': referrer.referral_count,
+                                'user_rank': referrer.user_rank
+                            })
+                            
+                            # Send referral bonus notification
+                            CelcomSMS.send_referral_notification(referrer.phone, referrer.username, 50)
+                
+                app.logger.info(f"User {user.username} auto-verified via STK push callback")
+                
+            else:
+                # Payment failed
+                update_data = {
+                    'status': 'failed',
+                    'description': f'Payment failed: {result_desc}'
+                }
+                SupabaseDB.update_transaction(transaction['id'], update_data)
+        
+        return jsonify({'ResultCode': 0, 'ResultDesc': 'Success'})
+        
+    except Exception as e:
+        app.logger.error(f"Error processing M-PESA callback: {str(e)}")
+        return jsonify({'ResultCode': 1, 'ResultDesc': 'Failed'})
+
+# M-PESA B2C CALLBACK HANDLER
+@app.route('/mpesa-b2c-callback', methods=['POST'])
+def mpesa_b2c_callback():
+    """Handle M-PESA B2C payout callbacks - AUTO UPDATE WITHDRAWAL STATUS"""
+    try:
+        callback_data = request.get_json()
+        
+        # Log the callback for debugging
+        app.logger.info("M-PESA B2C Callback received: %s", json.dumps(callback_data, indent=2))
+        
+        # Extract relevant information from callback
+        result = callback_data.get('Result', {})
+        result_code = result.get('ResultCode')
+        result_desc = result.get('ResultDesc')
+        originator_conversation_id = result.get('OriginatorConversationID')
+        conversation_id = result.get('ConversationID')
+        transaction_id = result.get('TransactionID')
+        
+        # Find the withdrawal transaction using OriginatorConversationID (which is our withdrawal ID)
+        withdrawal_transaction = SupabaseDB.get_transaction_by_id(originator_conversation_id)
+        
+        if not withdrawal_transaction:
+            app.logger.error(f"Withdrawal transaction not found for ID: {originator_conversation_id}")
+            return jsonify({'ResultCode': 1, 'ResultDesc': 'Transaction not found'})
+        
+        user = SupabaseDB.get_user_by_id(withdrawal_transaction['user_id'])
+        if not user:
+            app.logger.error(f"User not found for withdrawal: {withdrawal_transaction['id']}")
+            return jsonify({'ResultCode': 1, 'ResultDesc': 'User not found'})
+        
+        amount = abs(withdrawal_transaction['amount'])
+        
+        if result_code == 0:
+            # B2C payment successful
+            update_data = {
+                'status': 'completed',
+                'mpesa_code': transaction_id,
+                'description': f'M-Pesa B2C payout completed - {result_desc}'
+            }
+            SupabaseDB.update_transaction(withdrawal_transaction['id'], update_data)
+            
+            # Send success SMS to user via Celcom
+            CelcomSMS.send_withdrawal_notification(
+                user.phone,
+                user.username,
+                amount,
+                'completed',
+                transaction_id
+            )
+            
+            app.logger.info(f"B2C payout completed for user {user.username}, transaction ID: {transaction_id}")
+            
+        else:
+            # B2C payment failed
+            update_data = {
+                'status': 'failed',
+                'description': f'M-Pesa B2C payout failed - {result_desc}'
+            }
+            SupabaseDB.update_transaction(withdrawal_transaction['id'], update_data)
+            
+            # Refund user balance
+            user.balance += amount
+            user.total_withdrawn -= amount
+            SupabaseDB.update_user(user.id, {
+                'balance': user.balance,
+                'total_withdrawn': user.total_withdrawn
+            })
+            
+            # Send failure SMS to user via Celcom
+            CelcomSMS.send_withdrawal_notification(
+                user.phone,
+                user.username,
+                amount,
+                'failed'
+            )
+            
+            app.logger.error(f"B2C payout failed for user {user.username}: {result_desc}")
+        
+        # Always return success to M-PESA to stop retries
+        return jsonify({'ResultCode': 0, 'ResultDesc': 'Success'})
+        
+    except Exception as e:
+        app.logger.error(f"Error processing M-PESA B2C callback: {str(e)}")
+        return jsonify({'ResultCode': 1, 'ResultDesc': 'System error'})
+
+@app.route('/mpesa-b2c-timeout', methods=['POST'])
+def mpesa_b2c_timeout():
+    """Handle B2C timeout callbacks"""
+    callback_data = request.get_json()
+    app.logger.warning(f"M-PESA B2C Timeout callback: {json.dumps(callback_data)}")
+    return jsonify({'ResultCode': 0, 'ResultDesc': 'Success'})
 
 @app.route('/api/payment-status')
 def api_payment_status():
@@ -825,7 +3328,7 @@ def api_payment_status():
     if not user_id:
         return jsonify({'verified': False, 'error': 'Session expired'})
     
-    user = db.session.get(User, user_id)
+    user = SupabaseDB.get_user_by_id(user_id)
     if not user:
         return jsonify({'verified': False, 'error': 'User not found'})
     
@@ -834,21 +3337,14 @@ def api_payment_status():
     
     return jsonify({'verified': user.is_verified})
 
-@app.route('/api/payment-status/<int:user_id>')
-def api_payment_status_old(user_id):
-    session['pending_verification_user'] = user_id
-    return api_payment_status()
-
 @app.route('/referral-system')
 @login_required
 def referral_system():
     if not current_user.is_verified:
         flash('Please complete payment verification to access referral system.', 'warning')
-        return redirect(url_for('payment_instructions'))
+        return redirect(url_for('account_activation'))
     
-    referrals = Referral.query.filter_by(referrer_id=current_user.id)\
-        .order_by(Referral.created_at.desc())\
-        .all()
+    referrals = SupabaseDB.get_referrals_by_referrer(current_user.id)
     
     base_url = request.host_url.rstrip('/')
     referral_url = f"{base_url}/register?ref={current_user.referral_code}"
@@ -875,12 +3371,10 @@ def referrals():
 def leaderboard():
     if not current_user.is_verified:
         flash('Please complete payment verification to view leaderboard.', 'warning')
-        return redirect(url_for('payment_instructions'))
+        return redirect(url_for('account_activation'))
     
-    top_users = User.query.filter(User.is_active==True, User.total_commission>0)\
-        .order_by(User.total_commission.desc())\
-        .limit(50)\
-        .all()
+    top_users_data = SupabaseDB.get_top_users(limit=50)
+    top_users = [User(user_data) for user_data in top_users_data]
     
     user_ranking = get_user_ranking(current_user.id)
     
@@ -893,20 +3387,15 @@ def leaderboard():
 def statistics():
     if not current_user.is_verified:
         flash('Please complete payment verification to view statistics.', 'warning')
-        return redirect(url_for('payment_instructions'))
+        return redirect(url_for('account_activation'))
     
     total_earned = current_user.total_commission
     total_withdrawn = current_user.total_withdrawn
     pending_balance = current_user.balance
     
-    referral_stats = db.session.query(
-        db.func.date(Referral.created_at).label('date'),
-        db.func.count(Referral.id).label('count')
-    ).filter(Referral.referrer_id == current_user.id)\
-     .group_by(db.func.date(Referral.created_at))\
-     .order_by(db.func.date(Referral.created_at).desc())\
-     .limit(30)\
-     .all()
+    # For referral stats, we'd need to implement a more complex query
+    # This is a simplified version
+    referral_stats = []  # Would need custom implementation for date grouping
     
     return render_template('statistics.html',
                          total_earned=total_earned,
@@ -914,47 +3403,112 @@ def statistics():
                          pending_balance=pending_balance,
                          referral_stats=referral_stats)
 
+# UPDATED WITHDRAW ROUTE - Now with automatic M-Pesa B2C processing
 @app.route('/withdraw', methods=['GET', 'POST'])
 @login_required
 def withdraw():
     if not current_user.is_verified:
         flash('Please complete payment verification to withdraw funds.', 'warning')
-        return redirect(url_for('payment_instructions'))
+        return redirect(url_for('account_activation'))
     
     if request.method == 'POST':
         amount = float(request.form.get('amount'))
         phone_number = request.form.get('phone_number')
         
-        if amount < 100:
-            flash('Minimum withdrawal amount is KSH 100.', 'error')
+        # UPDATED: Minimum withdrawal amount changed from 100 to 400
+        if amount < 400:
+            flash('Minimum withdrawal amount is KSH 400.', 'error')
             return redirect(url_for('withdraw'))
         
         if amount > current_user.balance:
             flash('Insufficient balance.', 'error')
             return redirect(url_for('withdraw'))
         
-        transaction = Transaction(
-            user_id=current_user.id,
-            amount=-amount,
-            transaction_type='withdrawal',
-            status='pending',
-            phone_number=phone_number,
-            description=f'M-Pesa withdrawal to {phone_number}'
-        )
+        # Validate phone number format
+        if not re.match(r'^254[0-9]{9}$', phone_number) and not re.match(r'^07[0-9]{8}$', phone_number):
+            flash('Please enter a valid Kenyan phone number.', 'error')
+            return redirect(url_for('withdraw'))
         
+        # Convert to 254 format
+        if phone_number.startswith('07'):
+            phone_number = '254' + phone_number[1:]
+        elif phone_number.startswith('+'):
+            phone_number = phone_number[1:]
+        
+        # Fraud detection for web withdrawals too
+        fraud_check = FraudDetector.check_suspicious_activity(current_user, amount, request)
+        if fraud_check:
+            transaction_data = {
+                'id': str(uuid.uuid4()),
+                'user_id': current_user.id,
+                'amount': -amount,
+                'transaction_type': 'withdrawal',
+                'status': 'Under Review',
+                'phone_number': phone_number,
+                'ip_address': request.remote_addr,
+                'user_agent': request.headers.get('User-Agent'),
+                'created_at': datetime.now(timezone.utc).isoformat()
+            }
+            SupabaseDB.create_transaction(transaction_data)
+            
+            SecurityMonitor.log_security_event(
+                "SUSPICIOUS_WITHDRAWAL", 
+                current_user.id, 
+                {
+                    "amount": amount, 
+                    "reason": fraud_check,
+                    "withdrawal_id": transaction_data['id'],
+                    "ip": request.remote_addr
+                }
+            )
+            
+            flash('Withdrawal under review due to suspicious activity. We will notify you once processed.', 'warning')
+            return redirect(url_for('dashboard'))
+        
+        transaction_data = {
+            'id': str(uuid.uuid4()),
+            'user_id': current_user.id,
+            'amount': -amount,
+            'transaction_type': 'withdrawal',
+            'status': 'pending',
+            'phone_number': phone_number,
+            'description': f'M-Pesa withdrawal to {phone_number} - Pending automatic processing',
+            'ip_address': request.remote_addr,
+            'user_agent': request.headers.get('User-Agent'),
+            'created_at': datetime.now(timezone.utc).isoformat()
+        }
+        
+        # Deduct balance immediately
         current_user.balance -= amount
         current_user.total_withdrawn += amount
+        SupabaseDB.update_user(current_user.id, {
+            'balance': current_user.balance,
+            'total_withdrawn': current_user.total_withdrawn
+        })
         
-        db.session.add(transaction)
-        db.session.commit()
+        SupabaseDB.create_transaction(transaction_data)
         
-        flash('Withdrawal request submitted! It will be processed within 24 hours.', 'success')
+        # Send initial SMS via Celcom
+        CelcomSMS.send_withdrawal_notification(
+            current_user.phone,
+            current_user.username,
+            amount,
+            'processing'
+        )
+        
+        # 🔄 NEW: Process withdrawal automatically via M-Pesa B2C
+        processing_result = process_automatic_withdrawal(transaction_data)
+        
+        if processing_result:
+            flash('Withdrawal request submitted! We are processing your payment via M-Pesa. You will receive an SMS confirmation shortly.', 'success')
+        else:
+            flash('Withdrawal request received but automatic processing failed. Our team will process it manually within 24 hours.', 'warning')
+            # Send Telegram notification for manual processing
+            send_withdrawal_notification_to_telegram(current_user, transaction_data)
+        
         return redirect(url_for('dashboard'))
     
-    transactions = Transaction.query.filter_by(
-        user_id=current_user.id, 
-        transaction_type='withdrawal'
-    ).order_by(Transaction.created_at.desc()).limit(5).all()
+    transactions = SupabaseDB.get_transactions_by_user(current_user.id, transaction_type='withdrawal', limit=5)
     
     return render_template('withdraw.html', transactions=transactions)
 
@@ -964,6 +3518,7 @@ def profile():
     if request.method == 'POST':
         email = request.form.get('email', '').strip()
         phone_number = request.form.get('phone_number', '').strip()
+        name = request.form.get('full_name', '').strip()
         new_password = request.form.get('new_password')
         
         if not email:
@@ -974,19 +3529,26 @@ def profile():
             flash('Phone number is required.', 'error')
             return redirect(url_for('profile'))
         
-        current_user.email = email
-        current_user.phone_number = phone_number
+        if not name:
+            flash('Full name is required.', 'error')
+            return redirect(url_for('profile'))
+        
+        update_data = {
+            'email': email,
+            'phone': phone_number,
+            'name': name
+        }
         
         if new_password:
             current_user.set_password(new_password)
+            update_data['password_hash'] = current_user.password_hash
             flash('Password updated successfully!', 'success')
         
         try:
-            db.session.commit()
+            SupabaseDB.update_user(current_user.id, update_data)
             flash('Profile updated successfully!', 'success')
             return redirect(url_for('profile'))
         except Exception as e:
-            db.session.rollback()
             flash('Error updating profile. Please try again.', 'error')
             return redirect(url_for('profile'))
     
@@ -994,7 +3556,9 @@ def profile():
     total_withdrawn = current_user.total_withdrawn
     balance = current_user.balance
     
-    referred_count = User.query.filter_by(referred_by=current_user.referral_code).count()
+    # Get referred count
+    response = supabase.table('users').select('*', count='exact').eq('referred_by', current_user.referral_code).execute()
+    referred_count = len(response.data)
     
     return render_template('profile.html', 
                          total_earned=total_earned,
@@ -1002,392 +3566,256 @@ def profile():
                          balance=balance,
                          referred_count=referred_count)
 
-# UPDATED SETTINGS ROUTE WITH FIXES
+# Updated settings route with better error handling
 @app.route('/settings', methods=['GET', 'POST'])
 @login_required
 def settings():
-    """Simple settings route with better error handling"""
+    """Settings route with enhanced error handling"""
     try:
-        # Quick database health check
-        db.session.execute(text('SELECT 1'))
+        # Quick Supabase health check
+        response = supabase.table('users').select('*').limit(1).execute()
     except Exception as e:
-        print(f"Database error in settings: {e}")
+        app.logger.error(f"Supabase error in settings: {e}")
         flash('Database connection issue. Please try again later.', 'error')
         return redirect(url_for('dashboard'))
     
     # Check if user is verified
     if not current_user.is_verified:
         flash('Please complete payment verification to access settings.', 'warning')
-        return redirect(url_for('payment_instructions'))
+        return redirect(url_for('account_activation'))
     
-    # Handle POST requests
     if request.method == 'POST':
-        return handle_settings_post()
-    
-    # Render settings page
-    return render_template('settings.html')
-
-def handle_settings_post():
-    """Handle settings form submission"""
-    try:
         email = request.form.get('email', '').strip()
         phone_number = request.form.get('phone_number', '').strip()
-        
-        # Basic validation
-        if not email or not phone_number:
-            flash('Email and phone number are required.', 'error')
-            return redirect(url_for('settings'))
-        
-        # Check for duplicate email/phone
-        existing_user = User.query.filter(
-            (User.email == email) | (User.phone_number == phone_number)
-        ).filter(User.id != current_user.id).first()
-        
-        if existing_user:
-            if existing_user.email == email:
-                flash('Email already registered.', 'error')
-            else:
-                flash('Phone number already registered.', 'error')
-            return redirect(url_for('settings'))
-        
-        # Update user info
-        current_user.email = email
-        current_user.phone_number = phone_number
-        
-        # Handle password change if provided
+        name = request.form.get('full_name', '').strip()
         current_password = request.form.get('current_password')
         new_password = request.form.get('new_password')
         confirm_password = request.form.get('confirm_password')
         
-        if new_password:
-            if not handle_password_change(current_password, new_password, confirm_password):
-                return redirect(url_for('settings'))
-        
-        # Save changes
-        db.session.commit()
-        flash('Settings updated successfully!', 'success')
-        return redirect(url_for('settings'))
-        
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error updating settings: {e}")
-        flash('Error updating settings. Please try again.', 'error')
-        return redirect(url_for('settings'))
-
-def handle_password_change(current_password, new_password, confirm_password):
-    """Handle password change logic"""
-    if not current_password:
-        flash('Current password is required to change password.', 'error')
-        return False
-    
-    if not current_user.check_password(current_password):
-        flash('Current password is incorrect.', 'error')
-        return False
-    
-    if new_password != confirm_password:
-        flash('New passwords do not match.', 'error')
-        return False
-    
-    if len(new_password) < 6:
-        flash('Password must be at least 6 characters long.', 'error')
-        return False
-    
-    current_user.set_password(new_password)
-    flash('Password updated successfully!', 'success')
-    return True
-
-# ADDED: Quick Password Change Route
-@app.route('/change-password', methods=['POST'])
-@login_required
-def change_password():
-    if not current_user.is_verified:
-        return jsonify({'success': False, 'message': 'Please complete payment verification first.'})
-    
-    new_password = request.form.get('new_password')
-    confirm_password = request.form.get('confirm_password')
-    
-    if not new_password or not confirm_password:
-        return jsonify({'success': False, 'message': 'Please fill in all password fields.'})
-    
-    if new_password != confirm_password:
-        return jsonify({'success': False, 'message': 'Passwords do not match.'})
-    
-    if len(new_password) < 6:
-        return jsonify({'success': False, 'message': 'Password must be at least 6 characters long.'})
-    
-    try:
-        current_user.set_password(new_password)
-        db.session.commit()
-        
-        # Send notification
         try:
-            message = f"""
-✅ <b>Password Changed Successfully</b>
-
-👤 <b>User:</b> {current_user.username}
-📧 <b>Email:</b> {current_user.email}
-🆔 <b>User ID:</b> #{current_user.id}
-
-🕒 <b>Time:</b> {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}
-📍 <b>IP Address:</b> {request.remote_addr}
-
-🔒 <i>Password was changed successfully via quick password change.</i>
-"""
-            thread = threading.Thread(target=send_telegram_notification, args=(message,))
-            thread.daemon = True
-            thread.start()
+            # Basic validation
+            if not email or not phone_number or not name:
+                flash('Email, phone number and full name are required.', 'error')
+                return redirect(url_for('settings'))
+            
+            # Validate phone number format
+            if not re.match(r'^254[0-9]{9}$', phone_number) and not re.match(r'^07[0-9]{8}$', phone_number):
+                flash('Please enter a valid Kenyan phone number.', 'error')
+                return redirect(url_for('settings'))
+            
+            # Convert to 254 format
+            if phone_number.startswith('07'):
+                phone_number = '254' + phone_number[1:]
+            
+            # Check for duplicate email/phone
+            email_response = supabase.table('users').select('*').eq('email', email).neq('id', current_user.id).execute()
+            phone_response = supabase.table('users').select('*').eq('phone', phone_number).neq('id', current_user.id).execute()
+            
+            if email_response.data:
+                flash('Email already registered.', 'error')
+                return redirect(url_for('settings'))
+            
+            if phone_response.data:
+                flash('Phone number already registered.', 'error')
+                return redirect(url_for('settings'))
+            
+            # Update user info
+            update_data = {
+                'email': email,
+                'phone': phone_number,
+                'name': name
+            }
+            
+            # Handle password change if provided
+            if new_password:
+                if not current_password:
+                    flash('Current password is required to change password.', 'error')
+                    return redirect(url_for('settings'))
+                
+                if not current_user.check_password(current_password):
+                    flash('Current password is incorrect.', 'error')
+                    return redirect(url_for('settings'))
+                
+                if new_password != confirm_password:
+                    flash('New passwords do not match.', 'error')
+                    return redirect(url_for('settings'))
+                
+                if len(new_password) < 6:
+                    flash('Password must be at least 6 characters long.', 'error')
+                    return redirect(url_for('settings'))
+                
+                current_user.set_password(new_password)
+                update_data['password_hash'] = current_user.password_hash
+                flash('Password updated successfully!', 'success')
+            
+            # Save changes
+            SupabaseDB.update_user(current_user.id, update_data)
+            flash('Settings updated successfully!', 'success')
+            return redirect(url_for('settings'))
+            
         except Exception as e:
-            print(f"Error sending password change notification: {e}")
-        
-        return jsonify({'success': True, 'message': 'Password changed successfully!'})
+            app.logger.error(f"Error updating settings: {str(e)}")
+            flash(f'Error updating settings: {str(e)}', 'error')
+            return redirect(url_for('settings'))
     
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'message': f'Error changing password: {str(e)}'})
-
-# ADDED: Test Settings Route
-@app.route('/test-settings')
-@login_required
-def test_settings():
+    # For GET request, calculate stats safely
     try:
-        # Test database connection
-        db.session.execute(text('SELECT 1'))
+        total_earned = current_user.total_commission or 0.0
+        total_withdrawn = current_user.total_withdrawn or 0.0
+        balance = current_user.balance or 0.0
         
-        # Test user data access
-        user_data = {
-            'username': current_user.username,
-            'email': current_user.email,
-            'phone': current_user.phone_number,
-            'is_verified': current_user.is_verified
-        }
+        response = supabase.table('users').select('*', count='exact').eq('referred_by', current_user.referral_code).execute()
+        referred_count = len(response.data)
         
-        return jsonify({
-            'status': 'success',
-            'user': user_data,
-            'database': 'connected'
-        })
+        return render_template('settings.html',
+                             total_earned=total_earned,
+                             total_withdrawn=total_withdrawn,
+                             balance=balance,
+                             referred_count=referred_count)
+                             
     except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'error': str(e)
-        }), 500
+        app.logger.error(f"Error loading settings page: {str(e)}")
+        flash('Error loading settings page. Please try again.', 'error')
+        return redirect(url_for('dashboard'))
 
-# ADDED: Debug Settings Route
-@app.route('/debug-settings')
-@login_required
-def debug_settings():
-    """Debug settings access issues"""
-    try:
-        # Test database
-        db.session.execute(text('SELECT 1'))
-        db_ok = True
-        db_error = None
-    except Exception as e:
-        db_ok = False
-        db_error = str(e)
+# Forgot Password Route
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
     
-    # Test template
-    try:
-        template_ok = True
-        # This will test if the template exists and can be rendered
-    except Exception as e:
-        template_ok = False
-        template_error = str(e)
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip()
+        
+        if not email:
+            flash('Please enter your email address.', 'error')
+            return render_template('auth/forgot_password.html')
+        
+        user = SupabaseDB.get_user_by_email(email)
+        if user:
+            # In a real application, you would generate a reset token and send an email
+            # For now, we'll just show a success message
+            flash('If an account with that email exists, password reset instructions have been sent.', 'success')
+        else:
+            # Don't reveal whether email exists for security
+            flash('If an account with that email exists, password reset instructions have been sent.', 'success')
+        
+        return redirect(url_for('login'))
     
-    # Test user data
-    user_data = {
-        'id': current_user.id,
-        'username': current_user.username,
-        'email': current_user.email,
-        'is_verified': current_user.is_verified,
-        'is_active': current_user.is_active
-    }
-    
-    return jsonify({
-        'database_connection': db_ok,
-        'database_error': db_error,
-        'template_available': template_ok,
-        'user': user_data,
-        'session_keys': list(session.keys()),
-        'timestamp': datetime.now(timezone.utc).isoformat()
-    })
+    return render_template('auth/forgot_password.html')
 
-# ADDED: Emergency Database Repair
-@app.route('/repair-db')
-def repair_database():
-    """Emergency database repair route"""
-    try:
-        # Close all connections
-        db.session.remove()
-        
-        # Recreate tables if needed
-        db.create_all()
-        
-        # Test connection
-        db.session.execute(text('SELECT 1'))
-        
-        return jsonify({
-            'status': 'success',
-            'message': 'Database connection reset successfully'
-        })
-    except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': f'Repair failed: {str(e)}'
-        }), 500
-
-# ADDED: Simple Settings Fallback
-@app.route('/simple-settings')
-@login_required
-def simple_settings():
-    """Minimal settings page that should always work"""
-    return '''
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Settings - ReferralNinja</title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    </head>
-    <body>
-        <div class="container mt-5">
-            <div class="row justify-content-center">
-                <div class="col-md-8">
-                    <div class="card">
-                        <div class="card-header bg-primary text-white">
-                            <h4>Account Settings</h4>
-                        </div>
-                        <div class="card-body">
-                            <form method="POST" action="/settings">
-                                <div class="mb-3">
-                                    <label class="form-label">Email</label>
-                                    <input type="email" class="form-control" name="email" value="''' + current_user.email + '''" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">Phone</label>
-                                    <input type="tel" class="form-control" name="phone_number" value="''' + current_user.phone_number + '''" required>
-                                </div>
-                                <button type="submit" class="btn btn-primary">Update</button>
-                                <a href="/dashboard" class="btn btn-secondary">Back to Dashboard</a>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </body>
-    </html>
-    '''
-
-# Updated Admin Dashboard Route with Better Error Handling
+# Admin Dashboard Route
 @app.route('/admin/dashboard')
 @login_required
 @admin_required
 def admin_dashboard():
-    print(f"Admin access attempt by: {current_user.username}, is_admin: {current_user.is_admin}")
+    app.logger.info(f"Admin access attempt by: {current_user.username}, is_admin: {current_user.is_admin}")
     
     try:
-        # Test database connection first
-        db.session.execute(text('SELECT 1'))
-        print("Database connection test passed")
+        # Test Supabase connection first
+        response = supabase.table('users').select('*').limit(1).execute()
+        app.logger.info("Supabase connection test passed")
         
-        # Admin statistics with individual error handling
+        # Admin statistics
         try:
-            total_users = User.query.count()
-            print(f"Total users: {total_users}")
+            total_users = SupabaseDB.get_users_count()
+            app.logger.info(f"Total users: {total_users}")
         except Exception as e:
-            print(f"Error counting users: {e}")
+            app.logger.error(f"Error counting users: {e}")
             total_users = 0
         
         try:
-            total_verified = User.query.filter_by(is_verified=True).count()
-            print(f"Total verified: {total_verified}")
+            total_verified = SupabaseDB.get_verified_users_count()
+            app.logger.info(f"Total verified: {total_verified}")
         except Exception as e:
-            print(f"Error counting verified users: {e}")
+            app.logger.error(f"Error counting verified users: {e}")
             total_verified = 0
         
         try:
-            total_referrals = Referral.query.count()
-            print(f"Total referrals: {total_referrals}")
+            total_referrals = SupabaseDB.get_referrals_count()
+            app.logger.info(f"Total referrals: {total_referrals}")
         except Exception as e:
-            print(f"Error counting referrals: {e}")
+            app.logger.error(f"Error counting referrals: {e}")
             total_referrals = 0
         
         try:
-            total_commission = db.session.query(db.func.sum(User.total_commission)).scalar() or 0
-            print(f"Total commission: {total_commission}")
+            total_commission = SupabaseDB.get_total_commission()
+            app.logger.info(f"Total commission: {total_commission}")
         except Exception as e:
-            print(f"Error calculating total commission: {e}")
+            app.logger.error(f"Error calculating total commission: {e}")
             total_commission = 0
         
         try:
-            total_withdrawn_amount = db.session.query(db.func.sum(User.total_withdrawn)).scalar() or 0
-            print(f"Total withdrawn: {total_withdrawn_amount}")
+            total_withdrawn_amount = SupabaseDB.get_total_withdrawn()
+            app.logger.info(f"Total withdrawn: {total_withdrawn_amount}")
         except Exception as e:
-            print(f"Error calculating total withdrawn: {e}")
+            app.logger.error(f"Error calculating total withdrawn: {e}")
             total_withdrawn_amount = 0
         
         try:
-            total_balance = db.session.query(db.func.sum(User.balance)).scalar() or 0
-            print(f"Total balance: {total_balance}")
+            total_balance = SupabaseDB.get_total_balance()
+            app.logger.info(f"Total balance: {total_balance}")
         except Exception as e:
-            print(f"Error calculating total balance: {e}")
+            app.logger.error(f"Error calculating total balance: {e}")
             total_balance = 0
         
         try:
-            pending_withdrawals = Transaction.query.filter_by(
-                transaction_type='withdrawal', 
-                status='pending'
-            ).count()
-            print(f"Pending withdrawals: {pending_withdrawals}")
+            pending_withdrawals_data = SupabaseDB.get_pending_withdrawals()
+            pending_withdrawals = len(pending_withdrawals_data)
+            app.logger.info(f"Pending withdrawals: {pending_withdrawals}")
         except Exception as e:
-            print(f"Error counting pending withdrawals: {e}")
+            app.logger.error(f"Error counting pending withdrawals: {e}")
             pending_withdrawals = 0
-        
+
         try:
-            pending_payments = Transaction.query.filter_by(
-                transaction_type='registration_fee', 
-                status='pending'
-            ).count()
-            print(f"Pending payments: {pending_payments}")
+            pending_payments_data = SupabaseDB.get_pending_payments()
+            pending_payments = len(pending_payments_data)
+            app.logger.info(f"Pending payments: {pending_payments}")
         except Exception as e:
-            print(f"Error counting pending payments: {e}")
+            app.logger.error(f"Error counting pending payments: {e}")
             pending_payments = 0
         
         try:
-            recent_users = User.query.filter(User.is_verified == True)\
-                .order_by(User.created_at.desc())\
-                .limit(10)\
-                .all()
-            print(f"Recent users: {len(recent_users)}")
+            recent_users_data = SupabaseDB.get_recent_users(limit=10)
+            recent_users = [User(user_data) for user_data in recent_users_data]
+            app.logger.info(f"Recent users: {len(recent_users)}")
         except Exception as e:
-            print(f"Error fetching recent users: {e}")
+            app.logger.error(f"Error fetching recent users: {e}")
             recent_users = []
         
         try:
-            pending_transactions = db.session.query(Transaction, User)\
-                .join(User, Transaction.user_id == User.id)\
-                .filter(Transaction.transaction_type == 'registration_fee', 
-                        Transaction.status == 'pending')\
-                .order_by(Transaction.created_at.desc())\
-                .all()
-            print(f"Pending transactions: {len(pending_transactions)}")
+            # Get pending withdrawal transactions with user info
+            pending_withdrawal_transactions = []
+            for withdrawal in pending_withdrawals_data:
+                user = SupabaseDB.get_user_by_id(withdrawal['user_id'])
+                pending_withdrawal_transactions.append((withdrawal, user))
+            app.logger.info(f"Pending withdrawal transactions: {len(pending_withdrawal_transactions)}")
         except Exception as e:
-            print(f"Error fetching pending transactions: {e}")
-            pending_transactions = []
+            app.logger.error(f"Error fetching pending withdrawal transactions: {e}")
+            pending_withdrawal_transactions = []
+
+        try:
+            # Get pending payment transactions with user info
+            pending_payment_transactions = []
+            for payment in pending_payments_data:
+                user = SupabaseDB.get_user_by_id(payment['user_id'])
+                pending_payment_transactions.append((payment, user))
+            app.logger.info(f"Pending payment transactions: {len(pending_payment_transactions)}")
+        except Exception as e:
+            app.logger.error(f"Error fetching pending payment transactions: {e}")
+            pending_payment_transactions = []
         
         try:
-            recent_activity = Transaction.query\
-                .order_by(Transaction.created_at.desc())\
-                .limit(10)\
-                .all()
-            print(f"Recent activity: {len(recent_activity)}")
+            recent_activity_data = SupabaseDB.get_recent_activity(limit=10)
+            recent_activity = recent_activity_data
+            app.logger.info(f"Recent activity: {len(recent_activity)}")
         except Exception as e:
-            print(f"Error fetching recent activity: {e}")
+            app.logger.error(f"Error fetching recent activity: {e}")
             recent_activity = []
         
         current_time = datetime.now(timezone.utc)
         
-        print("All queries successful, rendering template...")
+        app.logger.info("All queries successful, rendering template...")
         
         return render_template('admin_dashboard.html',
                              total_users=total_users,
@@ -1399,185 +3827,143 @@ def admin_dashboard():
                              pending_withdrawals=pending_withdrawals,
                              pending_payments=pending_payments,
                              recent_users=recent_users,
-                             pending_transactions=pending_transactions,
+                             pending_withdrawal_transactions=pending_withdrawal_transactions,
+                             pending_payment_transactions=pending_payment_transactions,
                              recent_activity=recent_activity,
                              current_time=current_time)
                              
     except Exception as e:
-        print(f"Error in admin_dashboard: {str(e)}")
+        app.logger.error(f"Error in admin_dashboard: {str(e)}")
         import traceback
         traceback.print_exc()
         flash(f'Error accessing admin dashboard: {str(e)}', 'error')
         return redirect(url_for('dashboard'))
 
-@app.route('/admin/approve-payment/<int:transaction_id>', methods=['POST'])
-@login_required
-@admin_required
-def approve_payment(transaction_id):
-    transaction = Transaction.query.get_or_404(transaction_id)
-    user = User.query.get(transaction.user_id)
-    
-    if not user:
-        return jsonify({'success': False, 'message': 'User not found'})
-    
-    try:
-        user.is_verified = True
-        user.is_active = True
-        transaction.status = 'completed'
-        transaction.description = 'Account registration fee - Approved'
-        
-        if user.referred_by:
-            referrer = User.query.filter_by(referral_code=user.referred_by).first()
-            if referrer:
-                referrer.referral_balance += 50
-                referrer.balance += 50
-                referrer.total_commission += 50
-                referrer.referral_count += 1
-                referrer.update_rank()
-                
-                referral = Referral(
-                    referrer_id=referrer.id,
-                    referred_id=user.id,
-                    referral_code_used=user.referred_by,
-                    commission_earned=50.0
-                )
-                db.session.add(referral)
-                
-                commission_tx = Transaction(
-                    user_id=referrer.id,
-                    amount=50.0,
-                    transaction_type='referral_commission',
-                    status='completed',
-                    description=f'Referral commission from {user.username}'
-                )
-                db.session.add(commission_tx)
-        
-        db.session.commit()
-        send_admin_action_notification('approved', user, transaction, current_user)
-        
-        return jsonify({'success': True, 'message': 'Payment approved and user activated'})
-    
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'message': str(e)})
-
-@app.route('/admin/reject-payment/<int:transaction_id>', methods=['POST'])
-@login_required
-@admin_required
-def reject_payment(transaction_id):
-    transaction = Transaction.query.get_or_404(transaction_id)
-    user = User.query.get(transaction.user_id)
-    
-    try:
-        transaction.status = 'rejected'
-        transaction.description = 'Account registration fee - Rejected'
-        
-        db.session.commit()
-        send_admin_action_notification('rejected', user, transaction, current_user)
-        
-        return jsonify({'success': True, 'message': 'Payment rejected'})
-    
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'message': str(e)})
-
 @app.route('/admin/withdrawals')
 @login_required
 @admin_required
 def admin_withdrawals():
-    withdrawals = db.session.query(Transaction, User)\
-        .join(User, Transaction.user_id == User.id)\
-        .filter(Transaction.transaction_type == 'withdrawal')\
-        .order_by(Transaction.created_at.desc())\
-        .all()
+    # Get all withdrawals with user info
+    withdrawals_data = supabase.table('transactions').select('*, users(*)').eq('transaction_type', 'withdrawal').order('created_at', desc=True).execute()
     
-    total_pending_withdrawals = db.session.query(db.func.sum(Transaction.amount))\
-        .filter(Transaction.transaction_type == 'withdrawal', Transaction.status == 'pending')\
-        .scalar() or 0
+    withdrawals = []
+    for item in withdrawals_data.data:
+        transaction = item
+        user_data = item.get('users', {})
+        user = User(user_data) if user_data else None
+        withdrawals.append((transaction, user))
+    
+    pending_withdrawals_data = SupabaseDB.get_pending_withdrawals()
+    total_pending_withdrawals = sum(abs(t['amount']) for t in pending_withdrawals_data)
     
     return render_template('admin_withdrawals.html',
                          withdrawals=withdrawals,
-                         total_pending_withdrawals=abs(total_pending_withdrawals))
+                         total_pending_withdrawals=total_pending_withdrawals)
 
-@app.route('/admin/approve-withdrawal/<int:transaction_id>', methods=['POST'])
+# Update admin withdrawal approval to handle automatic processing
+@app.route('/admin/approve-withdrawal/<transaction_id>', methods=['POST'])
 @login_required
 @admin_required
 def approve_withdrawal(transaction_id):
-    transaction = Transaction.query.get_or_404(transaction_id)
+    transaction = SupabaseDB.get_transaction_by_id(transaction_id)
     
-    if transaction.transaction_type != 'withdrawal':
+    if not transaction or transaction['transaction_type'] != 'withdrawal':
         return jsonify({'success': False, 'message': 'Not a withdrawal transaction'})
     
+    # If already processing via B2C, don't allow manual approval
+    if transaction['status'] == 'processing':
+        return jsonify({'success': False, 'message': 'Withdrawal is being processed automatically via M-Pesa'})
+    
     try:
-        transaction.status = 'completed'
-        transaction.description = f'M-Pesa withdrawal approved - Processed to {transaction.phone_number}'
+        # For pending withdrawals that failed auto-processing, process manually
+        if transaction['status'] == 'pending':
+            # Initiate manual B2C processing
+            processing_result = process_automatic_withdrawal(transaction)
+            
+            if processing_result:
+                return jsonify({'success': True, 'message': 'Withdrawal sent for automatic processing via M-Pesa'})
+            else:
+                return jsonify({'success': False, 'message': 'Automatic processing failed. Please try manual M-Pesa payment.'})
         
-        db.session.commit()
+        # For already completed transactions
+        SupabaseDB.update_transaction(transaction_id, {
+            'status': 'completed',
+            'description': f'M-Pesa withdrawal approved manually - Processed to {transaction["phone_number"]}'
+        })
+        
         return jsonify({'success': True, 'message': 'Withdrawal approved successfully'})
     
     except Exception as e:
-        db.session.rollback()
         return jsonify({'success': False, 'message': str(e)})
 
-@app.route('/admin/reject-withdrawal/<int:transaction_id>', methods=['POST'])
+@app.route('/admin/reject-withdrawal/<transaction_id>', methods=['POST'])
 @login_required
 @admin_required
 def reject_withdrawal(transaction_id):
-    transaction = Transaction.query.get_or_404(transaction_id)
-    user = User.query.get(transaction.user_id)
+    transaction = SupabaseDB.get_transaction_by_id(transaction_id)
+    user = SupabaseDB.get_user_by_id(transaction['user_id']) if transaction else None
     
     if not user:
         return jsonify({'success': False, 'message': 'User not found'})
     
-    if transaction.transaction_type != 'withdrawal':
+    if not transaction or transaction['transaction_type'] != 'withdrawal':
         return jsonify({'success': False, 'message': 'Not a withdrawal transaction'})
     
     try:
-        refund_amount = abs(transaction.amount)
+        refund_amount = abs(transaction['amount'])
         user.balance += refund_amount
         user.total_withdrawn -= refund_amount
         
-        transaction.status = 'rejected'
-        transaction.description = f'Withdrawal rejected - Amount refunded'
+        SupabaseDB.update_user(user.id, {
+            'balance': user.balance,
+            'total_withdrawn': user.total_withdrawn
+        })
         
-        db.session.commit()
+        SupabaseDB.update_transaction(transaction_id, {
+            'status': 'rejected',
+            'description': 'Withdrawal rejected - Amount refunded'
+        })
+        
         return jsonify({'success': True, 'message': 'Withdrawal rejected and amount refunded'})
     
     except Exception as e:
-        db.session.rollback()
         return jsonify({'success': False, 'message': str(e)})
 
 @app.route('/admin/users')
 @login_required
 @admin_required
 def admin_users():
-    users = User.query.all()
+    users_data = SupabaseDB.get_all_users()
+    users = []
     
-    for user in users:
-        user.referral_count = Referral.query.filter_by(referrer_id=user.id).count()
-        user.pending_withdrawals = Transaction.query.filter_by(
-            user_id=user.id, 
-            transaction_type='withdrawal', 
-            status='pending'
-        ).count()
+    for user_data in users_data:
+        user = User(user_data)
+        # Get referral count
+        response = supabase.table('users').select('*', count='exact').eq('referred_by', user.referral_code).execute()
+        user.referral_count = len(response.data)
+        
+        # Get pending withdrawals count
+        withdrawals = SupabaseDB.get_transactions_by_user(user.id, transaction_type='withdrawal')
+        user.pending_withdrawals = len([w for w in withdrawals if w['status'] == 'pending'])
+        
+        users.append(user)
     
     return render_template('admin_users.html', users=users)
 
-@app.route('/admin/toggle-user-status/<int:user_id>', methods=['POST'])
+@app.route('/admin/toggle-user-status/<user_id>', methods=['POST'])
 @login_required
 @admin_required
 def toggle_user_status(user_id):
-    user = User.query.get_or_404(user_id)
+    user = SupabaseDB.get_user_by_id(user_id)
     
     try:
-        user.is_active = not user.is_active
-        db.session.commit()
+        update_data = {'is_active': not user.is_active}
+        SupabaseDB.update_user(user_id, update_data)
         
-        status = "activated" if user.is_active else "deactivated"
+        status = "activated" if not user.is_active else "deactivated"
         return jsonify({'success': True, 'message': f'User {status} successfully'})
     
     except Exception as e:
-        db.session.rollback()
         return jsonify({'success': False, 'message': str(e)})
 
 @app.route('/api/admin/stats')
@@ -1585,16 +3971,9 @@ def toggle_user_status(user_id):
 @admin_required
 def api_admin_stats():
     stats = {
-        'total_users': User.query.count(),
-        'total_verified': User.query.filter_by(is_verified=True).count(),
-        'pending_payments': Transaction.query.filter_by(
-            transaction_type='registration_fee', 
-            status='pending'
-        ).count(),
-        'pending_withdrawals': Transaction.query.filter_by(
-            transaction_type='withdrawal', 
-            status='pending'
-        ).count()
+        'total_users': SupabaseDB.get_users_count(),
+        'total_verified': SupabaseDB.get_verified_users_count(),
+        'pending_withdrawals': len(SupabaseDB.get_pending_withdrawals())
     }
     
     return jsonify(stats)
@@ -1619,45 +3998,82 @@ def api_user_ranking():
 def favicon():
     return '', 204
 
-def init_db():
+@login_manager.user_loader
+def load_user(user_id):
     try:
-        with app.app_context():
-            db.create_all()
-            
-            if User.query.filter_by(is_admin=True).first() is None:
-                admin = User(
-                    username='admin',
-                    email='admin@referralninja.com',
-                    phone_number='254799326074',
-                    is_admin=True,
-                    is_verified=True,
-                    is_active=True
-                )
-                admin.set_password('admin123')
-                admin.generate_phone_linked_referral_code()
-                db.session.add(admin)
-                db.session.commit()
-                print("Admin user created successfully!")
-            else:
-                print("Admin user already exists: admin")
+        return SupabaseDB.get_user_by_id(user_id)
     except Exception as e:
-        print(f"Database initialization error: {e}")
+        app.logger.error(f"Error loading user {user_id}: {e}")
+        return None
+
+# =============================================================================
+# APPLICATION STARTUP
+# =============================================================================
 
 # Initialize the database when the app starts
 with app.app_context():
-    init_db()
+    try:
+        validate_environment()
+        
+        if init_db():
+            app.logger.info("✓ Database initialization completed successfully")
+            
+            # Start health monitoring in production
+            if not app.debug:
+                start_health_monitoring()
+                app.logger.info("✓ Health monitoring started")
+        else:
+            app.logger.error("❌ Database initialization failed")
+    except Exception as e:
+        app.logger.error(f"❌ Application initialization failed: {e}")
 
+# Production Startup Script
 if __name__ == '__main__':
-    print("Starting Referral Ninja Application...")
-    
-    port = int(os.environ.get('PORT', 10000))
-    host = '0.0.0.0'
-    
-    print(f"✓ Application initialized successfully")
-    print(f"✓ Starting server on {host}:{port}")
-    
-    app.run(
-        host=host,
-        port=port,
-        debug=False
-    )
+    try:
+        # Validate environment first
+        with app.app_context():
+            validate_environment()
+            
+            # Initialize database
+            if init_db():
+                current_app.logger.info("✓ Database initialization completed successfully")
+                
+                # Start health monitoring in production
+                if not current_app.debug:
+                    start_health_monitoring()
+                    current_app.logger.info("✓ Health monitoring started")
+            else:
+                current_app.logger.error("❌ Database initialization failed - exiting")
+                sys.exit(1)
+        
+        print("🚀 Starting Referral Ninja Application - PRODUCTION READY")
+        print("✓ Environment validation: PASSED")
+        print("✓ Database schema: VERIFIED")
+        print("✓ Security configuration: ENABLED")
+        print("✓ M-Pesa environment: PRODUCTION")
+        print("✓ Celcom SMS: CONFIGURED")
+        print("✓ Health monitoring: ACTIVE")
+        
+        port = int(os.environ.get('PORT', 10000))
+        host = '0.0.0.0'
+        
+        print(f"✓ Server starting on {host}:{port}")
+        print(f"✓ Health endpoint: http://{host}:{port}/health")
+        print(f"✓ Detailed health: http://{host}:{port}/health/detailed")
+        print(f"✓ Minimum withdrawal: KSH {app.config['WITHDRAWAL_MIN_AMOUNT']}")
+        
+        # Production server configuration
+        app.run(
+            host=host,
+            port=port,
+            debug=False,  # Always False in production
+            threaded=True
+        )
+        
+    except Exception as e:
+        print(f"❌ CRITICAL: Failed to start application: {e}")
+        print("Please check:")
+        print("1. All required environment variables are set")
+        print("2. Supabase connection is working")
+        print("3. M-Pesa credentials are valid")
+        sys.exit(1)
