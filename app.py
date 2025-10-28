@@ -1,3 +1,4 @@
+
 import os
 from dotenv import load_dotenv
 
@@ -9,7 +10,7 @@ print(" Loading environment variables...")
 print("Current directory:", os.getcwd())
 print(".env file exists:", os.path.exists('.env'))
 print("SUPABASE_URL loaded:", bool(os.environ.get('SUPABASE_URL')))
-print("SUPABASE_KEY loaded:", bool(os.environ.get('SUPABASE_KEY')))
+print("SUPABASE_KEY loaded:", bool(os.environ.get('SUPABASE_SERVICE_ROLE_KEY')))
 
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, Blueprint, current_app
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
@@ -57,7 +58,7 @@ class Config:
     
     # Supabase Configuration - REQUIRED
     SUPABASE_URL = os.environ["SUPABASE_URL"]
-    SUPABASE_KEY = os.environ["SUPABASE_KEY"]
+    SUPABASE_KEY = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
     
     # Security Settings
     WITHDRAWAL_MIN_AMOUNT = 400
@@ -1929,6 +1930,7 @@ def validate_environment():
         'JWT_SECRET_KEY',
         'SUPABASE_URL',
         'SUPABASE_KEY',
+        'SUPABASE_SERVICE_ROLE_KEY',
         'MPESA_CONSUMER_KEY',
         'MPESA_CONSUMER_SECRET',
         'MPESA_BUSINESS_SHORTCODE',

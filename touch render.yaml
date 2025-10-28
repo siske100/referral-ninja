@@ -30,7 +30,7 @@ services:
       # Supabase configuration (set these in Render dashboard)
       - key: SUPABASE_URL
         fromSecret: true
-      - key: SUPABASE_KEY
+      - key: SUPABASE_SERVICE_ROLE_KEY
         fromSecret: true
       - key: SUPABASE_DB_URL
         fromSecret: true
