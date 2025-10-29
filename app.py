@@ -63,6 +63,26 @@ from supabase import create_client
 
 app = Flask(__name__)
 
+def safe_strftime(date_value, format_string='%Y-%m-%d'):
+    """Safely format date whether it's string, datetime, or None"""
+    if not date_value:
+        return "N/A"
+    
+    if isinstance(date_value, str):
+        try:
+            # Try to parse the string as datetime
+            if 'Z' in date_value:
+                date_value = date_value.replace('Z', '+00:00')
+            date_obj = datetime.fromisoformat(date_value)
+            return date_obj.strftime(format_string)
+        except (ValueError, AttributeError):
+            return date_value  # Return original if can't parse
+    elif hasattr(date_value, 'strftime'):
+        # It's already a datetime object
+        return date_value.strftime(format_string)
+    else:
+        return str(date_value)
+
 # PRODUCTION CONFIGURATION
 class Config:
     # REQUIRED - Use get with defaults for development
@@ -1168,10 +1188,13 @@ class User(UserMixin):
             self._is_admin = data.get('is_admin', False)
             self._is_verified = data.get('is_verified', False)
             self._is_active = data.get('is_active', True)
+            
+            # Safe date handling
             self.created_at = data.get('created_at')
             self.last_login = data.get('last_login')
-            self.login_attempts = data.get('login_attempts', 0)
             self.locked_until = data.get('locked_until')
+            
+            self.login_attempts = data.get('login_attempts', 0)
             self.two_factor_enabled = data.get('two_factor_enabled', False)
             self.user_rank = data.get('user_rank', 'Bronze')
             self.total_commission = data.get('total_commission', 0.0)
@@ -1179,6 +1202,100 @@ class User(UserMixin):
             self.reset_token = data.get('reset_token')
             self.reset_token_expires = data.get('reset_token_expires')
 
+    # Add a safe method to get formatted created_at date
+    def get_created_at_formatted(self, format_string='%d/%m/%Y'):
+        return safe_strftime(self.created_at, format_string)
+    
+    # Add a safe method to get formatted last_login date
+    def get_last_login_formatted(self, format_string='%d/%m/%Y %H:%M'):
+        return safe_strftime(self.last_login, format_string)
+
+    @property
+    def is_active(self):
+        return self._is_active
+
+    @is_active.setter
+    def is_active(self, value):
+        self._is_active = value
+
+    @property
+    def is_admin(self):
+        return self._is_admin
+
+    @is_admin.setter
+    def is_admin(self, value):
+        self._is_admin = value
+
+    @property
+    def is_verified(self):
+        return self._is_verified
+
+    @is_verified.setter
+    def is_verified(self, value):
+        self._is_verified = value
+
+    def set_password(self, password):
+        self.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+    
+    def check_password(self, password):
+        return bcrypt.check_password_hash(self.password_hash, password)
+    
+    def is_locked(self):
+        if self.locked_until:
+            try:
+                locked_until_dt = datetime.fromisoformat(self.locked_until.replace('Z', '+00:00'))
+                return locked_until_dt > datetime.now(timezone.utc)
+            except (ValueError, AttributeError):
+                return False
+        return False
+    
+    def generate_phone_linked_referral_code(self):
+        phone_hash = hashlib.md5(self.phone.encode()).hexdigest()[:6].upper()
+        self.referral_code = f"RN{phone_hash}"
+    
+    def update_rank(self):
+        if self.total_commission >= 10000:
+            self.user_rank = 'Diamond'
+        elif self.total_commission >= 5000:
+            self.user_rank = 'Platinum'
+        elif self.total_commission >= 2000:
+            self.user_rank = 'Gold'
+        elif self.total_commission >= 1000:
+            self.user_rank = 'Silver'
+        else:
+            self.user_rank = 'Bronze'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'username': self.username,
+            'email': self.email,
+            'password_hash': self.password_hash,
+            'phone': self.phone,
+            'name': self.name,
+            'balance': self.balance,
+            'total_earned': self.total_earned,
+            'total_withdrawn': self.total_withdrawn,
+            'referral_code': self.referral_code,
+            'referred_by': self.referred_by,
+            'referral_balance': self.referral_balance,
+            'referral_count': self.referral_count,
+            'is_admin': self._is_admin,
+            'is_verified': self._is_verified,
+            'is_active': self._is_active,
+            'created_at': self.created_at,
+            'last_login': self.last_login,
+            'login_attempts': self.login_attempts,
+            'locked_until': self.locked_until,
+            'two_factor_enabled': self.two_factor_enabled,
+            'user_rank': self.user_rank,
+            'total_commission': self.total_commission,
+            'referral_source': self.referral_source,
+            'reset_token': self.reset_token,
+            'reset_token_expires': self.reset_token_expires
+        }
+        
+        
     @property
     def is_active(self):
         return self._is_active
@@ -3844,25 +3961,35 @@ def profile():
             flash('Error updating profile. Please try again.', 'error')
             return redirect(url_for('profile'))
     
-    # Safely get user stats with proper defaults
+    # Safely get user stats with proper defaults and error handling
     try:
-        total_earned = float(current_user.total_commission or 0.0)
-        total_withdrawn = float(current_user.total_withdrawn or 0.0)
-        balance = float(current_user.balance or 0.0)
+        # Ensure we have the latest user data
+        current_user_refreshed = SupabaseDB.get_user_by_id(current_user.id)
+        if not current_user_refreshed:
+            flash('User not found. Please log in again.', 'error')
+            return redirect(url_for('logout'))
+        
+        total_earned = float(getattr(current_user_refreshed, 'total_commission', 0.0) or 0.0)
+        total_withdrawn = float(getattr(current_user_refreshed, 'total_withdrawn', 0.0) or 0.0)
+        balance = float(getattr(current_user_refreshed, 'balance', 0.0) or 0.0)
         
         # Get referred count safely
         try:
-            response = supabase.table('users').select('*', count='exact').eq('referred_by', current_user.referral_code).execute()
+            response = supabase.table('users').select('*', count='exact').eq('referred_by', current_user_refreshed.referral_code).execute()
             referred_count = len(response.data) if response.data else 0
         except Exception as e:
             app.logger.error(f"Error counting referrals: {e}")
             referred_count = 0
         
+        # Pass the refreshed user data to template
         return render_template('profile.html', 
+                             current_user=current_user_refreshed,
                              total_earned=total_earned,
                              total_withdrawn=total_withdrawn,
                              balance=balance,
-                             referred_count=referred_count)
+                             referred_count=referred_count,
+                             safe_strftime=safe_strftime)  # Pass the helper function
+                             
     except Exception as e:
         app.logger.error(f"Error loading profile: {str(e)}")
         flash('Error loading profile data. Please try again.', 'error')
@@ -3871,7 +3998,7 @@ def profile():
 @app.route('/settings', methods=['GET', 'POST'])
 @login_required
 def settings():
-    """Settings route with enhanced error handling"""
+    """Settings route with enhanced error handling and date safety"""
     try:
         # Quick Supabase health check
         response = supabase.table('users').select('*').limit(1).execute()
@@ -3959,30 +4086,38 @@ def settings():
             flash(f'Error updating settings: {str(e)}', 'error')
             return redirect(url_for('settings'))
     
-    # For GET request, calculate stats safely
+    # For GET request, calculate stats safely with refreshed user data
     try:
-        total_earned = float(current_user.total_commission or 0.0)
-        total_withdrawn = float(current_user.total_withdrawn or 0.0)
-        balance = float(current_user.balance or 0.0)
+        # Get fresh user data to ensure we have latest values
+        current_user_refreshed = SupabaseDB.get_user_by_id(current_user.id)
+        if not current_user_refreshed:
+            flash('User not found. Please log in again.', 'error')
+            return redirect(url_for('logout'))
+        
+        total_earned = float(getattr(current_user_refreshed, 'total_commission', 0.0) or 0.0)
+        total_withdrawn = float(getattr(current_user_refreshed, 'total_withdrawn', 0.0) or 0.0)
+        balance = float(getattr(current_user_refreshed, 'balance', 0.0) or 0.0)
         
         try:
-            response = supabase.table('users').select('*', count='exact').eq('referred_by', current_user.referral_code).execute()
+            response = supabase.table('users').select('*', count='exact').eq('referred_by', current_user_refreshed.referral_code).execute()
             referred_count = len(response.data) if response.data else 0
         except Exception as e:
             app.logger.error(f"Error counting referrals in settings: {e}")
             referred_count = 0
         
         return render_template('settings.html',
+                             current_user=current_user_refreshed,  # Use refreshed data
                              total_earned=total_earned,
                              total_withdrawn=total_withdrawn,
                              balance=balance,
-                             referred_count=referred_count)
+                             referred_count=referred_count,
+                             safe_strftime=safe_strftime)  # Pass the helper function
                              
     except Exception as e:
         app.logger.error(f"Error loading settings page: {str(e)}")
         flash('Error loading settings page. Please try again.', 'error')
         return redirect(url_for('dashboard'))
-    
+   
 # Forgot Password Route
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
@@ -4082,7 +4217,15 @@ def admin_dashboard():
         
         try:
             recent_users_data = SupabaseDB.get_recent_users(limit=10)
-            recent_users = [User(user_data) for user_data in recent_users_data] if recent_users_data else []
+            # Create User objects with safe date handling
+            recent_users = []
+            for user_data in recent_users_data:
+                try:
+                    user = User(user_data)
+                    recent_users.append(user)
+                except Exception as e:
+                    app.logger.error(f"Error creating User object: {e}")
+                    continue
             app.logger.info(f"Recent users: {len(recent_users)}")
         except Exception as e:
             app.logger.error(f"Error fetching recent users: {e}")
@@ -4092,9 +4235,13 @@ def admin_dashboard():
             # Get pending withdrawal transactions with user info
             pending_withdrawal_transactions = []
             for withdrawal in pending_withdrawals_data:
-                user = SupabaseDB.get_user_by_id(withdrawal['user_id'])
-                if user:
-                    pending_withdrawal_transactions.append((withdrawal, user))
+                try:
+                    user = SupabaseDB.get_user_by_id(withdrawal['user_id'])
+                    if user:
+                        pending_withdrawal_transactions.append((withdrawal, user))
+                except Exception as e:
+                    app.logger.error(f"Error processing withdrawal transaction: {e}")
+                    continue
             app.logger.info(f"Pending withdrawal transactions: {len(pending_withdrawal_transactions)}")
         except Exception as e:
             app.logger.error(f"Error fetching pending withdrawal transactions: {e}")
@@ -4104,9 +4251,13 @@ def admin_dashboard():
             # Get pending payment transactions with user info
             pending_payment_transactions = []
             for payment in pending_payments_data:
-                user = SupabaseDB.get_user_by_id(payment['user_id'])
-                if user:
-                    pending_payment_transactions.append((payment, user))
+                try:
+                    user = SupabaseDB.get_user_by_id(payment['user_id'])
+                    if user:
+                        pending_payment_transactions.append((payment, user))
+                except Exception as e:
+                    app.logger.error(f"Error processing payment transaction: {e}")
+                    continue
             app.logger.info(f"Pending payment transactions: {len(pending_payment_transactions)}")
         except Exception as e:
             app.logger.error(f"Error fetching pending payment transactions: {e}")
@@ -4137,7 +4288,8 @@ def admin_dashboard():
                              pending_withdrawal_transactions=pending_withdrawal_transactions,
                              pending_payment_transactions=pending_payment_transactions,
                              recent_activity=recent_activity,
-                             current_time=current_time)
+                             current_time=current_time,
+                             safe_strftime=safe_strftime)  # Pass the helper function
                              
     except Exception as e:
         app.logger.error(f"Error in admin_dashboard: {str(e)}")
