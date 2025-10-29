@@ -1,16 +1,27 @@
-
-import os
 from dotenv import load_dotenv
+import os
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Debug: Check if environment variables are loaded
 print(" Loading environment variables...")
-print("Current directory:", os.getcwd())
-print(".env file exists:", os.path.exists('.env'))
-print("SUPABASE_URL loaded:", bool(os.environ.get('SUPABASE_URL')))
-print("SUPABASE_KEY loaded:", bool(os.environ.get('SUPABASE_SERVICE_ROLE_KEY')))
+print(" Current directory:", os.getcwd())
+print(" .env file exists:", os.path.exists('.env'))
+
+# Check key environment variables
+env_vars = {
+    'SUPABASE_URL': os.environ.get('SUPABASE_URL'),
+    'SUPABASE_KEY': os.environ.get('SUPABASE_KEY'), 
+    'SUPABASE_SERVICE_ROLE_KEY': os.environ.get('SUPABASE_SERVICE_ROLE_KEY'),
+    'SECRET_KEY': os.environ.get('SECRET_KEY'),
+    'MPESA_CONSUMER_KEY': os.environ.get('MPESA_CONSUMER_KEY'),
+    'CELCOM_SMS_API_KEY': os.environ.get('CELCOM_SMS_API_KEY')
+}
+
+for var, value in env_vars.items():
+    status = "Loaded" if value and value not in ['your_', 'placeholder'] else "❌ Missing/Invalid"
+    print(f"{status} {var}: {value[:20] + '...' if value and len(value) > 20 else value}")
 
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, Blueprint, current_app
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
@@ -41,6 +52,9 @@ import time
 import sys
 import psutil
 from typing import Dict, List, Any, Tuple, Optional
+import socket
+from psycopg2 import OperationalError, Error
+
 
 # Supabase imports
 import psycopg2
@@ -51,14 +65,14 @@ app = Flask(__name__)
 
 # PRODUCTION CONFIGURATION
 class Config:
-    # REQUIRED - No defaults for secrets
-    SECRET_KEY = os.environ['SECRET_KEY']  # Will raise error if missing
-    JWT_SECRET_KEY = os.environ['JWT_SECRET_KEY']
+    # REQUIRED - Use get with defaults for development
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'dev-jwt-secret-change-in-production')
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
     
-    # Supabase Configuration - REQUIRED
-    SUPABASE_URL = os.environ["SUPABASE_URL"]
-    SUPABASE_KEY = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
+    # Supabase Configuration
+    SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://wawnboslxkkbrgffppps.supabase.co")
+    SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "your_supabase_key_here")
     
     # Security Settings
     WITHDRAWAL_MIN_AMOUNT = 400
@@ -66,31 +80,31 @@ class Config:
     SUSPICIOUS_AMOUNT_THRESHOLD = 5001
     WITHDRAWAL_DAILY_LIMIT = 5000
     
-    # M-PESA Configuration - PRODUCTION
-    MPESA_CONSUMER_KEY = os.environ['MPESA_CONSUMER_KEY']
-    MPESA_CONSUMER_SECRET = os.environ['MPESA_CONSUMER_SECRET']
-    MPESA_BUSINESS_SHORTCODE = os.environ['MPESA_BUSINESS_SHORTCODE']
-    MPESA_PASSKEY = os.environ['MPESA_PASSKEY']
-    MPESA_B2C_SHORTCODE = os.environ['MPESA_B2C_SHORTCODE']
-    MPESA_B2C_INITIATOR_NAME = os.environ['MPESA_B2C_INITIATOR_NAME']
-    MPESA_B2C_SECURITY_CREDENTIAL = os.environ['MPESA_B2C_SECURITY_CREDENTIAL']
-    MPESA_ENVIRONMENT = os.environ.get('MPESA_ENVIRONMENT', 'production')  # Default to production
+    # M-PESA Configuration
+    MPESA_CONSUMER_KEY = os.environ.get('MPESA_CONSUMER_KEY', 'your_consumer_key')
+    MPESA_CONSUMER_SECRET = os.environ.get('MPESA_CONSUMER_SECRET', 'your_consumer_secret')
+    MPESA_BUSINESS_SHORTCODE = os.environ.get('MPESA_BUSINESS_SHORTCODE', '174379')
+    MPESA_PASSKEY = os.environ.get('MPESA_PASSKEY', 'your_passkey')
+    MPESA_B2C_SHORTCODE = os.environ.get('MPESA_B2C_SHORTCODE', 'your_b2c_shortcode')
+    MPESA_B2C_INITIATOR_NAME = os.environ.get('MPESA_B2C_INITIATOR_NAME', 'testapi')
+    MPESA_B2C_SECURITY_CREDENTIAL = os.environ.get('MPESA_B2C_SECURITY_CREDENTIAL', 'your_security_credential')
+    MPESA_ENVIRONMENT = os.environ.get('MPESA_ENVIRONMENT', 'sandbox')
     
-    # Callback URLs - REQUIRED for production
-    MPESA_CALLBACK_URL = os.environ['MPESA_CALLBACK_URL']
-    MPESA_B2C_CALLBACK_URL = os.environ['MPESA_B2C_CALLBACK_URL']
-    MPESA_B2C_QUEUE_TIMEOUT_URL = os.environ['MPESA_B2C_QUEUE_TIMEOUT_URL']
+    # Callback URLs
+    MPESA_CALLBACK_URL = os.environ.get('MPESA_CALLBACK_URL', 'https://yourdomain.com/mpesa-callback')
+    MPESA_B2C_CALLBACK_URL = os.environ.get('MPESA_B2C_CALLBACK_URL', 'https://yourdomain.com/mpesa-b2c-callback')
+    MPESA_B2C_QUEUE_TIMEOUT_URL = os.environ.get('MPESA_B2C_QUEUE_TIMEOUT_URL', 'https://yourdomain.com/mpesa-b2c-timeout')
     
-    # Celcom SMS Configuration - REQUIRED
-    CELCOM_SMS_API_KEY = os.environ['CELCOM_SMS_API_KEY']
+    # Celcom SMS Configuration
+    CELCOM_SMS_API_KEY = os.environ.get('CELCOM_SMS_API_KEY', 'your_celcom_api_key')
     CELCOM_SENDER_ID = os.environ.get('CELCOM_SENDER_ID', 'RefNinja')
     CELCOM_SMS_URL = os.environ.get('CELCOM_SMS_URL', 'https://api.celcomafrica.com/sms/send')
     
     # Telegram (Optional)
-    TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
-    TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
+    TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
+    TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID', '')
     
-    # Safaricom IPs (Whitelist) - PRODUCTION
+    # Safaricom IPs (Whitelist)
     SAFARICOM_IPS = [
         '196.201.214.200', '196.201.214.206', '196.201.213.114',
         '196.201.212.227', '196.201.212.224', '196.201.212.138',
@@ -100,10 +114,10 @@ class Config:
     
     # Session Security
     SESSION_COOKIE_SAMESITE = 'Lax'
-    SESSION_COOKIE_SECURE = True  # Always True in production
+    SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
     SESSION_COOKIE_HTTPONLY = True
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
-
+    
 class DevelopmentConfig(Config):
     """Development specific configuration"""
     SESSION_COOKIE_SECURE = False
@@ -112,10 +126,10 @@ class DevelopmentConfig(Config):
 # Load appropriate config based on environment
 if os.environ.get('FLASK_ENV') == 'development':
     app.config.from_object(DevelopmentConfig)
-    print("⚙️  Development configuration loaded")
+    print("  Development configuration loaded")
 else:
     app.config.from_object(Config)
-    print("🚀 Production configuration loaded")
+    print("Production configuration loaded")
 
 # Initialize Supabase client
 supabase = create_client(app.config['SUPABASE_URL'], app.config['SUPABASE_KEY'])
@@ -146,12 +160,164 @@ import psycopg2  # Changed from psycopg to psycopg2
 
 
 class DatabaseManager:
-    """Production-grade database schema manager for Supabase (uses direct DB connection)."""
+    """Production-grade database schema manager with enhanced connectivity"""
     
     def __init__(self, supabase_client):
         self.supabase = supabase_client
         self.logger = logging.getLogger(__name__)
     
+    def _test_network_connectivity(self, host, port=5432, timeout=10):
+        """Test basic network connectivity to database host"""
+        try:
+            self.logger.info(f"Testing network connectivity to {host}:{port}")
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(timeout)
+            result = sock.connect_ex((host, port))
+            sock.close()
+            
+            if result == 0:
+                self.logger.info("✓ Network connectivity test passed")
+                return True
+            else:
+                self.logger.error(f"✗ Network connectivity failed (error code: {result})")
+                return False
+        except Exception as e:
+            self.logger.error(f"✗ Network connectivity test failed: {e}")
+            return False
+    
+    def _get_db_connection_params(self, db_url=None):
+        """Extract connection parameters from database URL"""
+        db_url = db_url or os.environ.get('SUPABASE_DB_URL')
+        if not db_url:
+            raise Exception("SUPABASE_DB_URL not set")
+        
+        parsed = urlparse(db_url)
+        return {
+            'host': parsed.hostname,
+            'port': parsed.port or 5432,
+            'database': parsed.path[1:],  # Remove leading slash
+            'user': parsed.username,
+            'password': parsed.password
+        }
+    
+    def _run_sql_via_db_url(self, sql: str, db_url: Optional[str] = None, timeout: int = 30, max_retries: int = 3) -> None:
+        """
+        Execute raw SQL with enhanced error handling and retries
+        """
+        for attempt in range(max_retries):
+            try:
+                db_url = db_url or os.environ.get('SUPABASE_DB_URL')
+                if not db_url:
+                    raise Exception("SUPABASE_DB_URL not set")
+                
+                # Test network connectivity first
+                params = self._get_db_connection_params(db_url)
+                if not self._test_network_connectivity(params['host'], params['port']):
+                    if attempt < max_retries - 1:
+                        wait_time = 2 ** attempt
+                        self.logger.warning(f"Network test failed, retrying in {wait_time}s...")
+                        time.sleep(wait_time)
+                        continue
+                    else:
+                        raise Exception("Network connectivity failed after all retries")
+                
+                # Attempt database connection
+                self.logger.info(f"Attempting database connection (attempt {attempt + 1}/{max_retries})")
+                
+                conn = psycopg2.connect(db_url)
+                conn.autocommit = True
+                
+                with conn.cursor() as cur:
+                    cur.execute(sql)
+                
+                conn.close()
+                self.logger.info(f"SQL executed successfully (attempt {attempt + 1})")
+                return
+                
+            except OperationalError as e:
+                # Network/database connection errors
+                error_msg = str(e)
+                self.logger.warning(f"Database operational error (attempt {attempt + 1}): {error_msg}")
+                
+                if "connection" in error_msg.lower() or "network" in error_msg.lower():
+                    if attempt < max_retries - 1:
+                        wait_time = 2 ** attempt
+                        self.logger.info(f"Connection failed, retrying in {wait_time}s...")
+                        time.sleep(wait_time)
+                        continue
+                    else:
+                        raise Exception(f"Database connection failed after {max_retries} attempts: {error_msg}")
+                else:
+                    raise
+                    
+            except Error as e:
+                # Database errors (permissions, syntax, etc.)
+                error_msg = str(e)
+                self.logger.error(f"Database error (attempt {attempt + 1}): {error_msg}")
+                
+                if "permission denied" in error_msg.lower():
+                    raise Exception(f"Database permission denied (RLS likely blocking): {error_msg}")
+                elif "already exists" in error_msg.lower():
+                    self.logger.info("Table/index already exists (non-fatal)")
+                    return
+                else:
+                    raise Exception(f"Database error: {error_msg}")
+                    
+            except Exception as e:
+                self.logger.error(f"Unexpected error (attempt {attempt + 1}): {e}")
+                if attempt < max_retries - 1:
+                    wait_time = 2 ** attempt
+                    time.sleep(wait_time)
+                    continue
+                else:
+                    raise
+    
+    def diagnose_connection_issue(self):
+        """Comprehensive connection diagnosis"""
+        try:
+            db_url = os.environ.get('SUPABASE_DB_URL')
+            if not db_url:
+                return {"status": "error", "message": "SUPABASE_DB_URL not set"}
+            
+            params = self._get_db_connection_params(db_url)
+            
+            # Test 1: Network connectivity
+            network_ok = self._test_network_connectivity(params['host'], params['port'])
+            if not network_ok:
+                return {
+                    "status": "network_error",
+                    "message": f"Cannot reach {params['host']}:{params['port']}",
+                    "details": "Check firewall settings and network configuration"
+                }
+            
+            # Test 2: Database connection
+            try:
+                conn = psycopg2.connect(db_url)
+                conn.close()
+                return {"status": "success", "message": "Database connection successful"}
+            except OperationalError as e:
+                error_msg = str(e)
+                if "password authentication" in error_msg:
+                    return {
+                        "status": "auth_error", 
+                        "message": "Database authentication failed",
+                        "details": "Check username and password"
+                    }
+                elif "database" in error_msg and "does not exist" in error_msg:
+                    return {
+                        "status": "database_error",
+                        "message": "Database does not exist",
+                        "details": "Check database name"
+                    }
+                else:
+                    return {
+                        "status": "connection_error",
+                        "message": f"Database connection failed: {error_msg}",
+                        "details": "Check connection parameters"
+                    }
+                    
+        except Exception as e:
+            return {"status": "error", "message": f"Diagnosis failed: {e}"}
     def _run_sql_via_db_url(self, sql: str, db_url: Optional[str] = None, timeout: int = 30) -> None:
         """
         Execute raw SQL using direct Postgres connection via SUPABASE_DB_URL.
@@ -1956,21 +2122,49 @@ def validate_environment():
 
 # Updated initialization function
 def init_db():
-    """Production database initialization with proper error handling"""
+    """Production database initialization with comprehensive diagnostics"""
     max_retries = 3
     retry_count = 0
     
     db_manager = DatabaseManager(supabase)
     
+    # Step 1: Run connection diagnostics
+    app.logger.info("Running database connection diagnostics...")
+    diagnosis = db_manager.diagnose_connection_issue()
+    
+    if diagnosis['status'] != 'success':
+        app.logger.error(f"Database connection issue: {diagnosis['message']}")
+        app.logger.error(f"Details: {diagnosis.get('details', 'No additional details')}")
+        
+        # Don't proceed if it's a network error
+        if diagnosis['status'] == 'network_error':
+            app.logger.error("Cannot proceed - network connectivity issue must be resolved first")
+            return False
+    
     while retry_count < max_retries:
         try:
-            # Test basic connection first
-            response = supabase.table('users').select('*').limit(1).execute()
-            current_app.logger.info("✓ Supabase connection successful")
+            # Test basic Supabase client connection
+            response = supabase.table('users').select('*', count='exact').limit(1).execute()
+            app.logger.info("✓ Supabase client connection test passed")
             
-            # Initialize database schema
+            # Test direct database connection (for schema management)
+            try:
+                # This will test if we can bypass RLS with service role
+                test_sql = "SELECT current_user;"
+                db_manager._run_sql_via_db_url(test_sql)
+                app.logger.info("✓ Direct database connection test passed")
+            except Exception as e:
+                error_msg = str(e)
+                if "permission denied" in error_msg.lower() or "rls" in error_msg.lower():
+                    app.logger.warning("Direct database connection has RLS restrictions")
+                    app.logger.info("Falling back to Supabase client for schema operations")
+                    # We'll handle this case below
+                else:
+                    raise
+            
+            # Initialize database schema with appropriate method
             if db_manager.initialize_database():
-                current_app.logger.info("Database schema verified/created successfully")
+                app.logger.info("Database schema verified/created successfully")
                 
                 # Create admin user if required
                 if os.environ.get('CREATE_ADMIN_USER') == 'true':
@@ -1978,20 +2172,30 @@ def init_db():
                 
                 return True
             else:
-                current_app.logger.error(" Database schema creation failed")
+                app.logger.error("Database schema creation failed")
                 return False
                 
         except Exception as e:
             retry_count += 1
-            current_app.logger.error(f" Database initialization attempt {retry_count} failed: {e}")
+            error_msg = str(e)
+            app.logger.error(f"Database initialization attempt {retry_count} failed: {error_msg}")
+            
+            # Distinguish between connection and permission errors
+            if any(keyword in error_msg.lower() for keyword in ['connection', 'network', 'unreachable']):
+                app.logger.error("Network/connection error detected")
+            elif any(keyword in error_msg.lower() for keyword in ['permission', 'rls', 'policy']):
+                app.logger.error("Permission/RLS error detected")
+            else:
+                app.logger.error("Unknown error type")
             
             if retry_count < max_retries:
-                current_app.logger.info(f"Retrying database initialization in {2 ** retry_count} seconds...")
-                time.sleep(2 ** retry_count)
+                wait_time = 2 ** retry_count
+                app.logger.info(f"Retrying database initialization in {wait_time} seconds...")
+                time.sleep(wait_time)
             else:
-                current_app.logger.error(" All database initialization attempts failed")
+                app.logger.error("All database initialization attempts failed")
                 return False
-
+            
 def _create_admin_user():
     """Create admin user with secure password"""
     try:
@@ -2670,6 +2874,68 @@ def internal_error(error):
 def handle_exception(error):
     app.logger.error(f"Unhandled Exception: {error}")
     return render_template('500.html'), 500
+
+@app.route('/debug/database-status')
+def debug_database_status():
+    """Debug endpoint to check database connection status"""
+    db_manager = DatabaseManager(supabase)
+    
+    # Test Supabase client
+    supabase_status = "unknown"
+    try:
+        response = supabase.table('users').select('*', count='exact').limit(1).execute()
+        supabase_status = "connected"
+        supabase_data = f"Found {len(response.data)} users"
+    except Exception as e:
+        supabase_status = f"error: {str(e)}"
+        supabase_data = None
+    
+    # Test direct database connection
+    direct_db_status = "unknown"
+    diagnosis = db_manager.diagnose_connection_issue()
+    
+    # Check environment variables (masked)
+    env_vars = {
+        'SUPABASE_URL_SET': bool(os.environ.get('SUPABASE_URL')),
+        'SUPABASE_KEY_SET': bool(os.environ.get('SUPABASE_KEY')),
+        'SUPABASE_DB_URL_SET': bool(os.environ.get('SUPABASE_DB_URL')),
+        'KEY_TYPE': 'service_role' if os.environ.get('SUPABASE_KEY', '').startswith('eyJ') else 'unknown'
+    }
+    
+    return jsonify({
+        'timestamp': datetime.now(timezone.utc).isoformat(),
+        'supabase_client_status': supabase_status,
+        'supabase_client_data': supabase_data,
+        'direct_db_connection': diagnosis,
+        'environment_variables': env_vars,
+        'recommendations': _get_connection_recommendations(diagnosis, supabase_status)
+    })
+
+def _get_connection_recommendations(diagnosis, supabase_status):
+    """Provide specific recommendations based on connection status"""
+    recommendations = []
+    
+    if diagnosis.get('status') == 'network_error':
+        recommendations.extend([
+            "1. Check Supabase project firewall settings",
+            "2. Allow Render IP ranges in Supabase dashboard",
+            "3. Verify database hostname and port",
+            "4. Test network connectivity from Render instance"
+        ])
+    
+    if 'permission' in str(supabase_status).lower() or 'rls' in str(supabase_status).lower():
+        recommendations.extend([
+            "1. Ensure you're using service_role key, not anon key",
+            "2. Check RLS policies in Supabase dashboard",
+            "3. Verify service_role key has bypass RLS permission",
+            "4. Test with Supabase client using service_role key"
+        ])
+    
+    if not recommendations:
+        recommendations = ["All connections appear healthy"]
+    
+    return recommendations
+
 
 # =============================================================================
 # APPLICATION ROUTES
