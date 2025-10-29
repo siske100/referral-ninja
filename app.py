@@ -141,12 +141,68 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message_category = 'info'
 
-# Rate limiter
+# Configure rate limiter storage
+try:
+    # Check if Redis URL is available (common on hosting platforms)
+    redis_url = os.environ.get('REDIS_URL', os.environ.get('REDIS_TLS_URL'))
+    if redis_url:
+        import redis
+        rate_limiter_storage = redis.from_url(redis_url)
+        app.logger.info("Using Redis for rate limiting")
+    else:
+        rate_limiter_storage = "memory://"
+        app.logger.warning(" Using in-memory rate limiting (not recommended for production)")
+except ImportError:
+    rate_limiter_storage = "memory://"
+    app.logger.warning(" Redis not available, using in-memory rate limiting")
+
+# Update your rate limiter
 rate_limiter = Limiter(
     app=app,
     key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"]
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri=rate_limiter_storage
 )
+
+# =============================================================================
+# SYSTEM STATUS ENDPOINT
+# =============================================================================
+
+@app.route('/system-status')
+def system_status():
+    """Check system status and database connectivity"""
+    try:
+        # Test Supabase connection
+        supabase_test = supabase.table('users').select('*', count='exact').limit(1).execute()
+        supabase_status = "connected"
+        tables_found = len(supabase_test.data) if supabase_test.data else 0
+    except Exception as e:
+        supabase_status = f"error: {str(e)}"
+        tables_found = 0
+    
+    # Check environment variables
+    env_status = {
+        'SUPABASE_URL': bool(os.environ.get('SUPABASE_URL')),
+        'SUPABASE_KEY': bool(os.environ.get('SUPABASE_KEY')),
+        'SUPABASE_DB_URL': bool(os.environ.get('SUPABASE_DB_URL')),
+        'FLASK_ENV': os.environ.get('FLASK_ENV', 'production')
+    }
+    
+    return jsonify({
+        'status': 'healthy' if supabase_status == 'connected' else 'degraded',
+        'timestamp': datetime.now(timezone.utc).isoformat(),
+        'supabase': {
+            'status': supabase_status,
+            'tables_accessible': tables_found,
+            'using_direct_connection': False
+        },
+        'environment': env_status,
+        'recommendations': [
+            "Remove SUPABASE_DB_URL from environment variables",
+            "Create missing tables in Supabase dashboard",
+            "Use only Supabase client for database operations"
+        ]
+    })
 
 # =============================================================================
 # PRODUCTION DATABASE SCHEMA MANAGER
@@ -318,24 +374,7 @@ class DatabaseManager:
                     
         except Exception as e:
             return {"status": "error", "message": f"Diagnosis failed: {e}"}
-    def _run_sql_via_db_url(self, sql: str, db_url: Optional[str] = None, timeout: int = 30) -> None:
-        """
-        Execute raw SQL using direct Postgres connection via SUPABASE_DB_URL.
-        Raises Exception on failure.
-        """
-        db_url = db_url or os.environ.get('SUPABASE_DB_URL')
-        if not db_url:
-            raise Exception("SUPABASE_DB_URL not set; cannot execute raw SQL via direct DB connection.")
-        
-        # Use autocommit for DDL/DDL-like statements
-        conn = psycopg2.connect(db_url)  # Changed from psycopg.connect
-        conn.autocommit = True
-        try:
-            with conn.cursor() as cur:
-                cur.execute(sql)
-        finally:
-            conn.close()
-    
+
     def execute_sql(self, sql: str, max_retries: int = 3) -> bool:
         """Execute SQL with proper error handling and retries using direct DB connection."""
         for attempt in range(max_retries):
@@ -605,6 +644,32 @@ class DatabaseManager:
         
         self.logger.info("Database initialization completed successfully")
         return True 
+
+    def initialize_database_supabase_only(self) -> bool:
+        """Supabase-only initialization - tables should exist already"""
+        try:
+            self.logger.info("Starting Supabase-only database initialization...")
+            
+            # Test Supabase connection
+            response = self.supabase.table('users').select('*', count='exact').limit(1).execute()
+            self.logger.info("✅ Supabase client connection verified")
+            
+            # Verify critical tables exist
+            verification = self.verify_schema()
+            critical_tables = ['users', 'transactions']
+            missing_tables = [table for table in critical_tables if not verification.get(table, {}).get('exists')]
+            
+            if missing_tables:
+                self.logger.error(f"❌ Missing critical tables: {missing_tables}")
+                self.logger.info("Please create these tables in your Supabase dashboard")
+                return False
+            
+            self.logger.info("✅ Database initialization completed successfully")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"❌ Database initialization failed: {e}")
+            return False
 # =============================================================================
 # COMPREHENSIVE HEALTH MONITORING SYSTEM
 # =============================================================================
@@ -2122,71 +2187,30 @@ def validate_environment():
 
 # Updated initialization function
 def init_db():
-    """Production database initialization with comprehensive diagnostics"""
+    """Supabase-only database initialization"""
     max_retries = 3
     retry_count = 0
     
     db_manager = DatabaseManager(supabase)
     
-    # Step 1: Run connection diagnostics
-    app.logger.info("Running database connection diagnostics...")
-    diagnosis = db_manager.diagnose_connection_issue()
-    
-    if diagnosis['status'] != 'success':
-        app.logger.error(f"Database connection issue: {diagnosis['message']}")
-        app.logger.error(f"Details: {diagnosis.get('details', 'No additional details')}")
-        
-        # Don't proceed if it's a network error
-        if diagnosis['status'] == 'network_error':
-            app.logger.error("Cannot proceed - network connectivity issue must be resolved first")
-            return False
-    
     while retry_count < max_retries:
         try:
-            # Test basic Supabase client connection
+            # Test Supabase client connection
             response = supabase.table('users').select('*', count='exact').limit(1).execute()
-            app.logger.info("✓ Supabase client connection test passed")
+            app.logger.info("✅ Supabase client connection test passed")
             
-            # Test direct database connection (for schema management)
-            try:
-                # This will test if we can bypass RLS with service role
-                test_sql = "SELECT current_user;"
-                db_manager._run_sql_via_db_url(test_sql)
-                app.logger.info("✓ Direct database connection test passed")
-            except Exception as e:
-                error_msg = str(e)
-                if "permission denied" in error_msg.lower() or "rls" in error_msg.lower():
-                    app.logger.warning("Direct database connection has RLS restrictions")
-                    app.logger.info("Falling back to Supabase client for schema operations")
-                    # We'll handle this case below
-                else:
-                    raise
-            
-            # Initialize database schema with appropriate method
-            if db_manager.initialize_database():
-                app.logger.info("Database schema verified/created successfully")
-                
-                # Create admin user if required
-                if os.environ.get('CREATE_ADMIN_USER') == 'true':
-                    _create_admin_user()
-                
+            # Initialize database manager (Supabase-only)
+            if db_manager.initialize_database_supabase_only():
+                app.logger.info("✅ Database initialization completed successfully")
                 return True
             else:
-                app.logger.error("Database schema creation failed")
+                app.logger.error("❌ Database initialization failed - missing tables")
                 return False
                 
         except Exception as e:
             retry_count += 1
             error_msg = str(e)
             app.logger.error(f"Database initialization attempt {retry_count} failed: {error_msg}")
-            
-            # Distinguish between connection and permission errors
-            if any(keyword in error_msg.lower() for keyword in ['connection', 'network', 'unreachable']):
-                app.logger.error("Network/connection error detected")
-            elif any(keyword in error_msg.lower() for keyword in ['permission', 'rls', 'policy']):
-                app.logger.error("Permission/RLS error detected")
-            else:
-                app.logger.error("Unknown error type")
             
             if retry_count < max_retries:
                 wait_time = 2 ** retry_count
@@ -3499,7 +3523,7 @@ def mpesa_callback():
         return jsonify({'ResultCode': 1, 'ResultDesc': 'Failed'})
 
 # M-PESA B2C CALLBACK HANDLER
-@app.route('/mpesa-b2c-callback', methods=['POST'])
+@app.route('/mpesa-b2c-callback', methods=["POST"])
 def mpesa_b2c_callback():
     """Handle M-PESA B2C payout callbacks - AUTO UPDATE WITHDRAWAL STATUS"""
     try:
@@ -4291,9 +4315,9 @@ with app.app_context():
                 start_health_monitoring()
                 app.logger.info("✓ Health monitoring started")
         else:
-            app.logger.error("❌ Database initialization failed")
+            app.logger.error("Database initialization failed")
     except Exception as e:
-        app.logger.error(f"❌ Application initialization failed: {e}")
+        app.logger.error(f"Application initialization failed: {e}")
 
 # Production Startup Script
 if __name__ == '__main__':
@@ -4311,10 +4335,10 @@ if __name__ == '__main__':
                     start_health_monitoring()
                     current_app.logger.info("✓ Health monitoring started")
             else:
-                current_app.logger.error("❌ Database initialization failed - exiting")
+                current_app.logger.error(" Database initialization failed - exiting")
                 sys.exit(1)
         
-        print("🚀 Starting Referral Ninja Application - PRODUCTION READY")
+        print("Starting Referral Ninja Application - PRODUCTION READY")
         print("✓ Environment validation: PASSED")
         print("✓ Database schema: VERIFIED")
         print("✓ Security configuration: ENABLED")
