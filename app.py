@@ -3804,7 +3804,7 @@ def withdraw():
     
     return render_template('withdraw.html', transactions=transactions)
 
-@app.route('/profile', methods=['GET', 'POST'])@app.route('/profile', methods=['GET', 'POST'])
+@app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
     if request.method == 'POST':
