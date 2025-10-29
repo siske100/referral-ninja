@@ -4010,7 +4010,7 @@ def forgot_password():
     return render_template('auth/forgot_password.html')
 
 # Admin Dashboard Route
-@app.route('/admin/dashboard')@app.route('/admin/dashboard')
+@app.route('/admin/dashboard')
 @login_required
 @admin_required
 def admin_dashboard():
