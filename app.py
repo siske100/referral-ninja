@@ -3998,44 +3998,94 @@ def profile():
 @app.route('/settings', methods=['GET', 'POST'])
 @login_required
 def settings():
-    """Settings route with enhanced error handling and date safety"""
+    """Settings route with comprehensive error handling"""
     try:
-        # Quick Supabase health check
-        response = supabase.table('users').select('*').limit(1).execute()
+        # Quick database health check with timeout
+        try:
+            response = supabase.table('users').select('*').limit(1).execute()
+            db_healthy = True
+        except Exception as e:
+            app.logger.error(f"Database health check failed: {e}")
+            db_healthy = False
+            flash('Temporary database issue. Some features may be limited.', 'warning')
+        
+        # Check if user is verified (but don't block access to settings)
+        if not current_user.is_verified:
+            flash('Please complete payment verification to access all features.', 'warning')
+            # Don't redirect - allow them to see settings but show warning
+        
+        if request.method == 'POST':
+            return handle_settings_post_request()
+        
+        # For GET request - use defensive programming for all data access
+        try:
+            # Get fresh user data with fallbacks
+            current_user_refreshed = SupabaseDB.get_user_by_id(current_user.id)
+            if not current_user_refreshed:
+                app.logger.error(f"User {current_user.id} not found in database")
+                flash('User data not found. Please log in again.', 'error')
+                return redirect(url_for('logout'))
+            
+            # Safely calculate financial stats with defaults
+            total_earned = safe_float_getattr(current_user_refreshed, 'total_commission', 0.0)
+            total_withdrawn = safe_float_getattr(current_user_refreshed, 'total_withdrawn', 0.0)
+            balance = safe_float_getattr(current_user_refreshed, 'balance', 0.0)
+            
+            # Safely get referral count
+            try:
+                response = supabase.table('users').select('*').eq('referred_by', current_user_refreshed.referral_code).execute()
+                referred_count = len(response.data) if response.data else 0
+            except Exception as e:
+                app.logger.error(f"Error counting referrals: {e}")
+                referred_count = 0
+            
+            return render_template('settings.html',
+                                 current_user=current_user_refreshed,
+                                 total_earned=total_earned,
+                                 total_withdrawn=total_withdrawn,
+                                 balance=balance,
+                                 referred_count=referred_count,
+                                 safe_strftime=safe_strftime)
+            
+        except Exception as e:
+            app.logger.error(f"Error preparing settings data: {str(e)}")
+            # Return minimal settings page with error info
+            return render_template('settings.html',
+                                 current_user=current_user,
+                                 total_earned=0.0,
+                                 total_withdrawn=0.0,
+                                 balance=0.0,
+                                 referred_count=0,
+                                 safe_strftime=safe_strftime)
+            
     except Exception as e:
-        app.logger.error(f"Supabase error in settings: {e}")
-        flash('Database connection issue. Please try again later.', 'error')
+        app.logger.error(f"Critical error in settings route: {str(e)}")
+        flash('Unable to load settings page. Please try again.', 'error')
         return redirect(url_for('dashboard'))
-    
-    # Check if user is verified
-    if not current_user.is_verified:
-        flash('Please complete payment verification to access settings.', 'warning')
-        return redirect(url_for('account_activation'))
-    
-    if request.method == 'POST':
+
+def handle_settings_post_request():
+    """Handle POST request for settings updates"""
+    try:
         email = request.form.get('email', '').strip()
         phone_number = request.form.get('phone_number', '').strip()
         name = request.form.get('full_name', '').strip()
-        current_password = request.form.get('current_password')
-        new_password = request.form.get('new_password')
-        confirm_password = request.form.get('confirm_password')
         
+        # Basic validation
+        if not email or not phone_number:
+            flash('Email and phone number are required.', 'error')
+            return redirect(url_for('settings'))
+        
+        # Validate phone number format
+        if not re.match(r'^254[0-9]{9}$', phone_number) and not re.match(r'^07[0-9]{8}$', phone_number):
+            flash('Please enter a valid Kenyan phone number (format: 07XXXXXXXX or 2547XXXXXXXX).', 'error')
+            return redirect(url_for('settings'))
+        
+        # Convert to 254 format
+        if phone_number.startswith('07'):
+            phone_number = '254' + phone_number[1:]
+        
+        # Check for duplicate email/phone
         try:
-            # Basic validation
-            if not email or not phone_number or not name:
-                flash('Email, phone number and full name are required.', 'error')
-                return redirect(url_for('settings'))
-            
-            # Validate phone number format
-            if not re.match(r'^254[0-9]{9}$', phone_number) and not re.match(r'^07[0-9]{8}$', phone_number):
-                flash('Please enter a valid Kenyan phone number.', 'error')
-                return redirect(url_for('settings'))
-            
-            # Convert to 254 format
-            if phone_number.startswith('07'):
-                phone_number = '254' + phone_number[1:]
-            
-            # Check for duplicate email/phone
             email_response = supabase.table('users').select('*').eq('email', email).neq('id', current_user.id).execute()
             phone_response = supabase.table('users').select('*').eq('phone', phone_number).neq('id', current_user.id).execute()
             
@@ -4046,79 +4096,40 @@ def settings():
             if phone_response.data:
                 flash('Phone number already registered.', 'error')
                 return redirect(url_for('settings'))
-            
-            # Update user info
-            update_data = {
-                'email': email,
-                'phone': phone_number,
-                'name': name
-            }
-            
-            # Handle password change if provided
-            if new_password:
-                if not current_password:
-                    flash('Current password is required to change password.', 'error')
-                    return redirect(url_for('settings'))
-                
-                if not current_user.check_password(current_password):
-                    flash('Current password is incorrect.', 'error')
-                    return redirect(url_for('settings'))
-                
-                if new_password != confirm_password:
-                    flash('New passwords do not match.', 'error')
-                    return redirect(url_for('settings'))
-                
-                if len(new_password) < 6:
-                    flash('Password must be at least 6 characters long.', 'error')
-                    return redirect(url_for('settings'))
-                
-                current_user.set_password(new_password)
-                update_data['password_hash'] = current_user.password_hash
-                flash('Password updated successfully!', 'success')
-            
-            # Save changes
-            SupabaseDB.update_user(current_user.id, update_data)
-            flash('Settings updated successfully!', 'success')
-            return redirect(url_for('settings'))
-            
         except Exception as e:
-            app.logger.error(f"Error updating settings: {str(e)}")
-            flash(f'Error updating settings: {str(e)}', 'error')
+            app.logger.error(f"Error checking duplicates: {e}")
+            flash('Error checking account details. Please try again.', 'error')
             return redirect(url_for('settings'))
-    
-    # For GET request, calculate stats safely with refreshed user data
-    try:
-        # Get fresh user data to ensure we have latest values
-        current_user_refreshed = SupabaseDB.get_user_by_id(current_user.id)
-        if not current_user_refreshed:
-            flash('User not found. Please log in again.', 'error')
-            return redirect(url_for('logout'))
         
-        total_earned = float(getattr(current_user_refreshed, 'total_commission', 0.0) or 0.0)
-        total_withdrawn = float(getattr(current_user_refreshed, 'total_withdrawn', 0.0) or 0.0)
-        balance = float(getattr(current_user_refreshed, 'balance', 0.0) or 0.0)
+        # Update user info
+        update_data = {
+            'email': email,
+            'phone': phone_number
+        }
         
-        try:
-            response = supabase.table('users').select('*', count='exact').eq('referred_by', current_user_refreshed.referral_code).execute()
-            referred_count = len(response.data) if response.data else 0
-        except Exception as e:
-            app.logger.error(f"Error counting referrals in settings: {e}")
-            referred_count = 0
+        if name:
+            update_data['name'] = name
         
-        return render_template('settings.html',
-                             current_user=current_user_refreshed,  # Use refreshed data
-                             total_earned=total_earned,
-                             total_withdrawn=total_withdrawn,
-                             balance=balance,
-                             referred_count=referred_count,
-                             safe_strftime=safe_strftime)  # Pass the helper function
-                             
+        # Save changes
+        SupabaseDB.update_user(current_user.id, update_data)
+        flash('Settings updated successfully!', 'success')
+        return redirect(url_for('settings'))
+        
     except Exception as e:
-        app.logger.error(f"Error loading settings page: {str(e)}")
-        flash('Error loading settings page. Please try again.', 'error')
-        return redirect(url_for('dashboard'))
-   
-# Forgot Password Route
+        app.logger.error(f"Error updating settings: {str(e)}")
+        flash(f'Error updating settings: {str(e)}', 'error')
+        return redirect(url_for('settings'))
+
+def safe_float_getattr(obj, attr, default=0.0):
+    """Safely get float attribute with error handling"""
+    try:
+        value = getattr(obj, attr, default)
+        if value is None:
+            return default
+        return float(value)
+    except (TypeError, ValueError):
+        return default 
+    
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
     if current_user.is_authenticated:
