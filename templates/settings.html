@@ -30,6 +30,42 @@
         </div>
     </div>
 
+    <!-- Financial Statistics Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="settings-card">
+                <div class="card-header-gradient">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-chart-bar fa-lg me-3"></i>
+                        <h4 class="mb-0">Financial Overview</h4>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="stat-card">
+                                <h3>Total Earned</h3>
+                                <p class="stat-value">KSH {{ "%.2f"|format(total_earned) }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-card">
+                                <h3>Total Withdrawn</h3>
+                                <p class="stat-value">KSH {{ "%.2f"|format(total_withdrawn) }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-card">
+                                <h3>Current Balance</h3>
+                                <p class="stat-value">KSH {{ "%.2f"|format(balance) }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Emergency Access Links (Hidden by default) -->
     <div class="alert alert-info mb-4" id="emergencyLinks" style="display: none;">
         <div class="d-flex justify-content-between align-items-center">
@@ -432,6 +468,39 @@
     padding: 2rem;
 }
 
+/* Stat Card Styles */
+.stat-card {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 12px;
+    border-left: 4px solid #667eea;
+    transition: all 0.3s ease;
+    text-align: center;
+    height: 100%;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.stat-card h3 {
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-card .stat-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #2c3e50;
+    line-height: 1;
+    margin: 0;
+}
+
 .form-floating {
     position: relative;
 }
@@ -697,6 +766,10 @@
     }
 
     .system-status-item {
+        margin-bottom: 1rem;
+    }
+
+    .stat-card {
         margin-bottom: 1rem;
     }
 }
@@ -1056,6 +1129,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Add interactive animations
     const statItems = document.querySelectorAll('.stat-item');
+    const statCards = document.querySelectorAll('.stat-card');
     
     statItems.forEach(item => {
         item.addEventListener('mouseenter', function() {
@@ -1064,6 +1138,16 @@ document.addEventListener('DOMContentLoaded', function() {
         
         item.addEventListener('mouseleave', function() {
             this.style.transform = 'translateX(0)';
+        });
+    });
+
+    statCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-5px)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
         });
     });
 

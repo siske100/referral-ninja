@@ -3804,7 +3804,7 @@ def withdraw():
     
     return render_template('withdraw.html', transactions=transactions)
 
-@app.route('/profile', methods=['GET', 'POST'])
+@app.route('/profile', methods=['GET', 'POST'])@app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
     if request.method == 'POST':
@@ -3844,21 +3844,30 @@ def profile():
             flash('Error updating profile. Please try again.', 'error')
             return redirect(url_for('profile'))
     
-    total_earned = current_user.total_commission
-    total_withdrawn = current_user.total_withdrawn
-    balance = current_user.balance
-    
-    # Get referred count
-    response = supabase.table('users').select('*', count='exact').eq('referred_by', current_user.referral_code).execute()
-    referred_count = len(response.data)
-    
-    return render_template('profile.html', 
-                         total_earned=total_earned,
-                         total_withdrawn=total_withdrawn,
-                         balance=balance,
-                         referred_count=referred_count)
+    # Safely get user stats with proper defaults
+    try:
+        total_earned = float(current_user.total_commission or 0.0)
+        total_withdrawn = float(current_user.total_withdrawn or 0.0)
+        balance = float(current_user.balance or 0.0)
+        
+        # Get referred count safely
+        try:
+            response = supabase.table('users').select('*', count='exact').eq('referred_by', current_user.referral_code).execute()
+            referred_count = len(response.data) if response.data else 0
+        except Exception as e:
+            app.logger.error(f"Error counting referrals: {e}")
+            referred_count = 0
+        
+        return render_template('profile.html', 
+                             total_earned=total_earned,
+                             total_withdrawn=total_withdrawn,
+                             balance=balance,
+                             referred_count=referred_count)
+    except Exception as e:
+        app.logger.error(f"Error loading profile: {str(e)}")
+        flash('Error loading profile data. Please try again.', 'error')
+        return redirect(url_for('dashboard'))
 
-# Updated settings route with better error handling
 @app.route('/settings', methods=['GET', 'POST'])
 @login_required
 def settings():
@@ -3952,12 +3961,16 @@ def settings():
     
     # For GET request, calculate stats safely
     try:
-        total_earned = current_user.total_commission or 0.0
-        total_withdrawn = current_user.total_withdrawn or 0.0
-        balance = current_user.balance or 0.0
+        total_earned = float(current_user.total_commission or 0.0)
+        total_withdrawn = float(current_user.total_withdrawn or 0.0)
+        balance = float(current_user.balance or 0.0)
         
-        response = supabase.table('users').select('*', count='exact').eq('referred_by', current_user.referral_code).execute()
-        referred_count = len(response.data)
+        try:
+            response = supabase.table('users').select('*', count='exact').eq('referred_by', current_user.referral_code).execute()
+            referred_count = len(response.data) if response.data else 0
+        except Exception as e:
+            app.logger.error(f"Error counting referrals in settings: {e}")
+            referred_count = 0
         
         return render_template('settings.html',
                              total_earned=total_earned,
@@ -3969,7 +3982,7 @@ def settings():
         app.logger.error(f"Error loading settings page: {str(e)}")
         flash('Error loading settings page. Please try again.', 'error')
         return redirect(url_for('dashboard'))
-
+    
 # Forgot Password Route
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
@@ -3997,7 +4010,7 @@ def forgot_password():
     return render_template('auth/forgot_password.html')
 
 # Admin Dashboard Route
-@app.route('/admin/dashboard')
+@app.route('/admin/dashboard')@app.route('/admin/dashboard')
 @login_required
 @admin_required
 def admin_dashboard():
@@ -4008,52 +4021,52 @@ def admin_dashboard():
         response = supabase.table('users').select('*').limit(1).execute()
         app.logger.info("Supabase connection test passed")
         
-        # Admin statistics
+        # Admin statistics - safely handle all calculations
         try:
-            total_users = SupabaseDB.get_users_count()
+            total_users = SupabaseDB.get_users_count() or 0
             app.logger.info(f"Total users: {total_users}")
         except Exception as e:
             app.logger.error(f"Error counting users: {e}")
             total_users = 0
         
         try:
-            total_verified = SupabaseDB.get_verified_users_count()
+            total_verified = SupabaseDB.get_verified_users_count() or 0
             app.logger.info(f"Total verified: {total_verified}")
         except Exception as e:
             app.logger.error(f"Error counting verified users: {e}")
             total_verified = 0
         
         try:
-            total_referrals = SupabaseDB.get_referrals_count()
+            total_referrals = SupabaseDB.get_referrals_count() or 0
             app.logger.info(f"Total referrals: {total_referrals}")
         except Exception as e:
             app.logger.error(f"Error counting referrals: {e}")
             total_referrals = 0
         
         try:
-            total_commission = SupabaseDB.get_total_commission()
+            total_commission = float(SupabaseDB.get_total_commission() or 0.0)
             app.logger.info(f"Total commission: {total_commission}")
         except Exception as e:
             app.logger.error(f"Error calculating total commission: {e}")
-            total_commission = 0
+            total_commission = 0.0
         
         try:
-            total_withdrawn_amount = SupabaseDB.get_total_withdrawn()
+            total_withdrawn_amount = float(SupabaseDB.get_total_withdrawn() or 0.0)
             app.logger.info(f"Total withdrawn: {total_withdrawn_amount}")
         except Exception as e:
             app.logger.error(f"Error calculating total withdrawn: {e}")
-            total_withdrawn_amount = 0
+            total_withdrawn_amount = 0.0
         
         try:
-            total_balance = SupabaseDB.get_total_balance()
+            total_balance = float(SupabaseDB.get_total_balance() or 0.0)
             app.logger.info(f"Total balance: {total_balance}")
         except Exception as e:
             app.logger.error(f"Error calculating total balance: {e}")
-            total_balance = 0
+            total_balance = 0.0
         
         try:
             pending_withdrawals_data = SupabaseDB.get_pending_withdrawals()
-            pending_withdrawals = len(pending_withdrawals_data)
+            pending_withdrawals = len(pending_withdrawals_data) if pending_withdrawals_data else 0
             app.logger.info(f"Pending withdrawals: {pending_withdrawals}")
         except Exception as e:
             app.logger.error(f"Error counting pending withdrawals: {e}")
@@ -4061,7 +4074,7 @@ def admin_dashboard():
 
         try:
             pending_payments_data = SupabaseDB.get_pending_payments()
-            pending_payments = len(pending_payments_data)
+            pending_payments = len(pending_payments_data) if pending_payments_data else 0
             app.logger.info(f"Pending payments: {pending_payments}")
         except Exception as e:
             app.logger.error(f"Error counting pending payments: {e}")
@@ -4069,7 +4082,7 @@ def admin_dashboard():
         
         try:
             recent_users_data = SupabaseDB.get_recent_users(limit=10)
-            recent_users = [User(user_data) for user_data in recent_users_data]
+            recent_users = [User(user_data) for user_data in recent_users_data] if recent_users_data else []
             app.logger.info(f"Recent users: {len(recent_users)}")
         except Exception as e:
             app.logger.error(f"Error fetching recent users: {e}")
@@ -4080,7 +4093,8 @@ def admin_dashboard():
             pending_withdrawal_transactions = []
             for withdrawal in pending_withdrawals_data:
                 user = SupabaseDB.get_user_by_id(withdrawal['user_id'])
-                pending_withdrawal_transactions.append((withdrawal, user))
+                if user:
+                    pending_withdrawal_transactions.append((withdrawal, user))
             app.logger.info(f"Pending withdrawal transactions: {len(pending_withdrawal_transactions)}")
         except Exception as e:
             app.logger.error(f"Error fetching pending withdrawal transactions: {e}")
@@ -4091,7 +4105,8 @@ def admin_dashboard():
             pending_payment_transactions = []
             for payment in pending_payments_data:
                 user = SupabaseDB.get_user_by_id(payment['user_id'])
-                pending_payment_transactions.append((payment, user))
+                if user:
+                    pending_payment_transactions.append((payment, user))
             app.logger.info(f"Pending payment transactions: {len(pending_payment_transactions)}")
         except Exception as e:
             app.logger.error(f"Error fetching pending payment transactions: {e}")
@@ -4099,7 +4114,7 @@ def admin_dashboard():
         
         try:
             recent_activity_data = SupabaseDB.get_recent_activity(limit=10)
-            recent_activity = recent_activity_data
+            recent_activity = recent_activity_data if recent_activity_data else []
             app.logger.info(f"Recent activity: {len(recent_activity)}")
         except Exception as e:
             app.logger.error(f"Error fetching recent activity: {e}")

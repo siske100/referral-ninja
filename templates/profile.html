@@ -138,27 +138,26 @@
                 </div>
             </div>
             <div class="card-body">
+                <!-- Updated Statistics Section -->
                 <div class="stats-grid">
-                    <div class="stat-item bg-primary-subtle">
-                        <div class="stat-icon">
-                            <i class="fas fa-wallet"></i>
-                        </div>
-                        <div class="stat-content">
-                            <div class="stat-value">KSH {{ "%.2f"|format(current_user.balance) }}</div>
-                            <div class="stat-label">Available Balance</div>
-                        </div>
+                    <div class="stat-card">
+                        <h3>Total Earned</h3>
+                        <p class="stat-value">KSH {{ "%.2f"|format(total_earned) }}</p>
                     </div>
-                    
-                    <div class="stat-item bg-success-subtle">
-                        <div class="stat-icon">
-                            <i class="fas fa-money-bill-wave"></i>
-                        </div>
-                        <div class="stat-content">
-                            <div class="stat-value">KSH {{ "%.2f"|format(total_earned) }}</div>
-                            <div class="stat-label">Total Earned</div>
-                        </div>
+
+                    <div class="stat-card">
+                        <h3>Total Withdrawn</h3>
+                        <p class="stat-value">KSH {{ "%.2f"|format(total_withdrawn) }}</p>
                     </div>
-                    
+
+                    <div class="stat-card">
+                        <h3>Current Balance</h3>
+                        <p class="stat-value">KSH {{ "%.2f"|format(balance) }}</p>
+                    </div>
+                </div>
+
+                <!-- Additional Stats Row -->
+                <div class="stats-grid mt-3">
                     <div class="stat-item bg-info-subtle">
                         <div class="stat-icon">
                             <i class="fas fa-users"></i>
@@ -325,6 +324,85 @@
     padding: 2rem;
 }
 
+/* Updated Stats Styles */
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+}
+
+.stat-card {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 12px;
+    border-left: 4px solid #667eea;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.stat-card h3 {
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-card .stat-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #2c3e50;
+    line-height: 1;
+    margin: 0;
+}
+
+/* Additional stats row */
+.stats-grid .stat-item {
+    padding: 1.5rem;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: transform 0.3s ease;
+}
+
+.stats-grid .stat-item:hover {
+    transform: translateY(-3px);
+}
+
+.stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.bg-info-subtle .stat-icon { color: #17a2b8; }
+.bg-warning-subtle .stat-icon { color: #ffc107; }
+
+.stat-content .stat-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #2c3e50;
+    line-height: 1;
+}
+
+.stat-content .stat-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+/* Form Styles */
 .form-floating {
     position: relative;
     margin-bottom: 1.5rem;
@@ -344,10 +422,6 @@
     transform: translateY(-2px);
 }
 
-.form-label {
-    font-weight: 500;
-}
-
 .btn {
     border-radius: 12px;
     font-weight: 600;
@@ -363,75 +437,6 @@
 .btn-primary:hover {
     transform: translateY(-2px);
     box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-}
-
-.btn-warning {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    color: white;
-}
-
-.btn-warning:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 20px rgba(245, 87, 108, 0.4);
-}
-
-.btn-success {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    color: white;
-}
-
-.btn-success:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 20px rgba(79, 172, 254, 0.4);
-}
-
-/* Stats Grid */
-.stats-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-}
-
-.stat-item {
-    padding: 1.5rem;
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    transition: transform 0.3s ease;
-}
-
-.stat-item:hover {
-    transform: translateY(-3px);
-}
-
-.stat-icon {
-    width: 50px;
-    height: 50px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.25rem;
-    background: rgba(255, 255, 255, 0.9);
-}
-
-.bg-primary-subtle .stat-icon { color: #667eea; }
-.bg-success-subtle .stat-icon { color: #28a745; }
-.bg-info-subtle .stat-icon { color: #17a2b8; }
-.bg-warning-subtle .stat-icon { color: #ffc107; }
-
-.stat-value {
-    font-size: 1.5rem;
-    font-weight: 800;
-    color: #2c3e50;
-    line-height: 1;
-}
-
-.stat-label {
-    font-size: 0.9rem;
-    color: #6c757d;
-    margin-top: 0.25rem;
 }
 
 /* Rank Section */
@@ -572,6 +577,10 @@
         height: 60px;
         font-size: 1.5rem;
     }
+    
+    .stat-card {
+        padding: 1rem;
+    }
 }
 
 /* Animation for copy notification */
@@ -639,7 +648,7 @@ function showNotification(message, type = 'success') {
 
 // Add interactive animations
 document.addEventListener('DOMContentLoaded', function() {
-    const statItems = document.querySelectorAll('.stat-item, .referral-stat');
+    const statItems = document.querySelectorAll('.stat-item, .referral-stat, .stat-card');
     
     statItems.forEach(item => {
         item.addEventListener('mouseenter', function() {
