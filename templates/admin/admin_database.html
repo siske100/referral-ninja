@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Database Management - Admin</title>
+    <style>
+        .metric-card { background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .metric-good { border-left: 4px solid #28a745; }
+        .metric-warning { border-left: 4px solid #ffc107; }
+        .metric-danger { border-left: 4px solid #dc3545; }
+        .table { width: 100%; margin: 20px 0; }
+        .table th, .table td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <h1>Database Management</h1>
+    
+    <div class="metric-card {% if db_metrics.connection_status == 'healthy' %}metric-good{% else %}metric-danger{% endif %}">
+        <h3>Connection Status: {{ db_metrics.connection_status|upper }}</h3>
+        <p>Response Time: {{ db_metrics.response_time }}ms</p>
+        <p>Last Check: {{ db_metrics.timestamp }}</p>
+    </div>
+
+    <div class="actions">
+        <form action="{{ url_for('admin_test_database_connection') }}" method="post" style="display: inline;">
+            <button type="submit">Test Connection</button>
+        </form>
+        <form action="{{ url_for('admin_reconnect_database') }}" method="post" style="display: inline;">
+            <button type="submit">Reconnect</button>
+        </form>
+    </div>
+
+    <h2>Database Tables</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Table Name</th>
+                <th>Record Count</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for table_name, info in table_info.items() %}
+            <tr>
+                <td>{{ table_name }}</td>
+                <td>{{ info.count }}</td>
+                <td>
+                    {% if info.accessible %}
+                        <span style="color: green;">✅ Accessible</span>
+                    {% else %}
+                        <span style="color: red;">❌ Error: {{ info.error }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="{{ url_for('admin_dashboard') }}">← Back to Admin Dashboard</a>
+</body>
+</html>

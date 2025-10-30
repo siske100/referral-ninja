@@ -43,13 +43,10 @@ from typing import Dict, List, Any, Tuple, Optional
 
 # Supabase imports
 import psycopg2
-from typing import Optional
 from supabase import create_client
 
 app = Flask(__name__)
 
-
-    
 # PRODUCTION CONFIGURATION
 class Config:
     # REQUIRED - No defaults for secrets
@@ -109,7 +106,6 @@ class Config:
 class DevelopmentConfig(Config):
     SESSION_COOKIE_SECURE = False
     DEBUG = True
-       
         
 # Load appropriate config based on environment
 if os.getenv('FLASK_ENV') == 'development':
@@ -140,12 +136,56 @@ rate_limiter = Limiter(
 # PRODUCTION DATABASE SCHEMA MANAGER
 # =============================================================================
 
-import os
-import time
-import logging
-from typing import List, Tuple, Optional
-import psycopg2  # Changed from psycopg to psycopg2
-
+class DatabaseHealthMonitor:
+    """Monitor database health and performance"""
+    
+    @staticmethod
+    def get_database_metrics():
+        """Get comprehensive database metrics"""
+        try:
+            metrics = {
+                'timestamp': datetime.now(timezone.utc).isoformat(),
+                'connection_status': 'unknown',
+                'response_time': 0,
+                'table_counts': {},
+                'performance': {}
+            }
+            
+            # Test connection speed
+            start_time = time.time()
+            response = supabase.table('users').select('*', count='exact').limit(1).execute()
+            metrics['response_time'] = round((time.time() - start_time) * 1000, 2)
+            metrics['connection_status'] = 'healthy'
+            
+            # Get table counts
+            tables = ['users', 'transactions', 'referrals', 'security_logs', 'mpesa_callbacks', 'two_factor_codes']
+            for table in tables:
+                try:
+                    response = supabase.table(table).select('*', count='exact').execute()
+                    metrics['table_counts'][table] = len(response.data)
+                except Exception as e:
+                    metrics['table_counts'][table] = f"error: {e}"
+            
+            return metrics
+            
+        except Exception as e:
+            return {
+                'timestamp': datetime.now(timezone.utc).isoformat(),
+                'connection_status': 'unhealthy',
+                'error': str(e)
+            }
+    
+    @staticmethod
+    def log_database_health():
+        """Log database health status"""
+        metrics = DatabaseHealthMonitor.get_database_metrics()
+        
+        if metrics['connection_status'] == 'healthy':
+            app.logger.info(f"Database health: {metrics['response_time']}ms response")
+        else:
+            app.logger.error(f"Database health issue: {metrics.get('error', 'Unknown error')}")
+        
+        return metrics
 
 class DatabaseManager:
     """Production-grade database schema manager for Supabase (uses direct DB connection)."""
@@ -164,7 +204,7 @@ class DatabaseManager:
             raise Exception("SUPABASE_DB_URL not set; cannot execute raw SQL via direct DB connection.")
         
         # Use autocommit for DDL/DDL-like statements
-        conn = psycopg2.connect(db_url)  # Changed from psycopg.connect
+        conn = psycopg2.connect(db_url)
         conn.autocommit = True
         try:
             with conn.cursor() as cur:
@@ -440,10 +480,54 @@ class DatabaseManager:
             return False
         
         self.logger.info("Database initialization completed successfully")
-        return True 
+        return True
+
+def create_admin_user_if_missing():
+    """Create admin user only if it doesn't exist"""
+    try:
+        admin_user = SupabaseDB.get_user_by_username('admin')
+        if not admin_user:
+            print("👨‍💼 Creating admin user...")
+            
+            admin_data = {
+                'id': str(uuid.uuid4()),
+                'username': 'admin',
+                'email': os.environ.get('ADMIN_EMAIL', 'admin@referralninja.co.ke'),
+                'phone': os.environ.get('ADMIN_PHONE', '254712345678'),
+                'name': 'System Administrator',
+                'is_admin': True,
+                'is_verified': True,
+                'is_active': True,
+                'created_at': datetime.now(timezone.utc).isoformat()
+            }
+            
+            admin = User(admin_data)
+            admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')  # Change in production!
+            admin.set_password(admin_password)
+            admin.generate_phone_linked_referral_code()
+            
+            admin_dict = admin.to_dict()
+            admin_dict.pop('password_hash', None)
+            admin_dict['password_hash'] = admin.password_hash
+            
+            created_admin = SupabaseDB.create_user(admin_dict)
+            if created_admin:
+                print("✅ Admin user created successfully")
+                print(f"   Username: admin")
+                print(f"   Password: {admin_password}")
+                print("   ⚠️  CHANGE THE PASSWORD IMMEDIATELY!")
+            else:
+                print("❌ Failed to create admin user")
+        else:
+            print("✅ Admin user already exists")
+            
+    except Exception as e:
+        print(f"❌ Admin user creation error: {e}")
+
 # =============================================================================
 # COMPREHENSIVE HEALTH MONITORING SYSTEM
 # =============================================================================
+
 class HealthMonitor:
     """Comprehensive health monitoring system for production"""
     
@@ -798,17 +882,15 @@ class HealthMonitor:
                 'details': 'Failed to get uptime'
             }
 
-
-# Add admin_required decorator BEFORE the health routes that use it
+# Admin required decorator
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not current_user.is_admin:
+        if not current_user.is_authenticated or not current_user.is_admin:
             flash('Access denied. Admin privileges required.', 'error')
             return redirect(url_for('dashboard'))
         return f(*args, **kwargs)
     return decorated_function
-
 
 # Health Check Routes
 @app.route('/health')
@@ -832,7 +914,6 @@ def health_check():
             'error': str(e)
         }), 503
 
-
 @app.route('/health/detailed')
 @login_required
 @admin_required
@@ -842,7 +923,6 @@ def detailed_health_check():
     health_status = health_monitor.comprehensive_health_check()
     
     return jsonify(health_status)
-
 
 @app.route('/health/readiness')
 def readiness_check():
@@ -862,7 +942,6 @@ def readiness_check():
             'error': str(e)
         }), 503
 
-
 @app.route('/health/liveness')
 def liveness_check():
     """Kubernetes liveness probe"""
@@ -871,7 +950,6 @@ def liveness_check():
         'status': 'alive',
         'timestamp': datetime.now(timezone.utc).isoformat()
     })
-
 
 # Health monitoring background task
 def start_health_monitoring():
@@ -901,7 +979,6 @@ def start_health_monitoring():
     monitor_thread = threading.Thread(target=monitor_health, daemon=True)
     monitor_thread.start()
 
-
 def _alert_on_critical_health_issue(health_status):
     """Send alerts for critical health issues"""
     critical_issues = []
@@ -913,8 +990,7 @@ def _alert_on_critical_health_issue(health_status):
     if critical_issues and app.config.get('TELEGRAM_BOT_TOKEN'):
         message = "🚨 CRITICAL HEALTH ALERT:\n" + "\n".join(critical_issues)
         send_telegram_notification(message)
-        
-        
+
 # =============================================================================
 # DATABASE MODELS AND UTILITIES
 # =============================================================================
@@ -1035,6 +1111,53 @@ class User(UserMixin):
 
 # Enhanced SupabaseDB class with error handling
 class SupabaseDB:
+    
+    @staticmethod
+    def test_connection():
+        """Test if Supabase connection is working"""
+        try:
+            response = supabase.table('users').select('*').limit(1).execute()
+            return True, "Connection successful"
+        except Exception as e:
+            return False, f"Connection failed: {e}"
+
+    @staticmethod
+    def reconnect():
+        """Attempt to reinitialize Supabase connection"""
+        try:
+            global supabase
+            supabase = create_client(
+                os.environ.get('SUPABASE_URL'), 
+                os.environ.get('SUPABASE_SERVICE_ROLE_KEY')
+            )
+            return True, "Reconnection successful"
+        except Exception as e:
+            return False, f"Reconnection failed: {e}"
+
+    @staticmethod
+    def execute_with_retry(operation, max_retries=2):
+        """Execute operation with retry logic"""
+        for attempt in range(max_retries):
+            try:
+                return operation()
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    print(f"⚠️  Operation failed, retrying... ({attempt + 1}/{max_retries})")
+                    SupabaseDB.reconnect()
+                    time.sleep(1)
+                else:
+                    raise e
+
+    @staticmethod
+    def get_user_by_id(user_id):
+        def operation():
+            response = supabase.table('users').select('*').eq('id', user_id).execute()
+            if response.data:
+                return User(response.data[0])
+            return None
+        
+        return SupabaseDB.execute_with_retry(operation)
+    
     @staticmethod
     def handle_db_error(method_name, error, raise_exception=True):
         """Standardized database error handling"""
@@ -1044,16 +1167,6 @@ class SupabaseDB:
         if raise_exception:
             raise Exception(f"Database operation failed: {method_name}")
         return None
-
-    @staticmethod
-    def get_user_by_id(user_id):
-        try:
-            response = supabase.table('users').select('*').eq('id', user_id).execute()
-            if response.data:
-                return User(response.data[0])
-            return None
-        except Exception as e:
-            return SupabaseDB.handle_db_error("get_user_by_id", e, False)
 
     @staticmethod
     def get_user_by_phone(phone):
@@ -1397,7 +1510,7 @@ class CelcomSMS:
                     
                     # Check if SMS was sent successfully based on Celcom API response structure
                     if result.get('status') == 'success' or result.get('success') or response.status_code == 200:
-                        current_app.logger.info(f" Celcom SMS sent successfully to {phone_clean}")
+                        current_app.logger.info(f"✅ Celcom SMS sent successfully to {phone_clean}")
                         
                         # Log successful SMS delivery
                         SecurityMonitor.log_security_event(
@@ -1408,9 +1521,9 @@ class CelcomSMS:
                         return True
                     else:
                         error_msg = result.get('message', 'Unknown error from Celcom API')
-                        current_app.logger.error(f"Celcom SMS failed: {error_msg}")
+                        current_app.logger.error(f"❌ Celcom SMS failed: {error_msg}")
                 else:
-                    current_app.logger.error(f" Celcom SMS HTTP error: {response.status_code} - {response.text}")
+                    current_app.logger.error(f"❌ Celcom SMS HTTP error: {response.status_code} - {response.text}")
                 
                 # Wait before retry (exponential backoff)
                 if attempt < max_retries - 1:
@@ -1489,7 +1602,7 @@ class CelcomSMS:
         """
         Send welcome message after registration
         """
-        message = f" Welcome to Referral Ninja, {username}! Complete your KSH 200 payment to activate your account and start earning."
+        message = f"✅ Welcome to Referral Ninja, {username}! Complete your KSH 200 payment to activate your account and start earning."
         return CelcomSMS.send_sms(phone, message)
     
     @staticmethod
@@ -1497,7 +1610,7 @@ class CelcomSMS:
         """
         Send notification when referral bonus is earned
         """
-        message = f" Hi {username}, you've earned Ksh {referral_bonus} referral bonus! Keep inviting friends to earn more."
+        message = f"💰 Hi {username}, you've earned Ksh {referral_bonus} referral bonus! Keep inviting friends to earn more."
         return CelcomSMS.send_sms(phone, message)
 
 # =============================================================================
@@ -1571,7 +1684,7 @@ class FraudDetector:
         checks = []
         
         # Check 1: Amount exceeds threshold
-        if amount > current_app.config['SUSPICIOUS_AMOUNT_THRESHOLD']:
+        if amount > 2000:  # Suspicious amount threshold
             checks.append("Amount exceeds normal threshold")
         
         # Check 2: Multiple rapid withdrawals
@@ -1980,60 +2093,23 @@ def init_db():
                 
                 # Create admin user if required
                 if os.environ.get('CREATE_ADMIN_USER') == 'true':
-                    _create_admin_user()
+                    create_admin_user_if_missing()
                 
                 return True
             else:
-                current_app.logger.error(" Database schema creation failed")
+                current_app.logger.error("❌ Database schema creation failed")
                 return False
                 
         except Exception as e:
             retry_count += 1
-            current_app.logger.error(f" Database initialization attempt {retry_count} failed: {e}")
+            current_app.logger.error(f"❌ Database initialization attempt {retry_count} failed: {e}")
             
             if retry_count < max_retries:
                 current_app.logger.info(f"Retrying database initialization in {2 ** retry_count} seconds...")
                 time.sleep(2 ** retry_count)
             else:
-                current_app.logger.error(" All database initialization attempts failed")
+                current_app.logger.error("❌ All database initialization attempts failed")
                 return False
-
-def _create_admin_user():
-    """Create admin user with secure password"""
-    try:
-        admin_user = SupabaseDB.get_user_by_username('admin')
-        if not admin_user:
-            admin_data = {
-                'id': str(uuid.uuid4()),
-                'username': 'admin',
-                'email': os.environ.get('ADMIN_EMAIL', 'admin@referralninja.co.ke'),
-                'phone': os.environ.get('ADMIN_PHONE', '254712345678'),
-                'name': 'System Administrator',
-                'is_admin': True,
-                'is_verified': True,
-                'is_active': True,
-                'created_at': datetime.now(timezone.utc).isoformat()
-            }
-            
-            admin = User(admin_data)
-            admin_password = os.environ.get('ADMIN_PASSWORD', secrets.token_urlsafe(16))
-            admin.set_password(admin_password)
-            admin.generate_phone_linked_referral_code()
-            
-            admin_dict = admin.to_dict()
-            admin_dict.pop('password_hash', None)
-            admin_dict['password_hash'] = admin.password_hash
-            
-            created_admin = SupabaseDB.create_user(admin_dict)
-            if created_admin:
-                current_app.logger.info("Admin user created successfully")
-                # Log password only in secure environments
-                if app.config.get('DEBUG'):
-                    current_app.logger.info(f"Admin password: {admin_password}")
-            else:
-                current_app.logger.error("Failed to create admin user")
-    except Exception as e:
-        current_app.logger.error(f"Admin user creation failed: {e}")
 
 # Enhanced before_request with health checks
 @app.before_request
@@ -2057,15 +2133,6 @@ def before_request():
                 "method": request.method
             }
         )
-
-def admin_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_admin:
-            flash('Access denied. Admin privileges required.', 'error')
-            return redirect(url_for('dashboard'))
-        return f(*args, **kwargs)
-    return decorated_function
 
 # Add utility functions to Jinja2 context
 @app.context_processor
@@ -2310,7 +2377,7 @@ def mpesa_withdraw_callback():
             return jsonify({"ResultCode": 1, "ResultDesc": "Unauthorized"}), 401
         
         data = request.get_json(force=True)
-        current_app.logger.info(f" M-Pesa callback: {json.dumps(data)}")
+        current_app.logger.info(f"✅ M-Pesa callback: {json.dumps(data)}")
         
         result = data.get("Result", {})
         result_code = result.get("ResultCode")
@@ -2319,12 +2386,12 @@ def mpesa_withdraw_callback():
         originator_conversation_id = result.get("OriginatorConversationID")
         
         if not originator_conversation_id:
-            current_app.logger.error(" No withdrawal reference in callback")
+            current_app.logger.error("❌ No withdrawal reference in callback")
             return jsonify({"ResultCode": 1, "ResultDesc": "Missing reference"})
         
         withdrawal_data = SupabaseDB.get_transaction_by_id(originator_conversation_id)
         if not withdrawal_data:
-            current_app.logger.error(f" Withdrawal not found: {originator_conversation_id}")
+            current_app.logger.error(f"❌ Withdrawal not found: {originator_conversation_id}")
             return jsonify({"ResultCode": 1, "ResultDesc": "Withdrawal not found"})
         
         user = SupabaseDB.get_user_by_id(withdrawal_data['user_id'])
@@ -2391,7 +2458,7 @@ def mpesa_withdraw_callback():
         return jsonify({"ResultCode": 0, "ResultDesc": "Success"})
         
     except Exception as e:
-        current_app.logger.error(f"Callback processing error: {str(e)}")
+        current_app.logger.error(f"❌ Callback processing error: {str(e)}")
         SecurityMonitor.log_security_event(
             "CALLBACK_ERROR", 
             None, 
@@ -2481,7 +2548,7 @@ def api_request_withdrawal():
             }), 202
         
         # 2FA for large amounts
-        if amount >= current_app.config['SUSPICIOUS_AMOUNT_THRESHOLD']:
+        if amount >= 2000:  # Suspicious amount threshold
             if user.two_factor_enabled:
                 code = SecurityMonitor.generate_2fa_code(user.id, "WITHDRAWAL")
                 return jsonify({
@@ -2608,7 +2675,7 @@ async def send_telegram_message_async(message):
             
         bot = Bot(token=current_app.config['TELEGRAM_BOT_TOKEN'])
         async with bot:
-            await bot.send_message(chat_id=current_app.config('TELEGRAM_CHAT_ID'), text=message, parse_mode='HTML')
+            await bot.send_message(chat_id=current_app.config['TELEGRAM_CHAT_ID'], text=message, parse_mode='HTML')
     except Exception as e:
         current_app.logger.error(f"Telegram notification failed: {str(e)}")
 
@@ -2622,20 +2689,20 @@ def send_withdrawal_notification_to_telegram(user, transaction):
     """Send withdrawal notification to Telegram"""
     try:
         message = f"""
- <b>New Withdrawal Request</b>
+💰 <b>New Withdrawal Request</b>
 
- <b>User Details:</b>
+👤 <b>User Details:</b>
 • Username: {user.username}
 • Email: {user.email}
 • Phone: {user.phone}
 • User ID: #{user.id}
 
- <b>Withdrawal Information:</b>
+💸 <b>Withdrawal Information:</b>
 • Amount: KSH {abs(transaction['amount'])}
 • Phone: {transaction['phone_number']}
-• Status:  Pending Processing
+• Status: ⏳ Pending Processing
 
-<b>Time Submitted:</b>
+⏰ <b>Time Submitted:</b>
 {transaction['created_at']}
 
 <i>Please process this withdrawal in the admin dashboard.</i>
@@ -3244,7 +3311,7 @@ def mpesa_callback():
                             # Send referral bonus notification
                             CelcomSMS.send_referral_notification(referrer.phone, referrer.username, 50)
                 
-                app.logger.info(f"User {user.username} auto-verified via STK push callback")
+                app.logger.info(f"✅ User {user.username} auto-verified via STK push callback")
                 
             else:
                 # Payment failed
@@ -3257,7 +3324,7 @@ def mpesa_callback():
         return jsonify({'ResultCode': 0, 'ResultDesc': 'Success'})
         
     except Exception as e:
-        app.logger.error(f"Error processing M-PESA callback: {str(e)}")
+        app.logger.error(f"❌ Error processing M-PESA callback: {str(e)}")
         return jsonify({'ResultCode': 1, 'ResultDesc': 'Failed'})
 
 # M-PESA B2C CALLBACK HANDLER
@@ -3282,12 +3349,12 @@ def mpesa_b2c_callback():
         withdrawal_transaction = SupabaseDB.get_transaction_by_id(originator_conversation_id)
         
         if not withdrawal_transaction:
-            app.logger.error(f"Withdrawal transaction not found for ID: {originator_conversation_id}")
+            app.logger.error(f"❌ Withdrawal transaction not found for ID: {originator_conversation_id}")
             return jsonify({'ResultCode': 1, 'ResultDesc': 'Transaction not found'})
         
         user = SupabaseDB.get_user_by_id(withdrawal_transaction['user_id'])
         if not user:
-            app.logger.error(f"User not found for withdrawal: {withdrawal_transaction['id']}")
+            app.logger.error(f"❌ User not found for withdrawal: {withdrawal_transaction['id']}")
             return jsonify({'ResultCode': 1, 'ResultDesc': 'User not found'})
         
         amount = abs(withdrawal_transaction['amount'])
@@ -3310,7 +3377,7 @@ def mpesa_b2c_callback():
                 transaction_id
             )
             
-            app.logger.info(f"B2C payout completed for user {user.username}, transaction ID: {transaction_id}")
+            app.logger.info(f"✅ B2C payout completed for user {user.username}, transaction ID: {transaction_id}")
             
         else:
             # B2C payment failed
@@ -3336,20 +3403,20 @@ def mpesa_b2c_callback():
                 'failed'
             )
             
-            app.logger.error(f"B2C payout failed for user {user.username}: {result_desc}")
+            app.logger.error(f"❌ B2C payout failed for user {user.username}: {result_desc}")
         
         # Always return success to M-PESA to stop retries
         return jsonify({'ResultCode': 0, 'ResultDesc': 'Success'})
         
     except Exception as e:
-        app.logger.error(f"Error processing M-PESA B2C callback: {str(e)}")
+        app.logger.error(f"❌ Error processing M-PESA B2C callback: {str(e)}")
         return jsonify({'ResultCode': 1, 'ResultDesc': 'System error'})
 
 @app.route('/mpesa-b2c-timeout', methods=['POST'])
 def mpesa_b2c_timeout():
     """Handle B2C timeout callbacks"""
     callback_data = request.get_json()
-    app.logger.warning(f"M-PESA B2C Timeout callback: {json.dumps(callback_data)}")
+    app.logger.warning(f"⚠️ M-PESA B2C Timeout callback: {json.dumps(callback_data)}")
     return jsonify({'ResultCode': 0, 'ResultDesc': 'Success'})
 
 @app.route('/api/payment-status')
@@ -3738,6 +3805,64 @@ def forgot_password():
     return render_template('auth/forgot_password.html')
 
 # Admin Dashboard Route
+@app.route('/admin/database')
+@login_required
+@admin_required
+def admin_database():
+    """Admin database management interface"""
+    # Get database metrics
+    db_metrics = DatabaseHealthMonitor.get_database_metrics()
+    
+    # Get table sizes and info
+    table_info = {}
+    tables = ['users', 'transactions', 'referrals', 'security_logs', 'mpesa_callbacks']
+    
+    for table in tables:
+        try:
+            response = supabase.table(table).select('*', count='exact').execute()
+            table_info[table] = {
+                'count': len(response.data),
+                'accessible': True
+            }
+        except Exception as e:
+            table_info[table] = {
+                'count': 0,
+                'accessible': False,
+                'error': str(e)
+            }
+    
+    return render_template('admin_database.html',
+                         db_metrics=db_metrics,
+                         table_info=table_info)
+
+@app.route('/admin/database/test-connection', methods=['POST'])
+@login_required
+@admin_required
+def admin_test_database_connection():
+    """Test database connection from admin panel"""
+    success, message = SupabaseDB.test_connection()
+    
+    if success:
+        flash('Database connection test: SUCCESS', 'success')
+    else:
+        flash(f'Database connection test: FAILED - {message}', 'error')
+    
+    return redirect(url_for('admin_database'))
+
+@app.route('/admin/database/reconnect', methods=['POST'])
+@login_required
+@admin_required
+def admin_reconnect_database():
+    """Reconnect to database from admin panel"""
+    success, message = SupabaseDB.reconnect()
+    
+    if success:
+        flash('Database reconnection: SUCCESS', 'success')
+    else:
+        flash(f'Database reconnection: FAILED - {message}', 'error')
+    
+    return redirect(url_for('admin_database'))
+
 @app.route('/admin/dashboard')
 @login_required
 @admin_required
@@ -3872,6 +3997,242 @@ def admin_dashboard():
         flash(f'Error accessing admin dashboard: {str(e)}', 'error')
         return redirect(url_for('dashboard'))
 
+@app.route('/admin/withdrawal-notice')
+@login_required
+@admin_required
+def admin_withdrawal_notice():
+    """Admin page to view and manage pending withdrawal requests"""
+    try:
+        # Get pending withdrawals with user information
+        response = supabase.table('transactions')\
+            .select('*, users(*)')\
+            .eq('transaction_type', 'withdrawal')\
+            .in_('status', ['pending', 'Under Review', 'processing'])\
+            .order('created_at', desc=True)\
+            .execute()
+        
+        pending_withdrawals = []
+        total_pending_amount = 0
+        
+        for item in response.data:
+            transaction = item
+            user_data = item.get('users', {})
+            user = User(user_data) if user_data else None
+            
+            if user:
+                pending_withdrawals.append({
+                    'transaction': transaction,
+                    'user': user,
+                    'days_pending': (datetime.now(timezone.utc) - 
+                                   datetime.fromisoformat(transaction['created_at'].replace('Z', '+00:00'))).days
+                })
+                total_pending_amount += abs(transaction['amount'])
+        
+        # Get statistics
+        stats = {
+            'total_pending': len(pending_withdrawals),
+            'total_amount': total_pending_amount,
+            'under_review': len([w for w in pending_withdrawals if w['transaction']['status'] == 'Under Review']),
+            'processing': len([w for w in pending_withdrawals if w['transaction']['status'] == 'processing']),
+            'regular_pending': len([w for w in pending_withdrawals if w['transaction']['status'] == 'pending'])
+        }
+        
+        return render_template('admin_withdrawal_notice.html',
+                             pending_withdrawals=pending_withdrawals,
+                             stats=stats,
+                             current_time=datetime.now(timezone.utc))
+                             
+    except Exception as e:
+        app.logger.error(f"Error loading withdrawal notice page: {str(e)}")
+        flash('Error loading withdrawal notices.', 'error')
+        return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/withdrawal-notice/update-status', methods=['POST'])
+@login_required
+@admin_required
+def update_withdrawal_status():
+    """Update withdrawal status via AJAX"""
+    try:
+        data = request.get_json()
+        transaction_id = data.get('transaction_id')
+        new_status = data.get('status')
+        notes = data.get('notes', '')
+        
+        if not transaction_id or not new_status:
+            return jsonify({'success': False, 'message': 'Missing required fields'})
+        
+        transaction = SupabaseDB.get_transaction_by_id(transaction_id)
+        if not transaction:
+            return jsonify({'success': False, 'message': 'Transaction not found'})
+        
+        user = SupabaseDB.get_user_by_id(transaction['user_id'])
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'})
+        
+        # Prepare update data
+        update_data = {
+            'status': new_status,
+            'description': f"Status updated to {new_status} by admin"
+        }
+        
+        if notes:
+            update_data['description'] += f" - {notes}"
+        
+        # Handle different status changes
+        if new_status == 'rejected':
+            # Refund the amount
+            refund_amount = abs(transaction['amount'])
+            user.balance += refund_amount
+            user.total_withdrawn -= refund_amount
+            
+            SupabaseDB.update_user(user.id, {
+                'balance': user.balance,
+                'total_withdrawn': user.total_withdrawn
+            })
+            
+            # Send rejection SMS
+            CelcomSMS.send_withdrawal_notification(
+                user.phone,
+                user.username,
+                refund_amount,
+                'failed',
+                notes="Withdrawal rejected by admin"
+            )
+            
+        elif new_status == 'processing':
+            # Initiate automatic processing if not already processing
+            if transaction['status'] != 'processing':
+                process_automatic_withdrawal(transaction)
+        
+        # Update transaction
+        SupabaseDB.update_transaction(transaction_id, update_data)
+        
+        # Log admin action
+        SecurityMonitor.log_security_event(
+            "ADMIN_WITHDRAWAL_UPDATE",
+            current_user.id,
+            {
+                "transaction_id": transaction_id,
+                "old_status": transaction['status'],
+                "new_status": new_status,
+                "user_affected": user.id,
+                "notes": notes
+            }
+        )
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Withdrawal status updated to {new_status}'
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Error updating withdrawal status: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/admin/withdrawal-notice/bulk-action', methods=['POST'])
+@login_required
+@admin_required
+def bulk_withdrawal_action():
+    """Process bulk actions on withdrawals"""
+    try:
+        data = request.get_json()
+        action = data.get('action')
+        transaction_ids = data.get('transaction_ids', [])
+        
+        if not action or not transaction_ids:
+            return jsonify({'success': False, 'message': 'Missing required fields'})
+        
+        results = {
+            'processed': 0,
+            'failed': 0,
+            'details': []
+        }
+        
+        for transaction_id in transaction_ids:
+            try:
+                transaction = SupabaseDB.get_transaction_by_id(transaction_id)
+                if not transaction:
+                    results['failed'] += 1
+                    results['details'].append(f"Transaction {transaction_id} not found")
+                    continue
+                
+                user = SupabaseDB.get_user_by_id(transaction['user_id'])
+                if not user:
+                    results['failed'] += 1
+                    results['details'].append(f"User for transaction {transaction_id} not found")
+                    continue
+                
+                if action == 'approve':
+                    # For pending withdrawals, process automatically
+                    if transaction['status'] == 'pending':
+                        processing_result = process_automatic_withdrawal(transaction)
+                        if processing_result:
+                            results['processed'] += 1
+                            results['details'].append(f"Approved and processing transaction {transaction_id}")
+                        else:
+                            results['failed'] += 1
+                            results['details'].append(f"Failed to process transaction {transaction_id}")
+                    
+                    # For under review, move to processing
+                    elif transaction['status'] == 'Under Review':
+                        SupabaseDB.update_transaction(transaction_id, {'status': 'processing'})
+                        process_automatic_withdrawal(transaction)
+                        results['processed'] += 1
+                        results['details'].append(f"Approved transaction {transaction_id}")
+                
+                elif action == 'reject':
+                    # Refund and mark as rejected
+                    refund_amount = abs(transaction['amount'])
+                    user.balance += refund_amount
+                    user.total_withdrawn -= refund_amount
+                    
+                    SupabaseDB.update_user(user.id, {
+                        'balance': user.balance,
+                        'total_withdrawn': user.total_withdrawn
+                    })
+                    
+                    SupabaseDB.update_transaction(transaction_id, {
+                        'status': 'rejected',
+                        'description': 'Bulk rejected by admin'
+                    })
+                    
+                    # Send rejection SMS
+                    CelcomSMS.send_withdrawal_notification(
+                        user.phone,
+                        user.username,
+                        refund_amount,
+                        'failed',
+                        notes="Withdrawal rejected by admin"
+                    )
+                    
+                    results['processed'] += 1
+                    results['details'].append(f"Rejected transaction {transaction_id}")
+                
+                # Log bulk action
+                SecurityMonitor.log_security_event(
+                    "ADMIN_BULK_WITHDRAWAL_ACTION",
+                    current_user.id,
+                    {
+                        "action": action,
+                        "transaction_id": transaction_id,
+                        "user_affected": user.id
+                    }
+                )
+                
+            except Exception as e:
+                results['failed'] += 1
+                results['details'].append(f"Error processing {transaction_id}: {str(e)}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Bulk action completed: {results["processed"]} processed, {results["failed"]} failed',
+            'results': results
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Error in bulk withdrawal action: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)})
+
 @app.route('/admin/withdrawals')
 @login_required
 @admin_required
@@ -3963,8 +4324,6 @@ def reject_withdrawal(transaction_id):
         return jsonify({'success': False, 'message': str(e)})
 
 @app.route('/admin/users')
-
-@app.route('/admin/users')
 @login_required
 @admin_required
 def admin_users():
@@ -4039,14 +4398,6 @@ def api_user_ranking():
 def favicon():
     return '', 204
 
-@login_manager.user_loader
-def load_user(user_id):
-    try:
-        return SupabaseDB.get_user_by_id(user_id)
-    except Exception as e:
-        app.logger.error(f"Error loading user {user_id}: {e}")
-        return None
-
 # =============================================================================
 # APPLICATION STARTUP
 # =============================================================================
@@ -4057,12 +4408,12 @@ with app.app_context():
         validate_environment()
         
         if init_db():
-            app.logger.info("✓ Database initialization completed successfully")
+            app.logger.info("✅ Database initialization completed successfully")
             
             # Start health monitoring in production
             if not app.debug:
                 start_health_monitoring()
-                app.logger.info("✓ Health monitoring started")
+                app.logger.info("✅ Health monitoring started")
         else:
             app.logger.error("❌ Database initialization failed")
     except Exception as e:
@@ -4077,31 +4428,31 @@ if __name__ == '__main__':
             
             # Initialize database
             if init_db():
-                current_app.logger.info("✓ Database initialization completed successfully")
+                current_app.logger.info("✅ Database initialization completed successfully")
                 
                 # Start health monitoring in production
                 if not current_app.debug:
                     start_health_monitoring()
-                    current_app.logger.info("✓ Health monitoring started")
+                    current_app.logger.info("✅ Health monitoring started")
             else:
                 current_app.logger.error("❌ Database initialization failed - exiting")
                 sys.exit(1)
         
         print("🚀 Starting Referral Ninja Application - PRODUCTION READY")
-        print("✓ Environment validation: PASSED")
-        print("✓ Database schema: VERIFIED")
-        print("✓ Security configuration: ENABLED")
-        print("✓ M-Pesa environment: PRODUCTION")
-        print("✓ Celcom SMS: CONFIGURED")
-        print("✓ Health monitoring: ACTIVE")
+        print("✅ Environment validation: PASSED")
+        print("✅ Database schema: VERIFIED")
+        print("✅ Security configuration: ENABLED")
+        print("✅ M-Pesa environment: PRODUCTION")
+        print("✅ Celcom SMS: CONFIGURED")
+        print("✅ Health monitoring: ACTIVE")
         
         port = int(os.environ.get('PORT', 10000))
         host = '0.0.0.0'
         
-        print(f"✓ Server starting on {host}:{port}")
-        print(f"✓ Health endpoint: http://{host}:{port}/health")
-        print(f"✓ Detailed health: http://{host}:{port}/health/detailed")
-        print(f"✓ Minimum withdrawal: KSH {app.config['WITHDRAWAL_MIN_AMOUNT']}")
+        print(f"✅ Server starting on {host}:{port}")
+        print(f"✅ Health endpoint: http://{host}:{port}/health")
+        print(f"✅ Detailed health: http://{host}:{port}/health/detailed")
+        print(f"✅ Minimum withdrawal: KSH {app.config['WITHDRAWAL_MIN_AMOUNT']}")
         
         # Production server configuration
         app.run(

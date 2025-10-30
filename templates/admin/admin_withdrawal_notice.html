@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Withdrawal Notices - Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .status-badge {
+            font-size: 0.75em;
+            padding: 0.35em 0.65em;
+        }
+        .withdrawal-card {
+            border-left: 4px solid #0d6efd;
+            transition: all 0.3s ease;
+        }
+        .withdrawal-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .withdrawal-card.under-review {
+            border-left-color: #ffc107;
+        }
+        .withdrawal-card.processing {
+            border-left-color: #0dcaf0;
+        }
+        .withdrawal-card.urgent {
+            border-left-color: #dc3545;
+            background-color: #fff5f5;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .bulk-actions {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #0d6efd;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .amount-display {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #198754;
+        }
+        .action-buttons .btn {
+            margin: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="h3 mb-1">
+                            <i class="fas fa-bell text-warning me-2"></i>
+                            Withdrawal Notices
+                        </h1>
+                        <p class="text-muted mb-0">Manage pending withdrawal requests</p>
+                    </div>
+                    <div>
+                        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-primary me-2">
+                            <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+                        </a>
+                        <a href="{{ url_for('admin_withdrawals') }}" class="btn btn-primary">
+                            <i class="fas fa-list me-1"></i> All Withdrawals
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="mb-0">{{ stats.total_pending }}</h4>
+                            <small>Total Pending</small>
+                        </div>
+                        <i class="fas fa-clock fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="mb-0">KSH {{ "%.2f"|format(stats.total_amount) }}</h4>
+                            <small>Total Amount</small>
+                        </div>
+                        <i class="fas fa-money-bill-wave fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="mb-0">{{ stats.under_review }}</h4>
+                            <small>Under Review</small>
+                        </div>
+                        <i class="fas fa-eye fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="mb-0">{{ stats.processing }}</h4>
+                            <small>Processing</small>
+                        </div>
+                        <i class="fas fa-cog fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bulk Actions -->
+        <div class="bulk-actions">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h5 class="mb-2"><i class="fas fa-bulk me-2"></i>Bulk Actions</h5>
+                    <p class="text-muted mb-2">Select multiple withdrawals and perform actions in bulk</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-success" onclick="bulkAction('approve')">
+                            <i class="fas fa-check me-1"></i> Approve Selected
+                        </button>
+                        <button type="button" class="btn btn-danger" onclick="bulkAction('reject')">
+                            <i class="fas fa-times me-1"></i> Reject Selected
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Withdrawal List -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-list me-2"></i>
+                            Pending Withdrawal Requests
+                            <span class="badge bg-primary ms-2">{{ pending_withdrawals|length }}</span>
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if pending_withdrawals %}
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th width="30">
+                                                <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
+                                            </th>
+                                            <th>User</th>
+                                            <th>Amount</th>
+                                            <th>Phone</th>
+                                            <th>Status</th>
+                                            <th>Days Pending</th>
+                                            <th>Submitted</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in pending_withdrawals %}
+                                            {% set transaction = item.transaction %}
+                                            {% set user = item.user %}
+                                            {% set days_pending = item.days_pending %}
+                                            
+                                            <tr class="{{ 'table-warning' if transaction.status == 'Under Review' else 'table-info' if transaction.status == 'processing' else '' }}">
+                                                <td>
+                                                    <input type="checkbox" class="withdrawal-checkbox" value="{{ transaction.id }}">
+                                                </td>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="user-avatar me-3">
+                                                            {{ user.username[:2]|upper }}
+                                                        </div>
+                                                        <div>
+                                                            <strong>{{ user.username }}</strong>
+                                                            <br>
+                                                            <small class="text-muted">{{ user.name }}</small>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <span class="amount-display">KSH {{ "%.2f"|format(transaction.amount|abs) }}</span>
+                                                </td>
+                                                <td>
+                                                    {{ transaction.phone_number }}
+                                                    <br>
+                                                    <small class="text-muted">{{ user.phone }}</small>
+                                                </td>
+                                                <td>
+                                                    {% if transaction.status == 'Under Review' %}
+                                                        <span class="badge bg-warning status-badge">
+                                                            <i class="fas fa-eye me-1"></i> Under Review
+                                                        </span>
+                                                    {% elif transaction.status == 'processing' %}
+                                                        <span class="badge bg-info status-badge">
+                                                            <i class="fas fa-cog me-1"></i> Processing
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="badge bg-secondary status-badge">
+                                                            <i class="fas fa-clock me-1"></i> Pending
+                                                        </span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if days_pending > 2 %}
+                                                        <span class="badge bg-danger">{{ days_pending }} days</span>
+                                                    {% elif days_pending > 1 %}
+                                                        <span class="badge bg-warning">{{ days_pending }} days</span>
+                                                    {% else %}
+                                                        <span class="badge bg-success">{{ days_pending }} day</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <small>
+                                                        {{ transaction.created_at[:16].replace('T', ' ') }}
+                                                    </small>
+                                                </td>
+                                                <td>
+                                                    <div class="action-buttons">
+                                                        {% if transaction.status == 'Under Review' %}
+                                                            <button class="btn btn-sm btn-success" 
+                                                                    onclick="updateStatus('{{ transaction.id }}', 'processing', 'Approved for processing')"
+                                                                    title="Approve">
+                                                                <i class="fas fa-check"></i>
+                                                            </button>
+                                                        {% endif %}
+                                                        
+                                                        <button class="btn btn-sm btn-info" 
+                                                                onclick="showDetails('{{ transaction.id }}')"
+                                                                title="View Details">
+                                                            <i class="fas fa-eye"></i>
+                                                        </button>
+                                                        
+                                                        <button class="btn btn-sm btn-warning" 
+                                                                onclick="showUpdateModal('{{ transaction.id }}', '{{ transaction.status }}')"
+                                                                title="Update Status">
+                                                            <i class="fas fa-edit"></i>
+                                                        </button>
+                                                        
+                                                        <button class="btn btn-sm btn-danger" 
+                                                                onclick="updateStatus('{{ transaction.id }}', 'rejected', 'Manual rejection')"
+                                                                title="Reject">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                                <h4>No Pending Withdrawals</h4>
+                                <p class="text-muted">All withdrawal requests have been processed.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Update Status Modal -->
+    <div class="modal fade" id="updateStatusModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Update Withdrawal Status</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="statusUpdateForm">
+                        <input type="hidden" id="modalTransactionId">
+                        <div class="mb-3">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" id="modalStatus" required>
+                                <option value="processing">Processing</option>
+                                <option value="completed">Completed</option>
+                                <option value="rejected">Rejected</option>
+                                <option value="Under Review">Under Review</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Notes</label>
+                            <textarea class="form-control" id="modalNotes" rows="3" 
+                                      placeholder="Add any notes or reasons for this status change..."></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitStatusUpdate()">Update Status</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Bulk selection
+        function toggleSelectAll(checkbox) {
+            const checkboxes = document.querySelectorAll('.withdrawal-checkbox');
+            checkboxes.forEach(cb => cb.checked = checkbox.checked);
+        }
+
+        // Bulk actions
+        function bulkAction(action) {
+            const selected = Array.from(document.querySelectorAll('.withdrawal-checkbox:checked'))
+                                .map(cb => cb.value);
+            
+            if (selected.length === 0) {
+                alert('Please select at least one withdrawal to perform bulk action.');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to ${action} ${selected.length} withdrawal(s)?`)) {
+                return;
+            }
+
+            fetch("{{ url_for('bulk_withdrawal_action') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    action: action,
+                    transaction_ids: selected
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while processing bulk action.');
+            });
+        }
+
+        // Quick status update
+        function updateStatus(transactionId, status, notes = '') {
+            if (!confirm(`Are you sure you want to mark this withdrawal as ${status}?`)) {
+                return;
+            }
+
+            fetch("{{ url_for('update_withdrawal_status') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    transaction_id: transactionId,
+                    status: status,
+                    notes: notes
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while updating status.');
+            });
+        }
+
+        // Modal functions
+        function showUpdateModal(transactionId, currentStatus) {
+            document.getElementById('modalTransactionId').value = transactionId;
+            document.getElementById('modalStatus').value = currentStatus;
+            document.getElementById('modalNotes').value = '';
+            
+            const modal = new bootstrap.Modal(document.getElementById('updateStatusModal'));
+            modal.show();
+        }
+
+        function submitStatusUpdate() {
+            const transactionId = document.getElementById('modalTransactionId').value;
+            const status = document.getElementById('modalStatus').value;
+            const notes = document.getElementById('modalNotes').value;
+
+            fetch("{{ url_for('update_withdrawal_status') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    transaction_id: transactionId,
+                    status: status,
+                    notes: notes
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('updateStatusModal'));
+                    modal.hide();
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while updating status.');
+            });
+        }
+
+        // Show details (placeholder - you can expand this)
+        function showDetails(transactionId) {
+            alert('Details for transaction: ' + transactionId + '\n\nYou can expand this to show full transaction details.');
+        }
+
+        // Auto-refresh every 2 minutes
+        setInterval(() => {
+            console.log('Auto-refreshing withdrawal notices...');
+            location.reload();
+        }, 120000);
+    </script>
+</body>
+</html>

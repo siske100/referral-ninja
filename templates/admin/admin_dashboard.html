@@ -9,6 +9,15 @@
         <h1 class="h2">Admin Dashboard</h1>
         <div class="btn-toolbar mb-2 mb-md-0">
             <div class="btn-group me-2">
+                <a href="{{ url_for('admin_withdrawal_notice') }}" class="btn btn-sm btn-warning position-relative">
+                    <i class="fas fa-bell"></i> Withdrawal Notices
+                    {% if pending_withdrawals > 0 %}
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                            {{ pending_withdrawals }}
+                            <span class="visually-hidden">pending withdrawals</span>
+                        </span>
+                    {% endif %}
+                </a>
                 <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refreshDashboard()">
                     <i class="fas fa-sync-alt"></i> Refresh
                 </button>
@@ -98,22 +107,25 @@
     <!-- Second Row Stats -->
     <div class="row">
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-danger shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
-                                Pending Withdrawals</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                {{ pending_withdrawals|default(0) }}
+            <a href="{{ url_for('admin_withdrawal_notice') }}" class="text-decoration-none">
+                <div class="card border-left-danger shadow h-100 py-2 hover-card">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                    Pending Withdrawals</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                    {{ pending_withdrawals|default(0) }}
+                                </div>
+                                <small class="text-muted">Click to manage</small>
                             </div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-clock fa-2x text-gray-300"></i>
+                            <div class="col-auto">
+                                <i class="fas fa-bell fa-2x text-gray-300"></i>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            </a>
         </div>
 
         <div class="col-xl-3 col-md-6 mb-4">
@@ -174,6 +186,48 @@
         </div>
     </div>
 
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <a href="{{ url_for('admin_withdrawal_notice') }}" class="btn btn-warning btn-block w-100">
+                                <i class="fas fa-bell me-2"></i>
+                                Manage Withdrawals
+                                {% if pending_withdrawals > 0 %}
+                                    <span class="badge bg-danger ms-2">{{ pending_withdrawals }}</span>
+                                {% endif %}
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{{ url_for('admin_users') }}" class="btn btn-info btn-block w-100">
+                                <i class="fas fa-users me-2"></i>
+                                Manage Users
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{{ url_for('admin_withdrawals') }}" class="btn btn-secondary btn-block w-100">
+                                <i class="fas fa-list me-2"></i>
+                                All Withdrawals
+                            </a>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <a href="{{ url_for('admin_database') }}" class="btn btn-dark btn-block w-100">
+                                <i class="fas fa-database me-2"></i>
+                                Database
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Recent Activity & Pending Actions -->
     <div class="row">
         <!-- Recent Users -->
@@ -181,6 +235,7 @@
             <div class="card shadow mb-4">
                 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                     <h6 class="m-0 font-weight-bold text-primary">Recent Verified Users</h6>
+                    <a href="{{ url_for('admin_users') }}" class="btn btn-sm btn-primary">View All</a>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -191,19 +246,32 @@
                                     <th>Email</th>
                                     <th>Phone</th>
                                     <th>Joined</th>
+                                    <th>Status</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for user in recent_users|default([]) %}
                                 <tr>
-                                    <td>{{ user.username }}</td>
+                                    <td>
+                                        <strong>{{ user.username }}</strong>
+                                        {% if user.is_admin %}
+                                            <span class="badge bg-danger ms-1">Admin</span>
+                                        {% endif %}
+                                    </td>
                                     <td>{{ user.email }}</td>
                                     <td>{{ user.phone }}</td>
-                                    <td>{{ safe_strftime(user.created_at, '%Y-%m-%d') }}</td>
+                                    <td>{{ user.created_at[:16].replace('T', ' ') if user.created_at else 'N/A' }}</td>
+                                    <td>
+                                        {% if user.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Inactive</span>
+                                        {% endif %}
+                                    </td>
                                 </tr>
                                 {% else %}
                                 <tr>
-                                    <td colspan="4" class="text-center">No recent users</td>
+                                    <td colspan="5" class="text-center">No recent users</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -217,8 +285,16 @@
         <div class="col-xl-6 col-lg-6">
             <div class="card shadow mb-4">
                 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                    <h6 class="m-0 font-weight-bold text-warning">Pending Withdrawals</h6>
-                    <a href="{{ url_for('admin_withdrawals') }}" class="btn btn-sm btn-primary">View All</a>
+                    <h6 class="m-0 font-weight-bold text-warning">
+                        <i class="fas fa-bell me-1"></i>
+                        Pending Withdrawals
+                    </h6>
+                    <div>
+                        <a href="{{ url_for('admin_withdrawal_notice') }}" class="btn btn-sm btn-warning me-1">
+                            <i class="fas fa-bell"></i> Notices
+                        </a>
+                        <a href="{{ url_for('admin_withdrawals') }}" class="btn btn-sm btn-primary">View All</a>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -228,23 +304,59 @@
                                     <th>User</th>
                                     <th>Amount</th>
                                     <th>Phone</th>
+                                    <th>Status</th>
                                     <th>Date</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for transaction, user in pending_withdrawal_transactions|default([]) %}
-                                <tr>
-                                    <td>{{ user.username }}</td>
-                                    <td>KSH {{ "%.2f"|format(transaction.amount|abs) }}</td>
+                                <tr class="{% if transaction.status == 'Under Review' %}table-warning{% elif transaction.status == 'processing' %}table-info{% endif %}">
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="user-avatar-sm me-2">
+                                                {{ user.username[:2]|upper }}
+                                            </div>
+                                            <div>
+                                                <strong>{{ user.username }}</strong>
+                                                <br>
+                                                <small class="text-muted">{{ user.name[:20] }}{% if user.name|length > 20 %}...{% endif %}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <strong class="text-success">KSH {{ "%.2f"|format(transaction.amount|abs) }}</strong>
+                                    </td>
                                     <td>{{ transaction.phone_number }}</td>
-                                    <td>{{ safe_strftime(transaction.created_at, '%m/%d %H:%M') }}</td>
+                                    <td>
+                                        {% if transaction.status == 'Under Review' %}
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="fas fa-eye me-1"></i> Under Review
+                                            </span>
+                                        {% elif transaction.status == 'processing' %}
+                                            <span class="badge bg-info">
+                                                <i class="fas fa-cog me-1"></i> Processing
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-clock me-1"></i> {{ transaction.status }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small>{{ transaction.created_at[:16].replace('T', ' ') }}</small>
+                                    </td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
-                                            <button class="btn btn-success" onclick="approveWithdrawal('{{ transaction.id }}')">
-                                                <i class="fas fa-check"></i>
+                                            {% if transaction.status == 'Under Review' %}
+                                                <button class="btn btn-success" onclick="approveWithdrawal('{{ transaction.id }}')" title="Approve">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
+                                            {% endif %}
+                                            <button class="btn btn-info" onclick="viewWithdrawalDetails('{{ transaction.id }}')" title="View Details">
+                                                <i class="fas fa-eye"></i>
                                             </button>
-                                            <button class="btn btn-danger" onclick="rejectWithdrawal('{{ transaction.id }}')">
+                                            <button class="btn btn-danger" onclick="rejectWithdrawal('{{ transaction.id }}')" title="Reject">
                                                 <i class="fas fa-times"></i>
                                             </button>
                                         </div>
@@ -252,7 +364,10 @@
                                 </tr>
                                 {% else %}
                                 <tr>
-                                    <td colspan="5" class="text-center">No pending withdrawals</td>
+                                    <td colspan="6" class="text-center py-4">
+                                        <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                                        <p class="text-muted mb-0">No pending withdrawals</p>
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -270,6 +385,7 @@
             <div class="card shadow mb-4">
                 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                     <h6 class="m-0 font-weight-bold text-info">Pending Registration Payments</h6>
+                    <span class="badge bg-info">{{ pending_payment_transactions|length|default(0) }}</span>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -286,17 +402,30 @@
                             <tbody>
                                 {% for transaction, user in pending_payment_transactions|default([]) %}
                                 <tr>
-                                    <td>{{ user.username }}</td>
-                                    <td>KSH {{ "%.2f"|format(transaction.amount) }}</td>
-                                    <td>{{ transaction.phone_number }}</td>
-                                    <td>{{ safe_strftime(transaction.created_at, '%m/%d %H:%M') }}</td>
                                     <td>
-                                        <span class="badge bg-warning text-dark">{{ transaction.status }}</span>
+                                        <strong>{{ user.username }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ user.email }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="text-primary">KSH {{ "%.2f"|format(transaction.amount) }}</span>
+                                    </td>
+                                    <td>{{ transaction.phone_number }}</td>
+                                    <td>
+                                        <small>{{ transaction.created_at[:16].replace('T', ' ') }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="fas fa-clock me-1"></i> {{ transaction.status }}
+                                        </span>
                                     </td>
                                 </tr>
                                 {% else %}
                                 <tr>
-                                    <td colspan="5" class="text-center">No pending payments</td>
+                                    <td colspan="5" class="text-center py-4">
+                                        <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                                        <p class="text-muted mb-0">No pending payments</p>
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -311,6 +440,7 @@
             <div class="card shadow mb-4">
                 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                     <h6 class="m-0 font-weight-bold text-secondary">Recent Activity</h6>
+                    <span class="badge bg-secondary">{{ recent_activity|length|default(0) }}</span>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -330,25 +460,42 @@
                                         <span class="badge 
                                             {% if transaction.transaction_type == 'registration_fee' %}bg-primary
                                             {% elif transaction.transaction_type == 'withdrawal' %}bg-warning text-dark
+                                            {% elif transaction.transaction_type == 'referral_bonus' %}bg-success
                                             {% else %}bg-secondary{% endif %}">
+                                            <i class="fas 
+                                                {% if transaction.transaction_type == 'registration_fee' %}fa-credit-card
+                                                {% elif transaction.transaction_type == 'withdrawal' %}fa-money-bill-wave
+                                                {% elif transaction.transaction_type == 'referral_bonus' %}fa-gift
+                                                {% else %}fa-exchange-alt{% endif %} me-1">
+                                            </i>
                                             {{ transaction.transaction_type|replace('_', ' ')|title }}
                                         </span>
                                     </td>
-                                    <td>KSH {{ "%.2f"|format(transaction.amount) }}</td>
+                                    <td>
+                                        <span class="{% if transaction.amount < 0 %}text-danger{% else %}text-success{% endif %}">
+                                            KSH {{ "%.2f"|format(transaction.amount|abs) }}
+                                        </span>
+                                    </td>
                                     <td>
                                         <span class="badge 
                                             {% if transaction.status == 'completed' %}bg-success
                                             {% elif transaction.status == 'pending' %}bg-warning text-dark
-                                            {% elif transaction.status == 'failed' %}bg-danger
+                                            {% elif transaction.status == 'failed' or transaction.status == 'rejected' %}bg-danger
+                                            {% elif transaction.status == 'processing' %}bg-info
                                             {% else %}bg-secondary{% endif %}">
                                             {{ transaction.status|title }}
                                         </span>
                                     </td>
-                                    <td>{{ safe_strftime(transaction.created_at, '%m/%d %H:%M') }}</td>
+                                    <td>
+                                        <small>{{ transaction.created_at[:16].replace('T', ' ') }}</small>
+                                    </td>
                                 </tr>
                                 {% else %}
                                 <tr>
-                                    <td colspan="4" class="text-center">No recent activity</td>
+                                    <td colspan="4" class="text-center py-4">
+                                        <i class="fas fa-history fa-2x text-muted mb-2"></i>
+                                        <p class="text-muted mb-0">No recent activity</p>
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -360,10 +507,39 @@
     </div>
 </div>
 
+<!-- Withdrawal Details Modal -->
+<div class="modal fade" id="withdrawalDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Withdrawal Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="withdrawalDetailsContent">
+                <!-- Details will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- JavaScript -->
 <script>
 function refreshDashboard() {
     window.location.reload();
+}
+
+function viewWithdrawalDetails(transactionId) {
+    // Simple details display - you can expand this to fetch more details
+    const content = `
+        <div class="text-center">
+            <i class="fas fa-info-circle fa-3x text-primary mb-3"></i>
+            <h5>Withdrawal Transaction</h5>
+            <p class="text-muted">Transaction ID: ${transactionId}</p>
+            <p>Full details can be viewed on the <a href="/admin/withdrawals">Withdrawals Management</a> page.</p>
+        </div>
+    `;
+    document.getElementById('withdrawalDetailsContent').innerHTML = content;
+    new bootstrap.Modal(document.getElementById('withdrawalDetailsModal')).show();
 }
 
 function approveWithdrawal(transactionId) {
@@ -416,6 +592,20 @@ function rejectWithdrawal(transactionId) {
 
 // Auto-refresh every 30 seconds
 setTimeout(refreshDashboard, 30000);
+
+// Add hover effects
+document.addEventListener('DOMContentLoaded', function() {
+    const cards = document.querySelectorAll('.hover-card');
+    cards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+            this.style.transition = 'all 0.3s ease';
+        });
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+});
 </script>
 
 <style>
@@ -498,6 +688,34 @@ setTimeout(refreshDashboard, 30000);
 .no-gutters > [class*="col-"] {
     padding-right: 0;
     padding-left: 0;
+}
+
+.user-avatar-sm {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #0d6efd;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.8rem;
+}
+
+.hover-card:hover {
+    transform: translateY(-2px);
+    transition: all 0.3s ease;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.btn-block {
+    display: block;
+    width: 100%;
+}
+
+.position-relative {
+    position: relative;
 }
 </style>
 {% endblock %}
