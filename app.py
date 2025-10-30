@@ -894,6 +894,15 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+@app.context_processor
+def utility_processor():
+    def safe_strftime(dt):
+        try:
+            return dt.strftime("%b %d, %Y %I:%M %p")  # e.g. Oct 30, 2025 09:45 AM
+        except Exception:
+            return ""
+    return dict(safe_strftime=safe_strftime)
+
 # Health Check Routes
 @app.route('/health')
 def health_check():
