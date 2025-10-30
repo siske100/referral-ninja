@@ -11,6 +11,45 @@ print(".env file exists:", os.path.exists('.env'))
 print("SUPABASE_URL loaded:", bool(os.environ.get('SUPABASE_URL')))
 print("SUPABASE_KEY loaded:", bool(os.environ.get('SUPABASE_SERVICE_ROLE_KEY')))
 
+# Test PostgreSQL connection first
+try:
+    import psycopg2
+    print("Testing PostgreSQL connection...")
+    
+    # Fetch variables
+    USER = os.getenv("user")
+    PASSWORD = os.getenv("password")
+    HOST = os.getenv("host")
+    PORT = os.getenv("port")
+    DBNAME = os.getenv("dbname")
+
+    # Connect to the database
+    connection = psycopg2.connect(
+        user=USER,
+        password=PASSWORD,
+        host=HOST,
+        port=PORT,
+        dbname=DBNAME
+    )
+    print("✅ PostgreSQL Connection successful!")
+    
+    # Create a cursor to execute SQL queries
+    cursor = connection.cursor()
+    
+    # Example query
+    cursor.execute("SELECT NOW();")
+    result = cursor.fetchone()
+    print("Current Time:", result)
+
+    # Close the cursor and connection
+    cursor.close()
+    connection.close()
+    print("PostgreSQL connection closed.")
+
+except Exception as e:
+    print(f"❌ PostgreSQL Connection failed: {e}")
+    print("Continuing with Supabase client only...")
+
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, Blueprint, current_app
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
@@ -40,8 +79,6 @@ import time
 import sys
 import psutil
 from typing import Dict, List, Any, Tuple, Optional
-
-
 
 # Supabase imports
 import psycopg2
@@ -4354,12 +4391,22 @@ def admin_users():
     
     for user_data in users_data:
         user = User(user_data)
+
+        # ✅ Convert created_at to datetime if it's a string
+        if isinstance(user.created_at, str):
+            try:
+                user.created_at = datetime.fromisoformat(user.created_at.replace("Z", ""))
+            except Exception:
+                pass
+
+        # Count referrals
         response = supabase.table('users').select('*', count='exact').eq('referred_by', user.referral_code).execute()
         user.referral_count = len(response.data)
-        
+
+        # Count pending withdrawals
         withdrawals = SupabaseDB.get_transactions_by_user(user.id, transaction_type='withdrawal')
         user.pending_withdrawals = len([w for w in withdrawals if w['status'] == 'pending'])
-        
+
         users.append(user)
     
     return render_template('admin_users.html', users=users)
