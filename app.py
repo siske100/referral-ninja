@@ -41,6 +41,8 @@ import sys
 import psutil
 from typing import Dict, List, Any, Tuple, Optional
 
+
+
 # Supabase imports
 import psycopg2
 from supabase import create_client
@@ -2808,6 +2810,7 @@ def get_user_ranking(user_id):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    # If user already logged in, send to dashboard
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
     
@@ -2815,76 +2818,86 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         remember_me = bool(request.form.get('remember_me'))
-        
+
         app.logger.info(f"Login attempt for username: {username}")
-        
+
+        # Validate input
         if not username or not password:
             flash('Please enter both username and password.', 'error')
             return render_template('auth/login.html')
-        
+
+        # Fetch user from Supabase
         user = SupabaseDB.get_user_by_username(username)
-        
+
         if user:
-            app.logger.info(f"User found: {user.username}, is_verified: {user.is_verified}")
-            
-            # Security: Check if account is locked
+            app.logger.info(f"User found: {user.username}, verified={user.is_verified}, active={user.is_active}")
+
+            # Check lock status
             if user.is_locked():
                 flash('Account temporarily locked. Please try again later.', 'error')
                 return render_template('auth/login.html')
-            
-            # When verifying login
+
+            # ✅ Use Werkzeug’s built-in password verification
             if check_password_hash(user.password_hash, password):
-                print("Login successful!")
-                
+                app.logger.info(f"Login successful for {username}")
+
+                # Require verification before login
                 if not user.is_verified:
                     flash('Please complete your payment verification before logging in.', 'warning')
                     session['pending_verification_user'] = user.id
                     return redirect(url_for('account_activation'))
-                
-                # Reset login attempts on successful login
-                update_data = {
+
+                # Reset login attempts on success
+                SupabaseDB.update_user(user.id, {
                     'login_attempts': 0,
                     'locked_until': None,
                     'last_login': datetime.now(timezone.utc).isoformat()
-                }
-                SupabaseDB.update_user(user.id, update_data)
-                
+                })
+
                 login_user(user, remember=remember_me)
                 next_page = request.args.get('next')
-                
-                # Log security event
+
+                # Log success
                 SecurityMonitor.log_security_event(
-                    "LOGIN_SUCCESS", 
-                    user.id, 
+                    "LOGIN_SUCCESS",
+                    user.id,
                     {"ip": request.remote_addr}
                 )
-                
+
                 flash('Login successful!', 'success')
                 return redirect(next_page) if next_page else redirect(url_for('dashboard'))
+
             else:
-                # Increment login attempts
-                user.login_attempts += 1
-                update_data = {'login_attempts': user.login_attempts}
-                
-                if user.login_attempts >= 5:
+                # ❌ Invalid password
+                attempts = user.login_attempts + 1
+                update_data = {'login_attempts': attempts}
+
+                if attempts >= 5:
                     locked_until = datetime.now(timezone.utc) + timedelta(minutes=30)
                     update_data['locked_until'] = locked_until.isoformat()
-                    flash('Account temporarily locked due to too many failed attempts. Try again in 30 minutes.', 'error')
+                    flash('Account locked for 30 minutes due to too many failed attempts.', 'error')
                 else:
                     flash('Invalid username or password.', 'error')
-                
-                # Log security event
-                SecurityMonitor.log_security_event(
-                    "LOGIN_FAILED", 
-                    user.id,
-                    {"ip": request.remote_addr, "reason": "Invalid credentials", "attempts": user.login_attempts}
-                )
-                
+
                 SupabaseDB.update_user(user.id, update_data)
+
+                # Log failed login
+                SecurityMonitor.log_security_event(
+                    "LOGIN_FAILED",
+                    user.id,
+                    {
+                        "ip": request.remote_addr,
+                        "reason": "Invalid credentials",
+                        "attempts": attempts
+                    }
+                )
+
         else:
-            app.logger.warning("User not found")
+            # User doesn’t exist
+            app.logger.warning(f"Login failed — user not found: {username}")
             flash('Invalid username or password.', 'error')
-    
+
+    # Render login page
     return render_template('auth/login.html')
 
 @app.route('/register', methods=['GET', 'POST'])
