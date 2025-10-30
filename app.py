@@ -1,27 +1,15 @@
-from dotenv import load_dotenv
 import os
+from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Debug: Check if environment variables are loaded
 print(" Loading environment variables...")
-print(" Current directory:", os.getcwd())
-print(" .env file exists:", os.path.exists('.env'))
-
-# Check key environment variables
-env_vars = {
-    'SUPABASE_URL': os.environ.get('SUPABASE_URL'),
-    'SUPABASE_KEY': os.environ.get('SUPABASE_KEY'), 
-    'SUPABASE_SERVICE_ROLE_KEY': os.environ.get('SUPABASE_SERVICE_ROLE_KEY'),
-    'SECRET_KEY': os.environ.get('SECRET_KEY'),
-    'MPESA_CONSUMER_KEY': os.environ.get('MPESA_CONSUMER_KEY'),
-    'CELCOM_SMS_API_KEY': os.environ.get('CELCOM_SMS_API_KEY')
-}
-
-for var, value in env_vars.items():
-    status = "Loaded" if value and value not in ['your_', 'placeholder'] else "❌ Missing/Invalid"
-    print(f"{status} {var}: {value[:20] + '...' if value and len(value) > 20 else value}")
+print("Current directory:", os.getcwd())
+print(".env file exists:", os.path.exists('.env'))
+print("SUPABASE_URL loaded:", bool(os.environ.get('SUPABASE_URL')))
+print("SUPABASE_KEY loaded:", bool(os.environ.get('SUPABASE_SERVICE_ROLE_KEY')))
 
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, Blueprint, current_app
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
@@ -52,10 +40,6 @@ import time
 import sys
 import psutil
 from typing import Dict, List, Any, Tuple, Optional
-import socket
-from psycopg2 import OperationalError, Error
-import traceback
-import re
 
 # Supabase imports
 import psycopg2
@@ -64,68 +48,51 @@ from supabase import create_client
 
 app = Flask(__name__)
 
-def safe_strftime(date_value, format_string='%Y-%m-%d'):
-    """Safely format date whether it's string, datetime, or None"""
-    if not date_value:
-        return "N/A"
-    
-    if isinstance(date_value, str):
-        try:
-            # Try to parse the string as datetime
-            if 'Z' in date_value:
-                date_value = date_value.replace('Z', '+00:00')
-            date_obj = datetime.fromisoformat(date_value)
-            return date_obj.strftime(format_string)
-        except (ValueError, AttributeError):
-            return date_value  # Return original if can't parse
-    elif hasattr(date_value, 'strftime'):
-        # It's already a datetime object
-        return date_value.strftime(format_string)
-    else:
-        return str(date_value)
 
+    
 # PRODUCTION CONFIGURATION
 class Config:
-    # REQUIRED - Use get with defaults for development
-    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
-    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'dev-jwt-secret-change-in-production')
+    # REQUIRED - No defaults for secrets
+    SECRET_KEY = os.environ['SECRET_KEY']  # Will raise error if missing
+    JWT_SECRET_KEY = os.environ['JWT_SECRET_KEY']
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
     
-    # Supabase Configuration
-    SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://wawnboslxkkbrgffppps.supabase.co")
-    SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "your_supabase_key_here")
+    # Supabase Configuration - REQUIRED
+    SUPABASE_URL = os.environ["SUPABASE_URL"]
+    SUPABASE_KEY = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
     
     # Security Settings
-    WITHDRAWAL_MIN_AMOUNT = 400
-    WITHDRAWAL_MAX_AMOUNT = 5000
-    SUSPICIOUS_AMOUNT_THRESHOLD = 5001
-    WITHDRAWAL_DAILY_LIMIT = 5000
+    WITHDRAWAL_MIN_AMOUNT = int(os.getenv('WITHDRAWAL_MIN_AMOUNT', 400))
+    WITHDRAWAL_MAX_AMOUNT = int(os.getenv('WITHDRAWAL_MAX_AMOUNT', 5000))
+    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    PERMANENT_SESSION_LIFETIME = timedelta(days=7)
     
-    # M-PESA Configuration
-    MPESA_CONSUMER_KEY = os.environ.get('MPESA_CONSUMER_KEY', 'your_consumer_key')
-    MPESA_CONSUMER_SECRET = os.environ.get('MPESA_CONSUMER_SECRET', 'your_consumer_secret')
-    MPESA_BUSINESS_SHORTCODE = os.environ.get('MPESA_BUSINESS_SHORTCODE', '174379')
-    MPESA_PASSKEY = os.environ.get('MPESA_PASSKEY', 'your_passkey')
-    MPESA_B2C_SHORTCODE = os.environ.get('MPESA_B2C_SHORTCODE', 'your_b2c_shortcode')
-    MPESA_B2C_INITIATOR_NAME = os.environ.get('MPESA_B2C_INITIATOR_NAME', 'testapi')
-    MPESA_B2C_SECURITY_CREDENTIAL = os.environ.get('MPESA_B2C_SECURITY_CREDENTIAL', 'your_security_credential')
-    MPESA_ENVIRONMENT = os.environ.get('MPESA_ENVIRONMENT', 'sandbox')
+    # M-PESA Configuration - PRODUCTION
+    MPESA_CONSUMER_KEY = os.environ['MPESA_CONSUMER_KEY']
+    MPESA_CONSUMER_SECRET = os.environ['MPESA_CONSUMER_SECRET']
+    MPESA_BUSINESS_SHORTCODE = os.environ['MPESA_BUSINESS_SHORTCODE']
+    MPESA_PASSKEY = os.environ['MPESA_PASSKEY']
+    MPESA_B2C_SHORTCODE = os.environ['MPESA_B2C_SHORTCODE']
+    MPESA_B2C_INITIATOR_NAME = os.environ['MPESA_B2C_INITIATOR_NAME']
+    MPESA_B2C_SECURITY_CREDENTIAL = os.environ['MPESA_B2C_SECURITY_CREDENTIAL']
+    MPESA_ENVIRONMENT = os.environ.get('MPESA_ENVIRONMENT', 'production')  # Default to production
     
-    # Callback URLs
-    MPESA_CALLBACK_URL = os.environ.get('MPESA_CALLBACK_URL', 'https://yourdomain.com/mpesa-callback')
-    MPESA_B2C_CALLBACK_URL = os.environ.get('MPESA_B2C_CALLBACK_URL', 'https://yourdomain.com/mpesa-b2c-callback')
-    MPESA_B2C_QUEUE_TIMEOUT_URL = os.environ.get('MPESA_B2C_QUEUE_TIMEOUT_URL', 'https://yourdomain.com/mpesa-b2c-timeout')
+    # Callback URLs - REQUIRED for production
+    MPESA_CALLBACK_URL = os.environ['MPESA_CALLBACK_URL']
+    MPESA_B2C_CALLBACK_URL = os.environ['MPESA_B2C_CALLBACK_URL']
+    MPESA_B2C_QUEUE_TIMEOUT_URL = os.environ['MPESA_B2C_QUEUE_TIMEOUT_URL']
     
-    # Celcom SMS Configuration
-    CELCOM_SMS_API_KEY = os.environ.get('CELCOM_SMS_API_KEY', 'your_celcom_api_key')
+    # Celcom SMS Configuration - REQUIRED
+    CELCOM_SMS_API_KEY = os.environ['CELCOM_SMS_API_KEY']
     CELCOM_SENDER_ID = os.environ.get('CELCOM_SENDER_ID', 'RefNinja')
     CELCOM_SMS_URL = os.environ.get('CELCOM_SMS_URL', 'https://api.celcomafrica.com/sms/send')
     
     # Telegram (Optional)
-    TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
-    TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID', '')
+    TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
+    TELEGRAM_CHAT_ID = os.environ.get('TELEGRAM_CHAT_ID')
     
-    # Safaricom IPs (Whitelist)
+    # Safaricom IPs (Whitelist) - PRODUCTION
     SAFARICOM_IPS = [
         '196.201.214.200', '196.201.214.206', '196.201.213.114',
         '196.201.212.227', '196.201.212.224', '196.201.212.138',
@@ -135,25 +102,25 @@ class Config:
     
     # Session Security
     SESSION_COOKIE_SAMESITE = 'Lax'
-    SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
+    SESSION_COOKIE_SECURE = True  # Always True in production
     SESSION_COOKIE_HTTPONLY = True
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
-    
-class DevelopmentConfig(Config):
-    """Development specific configuration"""
-    SESSION_COOKIE_SECURE = False
-    MPESA_ENVIRONMENT = 'sandbox'
 
+class DevelopmentConfig(Config):
+    SESSION_COOKIE_SECURE = False
+    DEBUG = True
+       
+        
 # Load appropriate config based on environment
-if os.environ.get('FLASK_ENV') == 'development':
+if os.getenv('FLASK_ENV') == 'development':
     app.config.from_object(DevelopmentConfig)
-    print("  Development configuration loaded")
+    app.logger.info("Development configuration loaded")
 else:
     app.config.from_object(Config)
-    print("Production configuration loaded")
+    app.logger.info("Production configuration loaded")
 
 # Initialize Supabase client
-supabase = create_client(app.config['SUPABASE_URL'], app.config['SUPABASE_KEY'])
+supabase = create_client(app.config.get('SUPABASE_URL'), app.config.get('SUPABASE_KEY'))
 
 # Initialize extensions
 bcrypt = Bcrypt(app)
@@ -162,68 +129,12 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message_category = 'info'
 
-# Configure rate limiter storage
-try:
-    # Check if Redis URL is available (common on hosting platforms)
-    redis_url = os.environ.get('REDIS_URL', os.environ.get('REDIS_TLS_URL'))
-    if redis_url:
-        import redis
-        rate_limiter_storage = redis.from_url(redis_url)
-        app.logger.info("Using Redis for rate limiting")
-    else:
-        rate_limiter_storage = "memory://"
-        app.logger.warning(" Using in-memory rate limiting (not recommended for production)")
-except ImportError:
-    rate_limiter_storage = "memory://"
-    app.logger.warning(" Redis not available, using in-memory rate limiting")
-
-# Update your rate limiter
+# Rate limiter
 rate_limiter = Limiter(
     app=app,
     key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"],
-    storage_uri=rate_limiter_storage
+    default_limits=["200 per day", "50 per hour"]
 )
-
-# =============================================================================
-# SYSTEM STATUS ENDPOINT
-# =============================================================================
-
-@app.route('/system-status')
-def system_status():
-    """Check system status and database connectivity"""
-    try:
-        # Test Supabase connection
-        supabase_test = supabase.table('users').select('*', count='exact').limit(1).execute()
-        supabase_status = "connected"
-        tables_found = len(supabase_test.data) if supabase_test.data else 0
-    except Exception as e:
-        supabase_status = f"error: {str(e)}"
-        tables_found = 0
-    
-    # Check environment variables
-    env_status = {
-        'SUPABASE_URL': bool(os.environ.get('SUPABASE_URL')),
-        'SUPABASE_KEY': bool(os.environ.get('SUPABASE_KEY')),
-        'SUPABASE_DB_URL': bool(os.environ.get('SUPABASE_DB_URL')),
-        'FLASK_ENV': os.environ.get('FLASK_ENV', 'production')
-    }
-    
-    return jsonify({
-        'status': 'healthy' if supabase_status == 'connected' else 'degraded',
-        'timestamp': datetime.now(timezone.utc).isoformat(),
-        'supabase': {
-            'status': supabase_status,
-            'tables_accessible': tables_found,
-            'using_direct_connection': False
-        },
-        'environment': env_status,
-        'recommendations': [
-            "Remove SUPABASE_DB_URL from environment variables",
-            "Create missing tables in Supabase dashboard",
-            "Use only Supabase client for database operations"
-        ]
-    })
 
 # =============================================================================
 # PRODUCTION DATABASE SCHEMA MANAGER
@@ -237,165 +148,30 @@ import psycopg2  # Changed from psycopg to psycopg2
 
 
 class DatabaseManager:
-    """Production-grade database schema manager with enhanced connectivity"""
+    """Production-grade database schema manager for Supabase (uses direct DB connection)."""
     
     def __init__(self, supabase_client):
         self.supabase = supabase_client
         self.logger = logging.getLogger(__name__)
     
-    def _test_network_connectivity(self, host, port=5432, timeout=10):
-        """Test basic network connectivity to database host"""
-        try:
-            self.logger.info(f"Testing network connectivity to {host}:{port}")
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(timeout)
-            result = sock.connect_ex((host, port))
-            sock.close()
-            
-            if result == 0:
-                self.logger.info("✓ Network connectivity test passed")
-                return True
-            else:
-                self.logger.error(f"✗ Network connectivity failed (error code: {result})")
-                return False
-        except Exception as e:
-            self.logger.error(f"✗ Network connectivity test failed: {e}")
-            return False
-    
-    def _get_db_connection_params(self, db_url=None):
-        """Extract connection parameters from database URL"""
+    def _run_sql_via_db_url(self, sql: str, db_url: Optional[str] = None, timeout: int = 30) -> None:
+        """
+        Execute raw SQL using direct Postgres connection via SUPABASE_DB_URL.
+        Raises Exception on failure.
+        """
         db_url = db_url or os.environ.get('SUPABASE_DB_URL')
         if not db_url:
-            raise Exception("SUPABASE_DB_URL not set")
+            raise Exception("SUPABASE_DB_URL not set; cannot execute raw SQL via direct DB connection.")
         
-        parsed = urlparse(db_url)
-        return {
-            'host': parsed.hostname,
-            'port': parsed.port or 5432,
-            'database': parsed.path[1:],  # Remove leading slash
-            'user': parsed.username,
-            'password': parsed.password
-        }
-    
-    def _run_sql_via_db_url(self, sql: str, db_url: Optional[str] = None, timeout: int = 30, max_retries: int = 3) -> None:
-        """
-        Execute raw SQL with enhanced error handling and retries
-        """
-        for attempt in range(max_retries):
-            try:
-                db_url = db_url or os.environ.get('SUPABASE_DB_URL')
-                if not db_url:
-                    raise Exception("SUPABASE_DB_URL not set")
-                
-                # Test network connectivity first
-                params = self._get_db_connection_params(db_url)
-                if not self._test_network_connectivity(params['host'], params['port']):
-                    if attempt < max_retries - 1:
-                        wait_time = 2 ** attempt
-                        self.logger.warning(f"Network test failed, retrying in {wait_time}s...")
-                        time.sleep(wait_time)
-                        continue
-                    else:
-                        raise Exception("Network connectivity failed after all retries")
-                
-                # Attempt database connection
-                self.logger.info(f"Attempting database connection (attempt {attempt + 1}/{max_retries})")
-                
-                conn = psycopg2.connect(db_url)
-                conn.autocommit = True
-                
-                with conn.cursor() as cur:
-                    cur.execute(sql)
-                
-                conn.close()
-                self.logger.info(f"SQL executed successfully (attempt {attempt + 1})")
-                return
-                
-            except OperationalError as e:
-                # Network/database connection errors
-                error_msg = str(e)
-                self.logger.warning(f"Database operational error (attempt {attempt + 1}): {error_msg}")
-                
-                if "connection" in error_msg.lower() or "network" in error_msg.lower():
-                    if attempt < max_retries - 1:
-                        wait_time = 2 ** attempt
-                        self.logger.info(f"Connection failed, retrying in {wait_time}s...")
-                        time.sleep(wait_time)
-                        continue
-                    else:
-                        raise Exception(f"Database connection failed after {max_retries} attempts: {error_msg}")
-                else:
-                    raise
-                    
-            except Error as e:
-                # Database errors (permissions, syntax, etc.)
-                error_msg = str(e)
-                self.logger.error(f"Database error (attempt {attempt + 1}): {error_msg}")
-                
-                if "permission denied" in error_msg.lower():
-                    raise Exception(f"Database permission denied (RLS likely blocking): {error_msg}")
-                elif "already exists" in error_msg.lower():
-                    self.logger.info("Table/index already exists (non-fatal)")
-                    return
-                else:
-                    raise Exception(f"Database error: {error_msg}")
-                    
-            except Exception as e:
-                self.logger.error(f"Unexpected error (attempt {attempt + 1}): {e}")
-                if attempt < max_retries - 1:
-                    wait_time = 2 ** attempt
-                    time.sleep(wait_time)
-                    continue
-                else:
-                    raise
-    
-    def diagnose_connection_issue(self):
-        """Comprehensive connection diagnosis"""
+        # Use autocommit for DDL/DDL-like statements
+        conn = psycopg2.connect(db_url)  # Changed from psycopg.connect
+        conn.autocommit = True
         try:
-            db_url = os.environ.get('SUPABASE_DB_URL')
-            if not db_url:
-                return {"status": "error", "message": "SUPABASE_DB_URL not set"}
-            
-            params = self._get_db_connection_params(db_url)
-            
-            # Test 1: Network connectivity
-            network_ok = self._test_network_connectivity(params['host'], params['port'])
-            if not network_ok:
-                return {
-                    "status": "network_error",
-                    "message": f"Cannot reach {params['host']}:{params['port']}",
-                    "details": "Check firewall settings and network configuration"
-                }
-            
-            # Test 2: Database connection
-            try:
-                conn = psycopg2.connect(db_url)
-                conn.close()
-                return {"status": "success", "message": "Database connection successful"}
-            except OperationalError as e:
-                error_msg = str(e)
-                if "password authentication" in error_msg:
-                    return {
-                        "status": "auth_error", 
-                        "message": "Database authentication failed",
-                        "details": "Check username and password"
-                    }
-                elif "database" in error_msg and "does not exist" in error_msg:
-                    return {
-                        "status": "database_error",
-                        "message": "Database does not exist",
-                        "details": "Check database name"
-                    }
-                else:
-                    return {
-                        "status": "connection_error",
-                        "message": f"Database connection failed: {error_msg}",
-                        "details": "Check connection parameters"
-                    }
-                    
-        except Exception as e:
-            return {"status": "error", "message": f"Diagnosis failed: {e}"}
-
+            with conn.cursor() as cur:
+                cur.execute(sql)
+        finally:
+            conn.close()
+    
     def execute_sql(self, sql: str, max_retries: int = 3) -> bool:
         """Execute SQL with proper error handling and retries using direct DB connection."""
         for attempt in range(max_retries):
@@ -665,32 +441,6 @@ class DatabaseManager:
         
         self.logger.info("Database initialization completed successfully")
         return True 
-
-    def initialize_database_supabase_only(self) -> bool:
-        """Supabase-only initialization - tables should exist already"""
-        try:
-            self.logger.info("Starting Supabase-only database initialization...")
-            
-            # Test Supabase connection
-            response = self.supabase.table('users').select('*', count='exact').limit(1).execute()
-            self.logger.info("✅ Supabase client connection verified")
-            
-            # Verify critical tables exist
-            verification = self.verify_schema()
-            critical_tables = ['users', 'transactions']
-            missing_tables = [table for table in critical_tables if not verification.get(table, {}).get('exists')]
-            
-            if missing_tables:
-                self.logger.error(f"❌ Missing critical tables: {missing_tables}")
-                self.logger.info("Please create these tables in your Supabase dashboard")
-                return False
-            
-            self.logger.info("✅ Database initialization completed successfully")
-            return True
-            
-        except Exception as e:
-            self.logger.error(f"❌ Database initialization failed: {e}")
-            return False
 # =============================================================================
 # COMPREHENSIVE HEALTH MONITORING SYSTEM
 # =============================================================================
@@ -1189,13 +939,10 @@ class User(UserMixin):
             self._is_admin = data.get('is_admin', False)
             self._is_verified = data.get('is_verified', False)
             self._is_active = data.get('is_active', True)
-            
-            # Safe date handling
             self.created_at = data.get('created_at')
             self.last_login = data.get('last_login')
-            self.locked_until = data.get('locked_until')
-            
             self.login_attempts = data.get('login_attempts', 0)
+            self.locked_until = data.get('locked_until')
             self.two_factor_enabled = data.get('two_factor_enabled', False)
             self.user_rank = data.get('user_rank', 'Bronze')
             self.total_commission = data.get('total_commission', 0.0)
@@ -1203,14 +950,6 @@ class User(UserMixin):
             self.reset_token = data.get('reset_token')
             self.reset_token_expires = data.get('reset_token_expires')
 
-    # Add a safe method to get formatted created_at date
-    def get_created_at_formatted(self, format_string='%d/%m/%Y'):
-        return safe_strftime(self.created_at, format_string)
-    
-    # Add a safe method to get formatted last_login date
-    def get_last_login_formatted(self, format_string='%d/%m/%Y %H:%M'):
-        return safe_strftime(self.last_login, format_string)
-
     @property
     def is_active(self):
         return self._is_active
@@ -1236,96 +975,12 @@ class User(UserMixin):
         self._is_verified = value
 
     def set_password(self, password):
-        self.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+        # When creating a new user
+        self.password_hash = generate_password_hash(password)
     
     def check_password(self, password):
-        return bcrypt.check_password_hash(self.password_hash, password)
-    
-    def is_locked(self):
-        if self.locked_until:
-            try:
-                locked_until_dt = datetime.fromisoformat(self.locked_until.replace('Z', '+00:00'))
-                return locked_until_dt > datetime.now(timezone.utc)
-            except (ValueError, AttributeError):
-                return False
-        return False
-    
-    def generate_phone_linked_referral_code(self):
-        phone_hash = hashlib.md5(self.phone.encode()).hexdigest()[:6].upper()
-        self.referral_code = f"RN{phone_hash}"
-    
-    def update_rank(self):
-        if self.total_commission >= 10000:
-            self.user_rank = 'Diamond'
-        elif self.total_commission >= 5000:
-            self.user_rank = 'Platinum'
-        elif self.total_commission >= 2000:
-            self.user_rank = 'Gold'
-        elif self.total_commission >= 1000:
-            self.user_rank = 'Silver'
-        else:
-            self.user_rank = 'Bronze'
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'username': self.username,
-            'email': self.email,
-            'password_hash': self.password_hash,
-            'phone': self.phone,
-            'name': self.name,
-            'balance': self.balance,
-            'total_earned': self.total_earned,
-            'total_withdrawn': self.total_withdrawn,
-            'referral_code': self.referral_code,
-            'referred_by': self.referred_by,
-            'referral_balance': self.referral_balance,
-            'referral_count': self.referral_count,
-            'is_admin': self._is_admin,
-            'is_verified': self._is_verified,
-            'is_active': self._is_active,
-            'created_at': self.created_at,
-            'last_login': self.last_login,
-            'login_attempts': self.login_attempts,
-            'locked_until': self.locked_until,
-            'two_factor_enabled': self.two_factor_enabled,
-            'user_rank': self.user_rank,
-            'total_commission': self.total_commission,
-            'referral_source': self.referral_source,
-            'reset_token': self.reset_token,
-            'reset_token_expires': self.reset_token_expires
-        }
-        
-        
-    @property
-    def is_active(self):
-        return self._is_active
-
-    @is_active.setter
-    def is_active(self, value):
-        self._is_active = value
-
-    @property
-    def is_admin(self):
-        return self._is_admin
-
-    @is_admin.setter
-    def is_admin(self, value):
-        self._is_admin = value
-
-    @property
-    def is_verified(self):
-        return self._is_verified
-
-    @is_verified.setter
-    def is_verified(self, value):
-        self._is_verified = value
-
-    def set_password(self, password):
-        self.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
-    
-    def check_password(self, password):
-        return bcrypt.check_password_hash(self.password_hash, password)
+        # When verifying login
+        return check_password_hash(self.password_hash, password)
     
     def is_locked(self):
         if self.locked_until and datetime.fromisoformat(self.locked_until.replace('Z', '+00:00')) > datetime.now(timezone.utc):
@@ -2265,7 +1920,9 @@ if not app.debug:
     ))
     file_handler.setLevel(logging.ERROR)
     app.logger.addHandler(file_handler)
-
+    app.logger.setLevel(logging.INFO)
+    app.logger.info('Referral Ninja startup')
+    
 # Fix console logging encoding
 if sys.stdout.encoding != 'utf-8':
     import codecs
@@ -2305,7 +1962,7 @@ def validate_environment():
 
 # Updated initialization function
 def init_db():
-    """Supabase-only database initialization"""
+    """Production database initialization with proper error handling"""
     max_retries = 3
     retry_count = 0
     
@@ -2313,31 +1970,34 @@ def init_db():
     
     while retry_count < max_retries:
         try:
-            # Test Supabase client connection
-            response = supabase.table('users').select('*', count='exact').limit(1).execute()
-            app.logger.info("✅ Supabase client connection test passed")
+            # Test basic connection first
+            response = supabase.table('users').select('*').limit(1).execute()
+            current_app.logger.info("✓ Supabase connection successful")
             
-            # Initialize database manager (Supabase-only)
-            if db_manager.initialize_database_supabase_only():
-                app.logger.info("✅ Database initialization completed successfully")
+            # Initialize database schema
+            if db_manager.initialize_database():
+                current_app.logger.info("Database schema verified/created successfully")
+                
+                # Create admin user if required
+                if os.environ.get('CREATE_ADMIN_USER') == 'true':
+                    _create_admin_user()
+                
                 return True
             else:
-                app.logger.error("❌ Database initialization failed - missing tables")
+                current_app.logger.error(" Database schema creation failed")
                 return False
                 
         except Exception as e:
             retry_count += 1
-            error_msg = str(e)
-            app.logger.error(f"Database initialization attempt {retry_count} failed: {error_msg}")
+            current_app.logger.error(f" Database initialization attempt {retry_count} failed: {e}")
             
             if retry_count < max_retries:
-                wait_time = 2 ** retry_count
-                app.logger.info(f"Retrying database initialization in {wait_time} seconds...")
-                time.sleep(wait_time)
+                current_app.logger.info(f"Retrying database initialization in {2 ** retry_count} seconds...")
+                time.sleep(2 ** retry_count)
             else:
-                app.logger.error("All database initialization attempts failed")
+                current_app.logger.error(" All database initialization attempts failed")
                 return False
-            
+
 def _create_admin_user():
     """Create admin user with secure password"""
     try:
@@ -2465,7 +2125,11 @@ def api_register():
         }
         
         user = User(user_data)
-        user.set_password(password)
+        
+        # When creating a new user - hash the password
+        hashed_pw = generate_password_hash(password)
+        user.password_hash = hashed_pw
+        
         user.generate_phone_linked_referral_code()
         
         # Save to database
@@ -2506,58 +2170,69 @@ def api_login():
         
         user = SupabaseDB.get_user_by_phone(phone)
         
-        if not user or not user.check_password(password):
+        if not user:
             SecurityMonitor.log_security_event(
                 "LOGIN_FAILED", 
-                user.id if user else None,
-                {"ip": request.remote_addr, "reason": "Invalid credentials"}
+                None,
+                {"ip": request.remote_addr, "reason": "Invalid credentials - user not found"}
             )
             return jsonify({"error": "Invalid phone or password"}), 401
         
-        if user.is_locked():
-            return jsonify({"error": "Account temporarily locked. Try again later."}), 423
-        
-        if not user.is_active:
-            return jsonify({"error": "Account deactivated"}), 403
-        
-        if not user.is_verified:
-            return jsonify({"error": "Account not verified. Please complete payment verification."}), 403
-        
-        # Reset login attempts on successful login
-        update_data = {
-            'login_attempts': 0,
-            'locked_until': None,
-            'last_login': datetime.now(timezone.utc).isoformat()
-        }
-        SupabaseDB.update_user(user.id, update_data)
-        
-        # Generate 2FA code if enabled
-        if user.two_factor_enabled:
-            code = SecurityMonitor.generate_2fa_code(user.id, "LOGIN")
-            return jsonify({
-                "message": "2FA code sent to your phone",
-                "requires_2fa": True
-            })
-        
-        access_token = create_access_token(identity=user.id)
-        
-        SecurityMonitor.log_security_event(
-            "LOGIN_SUCCESS", 
-            user.id, 
-            {"ip": request.remote_addr}
-        )
-        
-        return jsonify({
-            "access_token": access_token,
-            "user": {
-                "id": user.id,
-                "phone": user.phone,
-                "name": user.name,
-                "balance": user.balance,
-                "username": user.username,
-                "email": user.email
+        # When verifying login
+        if check_password_hash(user.password_hash, password):
+            print("Login successful!")
+            
+            if user.is_locked():
+                return jsonify({"error": "Account temporarily locked. Try again later."}), 423
+            
+            if not user.is_active:
+                return jsonify({"error": "Account deactivated"}), 403
+            
+            if not user.is_verified:
+                return jsonify({"error": "Account not verified. Please complete payment verification."}), 403
+            
+            # Reset login attempts on successful login
+            update_data = {
+                'login_attempts': 0,
+                'locked_until': None,
+                'last_login': datetime.now(timezone.utc).isoformat()
             }
-        })
+            SupabaseDB.update_user(user.id, update_data)
+            
+            # Generate 2FA code if enabled
+            if user.two_factor_enabled:
+                code = SecurityMonitor.generate_2fa_code(user.id, "LOGIN")
+                return jsonify({
+                    "message": "2FA code sent to your phone",
+                    "requires_2fa": True
+                })
+            
+            access_token = create_access_token(identity=user.id)
+            
+            SecurityMonitor.log_security_event(
+                "LOGIN_SUCCESS", 
+                user.id, 
+                {"ip": request.remote_addr}
+            )
+            
+            return jsonify({
+                "access_token": access_token,
+                "user": {
+                    "id": user.id,
+                    "phone": user.phone,
+                    "name": user.name,
+                    "balance": user.balance,
+                    "username": user.username,
+                    "email": user.email
+                }
+            })
+        else:
+            SecurityMonitor.log_security_event(
+                "LOGIN_FAILED", 
+                user.id,
+                {"ip": request.remote_addr, "reason": "Invalid credentials - wrong password"}
+            )
+            return jsonify({"error": "Invalid phone or password"}), 401
         
     except Exception as e:
         current_app.logger.error(f"Login error: {str(e)}")
@@ -2933,7 +2608,7 @@ async def send_telegram_message_async(message):
             
         bot = Bot(token=current_app.config['TELEGRAM_BOT_TOKEN'])
         async with bot:
-            await bot.send_message(chat_id=current_app.config['TELEGRAM_CHAT_ID'], text=message, parse_mode='HTML')
+            await bot.send_message(chat_id=current_app.config('TELEGRAM_CHAT_ID'), text=message, parse_mode='HTML')
     except Exception as e:
         current_app.logger.error(f"Telegram notification failed: {str(e)}")
 
@@ -3017,68 +2692,6 @@ def handle_exception(error):
     app.logger.error(f"Unhandled Exception: {error}")
     return render_template('500.html'), 500
 
-@app.route('/debug/database-status')
-def debug_database_status():
-    """Debug endpoint to check database connection status"""
-    db_manager = DatabaseManager(supabase)
-    
-    # Test Supabase client
-    supabase_status = "unknown"
-    try:
-        response = supabase.table('users').select('*', count='exact').limit(1).execute()
-        supabase_status = "connected"
-        supabase_data = f"Found {len(response.data)} users"
-    except Exception as e:
-        supabase_status = f"error: {str(e)}"
-        supabase_data = None
-    
-    # Test direct database connection
-    direct_db_status = "unknown"
-    diagnosis = db_manager.diagnose_connection_issue()
-    
-    # Check environment variables (masked)
-    env_vars = {
-        'SUPABASE_URL_SET': bool(os.environ.get('SUPABASE_URL')),
-        'SUPABASE_KEY_SET': bool(os.environ.get('SUPABASE_KEY')),
-        'SUPABASE_DB_URL_SET': bool(os.environ.get('SUPABASE_DB_URL')),
-        'KEY_TYPE': 'service_role' if os.environ.get('SUPABASE_KEY', '').startswith('eyJ') else 'unknown'
-    }
-    
-    return jsonify({
-        'timestamp': datetime.now(timezone.utc).isoformat(),
-        'supabase_client_status': supabase_status,
-        'supabase_client_data': supabase_data,
-        'direct_db_connection': diagnosis,
-        'environment_variables': env_vars,
-        'recommendations': _get_connection_recommendations(diagnosis, supabase_status)
-    })
-
-def _get_connection_recommendations(diagnosis, supabase_status):
-    """Provide specific recommendations based on connection status"""
-    recommendations = []
-    
-    if diagnosis.get('status') == 'network_error':
-        recommendations.extend([
-            "1. Check Supabase project firewall settings",
-            "2. Allow Render IP ranges in Supabase dashboard",
-            "3. Verify database hostname and port",
-            "4. Test network connectivity from Render instance"
-        ])
-    
-    if 'permission' in str(supabase_status).lower() or 'rls' in str(supabase_status).lower():
-        recommendations.extend([
-            "1. Ensure you're using service_role key, not anon key",
-            "2. Check RLS policies in Supabase dashboard",
-            "3. Verify service_role key has bypass RLS permission",
-            "4. Test with Supabase client using service_role key"
-        ])
-    
-    if not recommendations:
-        recommendations = ["All connections appear healthy"]
-    
-    return recommendations
-
-
 # =============================================================================
 # APPLICATION ROUTES
 # =============================================================================
@@ -3152,7 +2765,10 @@ def login():
                 flash('Account temporarily locked. Please try again later.', 'error')
                 return render_template('auth/login.html')
             
-            if user.check_password(password):
+            # When verifying login
+            if check_password_hash(user.password_hash, password):
+                print("Login successful!")
+                
                 if not user.is_verified:
                     flash('Please complete your payment verification before logging in.', 'warning')
                     session['pending_verification_user'] = user.id
@@ -3265,7 +2881,11 @@ def register():
         }
         
         user = User(user_data)
-        user.set_password(password)
+        
+        # When creating a new user - hash the password
+        hashed_pw = generate_password_hash(password)
+        user.password_hash = hashed_pw
+        
         user.generate_phone_linked_referral_code()
         
         if referrer:
@@ -3641,7 +3261,7 @@ def mpesa_callback():
         return jsonify({'ResultCode': 1, 'ResultDesc': 'Failed'})
 
 # M-PESA B2C CALLBACK HANDLER
-@app.route('/mpesa-b2c-callback', methods=["POST"])
+@app.route('/mpesa-b2c-callback', methods=['POST'])
 def mpesa_b2c_callback():
     """Handle M-PESA B2C payout callbacks - AUTO UPDATE WITHDRAWAL STATUS"""
     try:
@@ -3950,8 +3570,9 @@ def profile():
         }
         
         if new_password:
-            current_user.set_password(new_password)
-            update_data['password_hash'] = current_user.password_hash
+            # When creating a new user
+            hashed_pw = generate_password_hash(new_password)
+            update_data['password_hash'] = hashed_pw
             flash('Password updated successfully!', 'success')
         
         try:
@@ -3962,303 +3583,160 @@ def profile():
             flash('Error updating profile. Please try again.', 'error')
             return redirect(url_for('profile'))
     
-    # Safely get user stats with proper defaults and error handling
-    try:
-        # Ensure we have the latest user data
-        current_user_refreshed = SupabaseDB.get_user_by_id(current_user.id)
-        if not current_user_refreshed:
-            flash('User not found. Please log in again.', 'error')
-            return redirect(url_for('logout'))
-        
-        total_earned = float(getattr(current_user_refreshed, 'total_commission', 0.0) or 0.0)
-        total_withdrawn = float(getattr(current_user_refreshed, 'total_withdrawn', 0.0) or 0.0)
-        balance = float(getattr(current_user_refreshed, 'balance', 0.0) or 0.0)
-        
-        # Get referred count safely
-        try:
-            response = supabase.table('users').select('*', count='exact').eq('referred_by', current_user_refreshed.referral_code).execute()
-            referred_count = len(response.data) if response.data else 0
-        except Exception as e:
-            app.logger.error(f"Error counting referrals: {e}")
-            referred_count = 0
-        
-        # Pass the refreshed user data to template
-        return render_template('profile.html', 
-                             current_user=current_user_refreshed,
-                             total_earned=total_earned,
-                             total_withdrawn=total_withdrawn,
-                             balance=balance,
-                             referred_count=referred_count,
-                             safe_strftime=safe_strftime)  # Pass the helper function
-                             
-    except Exception as e:
-        app.logger.error(f"Error loading profile: {str(e)}")
-        flash('Error loading profile data. Please try again.', 'error')
-        return redirect(url_for('dashboard'))
+    total_earned = current_user.total_commission
+    total_withdrawn = current_user.total_withdrawn
+    balance = current_user.balance
+    
+    # Get referred count
+    response = supabase.table('users').select('*', count='exact').eq('referred_by', current_user.referral_code).execute()
+    referred_count = len(response.data)
+    
+    return render_template('profile.html', 
+                         total_earned=total_earned,
+                         total_withdrawn=total_withdrawn,
+                         balance=balance,
+                         referred_count=referred_count)
 
+# Updated settings route with better error handling
 @app.route('/settings', methods=['GET', 'POST'])
 @login_required
 def settings():
-    """Settings route with comprehensive error handling and fallbacks"""
+    """Settings route with enhanced error handling"""
     try:
-        app.logger.info(f"Settings page accessed by user {current_user.id}")
-        
-        # Check if user is verified (but don't block access)
-        verification_status = getattr(current_user, 'is_verified', False)
-        if not verification_status:
-            flash('Please complete verification to access all features.', 'warning')
-            app.logger.info(f"User {current_user.id} is not verified")
-
-        if request.method == 'POST':
-            app.logger.info(f"Settings POST request from user {current_user.id}")
-            return handle_settings_post_request()
-
-        # GET request - try to load full settings page with multiple fallbacks
-        try:
-            return load_full_settings_page()
-        except Exception as e:
-            app.logger.error(f"Full settings page failed for user {current_user.id}: {str(e)}")
-            app.logger.error(traceback.format_exc())
-            
-            # Try simple settings as first fallback
-            try:
-                flash('Using simplified settings interface due to system issues.', 'info')
-                return redirect(url_for('simple_settings'))
-            except Exception as fallback_error:
-                app.logger.error(f"Simple settings also failed: {str(fallback_error)}")
-                # Ultimate fallback to emergency settings
-                return redirect(url_for('emergency_settings'))
-
+        # Quick Supabase health check
+        response = supabase.table('users').select('*').limit(1).execute()
     except Exception as e:
-        app.logger.critical(f"Critical error in settings route for user {current_user.id}: {str(e)}")
-        app.logger.critical(traceback.format_exc())
-        
-        # Direct redirect to emergency settings with error info
-        try:
-            flash('System temporarily unavailable. Using emergency mode.', 'error')
-            return redirect(url_for('emergency_settings'))
-        except Exception as final_error:
-            # Absolute last resort - return basic HTML
-            app.logger.critical(f"Even emergency settings failed: {str(final_error)}")
-            return f"""
-            <html>
-                <head><title>Settings Error - ReferralNinja</title></head>
-                <body style="padding:20px;font-family:Arial;">
-                    <h1>⚠️ System Temporarily Unavailable</h1>
-                    <p>We're experiencing technical difficulties. Please try again later.</p>
-                    <p><strong>User:</strong> {current_user.email}</p>
-                    <div style="margin-top:20px;">
-                        <a href="{url_for('dashboard')}" style="background:#007bff;color:white;padding:10px;text-decoration:none;border-radius:5px;">
-                            Return to Dashboard
-                        </a>
-                        <a href="{url_for('logout')}" style="background:#dc3545;color:white;padding:10px;text-decoration:none;border-radius:5px;margin-left:10px;">
-                            Logout
-                        </a>
-                    </div>
-                </body>
-            </html>
-            """, 503
-
-
-def load_full_settings_page():
-    """Load the full settings page with all features and comprehensive error handling"""
-    try:
-        app.logger.info(f"Loading full settings page for user {current_user.id}")
-        
-        # Get fresh user data with timeout protection
-        try:
-            current_user_refreshed = SupabaseDB.get_user_by_id(current_user.id)
-            if not current_user_refreshed:
-                app.logger.error(f"User {current_user.id} not found in database")
-                flash('User data not found. Please log in again.', 'error')
-                return redirect(url_for('logout'))
-        except Exception as user_error:
-            app.logger.error(f"Error fetching user data for {current_user.id}: {str(user_error)}")
-            # Continue with current user data as fallback
-            current_user_refreshed = current_user
-            flash('Using cached user data. Some information may be outdated.', 'warning')
-
-        # Safely calculate financial stats with extensive error handling
-        try:
-            total_earned = safe_float_getattr(current_user_refreshed, 'total_commission', 0.0)
-            total_withdrawn = safe_float_getattr(current_user_refreshed, 'total_withdrawn', 0.0)
-            balance = safe_float_getattr(current_user_refreshed, 'balance', 0.0)
-            
-            app.logger.info(f"Financial stats for user {current_user.id}: earned={total_earned}, withdrawn={total_withdrawn}, balance={balance}")
-        except Exception as finance_error:
-            app.logger.error(f"Error calculating financial stats for user {current_user.id}: {str(finance_error)}")
-            total_earned = 0.0
-            total_withdrawn = 0.0
-            balance = 0.0
-            flash('Unable to load financial information.', 'warning')
-
-        # Safely get referral count with database error handling
-        try:
-            referral_code = getattr(current_user_refreshed, 'referral_code', '')
-            if referral_code:
-                response = supabase.table('users').select('*').eq('referred_by', referral_code).execute()
-                referred_count = len(response.data) if response.data else 0
-            else:
-                referred_count = 0
-                app.logger.warning(f"User {current_user.id} has no referral code")
-                
-            app.logger.info(f"Referral count for user {current_user.id}: {referred_count}")
-        except Exception as referral_error:
-            app.logger.error(f"Error counting referrals for user {current_user.id}: {str(referral_error)}")
-            referred_count = 0
-            flash('Unable to load referral information.', 'warning')
-
-        # Prepare template data with safe defaults
-        template_data = {
-            'current_user': current_user_refreshed,
-            'total_earned': total_earned,
-            'total_withdrawn': total_withdrawn,
-            'balance': balance,
-            'referred_count': referred_count,
-            'safe_strftime': safe_strftime
-        }
-
-        # Final attempt to render template
-        try:
-            return render_template('settings.html', **template_data)
-        except Exception as template_error:
-            app.logger.error(f"Template rendering failed for user {current_user.id}: {str(template_error)}")
-            raise template_error  # Re-raise to trigger fallback
-
-    except Exception as e:
-        app.logger.error(f"Error in load_full_settings_page for user {current_user.id}: {str(e)}")
-        app.logger.error(traceback.format_exc())
-        raise  # Re-raise to trigger fallback
-
-
-def handle_settings_post_request():
-    """Handle POST request for settings updates with comprehensive validation"""
-    try:
-        # Extract and clean form data
-        email = request.form.get('email', '').strip().lower()
+        app.logger.error(f"Supabase error in settings: {e}")
+        flash('Database connection issue. Please try again later.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    # Check if user is verified
+    if not current_user.is_verified:
+        flash('Please complete payment verification to access settings.', 'warning')
+        return redirect(url_for('account_activation'))
+    
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip()
         phone_number = request.form.get('phone_number', '').strip()
         name = request.form.get('full_name', '').strip()
+        current_password = request.form.get('current_password')
         new_password = request.form.get('new_password')
         confirm_password = request.form.get('confirm_password')
-
-        app.logger.info(f"Settings update attempt by user {current_user.id}: email={email}, phone={phone_number}")
-
-        # Basic validation
-        if not email or not phone_number:
-            flash('Email and phone number are required.', 'error')
-            return redirect(url_for('settings'))
-
-        # Validate email format
-        if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
-            flash('Please enter a valid email address.', 'error')
-            return redirect(url_for('settings'))
-
-        # Validate phone number format
-        if not re.match(r'^(254|07)\d{9}$', phone_number):
-            flash('Please enter a valid Kenyan phone number (format: 07XXXXXXXX or 2547XXXXXXXX).', 'error')
-            return redirect(url_for('settings'))
-
-        # Convert phone number to 254 format
-        if phone_number.startswith('07'):
-            phone_number = '254' + phone_number[1:]
-            app.logger.info(f"Converted phone number to 254 format for user {current_user.id}")
-
-        # Check for duplicate email (excluding current user)
-        try:
-            email_check = supabase.table('users').select('id').eq('email', email).neq('id', current_user.id).execute()
-            if email_check.data:
-                flash('This email address is already registered by another user.', 'error')
-                return redirect(url_for('settings'))
-        except Exception as email_check_error:
-            app.logger.error(f"Error checking email uniqueness for user {current_user.id}: {str(email_check_error)}")
-            flash('Error verifying email availability. Please try again.', 'error')
-            return redirect(url_for('settings'))
-
-        # Check for duplicate phone number (excluding current user)
-        try:
-            phone_check = supabase.table('users').select('id').eq('phone', phone_number).neq('id', current_user.id).execute()
-            if phone_check.data:
-                flash('This phone number is already registered by another user.', 'error')
-                return redirect(url_for('settings'))
-        except Exception as phone_check_error:
-            app.logger.error(f"Error checking phone uniqueness for user {current_user.id}: {str(phone_check_error)}")
-            flash('Error verifying phone number availability. Please try again.', 'error')
-            return redirect(url_for('settings'))
-
-        # Prepare update data
-        update_data = {
-            'email': email,
-            'phone': phone_number,
-            'updated_at': datetime.now().isoformat()
-        }
         
-        if name:
-            update_data['name'] = name
-
-        # Handle password change if provided
-        if new_password:
-            if not confirm_password:
-                flash('Please confirm your new password.', 'error')
-                return redirect(url_for('settings'))
-            
-            if new_password != confirm_password:
-                flash('New passwords do not match.', 'error')
-                return redirect(url_for('settings'))
-            
-            if len(new_password) < 6:
-                flash('Password must be at least 6 characters long.', 'error')
-                return redirect(url_for('settings'))
-            
-            # Set new password
-            current_user.set_password(new_password)
-            update_data['password_hash'] = current_user.password_hash
-            app.logger.info(f"Password update requested for user {current_user.id}")
-
-        # Perform the update
         try:
-            update_result = SupabaseDB.update_user(current_user.id, update_data)
-            app.logger.info(f"Successfully updated settings for user {current_user.id}")
+            # Basic validation
+            if not email or not phone_number or not name:
+                flash('Email, phone number and full name are required.', 'error')
+                return redirect(url_for('settings'))
             
-            # Show appropriate success message
+            # Validate phone number format
+            if not re.match(r'^254[0-9]{9}$', phone_number) and not re.match(r'^07[0-9]{8}$', phone_number):
+                flash('Please enter a valid Kenyan phone number.', 'error')
+                return redirect(url_for('settings'))
+            
+            # Convert to 254 format
+            if phone_number.startswith('07'):
+                phone_number = '254' + phone_number[1:]
+            
+            # Check for duplicate email/phone
+            email_response = supabase.table('users').select('*').eq('email', email).neq('id', current_user.id).execute()
+            phone_response = supabase.table('users').select('*').eq('phone', phone_number).neq('id', current_user.id).execute()
+            
+            if email_response.data:
+                flash('Email already registered.', 'error')
+                return redirect(url_for('settings'))
+            
+            if phone_response.data:
+                flash('Phone number already registered.', 'error')
+                return redirect(url_for('settings'))
+            
+            # Update user info
+            update_data = {
+                'email': email,
+                'phone': phone_number,
+                'name': name
+            }
+            
+            # Handle password change if provided
             if new_password:
-                flash('Settings and password updated successfully!', 'success')
-            else:
-                flash('Settings updated successfully!', 'success')
+                if not current_password:
+                    flash('Current password is required to change password.', 'error')
+                    return redirect(url_for('settings'))
                 
+                # When verifying login
+                if not check_password_hash(current_user.password_hash, current_password):
+                    flash('Current password is incorrect.', 'error')
+                    return redirect(url_for('settings'))
+                
+                if new_password != confirm_password:
+                    flash('New passwords do not match.', 'error')
+                    return redirect(url_for('settings'))
+                
+                if len(new_password) < 6:
+                    flash('Password must be at least 6 characters long.', 'error')
+                    return redirect(url_for('settings'))
+                
+                # When creating a new user
+                hashed_pw = generate_password_hash(new_password)
+                update_data['password_hash'] = hashed_pw
+                flash('Password updated successfully!', 'success')
+            
+            # Save changes
+            SupabaseDB.update_user(current_user.id, update_data)
+            flash('Settings updated successfully!', 'success')
             return redirect(url_for('settings'))
             
-        except Exception as update_error:
-            app.logger.error(f"Database update failed for user {current_user.id}: {str(update_error)}")
-            flash('Error saving changes to database. Please try again.', 'error')
+        except Exception as e:
+            app.logger.error(f"Error updating settings: {str(e)}")
+            flash(f'Error updating settings: {str(e)}', 'error')
             return redirect(url_for('settings'))
-
-    except Exception as e:
-        app.logger.error(f"Unexpected error in handle_settings_post_request for user {current_user.id}: {str(e)}")
-        app.logger.error(traceback.format_exc())
-        flash('An unexpected error occurred. Please try again.', 'error')
-        return redirect(url_for('settings'))
-
-
-def safe_float_getattr(obj, attr, default=0.0):
-    """Safely get float attribute with comprehensive error handling"""
-    try:
-        value = getattr(obj, attr, default)
-        
-        if value is None:
-            return default
-            
-        # Handle string conversion
-        if isinstance(value, str):
-            # Remove any currency symbols or commas
-            cleaned_value = value.replace('KSH', '').replace('$', '').replace(',', '').strip()
-            return float(cleaned_value) if cleaned_value else default
-            
-        return float(value)
-        
-    except (TypeError, ValueError, AttributeError) as e:
-        app.logger.warning(f"Error converting attribute {attr} to float: {str(e)}")
-        return default
     
+    # For GET request, calculate stats safely
+    try:
+        total_earned = current_user.total_commission or 0.0
+        total_withdrawn = current_user.total_withdrawn or 0.0
+        balance = current_user.balance or 0.0
+        
+        response = supabase.table('users').select('*', count='exact').eq('referred_by', current_user.referral_code).execute()
+        referred_count = len(response.data)
+        
+        return render_template('settings.html',
+                             total_earned=total_earned,
+                             total_withdrawn=total_withdrawn,
+                             balance=balance,
+                             referred_count=referred_count)
+                             
+    except Exception as e:
+        app.logger.error(f"Error loading settings page: {str(e)}")
+        flash('Error loading settings page. Please try again.', 'error')
+        return redirect(url_for('dashboard'))
+
+# Forgot Password Route
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip()
+        
+        if not email:
+            flash('Please enter your email address.', 'error')
+            return render_template('auth/forgot_password.html')
+        
+        user = SupabaseDB.get_user_by_email(email)
+        if user:
+            # In a real application, you would generate a reset token and send an email
+            # For now, we'll just show a success message
+            flash('If an account with that email exists, password reset instructions have been sent.', 'success')
+        else:
+            # Don't reveal whether email exists for security
+            flash('If an account with that email exists, password reset instructions have been sent.', 'success')
+        
+        return redirect(url_for('login'))
+    
+    return render_template('auth/forgot_password.html')
+
 # Admin Dashboard Route
 @app.route('/admin/dashboard')
 @login_required
@@ -4271,52 +3749,52 @@ def admin_dashboard():
         response = supabase.table('users').select('*').limit(1).execute()
         app.logger.info("Supabase connection test passed")
         
-        # Admin statistics - safely handle all calculations
+        # Admin statistics
         try:
-            total_users = SupabaseDB.get_users_count() or 0
+            total_users = SupabaseDB.get_users_count()
             app.logger.info(f"Total users: {total_users}")
         except Exception as e:
             app.logger.error(f"Error counting users: {e}")
             total_users = 0
         
         try:
-            total_verified = SupabaseDB.get_verified_users_count() or 0
+            total_verified = SupabaseDB.get_verified_users_count()
             app.logger.info(f"Total verified: {total_verified}")
         except Exception as e:
             app.logger.error(f"Error counting verified users: {e}")
             total_verified = 0
         
         try:
-            total_referrals = SupabaseDB.get_referrals_count() or 0
+            total_referrals = SupabaseDB.get_referrals_count()
             app.logger.info(f"Total referrals: {total_referrals}")
         except Exception as e:
             app.logger.error(f"Error counting referrals: {e}")
             total_referrals = 0
         
         try:
-            total_commission = float(SupabaseDB.get_total_commission() or 0.0)
+            total_commission = SupabaseDB.get_total_commission()
             app.logger.info(f"Total commission: {total_commission}")
         except Exception as e:
             app.logger.error(f"Error calculating total commission: {e}")
-            total_commission = 0.0
+            total_commission = 0
         
         try:
-            total_withdrawn_amount = float(SupabaseDB.get_total_withdrawn() or 0.0)
+            total_withdrawn_amount = SupabaseDB.get_total_withdrawn()
             app.logger.info(f"Total withdrawn: {total_withdrawn_amount}")
         except Exception as e:
             app.logger.error(f"Error calculating total withdrawn: {e}")
-            total_withdrawn_amount = 0.0
+            total_withdrawn_amount = 0
         
         try:
-            total_balance = float(SupabaseDB.get_total_balance() or 0.0)
+            total_balance = SupabaseDB.get_total_balance()
             app.logger.info(f"Total balance: {total_balance}")
         except Exception as e:
             app.logger.error(f"Error calculating total balance: {e}")
-            total_balance = 0.0
+            total_balance = 0
         
         try:
             pending_withdrawals_data = SupabaseDB.get_pending_withdrawals()
-            pending_withdrawals = len(pending_withdrawals_data) if pending_withdrawals_data else 0
+            pending_withdrawals = len(pending_withdrawals_data)
             app.logger.info(f"Pending withdrawals: {pending_withdrawals}")
         except Exception as e:
             app.logger.error(f"Error counting pending withdrawals: {e}")
@@ -4324,7 +3802,7 @@ def admin_dashboard():
 
         try:
             pending_payments_data = SupabaseDB.get_pending_payments()
-            pending_payments = len(pending_payments_data) if pending_payments_data else 0
+            pending_payments = len(pending_payments_data)
             app.logger.info(f"Pending payments: {pending_payments}")
         except Exception as e:
             app.logger.error(f"Error counting pending payments: {e}")
@@ -4332,15 +3810,7 @@ def admin_dashboard():
         
         try:
             recent_users_data = SupabaseDB.get_recent_users(limit=10)
-            # Create User objects with safe date handling
-            recent_users = []
-            for user_data in recent_users_data:
-                try:
-                    user = User(user_data)
-                    recent_users.append(user)
-                except Exception as e:
-                    app.logger.error(f"Error creating User object: {e}")
-                    continue
+            recent_users = [User(user_data) for user_data in recent_users_data]
             app.logger.info(f"Recent users: {len(recent_users)}")
         except Exception as e:
             app.logger.error(f"Error fetching recent users: {e}")
@@ -4350,13 +3820,8 @@ def admin_dashboard():
             # Get pending withdrawal transactions with user info
             pending_withdrawal_transactions = []
             for withdrawal in pending_withdrawals_data:
-                try:
-                    user = SupabaseDB.get_user_by_id(withdrawal['user_id'])
-                    if user:
-                        pending_withdrawal_transactions.append((withdrawal, user))
-                except Exception as e:
-                    app.logger.error(f"Error processing withdrawal transaction: {e}")
-                    continue
+                user = SupabaseDB.get_user_by_id(withdrawal['user_id'])
+                pending_withdrawal_transactions.append((withdrawal, user))
             app.logger.info(f"Pending withdrawal transactions: {len(pending_withdrawal_transactions)}")
         except Exception as e:
             app.logger.error(f"Error fetching pending withdrawal transactions: {e}")
@@ -4366,13 +3831,8 @@ def admin_dashboard():
             # Get pending payment transactions with user info
             pending_payment_transactions = []
             for payment in pending_payments_data:
-                try:
-                    user = SupabaseDB.get_user_by_id(payment['user_id'])
-                    if user:
-                        pending_payment_transactions.append((payment, user))
-                except Exception as e:
-                    app.logger.error(f"Error processing payment transaction: {e}")
-                    continue
+                user = SupabaseDB.get_user_by_id(payment['user_id'])
+                pending_payment_transactions.append((payment, user))
             app.logger.info(f"Pending payment transactions: {len(pending_payment_transactions)}")
         except Exception as e:
             app.logger.error(f"Error fetching pending payment transactions: {e}")
@@ -4380,7 +3840,7 @@ def admin_dashboard():
         
         try:
             recent_activity_data = SupabaseDB.get_recent_activity(limit=10)
-            recent_activity = recent_activity_data if recent_activity_data else []
+            recent_activity = recent_activity_data
             app.logger.info(f"Recent activity: {len(recent_activity)}")
         except Exception as e:
             app.logger.error(f"Error fetching recent activity: {e}")
@@ -4403,8 +3863,7 @@ def admin_dashboard():
                              pending_withdrawal_transactions=pending_withdrawal_transactions,
                              pending_payment_transactions=pending_payment_transactions,
                              recent_activity=recent_activity,
-                             current_time=current_time,
-                             safe_strftime=safe_strftime)  # Pass the helper function
+                             current_time=current_time)
                              
     except Exception as e:
         app.logger.error(f"Error in admin_dashboard: {str(e)}")
@@ -4504,6 +3963,8 @@ def reject_withdrawal(transaction_id):
         return jsonify({'success': False, 'message': str(e)})
 
 @app.route('/admin/users')
+
+@app.route('/admin/users')
 @login_required
 @admin_required
 def admin_users():
@@ -4512,11 +3973,9 @@ def admin_users():
     
     for user_data in users_data:
         user = User(user_data)
-        # Get referral count
         response = supabase.table('users').select('*', count='exact').eq('referred_by', user.referral_code).execute()
         user.referral_count = len(response.data)
         
-        # Get pending withdrawals count
         withdrawals = SupabaseDB.get_transactions_by_user(user.id, transaction_type='withdrawal')
         user.pending_withdrawals = len([w for w in withdrawals if w['status'] == 'pending'])
         
@@ -4539,6 +3998,14 @@ def toggle_user_status(user_id):
     
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
+
+@login_manager.user_loader
+def load_user(user_id):
+    try:
+        return SupabaseDB.get_user_by_id(user_id)
+    except Exception as e:
+        app.logger.error(f"Error loading user {user_id}: {e}")
+        return None
 
 @app.route('/api/admin/stats')
 @login_required
@@ -4597,9 +4064,9 @@ with app.app_context():
                 start_health_monitoring()
                 app.logger.info("✓ Health monitoring started")
         else:
-            app.logger.error("Database initialization failed")
+            app.logger.error("❌ Database initialization failed")
     except Exception as e:
-        app.logger.error(f"Application initialization failed: {e}")
+        app.logger.error(f"❌ Application initialization failed: {e}")
 
 # Production Startup Script
 if __name__ == '__main__':
@@ -4617,10 +4084,10 @@ if __name__ == '__main__':
                     start_health_monitoring()
                     current_app.logger.info("✓ Health monitoring started")
             else:
-                current_app.logger.error(" Database initialization failed - exiting")
+                current_app.logger.error("❌ Database initialization failed - exiting")
                 sys.exit(1)
         
-        print("Starting Referral Ninja Application - PRODUCTION READY")
+        print("🚀 Starting Referral Ninja Application - PRODUCTION READY")
         print("✓ Environment validation: PASSED")
         print("✓ Database schema: VERIFIED")
         print("✓ Security configuration: ENABLED")
