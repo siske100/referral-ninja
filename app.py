@@ -2707,24 +2707,44 @@ def send_sms(phone, message):
     return CelcomSMS.send_sms(phone, message)
 
 # Telegram Functions
-async def send_telegram_message_async(message):
-    try:
-        if (current_app.config['TELEGRAM_BOT_TOKEN'] == 'your_bot_token_here' or 
-            current_app.config['TELEGRAM_CHAT_ID'] == 'your_chat_id_here'):
-            return
-            
-        bot = Bot(token=current_app.config['TELEGRAM_BOT_TOKEN'])
-        async with bot:
-            await bot.send_message(chat_id=current_app.config['TELEGRAM_CHAT_ID'], text=message, parse_mode='HTML')
-    except Exception as e:
-        current_app.logger.error(f"Telegram notification failed: {str(e)}")
+async def send_telegram_message_async(message: str):
+    """Send Telegram message asynchronously and safely."""
+    token = current_app.config.get("TELEGRAM_BOT_TOKEN") or os.environ.get("TELEGRAM_BOT_TOKEN")
+    chat_id = current_app.config.get("TELEGRAM_CHAT_ID") or os.environ.get("TELEGRAM_CHAT_ID")
 
-def send_telegram_notification(message):
+    if not token or not chat_id:
+        current_app.logger.warning("⚠️ Telegram credentials missing — skipping alert")
+        return
+
+    try:
+        safe_message = html.escape(message)  # prevents HTML parse errors
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
+        payload = {"chat_id": chat_id, "text": safe_message, "parse_mode": "HTML"}
+
+        # Run the request in a non-blocking way
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # If Flask is already async-aware
+            await asyncio.to_thread(requests.post, url, json=payload, timeout=10)
+        else:
+            await asyncio.run(asyncio.to_thread(requests.post, url, json=payload, timeout=10))
+
+        current_app.logger.info("✅ Telegram notification sent successfully")
+
+    except Exception as e:
+        current_app.logger.error(f"Telegram notification failed: {html.escape(str(e))}")
+
+
+def send_telegram_notification(message: str):
+    """Wrapper to safely send Telegram messages from sync Flask routes."""
     try:
         asyncio.run(send_telegram_message_async(message))
+    except RuntimeError:
+        # Handles "event loop already running" error
+        asyncio.create_task(send_telegram_message_async(message))
     except Exception as e:
-        current_app.logger.error(f"Failed to send Telegram notification: {str(e)}")
-
+        current_app.logger.error(f"Failed to send Telegram notification: {html.escape(str(e))}")
+        
 def send_withdrawal_notification_to_telegram(user, transaction):
     """Send withdrawal notification to Telegram"""
     try:
