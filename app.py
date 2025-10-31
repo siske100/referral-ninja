@@ -1,5 +1,38 @@
 import os
+import sys
+import time
+import uuid
+import math
+import re
+import html
+import json
+import base64
+import logging
+import asyncio
+import threading
+import secrets
+import string
+import hashlib
+import requests
+from datetime import datetime, timezone, timedelta
+from urllib.parse import urlparse
+from functools import wraps
+from typing import Dict, List, Any, Tuple, Optional
+
+import psutil
+import psycopg2
+import redis
 from dotenv import load_dotenv
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, Blueprint, current_app
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask_bcrypt import Bcrypt
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from werkzeug.security import generate_password_hash, check_password_hash
+from logging.handlers import RotatingFileHandler
+from supabase import create_client
+from telegram import Bot
 
 # Load environment variables from .env file
 load_dotenv()
@@ -13,43 +46,9 @@ print("SUPABASE_KEY loaded:", bool(os.environ.get('SUPABASE_SERVICE_ROLE_KEY')))
 
 # Remove the PostgreSQL connection test entirely - only use Supabase
 
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, Blueprint, current_app
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
-from flask_bcrypt import Bcrypt
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, timezone, timedelta
-import uuid
-import re
-import hashlib
-import os
-import math
-import asyncio
-from telegram import Bot
-import threading
-import html
-import requests
-import secrets
-import string
-from functools import wraps
-import base64
-import json
-import logging
-from logging.handlers import RotatingFileHandler
-from urllib.parse import urlparse
-import time
-import sys
-import psutil
-from typing import Dict, List, Any, Tuple, Optional
-import psycopg2
-
-# Redis imports
-import redis
-
-# Supabase imports
-from supabase import create_client
+# =============================================================================
+# FLASK APP CONFIGURATION
+# =============================================================================
 
 app = Flask(__name__)
 
@@ -124,11 +123,19 @@ else:
     app.config.from_object(Config)
     app.logger.info("Production configuration loaded")
 
+# =============================================================================
+# DATABASE INITIALIZATION
+# =============================================================================
+
 # Initialize Supabase client
 supabase = create_client(app.config.get('SUPABASE_URL'), app.config.get('SUPABASE_KEY'))
 
 # Initialize Redis client
 redis_client = redis.from_url(app.config['REDIS_URL'], decode_responses=True)
+
+# =============================================================================
+# EXTENSIONS INITIALIZATION
+# =============================================================================
 
 # Initialize extensions
 bcrypt = Bcrypt(app)
@@ -156,1082 +163,8 @@ rate_limiter = Limiter(
     )
 )
 
-
 # =============================================================================
-# PRODUCTION DATABASE SCHEMA MANAGER
-# =============================================================================
-def supabase_check(table_name: str, limit: int = 1, retries: int = 3):
-    for attempt in range(1, retries + 1):
-        try:
-            return supabase.table(table_name).select("*").limit(limit).execute()
-        except Exception as e:
-            app.logger.warning(f"Supabase attempt {attempt} failed: {e}")
-            time.sleep(2 ** attempt)
-    raise ConnectionError(f"Supabase {table_name} check failed after {retries} attempts")
-
-class DatabaseHealthMonitor:
-    """Monitor database health and performance"""
-    
-    @staticmethod
-    def get_database_metrics():
-        """Get comprehensive database metrics"""
-        try:
-            metrics = {
-                'timestamp': datetime.now(timezone.utc).isoformat(),
-                'connection_status': 'unknown',
-                'response_time': 0,
-                'table_counts': {},
-                'performance': {}
-            }
-            
-            # Test connection speed
-            start_time = time.time()
-            response = supabase.table('users').select('*', count='exact').limit(1).execute()
-            metrics['response_time'] = round((time.time() - start_time) * 1000, 2)
-            metrics['connection_status'] = 'healthy'
-            
-            # Get table counts
-            tables = ['users', 'transactions', 'referrals', 'security_logs', 'mpesa_callbacks', 'two_factor_codes']
-            for table in tables:
-                try:
-                    response = supabase.table(table).select('*', count='exact').execute()
-                    metrics['table_counts'][table] = len(response.data)
-                except Exception as e:
-                    metrics['table_counts'][table] = f"error: {e}"
-            
-            return metrics
-            
-        except Exception as e:
-            return {
-                'timestamp': datetime.now(timezone.utc).isoformat(),
-                'connection_status': 'unhealthy',
-                'error': str(e)
-            }
-    
-    @staticmethod
-    def log_database_health():
-        """Log database health status"""
-        metrics = DatabaseHealthMonitor.get_database_metrics()
-        
-        if metrics['connection_status'] == 'healthy':
-            app.logger.info(f"Database health: {metrics['response_time']}ms response")
-        else:
-            app.logger.error(f"Database health issue: {metrics.get('error', 'Unknown error')}")
-        
-        return metrics
-
-class DatabaseManager:
-    """Production-grade database schema manager for Supabase (uses direct DB connection)."""
-    
-    def __init__(self, supabase_client):
-        self.supabase = supabase_client
-        self.logger = logging.getLogger(__name__)
-    
-    def _run_sql_via_db_url(self, sql: str, db_url: Optional[str] = None, timeout: int = 30) -> None:
-        """
-        Execute raw SQL using direct Postgres connection via SUPABASE_DB_URL.
-        Raises Exception on failure.
-        """
-        db_url = db_url or os.environ.get('SUPABASE_DB_URL')
-        if not db_url:
-            raise Exception("SUPABASE_DB_URL not set; cannot execute raw SQL via direct DB connection.")
-        
-        # Use autocommit for DDL/DDL-like statements
-        conn = psycopg2.connect(db_url)
-        conn.autocommit = True
-        try:
-            with conn.cursor() as cur:
-                cur.execute(sql)
-        finally:
-            conn.close()
-    
-    def execute_sql(self, sql: str, max_retries: int = 3) -> bool:
-        """Execute SQL with proper error handling and retries using direct DB connection."""
-        for attempt in range(max_retries):
-            try:
-                self._run_sql_via_db_url(sql)
-                self.logger.info(f"SQL executed successfully (attempt {attempt + 1})")
-                return True
-                
-            except Exception as e:
-                err = str(e)
-                # Avoid emoji in logs to prevent Windows console encoding errors
-                self.logger.warning(f"SQL execution attempt {attempt + 1} failed: {err}")
-                
-                if "already exists" in err.lower():
-                    self.logger.info("Table/index already exists (non-fatal)")
-                    return True
-                
-                if attempt < max_retries - 1:
-                    wait = 2 ** attempt
-                    self.logger.info(f"Retrying SQL execution in {wait} seconds...")
-                    time.sleep(wait)
-                else:
-                    self.logger.error(f"All SQL execution attempts failed: {err}")
-                    return False
-        return False
-    
-    def create_tables(self) -> bool:
-        """Create all required tables with proper constraints"""
-        tables = self._get_table_definitions()
-        
-        for table_name, sql in tables:
-            self.logger.info(f"Creating table: {table_name}")
-            if not self.execute_sql(sql):
-                self.logger.error(f"Failed to create table: {table_name}")
-                return False
-        
-        self.logger.info("All tables created successfully")
-        return True
-    
-    def create_indexes(self) -> bool:
-        """Create performance indexes"""
-        indexes = self._get_index_definitions()
-        
-        for index_name, sql in indexes:
-            self.logger.info(f"Creating index: {index_name}")
-            if not self.execute_sql(sql):
-                self.logger.warning(f"Index creation failed (may already exist): {index_name}")
-        
-        self.logger.info("All indexes created/verified")
-        return True
-    
-    def _get_table_definitions(self) -> List[Tuple[str, str]]:
-        """Return all table creation SQL with proper error handling"""
-        return [
-            ("users", """
-            CREATE TABLE IF NOT EXISTS users (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                username VARCHAR(50) UNIQUE NOT NULL,
-                email VARCHAR(255) UNIQUE,
-                phone VARCHAR(20) UNIQUE NOT NULL,
-                name VARCHAR(255) NOT NULL,
-                password_hash TEXT NOT NULL,
-                balance DECIMAL(10,2) DEFAULT 0.0 CHECK (balance >= 0),
-                total_earned DECIMAL(10,2) DEFAULT 0.0 CHECK (total_earned >= 0),
-                total_withdrawn DECIMAL(10,2) DEFAULT 0.0 CHECK (total_withdrawn >= 0),
-                referral_code VARCHAR(20) UNIQUE,
-                referred_by VARCHAR(20),
-                referral_balance DECIMAL(10,2) DEFAULT 0.0 CHECK (referral_balance >= 0),
-                referral_count INTEGER DEFAULT 0 CHECK (referral_count >= 0),
-                is_admin BOOLEAN DEFAULT FALSE,
-                is_verified BOOLEAN DEFAULT FALSE,
-                is_active BOOLEAN DEFAULT TRUE,
-                created_at TIMESTAMPTZ DEFAULT NOW(),
-                last_login TIMESTAMPTZ,
-                login_attempts INTEGER DEFAULT 0 CHECK (login_attempts >= 0),
-                locked_until TIMESTAMPTZ,
-                two_factor_enabled BOOLEAN DEFAULT FALSE,
-                user_rank VARCHAR(20) DEFAULT 'Bronze',
-                total_commission DECIMAL(10,2) DEFAULT 0.0 CHECK (total_commission >= 0),
-                referral_source VARCHAR(50) DEFAULT 'direct',
-                reset_token TEXT,
-                reset_token_expires TIMESTAMPTZ,
-                -- Additional constraints
-                CONSTRAINT valid_phone CHECK (phone ~ '^254[17]\\d{8}$'),
-                CONSTRAINT valid_email CHECK (email IS NULL OR email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$'),
-                CONSTRAINT chk_balance_limits CHECK (balance <= 1000000),
-                CONSTRAINT chk_username_length CHECK (LENGTH(username) >= 3)
-            );
-            """),
-            
-            ("transactions", """
-            CREATE TABLE IF NOT EXISTS transactions (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                amount DECIMAL(10,2) NOT NULL CHECK (ABS(amount) <= 50000),
-                transaction_type VARCHAR(50) NOT NULL CHECK (transaction_type IN ('withdrawal', 'registration_fee', 'referral_bonus')),
-                status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed', 'rejected', 'Under Review')),
-                phone_number VARCHAR(20),
-                mpesa_code VARCHAR(100),
-                checkout_request_id VARCHAR(100),
-                merchant_request_id VARCHAR(100),
-                b2c_conversation_id VARCHAR(100),
-                b2c_originator_conversation_id VARCHAR(100),
-                description TEXT,
-                ip_address INET,
-                user_agent TEXT,
-                created_at TIMESTAMPTZ DEFAULT NOW(),
-                processed_at TIMESTAMPTZ,
-                -- Constraints
-                CONSTRAINT chk_withdrawal_amount CHECK (
-                    transaction_type != 'withdrawal' OR 
-                    (amount <= 0 AND ABS(amount) >= 400 AND ABS(amount) <= 5000)
-                ),
-                CONSTRAINT chk_registration_fee CHECK (
-                    transaction_type != 'registration_fee' OR 
-                    (amount = 200)
-                )
-            );
-            """),
-            
-            ("referrals", """
-            CREATE TABLE IF NOT EXISTS referrals (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                referrer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                referred_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                referral_code_used VARCHAR(20) NOT NULL,
-                commission_earned DECIMAL(10,2) DEFAULT 0.0 CHECK (commission_earned >= 0),
-                status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
-                created_at TIMESTAMPTZ DEFAULT NOW(),
-                -- Ensure unique referral relationships
-                CONSTRAINT unique_referral_relationship UNIQUE (referrer_id, referred_id)
-            );
-            """),
-            
-            ("security_logs", """
-            CREATE TABLE IF NOT EXISTS security_logs (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-                event_type VARCHAR(100) NOT NULL,
-                ip_address INET,
-                user_agent TEXT,
-                details TEXT,
-                created_at TIMESTAMPTZ DEFAULT NOW(),
-                -- Index for faster querying
-                CONSTRAINT valid_event_type CHECK (event_type IN (
-                    'LOGIN_SUCCESS', 'LOGIN_FAILED', 'REGISTRATION', 'LOGOUT',
-                    'WITHDRAWAL_INITIATED', 'WITHDRAWAL_COMPLETED', 'WITHDRAWAL_FAILED',
-                    'SUSPICIOUS_WITHDRAWAL', '2FA_SUCCESS', '2FA_FAILED',
-                    'PASSWORD_CHANGE', 'PROFILE_UPDATE', 'SMS_SENT_SUCCESS',
-                    'SMS_SENT_FAILED', 'UNAUTHORIZED_ACCESS', 'ADMIN_ACTION'
-                ))
-            );
-            """),
-            
-            ("mpesa_callbacks", """
-            CREATE TABLE IF NOT EXISTS mpesa_callbacks (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                payload JSONB NOT NULL,
-                ip_address INET,
-                callback_type VARCHAR(50) CHECK (callback_type IN ('STK', 'B2C', 'C2B')),
-                processed BOOLEAN DEFAULT FALSE,
-                processed_at TIMESTAMPTZ,
-                error_message TEXT,
-                created_at TIMESTAMPTZ DEFAULT NOW()
-            );
-            """),
-            
-            ("two_factor_codes", """
-            CREATE TABLE IF NOT EXISTS two_factor_codes (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                code VARCHAR(10) NOT NULL,
-                purpose VARCHAR(50) NOT NULL CHECK (purpose IN ('LOGIN', 'WITHDRAWAL', 'PASSWORD_RESET')),
-                expires_at TIMESTAMPTZ NOT NULL,
-                is_used BOOLEAN DEFAULT FALSE,
-                used_at TIMESTAMPTZ,
-                created_at TIMESTAMPTZ DEFAULT NOW(),
-                -- Ensure codes are unique per user and purpose when not used
-                CONSTRAINT unique_active_code UNIQUE (user_id, code, purpose) 
-                WHERE (is_used = FALSE AND expires_at > NOW())
-            );
-            """)
-        ]
-    
-    def _get_index_definitions(self) -> List[Tuple[str, str]]:
-        """Return all index creation SQL"""
-        return [
-            # Users table indexes
-            ("idx_users_phone", "CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);"),
-            ("idx_users_email", "CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);"),
-            ("idx_users_referral_code", "CREATE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code);"),
-            ("idx_users_referred_by", "CREATE INDEX IF NOT EXISTS idx_users_referred_by ON users(referred_by);"),
-            ("idx_users_created_at", "CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at);"),
-            ("idx_users_is_verified", "CREATE INDEX IF NOT EXISTS idx_users_is_verified ON users(is_verified) WHERE is_verified = true;"),
-            
-            # Transactions table indexes
-            ("idx_transactions_user_id", "CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);"),
-            ("idx_transactions_status", "CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status);"),
-            ("idx_transactions_created_at", "CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at);"),
-            ("idx_transactions_type_status", "CREATE INDEX IF NOT EXISTS idx_transactions_type_status ON transactions(transaction_type, status);"),
-            ("idx_transactions_mpesa_code", "CREATE INDEX IF NOT EXISTS idx_transactions_mpesa_code ON transactions(mpesa_code) WHERE mpesa_code IS NOT NULL;"),
-            
-            # Referrals table indexes
-            ("idx_referrals_referrer_id", "CREATE INDEX IF NOT EXISTS idx_referrals_referrer_id ON referrals(referrer_id);"),
-            ("idx_referrals_referred_id", "CREATE INDEX IF NOT EXISTS idx_referrals_referred_id ON referrals(referred_id);"),
-            ("idx_referrals_created_at", "CREATE INDEX IF NOT EXISTS idx_referrals_created_at ON referrals(created_at);"),
-            
-            # Security logs indexes
-            ("idx_security_logs_user_id", "CREATE INDEX IF NOT EXISTS idx_security_logs_user_id ON security_logs(user_id);"),
-            ("idx_security_logs_created_at", "CREATE INDEX IF NOT EXISTS idx_security_logs_created_at ON security_logs(created_at);"),
-            ("idx_security_logs_event_type", "CREATE INDEX IF NOT EXISTS idx_security_logs_event_type ON security_logs(event_type);"),
-            
-            # Two-factor codes indexes
-            ("idx_two_factor_codes_user_id", "CREATE INDEX IF NOT EXISTS idx_two_factor_codes_user_id ON two_factor_codes(user_id);"),
-            ("idx_two_factor_codes_code", "CREATE INDEX IF NOT EXISTS idx_two_factor_codes_code ON two_factor_codes(code);"),
-            ("idx_two_factor_codes_expires", "CREATE INDEX IF NOT EXISTS idx_two_factor_codes_expires ON two_factor_codes(expires_at) WHERE is_used = false;"),
-            
-            # M-Pesa callbacks indexes
-            ("idx_mpesa_callbacks_processed", "CREATE INDEX IF NOT EXISTS idx_mpesa_callbacks_processed ON mpesa_callbacks(processed) WHERE processed = false;"),
-            ("idx_mpesa_callbacks_created_at", "CREATE INDEX IF NOT EXISTS idx_mpesa_callbacks_created_at ON mpesa_callbacks(created_at);")
-        ]
-    
-    def verify_schema(self) -> dict:
-        """Verify all tables and indexes exist and are accessible"""
-        verification_results = {}
-        tables_to_check = ['users', 'transactions', 'referrals', 'security_logs', 'mpesa_callbacks', 'two_factor_codes']
-        
-        for table in tables_to_check:
-            try:
-                # Try to select one row from each table via Supabase client
-                response = self.supabase.table(table).select('*', count='exact').limit(1).execute()
-                verification_results[table] = {
-                    'exists': True,
-                    'accessible': True,
-                    'row_count': len(response.data) if hasattr(response, 'data') else 0
-                }
-            except Exception as e:
-                verification_results[table] = {
-                    'exists': False,
-                    'accessible': False,
-                    'error': str(e)
-                }
-        
-        return verification_results
-    
-    def initialize_database(self) -> bool:
-        """Complete database initialization process"""
-        self.logger.info("Starting database initialization...")
-        
-        # Step 1: Create tables
-        if not self.create_tables():
-            self.logger.error("Table creation failed")
-            return False
-        
-        # Step 2: Create indexes
-        if not self.create_indexes():
-            self.logger.error("Index creation failed")
-            return False
-        
-        # Step 3: Verify schema
-        verification = self.verify_schema()
-        failed_tables = [table for table, result in verification.items() if not result['exists']]
-        
-        if failed_tables:
-            self.logger.error(f"Schema verification failed for tables: {failed_tables}")
-            return False
-        
-        self.logger.info("Database initialization completed successfully")
-        return True
-
-def create_admin_user_if_missing():
-    """Create admin user only if it doesn't exist"""
-    try:
-        admin_user = SupabaseDB.get_user_by_username('admin')
-        if not admin_user:
-            print("👨‍💼 Creating admin user...")
-            
-            admin_data = {
-                'id': str(uuid.uuid4()),
-                'username': 'admin',
-                'email': os.environ.get('ADMIN_EMAIL', 'admin@referralninja.co.ke'),
-                'phone': os.environ.get('ADMIN_PHONE', '254712345678'),
-                'name': 'System Administrator',
-                'is_admin': True,
-                'is_verified': True,
-                'is_active': True,
-                'created_at': datetime.now(timezone.utc).isoformat()
-            }
-            
-            admin = User(admin_data)
-            admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')  # Change in production!
-            admin.set_password(admin_password)
-            admin.generate_phone_linked_referral_code()
-            
-            admin_dict = admin.to_dict()
-            admin_dict.pop('password_hash', None)
-            admin_dict['password_hash'] = admin.password_hash
-            
-            created_admin = SupabaseDB.create_user(admin_dict)
-            if created_admin:
-                print("✅ Admin user created successfully")
-                print(f"   Username: admin")
-                print(f"   Password: {admin_password}")
-                print("   ⚠️  CHANGE THE PASSWORD IMMEDIATELY!")
-            else:
-                print("❌ Failed to create admin user")
-        else:
-            print("✅ Admin user already exists")
-            
-    except Exception as e:
-        print(f"❌ Admin user creation error: {e}")
-
-# =============================================================================
-# COMPREHENSIVE HEALTH MONITORING SYSTEM
-# =============================================================================
-
-class DatabaseHealthMonitor:
-    """Monitor database health and performance"""
-    
-    @staticmethod
-    def get_database_metrics():
-        """Get comprehensive database metrics"""
-        try:
-            metrics = {
-                'timestamp': datetime.now(timezone.utc).isoformat(),
-                'connection_status': 'unknown',
-                'response_time': 0,
-                'table_counts': {},
-                'performance': {}
-            }
-            
-            # Test connection speed
-            start_time = time.time()
-            response = supabase.table('users').select('*', count='exact').limit(1).execute()
-            metrics['response_time'] = round((time.time() - start_time) * 1000, 2)
-            metrics['connection_status'] = 'healthy'
-            
-            # Get table counts
-            tables = ['users', 'transactions', 'referrals', 'security_logs', 'mpesa_callbacks', 'two_factor_codes']
-            for table in tables:
-                try:
-                    response = supabase.table(table).select('*', count='exact').execute()
-                    metrics['table_counts'][table] = len(response.data)
-                except Exception as e:
-                    metrics['table_counts'][table] = f"error: {e}"
-            
-            return metrics
-            
-        except Exception as e:
-            return {
-                'timestamp': datetime.now(timezone.utc).isoformat(),
-                'connection_status': 'unhealthy',
-                'error': str(e)
-            }
-    
-    @staticmethod
-    def log_database_health():
-        """Log database health status"""
-        metrics = DatabaseHealthMonitor.get_database_metrics()
-        
-        if metrics['connection_status'] == 'healthy':
-            app.logger.info(f"Database health: {metrics['response_time']}ms response")
-        else:
-            app.logger.error(f"Database health issue: {metrics.get('error', 'Unknown error')}")
-        
-        return metrics
-
-class DatabaseManager:
-    """Production-grade database schema manager for Supabase only."""
-    
-    def __init__(self, supabase_client):
-        self.supabase = supabase_client
-        self.logger = logging.getLogger(__name__)
-    
-    def execute_sql_via_supabase(self, sql: str) -> bool:
-        """Execute SQL via Supabase - for tables that don't exist yet"""
-        try:
-            # This is a simplified approach - in production you might use Supabase's SQL API
-            # or run migrations separately
-            self.logger.warning(f"SQL execution not available via Supabase client: {sql[:100]}...")
-            return True
-        except Exception as e:
-            self.logger.error(f"SQL execution failed: {e}")
-            return False
-    
-    def create_tables(self) -> bool:
-        """Create all required tables - This should be done via Supabase dashboard or migrations"""
-        self.logger.info("Table creation should be done via Supabase dashboard or migrations")
-        return True
-    
-    def create_indexes(self) -> bool:
-        """Create performance indexes - This should be done via Supabase dashboard"""
-        self.logger.info("Index creation should be done via Supabase dashboard")
-        return True
-    
-    def verify_schema(self) -> dict:
-        """Verify all tables and indexes exist and are accessible"""
-        verification_results = {}
-        tables_to_check = ['users', 'transactions', 'referrals', 'security_logs', 'mpesa_callbacks', 'two_factor_codes']
-        
-        for table in tables_to_check:
-            try:
-                # Try to select one row from each table via Supabase client
-                response = self.supabase.table(table).select('*', count='exact').limit(1).execute()
-                verification_results[table] = {
-                    'exists': True,
-                    'accessible': True,
-                    'row_count': len(response.data) if hasattr(response, 'data') else 0
-                }
-            except Exception as e:
-                verification_results[table] = {
-                    'exists': False,
-                    'accessible': False,
-                    'error': str(e)
-                }
-        
-        return verification_results
-    
-    def initialize_database(self) -> bool:
-        """Complete database initialization process"""
-        self.logger.info("Starting database initialization...")
-        
-        # Verify schema
-        verification = self.verify_schema()
-        failed_tables = [table for table, result in verification.items() if not result['exists']]
-        
-        if failed_tables:
-            self.logger.error(f"Schema verification failed for tables: {failed_tables}")
-            return False
-        
-        self.logger.info("Database initialization completed successfully")
-        return True
-
-# Remove the _run_sql_via_db_url method and all psycopg2 references
-
-def create_admin_user_if_missing():
-    """Create admin user only if it doesn't exist"""
-    try:
-        admin_user = SupabaseDB.get_user_by_username('admin')
-        if not admin_user:
-            print("👨‍💼 Creating admin user...")
-            
-            admin_data = {
-                'id': str(uuid.uuid4()),
-                'username': 'admin',
-                'email': os.environ.get('ADMIN_EMAIL', 'admin@referralninja.co.ke'),
-                'phone': os.environ.get('ADMIN_PHONE', '254712345678'),
-                'name': 'System Administrator',
-                'is_admin': True,
-                'is_verified': True,
-                'is_active': True,
-                'created_at': datetime.now(timezone.utc).isoformat()
-            }
-            
-            admin = User(admin_data)
-            admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')  # Change in production!
-            admin.set_password(admin_password)
-            admin.generate_phone_linked_referral_code()
-            
-            admin_dict = admin.to_dict()
-            admin_dict.pop('password_hash', None)
-            admin_dict['password_hash'] = admin.password_hash
-            
-            created_admin = SupabaseDB.create_user(admin_dict)
-            if created_admin:
-                print("✅ Admin user created successfully")
-                print(f"   Username: admin")
-                print(f"   Password: {admin_password}")
-                print("   ⚠️  CHANGE THE PASSWORD IMMEDIATELY!")
-            else:
-                print("❌ Failed to create admin user")
-        else:
-            print("✅ Admin user already exists")
-            
-    except Exception as e:
-        print(f"❌ Admin user creation error: {e}")
-
-# =============================================================================
-# COMPREHENSIVE HEALTH MONITORING SYSTEM (with Redis)
-# =============================================================================
-
-class HealthMonitor:
-    """Comprehensive health monitoring system for production"""
-    
-    def __init__(self, supabase_client, redis_client, app_config):
-        self.supabase = supabase_client
-        self.redis = redis_client
-        self.config = app_config
-        self.logger = logging.getLogger(__name__)
-    
-    def comprehensive_health_check(self) -> Dict[str, Any]:
-        """Run comprehensive health checks for all critical systems"""
-        health_status = {
-            'status': 'healthy',
-            'timestamp': datetime.now(timezone.utc).isoformat(),
-            'version': '1.0.0',
-            'components': {}
-        }
-        
-        # Critical components (if any fail, overall status is unhealthy)
-        critical_components = {
-            'database': self._check_database_health(),
-            'redis': self._check_redis_health(),
-            'mpesa_api': self._check_mpesa_health(),
-            'celcom_sms': self._check_celcom_sms_health(),
-        }
-        
-        # Important components (failures affect functionality but not overall status)
-        important_components = {
-            'system_resources': self._check_system_resources(),
-            'telegram_bot': self._check_telegram_health(),
-        }
-        
-        # Operational metrics
-        operational_metrics = {
-            'pending_withdrawals': self._get_pending_withdrawals_count(),
-            'pending_payments': self._get_pending_payments_count(),
-            'recent_errors': self._get_recent_errors(),
-            'uptime': self._get_system_uptime(),
-        }
-        
-        health_status['components']['critical'] = critical_components
-        health_status['components']['important'] = important_components
-        health_status['components']['metrics'] = operational_metrics
-        
-        # Determine overall status
-        if any(comp['status'] == 'unhealthy' for comp in critical_components.values()):
-            health_status['status'] = 'unhealthy'
-        elif any(comp['status'] == 'degraded' for comp in critical_components.values()):
-            health_status['status'] = 'degraded'
-        elif any(comp['status'] == 'unhealthy' for comp in important_components.values()):
-            health_status['status'] = 'degraded'
-        
-        return health_status
-    
-    def _check_database_health(self) -> Dict[str, Any]:
-        """Check database connection and performance"""
-        try:
-            start_time = time.time()
-            
-            # Test basic connection
-            response = self.supabase.table('users').select('*', count='exact').limit(1).execute()
-            connection_time = time.time() - start_time
-            
-            # Test write operation
-            test_data = {
-                'event_type': 'HEALTH_CHECK',
-                'details': 'Database health check',
-                'created_at': datetime.now(timezone.utc).isoformat()
-            }
-            write_response = self.supabase.table('security_logs').insert(test_data).execute()
-            
-            status = 'healthy'
-            if connection_time > 2.0:  # More than 2 seconds is slow
-                status = 'degraded'
-            
-            return {
-                'status': status,
-                'response_time_ms': round(connection_time * 1000, 2),
-                'connection': True,
-                'read_operation': True,
-                'write_operation': bool(write_response.data),
-                'details': f'Database connection OK ({connection_time:.2f}s)'
-            }
-            
-        except Exception as e:
-            self.logger.error(f"Database health check failed: {e}")
-            return {
-                'status': 'unhealthy',
-                'response_time_ms': None,
-                'connection': False,
-                'read_operation': False,
-                'write_operation': False,
-                'error': str(e),
-                'details': 'Database connection failed'
-            }
-    
-    def _check_redis_health(self) -> Dict[str, Any]:
-        """Check Redis connection health"""
-        try:
-            start_time = time.time()
-            
-            # Test basic connection
-            self.redis.ping()
-            connection_time = time.time() - start_time
-            
-            # Test read/write operations
-            test_key = f"health_check_{int(time.time())}"
-            test_value = "health_check_value"
-            
-            self.redis.set(test_key, test_value, ex=10)  # Set with 10s expiry
-            retrieved_value = self.redis.get(test_key)
-            
-            status = 'healthy'
-            if connection_time > 0.1:  # More than 100ms is slow for Redis
-                status = 'degraded'
-            
-            return {
-                'status': status,
-                'response_time_ms': round(connection_time * 1000, 2),
-                'connection': True,
-                'read_operation': retrieved_value == test_value,
-                'write_operation': True,
-                'details': f'Redis connection OK ({connection_time:.3f}s)'
-            }
-            
-        except Exception as e:
-            self.logger.error(f"Redis health check failed: {e}")
-            return {
-                'status': 'unhealthy',
-                'response_time_ms': None,
-                'connection': False,
-                'read_operation': False,
-                'write_operation': False,
-                'error': str(e),
-                'details': 'Redis connection failed'
-            }
-    
-    def _check_mpesa_health(self) -> Dict[str, Any]:
-        """Check M-Pesa API availability"""
-        try:
-            start_time = time.time()
-            
-            # Get access token (this tests the API)
-            access_token = get_mpesa_access_token()
-            response_time = time.time() - start_time
-            
-            status = 'healthy'
-            if response_time > 5.0:  # M-Pesa is slow if >5s
-                status = 'degraded'
-            
-            return {
-                'status': status,
-                'response_time_ms': round(response_time * 1000, 2),
-                'access_token_obtained': bool(access_token),
-                'environment': self.config.get('MPESA_ENVIRONMENT', 'unknown'),
-                'details': f'M-Pesa API accessible ({response_time:.2f}s)'
-            }
-            
-        except Exception as e:
-            self.logger.error(f"M-Pesa health check failed: {e}")
-            return {
-                'status': 'unhealthy',
-                'response_time_ms': None,
-                'access_token_obtained': False,
-                'environment': self.config.get('MPESA_ENVIRONMENT', 'unknown'),
-                'error': str(e),
-                'details': 'M-Pesa API unavailable'
-            }
-
-    # ... rest of the HealthMonitor methods remain the same (keeping the existing _check_celcom_sms_health, etc.)
-    
-    def _check_celcom_sms_health(self) -> Dict[str, Any]:
-        """Check Celcom SMS API health"""
-        try:
-            # Test configuration without sending actual SMS
-            api_key = self.config.get('CELCOM_SMS_API_KEY')
-            sender_id = self.config.get('CELCOM_SENDER_ID')
-            
-            if not api_key or api_key == 'your_celcom_api_key':
-                return {
-                    'status': 'unhealthy',
-                    'configured': False,
-                    'details': 'Celcom SMS API key not configured'
-                }
-            
-            # Make a test request to check API key validity
-            headers = {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            }
-            
-            test_payload = {
-                'api_key': api_key,
-                'sender_id': sender_id,
-                'phone': '254700000000',  # Test number
-                'message': 'HEALTH CHECK - IGNORE'
-            }
-            
-            # Don't actually send, just check if credentials are valid
-            # by making a lightweight request
-            response = requests.post(
-                self.config.get('CELCOM_SMS_URL', 'https://api.celcomafrica.com/sms/send'),
-                json=test_payload,
-                headers=headers,
-                timeout=10
-            )
-            
-            # Even if it fails due to invalid number, if we get a response
-            # the API is working
-            if response.status_code in [200, 400]:  # 400 might be due to test number
-                return {
-                    'status': 'healthy',
-                    'configured': True,
-                    'api_accessible': True,
-                    'details': 'Celcom SMS API is accessible'
-                }
-            else:
-                return {
-                    'status': 'degraded',
-                    'configured': True,
-                    'api_accessible': False,
-                    'http_status': response.status_code,
-                    'details': f'Celcom SMS API returned HTTP {response.status_code}'
-                }
-                
-        except requests.exceptions.Timeout:
-            return {
-                'status': 'unhealthy',
-                'configured': True,
-                'api_accessible': False,
-                'error': 'Timeout',
-                'details': 'Celcom SMS API timeout'
-            }
-        except Exception as e:
-            self.logger.error(f"Celcom SMS health check failed: {e}")
-            return {
-                'status': 'unhealthy',
-                'configured': bool(api_key and api_key != 'your_celcom_api_key'),
-                'api_accessible': False,
-                'error': str(e),
-                'details': 'Celcom SMS API check failed'
-            }
-    
-    def _check_system_resources(self) -> Dict[str, Any]:
-        """Check system resource utilization"""
-        try:
-            cpu_percent = psutil.cpu_percent(interval=1)
-            memory = psutil.virtual_memory()
-            disk = psutil.disk_usage('/')
-            
-            status = 'healthy'
-            warnings = []
-            
-            if cpu_percent > 80:
-                status = 'degraded'
-                warnings.append(f'High CPU usage: {cpu_percent}%')
-            
-            if memory.percent > 85:
-                status = 'degraded'
-                warnings.append(f'High memory usage: {memory.percent}%')
-            
-            if disk.percent > 90:
-                status = 'degraded'
-                warnings.append(f'Low disk space: {disk.percent}% used')
-            
-            return {
-                'status': status,
-                'cpu_percent': cpu_percent,
-                'memory_percent': memory.percent,
-                'disk_percent': disk.percent,
-                'warnings': warnings,
-                'details': f'CPU: {cpu_percent}%, Memory: {memory.percent}%, Disk: {disk.percent}%'
-            }
-            
-        except Exception as e:
-            self.logger.error(f"System resources check failed: {e}")
-            return {
-                'status': 'unknown',
-                'error': str(e),
-                'details': 'System resource check failed'
-            }
-    
-    def _check_redis_health(self) -> Dict[str, Any]:
-        """Check Redis cache health (if used)"""
-        # Placeholder for Redis health check
-        return {
-            'status': 'unknown',
-            'details': 'Redis not configured'
-        }
-    
-    def _check_telegram_health(self) -> Dict[str, Any]:
-        """Check Telegram bot health"""
-        bot_token = self.config.get('TELEGRAM_BOT_TOKEN')
-        chat_id = self.config.get('TELEGRAM_CHAT_ID')
-        
-        if not bot_token or bot_token == 'your_bot_token_here':
-            return {
-                'status': 'unknown',
-                'configured': False,
-                'details': 'Telegram bot not configured'
-            }
-        
-        return {
-            'status': 'healthy',
-            'configured': True,
-            'details': 'Telegram bot configured'
-        }
-    
-    def _get_pending_withdrawals_count(self) -> Dict[str, Any]:
-        """Get pending withdrawals metrics"""
-        try:
-            pending_withdrawals = SupabaseDB.get_pending_withdrawals()
-            count = len(pending_withdrawals)
-            total_amount = sum(abs(t['amount']) for t in pending_withdrawals)
-            
-            status = 'normal'
-            if count > 20:
-                status = 'high'
-            elif count > 50:
-                status = 'critical'
-            
-            return {
-                'status': status,
-                'count': count,
-                'total_amount': total_amount,
-                'details': f'{count} pending withdrawals (KSH {total_amount:,.2f})'
-            }
-            
-        except Exception as e:
-            return {
-                'status': 'unknown',
-                'error': str(e),
-                'details': 'Failed to get pending withdrawals'
-            }
-    
-    def _get_pending_payments_count(self) -> Dict[str, Any]:
-        """Get pending payments metrics"""
-        try:
-            pending_payments = SupabaseDB.get_pending_payments()
-            count = len(pending_payments)
-            
-            return {
-                'count': count,
-                'details': f'{count} pending registration payments'
-            }
-            
-        except Exception as e:
-            return {
-                'count': 0,
-                'error': str(e),
-                'details': 'Failed to get pending payments'
-            }
-    
-    def _get_recent_errors(self) -> Dict[str, Any]:
-        """Get recent error metrics"""
-        try:
-            # Get errors from security logs in last hour
-            one_hour_ago = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
-            
-            response = self.supabase.table('security_logs') \
-                .select('*', count='exact') \
-                .like('event_type', '%FAILED%') \
-                .gte('created_at', one_hour_ago) \
-                .execute()
-            
-            error_count = len(response.data)
-            
-            return {
-                'count': error_count,
-                'period': '1h',
-                'details': f'{error_count} errors in last hour'
-            }
-            
-        except Exception as e:
-            return {
-                'count': 0,
-                'error': str(e),
-                'details': 'Failed to get error count'
-            }
-    
-    def _get_system_uptime(self) -> Dict[str, Any]:
-        """Get system uptime information"""
-        try:
-            uptime_seconds = time.time() - psutil.boot_time()
-            uptime_hours = uptime_seconds / 3600
-            
-            return {
-                'hours': round(uptime_hours, 2),
-                'details': f'System uptime: {uptime_hours:.2f} hours'
-            }
-            
-        except Exception as e:
-            return {
-                'hours': 0,
-                'error': str(e),
-                'details': 'Failed to get uptime'
-            }
-
-# Admin required decorator
-def admin_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or not current_user.is_admin:
-            flash('Access denied. Admin privileges required.', 'error')
-            return redirect(url_for('dashboard'))
-        return f(*args, **kwargs)
-    return decorated_function
-
-@app.context_processor
-def utility_processor():
-    def safe_strftime(dt, fmt="%b %d, %Y %I:%M %p"):
-        try:
-            return dt.strftime(fmt) if dt else ""
-        except Exception:
-            return ""
-    return dict(safe_strftime=safe_strftime)
-
-# Health Check Routes
-@app.route('/health')
-def health_check():
-    """Basic health check for load balancers"""
-    try:
-        response = supabase_check('users', limit=1)
-        return jsonify({
-            'status': 'healthy',
-            'timestamp': datetime.now(timezone.utc).isoformat(),
-            'database': 'connected',
-            'version': '1.0.0'
-        })
-    except Exception as e:
-        return jsonify({
-            'status': 'unhealthy',
-            'timestamp': datetime.now(timezone.utc).isoformat(),
-            'database': 'error',
-            'error': str(e)
-        }), 503
-
-@app.route('/health/detailed')
-@login_required
-@admin_required
-def detailed_health_check():
-    """Detailed health check for administrators"""
-    health_monitor = HealthMonitor(supabase, redis_client, app.config)  # Add redis_client
-    health_status = health_monitor.comprehensive_health_check()
-    
-    return jsonify(health_status)
-
-@app.route('/health/readiness')
-def readiness_check():
-    try:
-        supabase_check('users', limit=1)
-        return jsonify({'status': 'ready', 'timestamp': datetime.now(timezone.utc).isoformat()})
-    except Exception as e:
-        return jsonify({'status': 'not_ready', 'timestamp': datetime.now(timezone.utc).isoformat(), 'error': str(e)}), 503
-
-@app.route('/health/liveness')
-def liveness_check():
-    return jsonify({'status': 'alive', 'timestamp': datetime.now(timezone.utc).isoformat()})
-
-# Health monitoring background task
-def start_health_monitoring():
-    """Start background health monitoring safely in a thread."""
-    
-    def monitor_health():
-        
-        # Make sure we have Flask context in this thread
-        with app.app_context():
-            health_monitor = HealthMonitor(supabase, redis_client, app.config)  # Add redis_client
-
-            while True:
-                try:
-                    health_status = health_monitor.comprehensive_health_check()
-
-                    if health_status['status'] != 'healthy':
-                        current_app.logger.warning(
-                            f"System health degraded: {health_status['status']}"
-                        )
-
-                    # Alert on critical issues safely
-                    if health_status['status'] == 'unhealthy':
-                        _alert_on_critical_health_issue(health_status)
-
-                except Exception as e:
-                    safe_error = html.escape(str(e))
-                    current_app.logger.error(f"Health monitoring error: {safe_error}")
-
-                # Run every 5 minutes
-                time.sleep(300)
-
-    def _alert_on_critical_health_issue(health_status):
-        critical_issues = []
-        for component, status in health_status['components']['critical'].items():
-            if status['status'] == 'unhealthy':
-                critical_issues.append(f"{component}: {status.get('error', 'Unknown error')}")
-
-        if critical_issues:
-            message = "🚨 CRITICAL HEALTH ALERT:\n" + "\n".join([html.escape(i) for i in critical_issues])
-            # This is now safe in a thread
-            send_telegram_notification(message)
-
-    # Start monitoring in a daemon thread
-    thread = threading.Thread(target=monitor_health, daemon=True)
-    thread.start()
-            
-# =============================================================================
-# DATABASE MODELS AND UTILITIES
+# DATABASE MODELS
 # =============================================================================
 
 # Database Models as Python Classes (for type hinting and structure)
@@ -1348,8 +281,62 @@ class User(UserMixin):
             'reset_token_expires': self.reset_token_expires
         }
 
+# =============================================================================
+# DATABASE UTILITIES
+# =============================================================================
+
 # Enhanced SupabaseDB class with error handling
 class SupabaseDB:
+    @staticmethod
+    def create_job(job_data):
+        try:
+            response = supabase.table('jobs').insert(job_data).execute()
+            if response.data:
+                return response.data[0]
+            return None
+        except Exception as e:
+            return SupabaseDB.handle_db_error("create_job", e, False)
+
+    @staticmethod
+    def get_all_jobs(active_only=True, limit=50):
+        try:
+            query = supabase.table('jobs').select('*')
+            if active_only:
+                query = query.eq('is_active', True)
+            query = query.order('created_at', desc=True).limit(limit)
+            response = query.execute()
+            return response.data
+        except Exception as e:
+            return SupabaseDB.handle_db_error("get_all_jobs", e, False)
+
+    @staticmethod
+    def get_job_by_id(job_id):
+        try:
+            response = supabase.table('jobs').select('*').eq('id', job_id).execute()
+            if response.data:
+                return response.data[0]
+            return None
+        except Exception as e:
+            return SupabaseDB.handle_db_error("get_job_by_id", e, False)
+
+    @staticmethod
+    def update_job(job_id, update_data):
+        try:
+            update_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+            response = supabase.table('jobs').update(update_data).eq('id', job_id).execute()
+            if response.data:
+                return response.data[0]
+            return None
+        except Exception as e:
+            return SupabaseDB.handle_db_error("update_job", e, False)
+
+    @staticmethod
+    def delete_job(job_id):
+        try:
+            response = supabase.table('jobs').delete().eq('id', job_id).execute()
+            return True
+        except Exception as e:
+            return SupabaseDB.handle_db_error("delete_job", e, False)
     
     @staticmethod
     def test_connection():
@@ -1705,6 +692,533 @@ class SupabaseDB:
             return SupabaseDB.handle_db_error("get_total_balance", e, False)
 
 # =============================================================================
+# DATABASE SCHEMA MANAGER
+# =============================================================================
+
+def supabase_check(table_name: str, limit: int = 1, retries: int = 3):
+    for attempt in range(1, retries + 1):
+        try:
+            return supabase.table(table_name).select("*").limit(limit).execute()
+        except Exception as e:
+            app.logger.warning(f"Supabase attempt {attempt} failed: {e}")
+            time.sleep(2 ** attempt)
+    raise ConnectionError(f"Supabase {table_name} check failed after {retries} attempts")
+
+class DatabaseHealthMonitor:
+    """Monitor database health and performance"""
+    
+    @staticmethod
+    def get_database_metrics():
+        """Get comprehensive database metrics"""
+        try:
+            metrics = {
+                'timestamp': datetime.now(timezone.utc).isoformat(),
+                'connection_status': 'unknown',
+                'response_time': 0,
+                'table_counts': {},
+                'performance': {}
+            }
+            
+            # Test connection speed
+            start_time = time.time()
+            response = supabase.table('users').select('*', count='exact').limit(1).execute()
+            metrics['response_time'] = round((time.time() - start_time) * 1000, 2)
+            metrics['connection_status'] = 'healthy'
+            
+            # Get table counts
+            tables = ['users', 'transactions', 'referrals', 'security_logs', 'mpesa_callbacks', 'two_factor_codes']
+            for table in tables:
+                try:
+                    response = supabase.table(table).select('*', count='exact').execute()
+                    metrics['table_counts'][table] = len(response.data)
+                except Exception as e:
+                    metrics['table_counts'][table] = f"error: {e}"
+            
+            return metrics
+            
+        except Exception as e:
+            return {
+                'timestamp': datetime.now(timezone.utc).isoformat(),
+                'connection_status': 'unhealthy',
+                'error': str(e)
+            }
+    
+    @staticmethod
+    def log_database_health():
+        """Log database health status"""
+        metrics = DatabaseHealthMonitor.get_database_metrics()
+        
+        if metrics['connection_status'] == 'healthy':
+            app.logger.info(f"Database health: {metrics['response_time']}ms response")
+        else:
+            app.logger.error(f"Database health issue: {metrics.get('error', 'Unknown error')}")
+        
+        return metrics
+
+class DatabaseManager:
+    """Production-grade database schema manager for Supabase (uses direct DB connection)."""
+    
+    def __init__(self, supabase_client):
+        self.supabase = supabase_client
+        self.logger = logging.getLogger(__name__)
+    
+    def _run_sql_via_db_url(self, sql: str, db_url: Optional[str] = None, timeout: int = 30) -> None:
+        """
+        Execute raw SQL using direct Postgres connection via SUPABASE_DB_URL.
+        Raises Exception on failure.
+        """
+        db_url = db_url or os.environ.get('SUPABASE_DB_URL')
+        if not db_url:
+            raise Exception("SUPABASE_DB_URL not set; cannot execute raw SQL via direct DB connection.")
+        
+        # Use autocommit for DDL/DDL-like statements
+        conn = psycopg2.connect(db_url)
+        conn.autocommit = True
+        try:
+            with conn.cursor() as cur:
+                cur.execute(sql)
+        finally:
+            conn.close()
+    
+    def execute_sql(self, sql: str, max_retries: int = 3) -> bool:
+        """Execute SQL with proper error handling and retries using direct DB connection."""
+        for attempt in range(max_retries):
+            try:
+                self._run_sql_via_db_url(sql)
+                self.logger.info(f"SQL executed successfully (attempt {attempt + 1})")
+                return True
+                
+            except Exception as e:
+                err = str(e)
+                # Avoid emoji in logs to prevent Windows console encoding errors
+                self.logger.warning(f"SQL execution attempt {attempt + 1} failed: {err}")
+                
+                if "already exists" in err.lower():
+                    self.logger.info("Table/index already exists (non-fatal)")
+                    return True
+                
+                if attempt < max_retries - 1:
+                    wait = 2 ** attempt
+                    self.logger.info(f"Retrying SQL execution in {wait} seconds...")
+                    time.sleep(wait)
+                else:
+                    self.logger.error(f"All SQL execution attempts failed: {err}")
+                    return False
+        return False
+    
+    def create_tables(self) -> bool:
+        """Create all required tables with proper constraints"""
+        tables = self._get_table_definitions()
+        
+        for table_name, sql in tables:
+            self.logger.info(f"Creating table: {table_name}")
+            if not self.execute_sql(sql):
+                self.logger.error(f"Failed to create table: {table_name}")
+                return False
+        
+        self.logger.info("All tables created successfully")
+        return True
+    
+    def create_indexes(self) -> bool:
+        """Create performance indexes"""
+        indexes = self._get_index_definitions()
+        
+        for index_name, sql in indexes:
+            self.logger.info(f"Creating index: {index_name}")
+            if not self.execute_sql(sql):
+                self.logger.warning(f"Index creation failed (may already exist): {index_name}")
+        
+        self.logger.info("All indexes created/verified")
+        return True
+    
+    def _get_table_definitions(self) -> List[Tuple[str, str]]:
+        """Return all table creation SQL with proper error handling"""
+        return [
+            ("users", """
+            CREATE TABLE IF NOT EXISTS users (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                username VARCHAR(50) UNIQUE NOT NULL,
+                email VARCHAR(255) UNIQUE,
+                phone VARCHAR(20) UNIQUE NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                password_hash TEXT NOT NULL,
+                balance DECIMAL(10,2) DEFAULT 0.0 CHECK (balance >= 0),
+                total_earned DECIMAL(10,2) DEFAULT 0.0 CHECK (total_earned >= 0),
+                total_withdrawn DECIMAL(10,2) DEFAULT 0.0 CHECK (total_withdrawn >= 0),
+                referral_code VARCHAR(20) UNIQUE,
+                referred_by VARCHAR(20),
+                referral_balance DECIMAL(10,2) DEFAULT 0.0 CHECK (referral_balance >= 0),
+                referral_count INTEGER DEFAULT 0 CHECK (referral_count >= 0),
+                is_admin BOOLEAN DEFAULT FALSE,
+                is_verified BOOLEAN DEFAULT FALSE,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                last_login TIMESTAMPTZ,
+                login_attempts INTEGER DEFAULT 0 CHECK (login_attempts >= 0),
+                locked_until TIMESTAMPTZ,
+                two_factor_enabled BOOLEAN DEFAULT FALSE,
+                user_rank VARCHAR(20) DEFAULT 'Bronze',
+                total_commission DECIMAL(10,2) DEFAULT 0.0 CHECK (total_commission >= 0),
+                referral_source VARCHAR(50) DEFAULT 'direct',
+                reset_token TEXT,
+                reset_token_expires TIMESTAMPTZ,
+                -- Additional constraints
+                CONSTRAINT valid_phone CHECK (phone ~ '^254[17]\\d{8}$'),
+                CONSTRAINT valid_email CHECK (email IS NULL OR email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$'),
+                CONSTRAINT chk_balance_limits CHECK (balance <= 1000000),
+                CONSTRAINT chk_username_length CHECK (LENGTH(username) >= 3)
+            );
+            """),
+            
+            ("transactions", """
+            CREATE TABLE IF NOT EXISTS transactions (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                amount DECIMAL(10,2) NOT NULL CHECK (ABS(amount) <= 50000),
+                transaction_type VARCHAR(50) NOT NULL CHECK (transaction_type IN ('withdrawal', 'registration_fee', 'referral_bonus')),
+                status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed', 'rejected', 'Under Review')),
+                phone_number VARCHAR(20),
+                mpesa_code VARCHAR(100),
+                checkout_request_id VARCHAR(100),
+                merchant_request_id VARCHAR(100),
+                b2c_conversation_id VARCHAR(100),
+                b2c_originator_conversation_id VARCHAR(100),
+                description TEXT,
+                ip_address INET,
+                user_agent TEXT,
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                processed_at TIMESTAMPTZ,
+                -- Constraints
+                CONSTRAINT chk_withdrawal_amount CHECK (
+                    transaction_type != 'withdrawal' OR 
+                    (amount <= 0 AND ABS(amount) >= 400 AND ABS(amount) <= 5000)
+                ),
+                CONSTRAINT chk_registration_fee CHECK (
+                    transaction_type != 'registration_fee' OR 
+                    (amount = 200)
+                )
+            );
+            """),
+            
+            ("referrals", """
+            CREATE TABLE IF NOT EXISTS referrals (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                referrer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                referred_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                referral_code_used VARCHAR(20) NOT NULL,
+                commission_earned DECIMAL(10,2) DEFAULT 0.0 CHECK (commission_earned >= 0),
+                status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                -- Ensure unique referral relationships
+                CONSTRAINT unique_referral_relationship UNIQUE (referrer_id, referred_id)
+            );
+            """),
+            
+            ("security_logs", """
+            CREATE TABLE IF NOT EXISTS security_logs (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+                event_type VARCHAR(100) NOT NULL,
+                ip_address INET,
+                user_agent TEXT,
+                details TEXT,
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                -- Index for faster querying
+                CONSTRAINT valid_event_type CHECK (event_type IN (
+                    'LOGIN_SUCCESS', 'LOGIN_FAILED', 'REGISTRATION', 'LOGOUT',
+                    'WITHDRAWAL_INITIATED', 'WITHDRAWAL_COMPLETED', 'WITHDRAWAL_FAILED',
+                    'SUSPICIOUS_WITHDRAWAL', '2FA_SUCCESS', '2FA_FAILED',
+                    'PASSWORD_CHANGE', 'PROFILE_UPDATE', 'SMS_SENT_SUCCESS',
+                    'SMS_SENT_FAILED', 'UNAUTHORIZED_ACCESS', 'ADMIN_ACTION'
+                ))
+            );
+            """),
+            
+            ("mpesa_callbacks", """
+            CREATE TABLE IF NOT EXISTS mpesa_callbacks (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                payload JSONB NOT NULL,
+                ip_address INET,
+                callback_type VARCHAR(50) CHECK (callback_type IN ('STK', 'B2C', 'C2B')),
+                processed BOOLEAN DEFAULT FALSE,
+                processed_at TIMESTAMPTZ,
+                error_message TEXT,
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            );
+            """),
+            
+            ("jobs", """
+            CREATE TABLE IF NOT EXISTS jobs (
+              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+              title VARCHAR(255) NOT NULL,
+              description TEXT,
+               company VARCHAR(255),
+               job_link TEXT NOT NULL,
+               category VARCHAR(100),
+               location VARCHAR(100),
+               salary_range VARCHAR(100),
+               application_deadline DATE,
+               is_active BOOLEAN DEFAULT TRUE,
+               is_featured BOOLEAN DEFAULT FALSE,
+               created_by UUID REFERENCES users(id),
+               created_at TIMESTAMPTZ DEFAULT NOW(),
+               updated_at TIMESTAMPTZ DEFAULT NOW(),
+               -- Constraints
+               CONSTRAINT valid_job_link CHECK (job_link ~ '^https?://'),
+                CONSTRAINT valid_category CHECK (category IN ('Internship', 'Full-time', 'Part-time', 'Contract', 'Remote', 'Other'))
+            );
+            """),
+            
+            ("two_factor_codes", """
+            CREATE TABLE IF NOT EXISTS two_factor_codes (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                code VARCHAR(10) NOT NULL,
+                purpose VARCHAR(50) NOT NULL CHECK (purpose IN ('LOGIN', 'WITHDRAWAL', 'PASSWORD_RESET')),
+                expires_at TIMESTAMPTZ NOT NULL,
+                is_used BOOLEAN DEFAULT FALSE,
+                used_at TIMESTAMPTZ,
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                -- Ensure codes are unique per user and purpose when not used
+                CONSTRAINT unique_active_code UNIQUE (user_id, code, purpose) 
+                WHERE (is_used = FALSE AND expires_at > NOW())
+            );
+            """)
+        ]
+    
+    def _get_index_definitions(self) -> List[Tuple[str, str]]:
+        """Return all index creation SQL"""
+        return [
+            # Users table indexes
+            ("idx_users_phone", "CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);"),
+            ("idx_users_email", "CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);"),
+            ("idx_users_referral_code", "CREATE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code);"),
+            ("idx_users_referred_by", "CREATE INDEX IF NOT EXISTS idx_users_referred_by ON users(referred_by);"),
+            ("idx_users_created_at", "CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at);"),
+            ("idx_users_is_verified", "CREATE INDEX IF NOT EXISTS idx_users_is_verified ON users(is_verified) WHERE is_verified = true;"),
+            
+            # Transactions table indexes
+            ("idx_transactions_user_id", "CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);"),
+            ("idx_transactions_status", "CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status);"),
+            ("idx_transactions_created_at", "CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at);"),
+            ("idx_transactions_type_status", "CREATE INDEX IF NOT EXISTS idx_transactions_type_status ON transactions(transaction_type, status);"),
+            ("idx_transactions_mpesa_code", "CREATE INDEX IF NOT EXISTS idx_transactions_mpesa_code ON transactions(mpesa_code) WHERE mpesa_code IS NOT NULL;"),
+            
+            # Referrals table indexes
+            ("idx_referrals_referrer_id", "CREATE INDEX IF NOT EXISTS idx_referrals_referrer_id ON referrals(referrer_id);"),
+            ("idx_referrals_referred_id", "CREATE INDEX IF NOT EXISTS idx_referrals_referred_id ON referrals(referred_id);"),
+            ("idx_referrals_created_at", "CREATE INDEX IF NOT EXISTS idx_referrals_created_at ON referrals(created_at);"),
+            
+            # Security logs indexes
+            ("idx_security_logs_user_id", "CREATE INDEX IF NOT EXISTS idx_security_logs_user_id ON security_logs(user_id);"),
+            ("idx_security_logs_created_at", "CREATE INDEX IF NOT EXISTS idx_security_logs_created_at ON security_logs(created_at);"),
+            ("idx_security_logs_event_type", "CREATE INDEX IF NOT EXISTS idx_security_logs_event_type ON security_logs(event_type);"),
+            
+            # Two-factor codes indexes
+            ("idx_two_factor_codes_user_id", "CREATE INDEX IF NOT EXISTS idx_two_factor_codes_user_id ON two_factor_codes(user_id);"),
+            ("idx_two_factor_codes_code", "CREATE INDEX IF NOT EXISTS idx_two_factor_codes_code ON two_factor_codes(code);"),
+            ("idx_two_factor_codes_expires", "CREATE INDEX IF NOT EXISTS idx_two_factor_codes_expires ON two_factor_codes(expires_at) WHERE is_used = false;"),
+            
+            # M-Pesa callbacks indexes
+            ("idx_mpesa_callbacks_processed", "CREATE INDEX IF NOT EXISTS idx_mpesa_callbacks_processed ON mpesa_callbacks(processed) WHERE processed = false;"),
+            ("idx_mpesa_callbacks_created_at", "CREATE INDEX IF NOT EXISTS idx_mpesa_callbacks_created_at ON mpesa_callbacks(created_at);")
+        ]
+    
+    def verify_schema(self) -> dict:
+        """Verify all tables and indexes exist and are accessible"""
+        verification_results = {}
+        tables_to_check = ['users', 'transactions', 'referrals', 'security_logs', 'mpesa_callbacks', 'two_factor_codes']
+        
+        for table in tables_to_check:
+            try:
+                # Try to select one row from each table via Supabase client
+                response = self.supabase.table(table).select('*', count='exact').limit(1).execute()
+                verification_results[table] = {
+                    'exists': True,
+                    'accessible': True,
+                    'row_count': len(response.data) if hasattr(response, 'data') else 0
+                }
+            except Exception as e:
+                verification_results[table] = {
+                    'exists': False,
+                    'accessible': False,
+                    'error': str(e)
+                }
+        
+        return verification_results
+    
+    def initialize_database(self) -> bool:
+        """Complete database initialization process"""
+        self.logger.info("Starting database initialization...")
+        
+        # Step 1: Create tables
+        if not self.create_tables():
+            self.logger.error("Table creation failed")
+            return False
+        
+        # Step 2: Create indexes
+        if not self.create_indexes():
+            self.logger.error("Index creation failed")
+            return False
+        
+        # Step 3: Verify schema
+        verification = self.verify_schema()
+        failed_tables = [table for table, result in verification.items() if not result['exists']]
+        
+        if failed_tables:
+            self.logger.error(f"Schema verification failed for tables: {failed_tables}")
+            return False
+        
+        self.logger.info("Database initialization completed successfully")
+        return True
+
+def create_admin_user_if_missing():
+    """Create admin user only if it doesn't exist"""
+    try:
+        admin_user = SupabaseDB.get_user_by_username('admin')
+        if not admin_user:
+            print("👨‍💼 Creating admin user...")
+            
+            admin_data = {
+                'id': str(uuid.uuid4()),
+                'username': 'admin',
+                'email': os.environ.get('ADMIN_EMAIL', 'admin@referralninja.co.ke'),
+                'phone': os.environ.get('ADMIN_PHONE', '254712345678'),
+                'name': 'System Administrator',
+                'is_admin': True,
+                'is_verified': True,
+                'is_active': True,
+                'created_at': datetime.now(timezone.utc).isoformat()
+            }
+            
+            admin = User(admin_data)
+            admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')  # Change in production!
+            admin.set_password(admin_password)
+            admin.generate_phone_linked_referral_code()
+            
+            admin_dict = admin.to_dict()
+            admin_dict.pop('password_hash', None)
+            admin_dict['password_hash'] = admin.password_hash
+            
+            created_admin = SupabaseDB.create_user(admin_dict)
+            if created_admin:
+                print("✅ Admin user created successfully")
+                print(f"   Username: admin")
+                print(f"   Password: {admin_password}")
+                print("   ⚠️  CHANGE THE PASSWORD IMMEDIATELY!")
+            else:
+                print("❌ Failed to create admin user")
+        else:
+            print("✅ Admin user already exists")
+            
+    except Exception as e:
+        print(f"❌ Admin user creation error: {e}")
+
+# =============================================================================
+# SECURITY CLASSES
+# =============================================================================
+
+class SecurityMonitor:
+    @staticmethod
+    def log_security_event(event_type, user_id, details):
+        """Log security events"""
+        security_log = {
+            'user_id': user_id,
+            'event_type': event_type,
+            'ip_address': request.remote_addr if request else None,
+            'user_agent': request.headers.get('User-Agent') if request else None,
+            'details': str(details),
+            'created_at': datetime.now(timezone.utc).isoformat()
+        }
+        SupabaseDB.create_security_log(security_log)
+        current_app.logger.info(f"Security Event: {event_type} - User: {user_id} - {details}")
+    
+    @staticmethod
+    def generate_2fa_code(user_id, purpose):
+        """Generate 2FA code"""
+        code = ''.join(secrets.choice(string.digits) for _ in range(6))
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+        
+        two_fa_code = {
+            'user_id': user_id,
+            'code': code,
+            'purpose': purpose,
+            'expires_at': expires_at.isoformat(),
+            'is_used': False,
+            'created_at': datetime.now(timezone.utc).isoformat()
+        }
+        SupabaseDB.create_two_factor_code(two_fa_code)
+        
+        # Send 2FA code via Celcom SMS
+        user = SupabaseDB.get_user_by_id(user_id)
+        if user:
+            CelcomSMS.send_2fa_code(user.phone, code)
+        
+        current_app.logger.info(f"2FA Code for {user_id}: {code}")
+        return code
+    
+    @staticmethod
+    def verify_2fa_code(user_id, code, purpose):
+        """Verify 2FA code"""
+        two_fa_code = SupabaseDB.get_two_factor_code(user_id, code, purpose, False)
+        
+        if not two_fa_code:
+            return False
+        
+        expires_at = datetime.fromisoformat(two_fa_code['expires_at'].replace('Z', '+00:00'))
+        if expires_at < datetime.now(timezone.utc):
+            return False
+        
+        # Mark as used
+        SupabaseDB.update_two_factor_code(two_fa_code['id'], {'is_used': True})
+        return True
+    
+    @staticmethod
+    def notify_admins(message):
+        """Notify admins of security events"""
+        current_app.logger.warning(f"ADMIN ALERT: {message}")
+
+class FraudDetector:
+    @staticmethod
+    def check_suspicious_activity(user, amount, request_obj):
+        """Detect suspicious withdrawal patterns"""
+        checks = []
+        
+        # Check 1: Amount exceeds threshold
+        if amount > 2000:  # Suspicious amount threshold
+            checks.append("Amount exceeds normal threshold")
+        
+        # Check 2: Multiple rapid withdrawals
+        recent_withdrawals = SupabaseDB.get_transactions_by_user(
+            user.id, 
+            transaction_type='withdrawal'
+        )
+        # Filter for last hour
+        recent_withdrawals = [t for t in recent_withdrawals 
+                            if datetime.fromisoformat(t['created_at'].replace('Z', '+00:00')) >= datetime.now(timezone.utc) - timedelta(hours=1)]
+        
+        if len(recent_withdrawals) >= 3:
+            checks.append("Multiple withdrawals in short period")
+        
+        # Check 3: Unusual time (2AM - 5AM)
+        current_hour = datetime.now(timezone.utc).hour
+        if 2 <= current_hour <= 5:
+            checks.append("Unusual withdrawal time")
+        
+        # Check 4: New device/location
+        if recent_withdrawals:
+            recent_withdrawal = recent_withdrawals[0]
+            if recent_withdrawal.get('ip_address') != request_obj.remote_addr:
+                checks.append("Different IP address from previous withdrawals")
+        
+        # Check 5: New user with large withdrawal
+        user_created = datetime.fromisoformat(user.created_at.replace('Z', '+00:00'))
+        if user_created > datetime.now(timezone.utc) - timedelta(days=1) and amount > 1000:
+            checks.append("New user with large withdrawal")
+        
+        return " | ".join(checks) if checks else None
+
+# =============================================================================
 # CELCOM SMS IMPLEMENTATION
 # =============================================================================
 
@@ -1853,111 +1367,7 @@ class CelcomSMS:
         return CelcomSMS.send_sms(phone, message)
 
 # =============================================================================
-# SECURITY CLASSES
-# =============================================================================
-
-class SecurityMonitor:
-    @staticmethod
-    def log_security_event(event_type, user_id, details):
-        """Log security events"""
-        security_log = {
-            'user_id': user_id,
-            'event_type': event_type,
-            'ip_address': request.remote_addr if request else None,
-            'user_agent': request.headers.get('User-Agent') if request else None,
-            'details': str(details),
-            'created_at': datetime.now(timezone.utc).isoformat()
-        }
-        SupabaseDB.create_security_log(security_log)
-        current_app.logger.info(f"Security Event: {event_type} - User: {user_id} - {details}")
-    
-    @staticmethod
-    def generate_2fa_code(user_id, purpose):
-        """Generate 2FA code"""
-        code = ''.join(secrets.choice(string.digits) for _ in range(6))
-        expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
-        
-        two_fa_code = {
-            'user_id': user_id,
-            'code': code,
-            'purpose': purpose,
-            'expires_at': expires_at.isoformat(),
-            'is_used': False,
-            'created_at': datetime.now(timezone.utc).isoformat()
-        }
-        SupabaseDB.create_two_factor_code(two_fa_code)
-        
-        # Send 2FA code via Celcom SMS
-        user = SupabaseDB.get_user_by_id(user_id)
-        if user:
-            CelcomSMS.send_2fa_code(user.phone, code)
-        
-        current_app.logger.info(f"2FA Code for {user_id}: {code}")
-        return code
-    
-    @staticmethod
-    def verify_2fa_code(user_id, code, purpose):
-        """Verify 2FA code"""
-        two_fa_code = SupabaseDB.get_two_factor_code(user_id, code, purpose, False)
-        
-        if not two_fa_code:
-            return False
-        
-        expires_at = datetime.fromisoformat(two_fa_code['expires_at'].replace('Z', '+00:00'))
-        if expires_at < datetime.now(timezone.utc):
-            return False
-        
-        # Mark as used
-        SupabaseDB.update_two_factor_code(two_fa_code['id'], {'is_used': True})
-        return True
-    
-    @staticmethod
-    def notify_admins(message):
-        """Notify admins of security events"""
-        current_app.logger.warning(f"ADMIN ALERT: {message}")
-
-class FraudDetector:
-    @staticmethod
-    def check_suspicious_activity(user, amount, request_obj):
-        """Detect suspicious withdrawal patterns"""
-        checks = []
-        
-        # Check 1: Amount exceeds threshold
-        if amount > 2000:  # Suspicious amount threshold
-            checks.append("Amount exceeds normal threshold")
-        
-        # Check 2: Multiple rapid withdrawals
-        recent_withdrawals = SupabaseDB.get_transactions_by_user(
-            user.id, 
-            transaction_type='withdrawal'
-        )
-        # Filter for last hour
-        recent_withdrawals = [t for t in recent_withdrawals 
-                            if datetime.fromisoformat(t['created_at'].replace('Z', '+00:00')) >= datetime.now(timezone.utc) - timedelta(hours=1)]
-        
-        if len(recent_withdrawals) >= 3:
-            checks.append("Multiple withdrawals in short period")
-        
-        # Check 3: Unusual time (2AM - 5AM)
-        current_hour = datetime.now(timezone.utc).hour
-        if 2 <= current_hour <= 5:
-            checks.append("Unusual withdrawal time")
-        
-        # Check 4: New device/location
-        if recent_withdrawals:
-            recent_withdrawal = recent_withdrawals[0]
-            if recent_withdrawal.get('ip_address') != request_obj.remote_addr:
-                checks.append("Different IP address from previous withdrawals")
-        
-        # Check 5: New user with large withdrawal
-        user_created = datetime.fromisoformat(user.created_at.replace('Z', '+00:00'))
-        if user_created > datetime.now(timezone.utc) - timedelta(days=1) and amount > 1000:
-            checks.append("New user with large withdrawal")
-        
-        return " | ".join(checks) if checks else None
-
-# =============================================================================
-# M-PESA CONFIGURATION AND FUNCTIONS
+# M-PESA INTEGRATION
 # =============================================================================
 
 # Production M-Pesa Configuration
@@ -2261,140 +1671,541 @@ def query_stk_push_status(checkout_request_id):
         return None
 
 # =============================================================================
-# APPLICATION INITIALIZATION
+# TELEGRAM INTEGRATION
 # =============================================================================
 
-# Setup logging
-if not app.debug:
-    file_handler = RotatingFileHandler('error.log', maxBytes=10240, backupCount=10)
-    file_handler.setFormatter(logging.Formatter(
-        '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
-    ))
-    file_handler.setLevel(logging.ERROR)
-    app.logger.addHandler(file_handler)
-    app.logger.setLevel(logging.INFO)
-    app.logger.info('Referral Ninja startup')
-    
-# Fix console logging encoding
-if sys.stdout.encoding != 'utf-8':
-    import codecs
-    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer)
+async def send_telegram_message_async(message: str):
+    """Send Telegram message asynchronously (safe for Flask contexts)."""
+    try:
+        # Use app context safely
+        app = current_app._get_current_object()
+        token = app.config.get("TELEGRAM_BOT_TOKEN") or os.environ.get("TELEGRAM_BOT_TOKEN")
+        chat_id = app.config.get("TELEGRAM_CHAT_ID") or os.environ.get("TELEGRAM_CHAT_ID")
 
-# Environment validation
-def validate_environment():
-    """Validate all required environment variables are set"""
-    required_vars = [
-        'SECRET_KEY',
-        'JWT_SECRET_KEY',
-        'SUPABASE_URL',
-        'SUPABASE_KEY',
-        'SUPABASE_SERVICE_ROLE_KEY',
-        'MPESA_CONSUMER_KEY',
-        'MPESA_CONSUMER_SECRET',
-        'MPESA_BUSINESS_SHORTCODE',
-        'MPESA_PASSKEY',
-        'MPESA_B2C_SHORTCODE',
-        'MPESA_B2C_INITIATOR_NAME',
-        'MPESA_B2C_SECURITY_CREDENTIAL',
-        'MPESA_CALLBACK_URL',
-        'MPESA_B2C_CALLBACK_URL',
-        'MPESA_B2C_QUEUE_TIMEOUT_URL',
-        'CELCOM_SMS_API_KEY'
+        if not token or not chat_id:
+            app.logger.warning("⚠️ Telegram credentials missing — skipping alert")
+            return
+
+        safe_message = html.escape(message)
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
+        payload = {"chat_id": chat_id, "text": safe_message, "parse_mode": "HTML"}
+
+        # Run the request non-blocking
+        await asyncio.to_thread(requests.post, url, json=payload, timeout=10)
+        app.logger.info("✅ Telegram notification sent successfully")
+
+    except Exception as e:
+        try:
+            app.logger.error(f"Telegram notification failed: {html.escape(str(e))}")
+        except Exception:
+            print(f"Telegram notification failed: {str(e)}")
+
+
+def send_telegram_notification(message: str):
+    """Send Telegram notifications safely from any thread or async context."""
+    try:
+        from app import app as flask_app
+        app = flask_app
+        with app.app_context():
+            token = app.config.get("TELEGRAM_BOT_TOKEN")
+            chat_id = app.config.get("TELEGRAM_CHAT_ID")
+            if not token or not chat_id:
+                app.logger.warning("⚠️ Telegram credentials missing — skipping alert")
+                return
+
+            safe_message = html.escape(message)
+            url = f"https://api.telegram.org/bot{token}/sendMessage"
+            payload = {"chat_id": chat_id, "text": safe_message, "parse_mode": "HTML"}
+
+            # Run sync HTTP in a thread (safe for background threads)
+            threading.Thread(target=requests.post, args=(url,), kwargs={"json": payload, "timeout": 10}).start()
+            app.logger.info("✅ Telegram notification sent successfully")
+    except Exception as e:
+        app.logger.error(f"Telegram notification failed: {html.escape(str(e))}")
+           
+def send_withdrawal_notification_to_telegram(user, transaction):
+    """Send withdrawal notification to Telegram"""
+    try:
+        message = f"""
+💰 <b>New Withdrawal Request</b>
+
+👤 <b>User Details:</b>
+• Username: {user.username}
+• Email: {user.email}
+• Phone: {user.phone}
+• User ID: #{user.id}
+
+💸 <b>Withdrawal Information:</b>
+• Amount: KSH {abs(transaction['amount'])}
+• Phone: {transaction['phone_number']}
+• Status: ⏳ Pending Processing
+
+⏰ <b>Time Submitted:</b>
+{transaction['created_at']}
+
+<i>Please process this withdrawal in the admin dashboard.</i>
+"""
+        thread = threading.Thread(target=send_telegram_notification, args=(message,))
+        thread.daemon = True
+        thread.start()
+        return True
+    except Exception as e:
+        current_app.logger.error(f"Error sending withdrawal notification to Telegram: {str(e)}")
+        return False
+
+# =============================================================================
+# HEALTH MONITORING SYSTEM
+# =============================================================================
+
+class HealthMonitor:
+    """Comprehensive health monitoring system for production"""
+    
+    def __init__(self, supabase_client, redis_client, app_config):
+        self.supabase = supabase_client
+        self.redis = redis_client
+        self.config = app_config
+        self.logger = logging.getLogger(__name__)
+    
+    def comprehensive_health_check(self) -> Dict[str, Any]:
+        """Run comprehensive health checks for all critical systems"""
+        health_status = {
+            'status': 'healthy',
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'version': '1.0.0',
+            'components': {}
+        }
+        
+        # Critical components (if any fail, overall status is unhealthy)
+        critical_components = {
+            'database': self._check_database_health(),
+            'redis': self._check_redis_health(),
+            'mpesa_api': self._check_mpesa_health(),
+            'celcom_sms': self._check_celcom_sms_health(),
+        }
+        
+        # Important components (failures affect functionality but not overall status)
+        important_components = {
+            'system_resources': self._check_system_resources(),
+            'telegram_bot': self._check_telegram_health(),
+        }
+        
+        # Operational metrics
+        operational_metrics = {
+            'pending_withdrawals': self._get_pending_withdrawals_count(),
+            'pending_payments': self._get_pending_payments_count(),
+            'recent_errors': self._get_recent_errors(),
+            'uptime': self._get_system_uptime(),
+        }
+        
+        health_status['components']['critical'] = critical_components
+        health_status['components']['important'] = important_components
+        health_status['components']['metrics'] = operational_metrics
+        
+        # Determine overall status
+        if any(comp['status'] == 'unhealthy' for comp in critical_components.values()):
+            health_status['status'] = 'unhealthy'
+        elif any(comp['status'] == 'degraded' for comp in critical_components.values()):
+            health_status['status'] = 'degraded'
+        elif any(comp['status'] == 'unhealthy' for comp in important_components.values()):
+            health_status['status'] = 'degraded'
+        
+        return health_status
+    
+    def _check_database_health(self) -> Dict[str, Any]:
+        """Check database connection and performance"""
+        try:
+            start_time = time.time()
+            
+            # Test basic connection
+            response = self.supabase.table('users').select('*', count='exact').limit(1).execute()
+            connection_time = time.time() - start_time
+            
+            # Test write operation
+            test_data = {
+                'event_type': 'HEALTH_CHECK',
+                'details': 'Database health check',
+                'created_at': datetime.now(timezone.utc).isoformat()
+            }
+            write_response = self.supabase.table('security_logs').insert(test_data).execute()
+            
+            status = 'healthy'
+            if connection_time > 2.0:  # More than 2 seconds is slow
+                status = 'degraded'
+            
+            return {
+                'status': status,
+                'response_time_ms': round(connection_time * 1000, 2),
+                'connection': True,
+                'read_operation': True,
+                'write_operation': bool(write_response.data),
+                'details': f'Database connection OK ({connection_time:.2f}s)'
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Database health check failed: {e}")
+            return {
+                'status': 'unhealthy',
+                'response_time_ms': None,
+                'connection': False,
+                'read_operation': False,
+                'write_operation': False,
+                'error': str(e),
+                'details': 'Database connection failed'
+            }
+    
+    def _check_redis_health(self) -> Dict[str, Any]:
+        """Check Redis connection health"""
+        try:
+            start_time = time.time()
+            
+            # Test basic connection
+            self.redis.ping()
+            connection_time = time.time() - start_time
+            
+            # Test read/write operations
+            test_key = f"health_check_{int(time.time())}"
+            test_value = "health_check_value"
+            
+            self.redis.set(test_key, test_value, ex=10)  # Set with 10s expiry
+            retrieved_value = self.redis.get(test_key)
+            
+            status = 'healthy'
+            if connection_time > 0.1:  # More than 100ms is slow for Redis
+                status = 'degraded'
+            
+            return {
+                'status': status,
+                'response_time_ms': round(connection_time * 1000, 2),
+                'connection': True,
+                'read_operation': retrieved_value == test_value,
+                'write_operation': True,
+                'details': f'Redis connection OK ({connection_time:.3f}s)'
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Redis health check failed: {e}")
+            return {
+                'status': 'unhealthy',
+                'response_time_ms': None,
+                'connection': False,
+                'read_operation': False,
+                'write_operation': False,
+                'error': str(e),
+                'details': 'Redis connection failed'
+            }
+    
+    def _check_mpesa_health(self) -> Dict[str, Any]:
+        """Check M-Pesa API availability"""
+        try:
+            start_time = time.time()
+            
+            # Get access token (this tests the API)
+            access_token = get_mpesa_access_token()
+            response_time = time.time() - start_time
+            
+            status = 'healthy'
+            if response_time > 5.0:  # M-Pesa is slow if >5s
+                status = 'degraded'
+            
+            return {
+                'status': status,
+                'response_time_ms': round(response_time * 1000, 2),
+                'access_token_obtained': bool(access_token),
+                'environment': self.config.get('MPESA_ENVIRONMENT', 'unknown'),
+                'details': f'M-Pesa API accessible ({response_time:.2f}s)'
+            }
+            
+        except Exception as e:
+            self.logger.error(f"M-Pesa health check failed: {e}")
+            return {
+                'status': 'unhealthy',
+                'response_time_ms': None,
+                'access_token_obtained': False,
+                'environment': self.config.get('MPESA_ENVIRONMENT', 'unknown'),
+                'error': str(e),
+                'details': 'M-Pesa API unavailable'
+            }
+
+    def _check_celcom_sms_health(self) -> Dict[str, Any]:
+        """Check Celcom SMS API health"""
+        try:
+            # Test configuration without sending actual SMS
+            api_key = self.config.get('CELCOM_SMS_API_KEY')
+            sender_id = self.config.get('CELCOM_SENDER_ID')
+            
+            if not api_key or api_key == 'your_celcom_api_key':
+                return {
+                    'status': 'unhealthy',
+                    'configured': False,
+                    'details': 'Celcom SMS API key not configured'
+                }
+            
+            # Make a test request to check API key validity
+            headers = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+            
+            test_payload = {
+                'api_key': api_key,
+                'sender_id': sender_id,
+                'phone': '254700000000',  # Test number
+                'message': 'HEALTH CHECK - IGNORE'
+            }
+            
+            # Don't actually send, just check if credentials are valid
+            # by making a lightweight request
+            response = requests.post(
+                self.config.get('CELCOM_SMS_URL', 'https://api.celcomafrica.com/sms/send'),
+                json=test_payload,
+                headers=headers,
+                timeout=10
+            )
+            
+            # Even if it fails due to invalid number, if we get a response
+            # the API is working
+            if response.status_code in [200, 400]:  # 400 might be due to test number
+                return {
+                    'status': 'healthy',
+                    'configured': True,
+                    'api_accessible': True,
+                    'details': 'Celcom SMS API is accessible'
+                }
+            else:
+                return {
+                    'status': 'degraded',
+                    'configured': True,
+                    'api_accessible': False,
+                    'http_status': response.status_code,
+                    'details': f'Celcom SMS API returned HTTP {response.status_code}'
+                }
+                
+        except requests.exceptions.Timeout:
+            return {
+                'status': 'unhealthy',
+                'configured': True,
+                'api_accessible': False,
+                'error': 'Timeout',
+                'details': 'Celcom SMS API timeout'
+            }
+        except Exception as e:
+            self.logger.error(f"Celcom SMS health check failed: {e}")
+            return {
+                'status': 'unhealthy',
+                'configured': bool(api_key and api_key != 'your_celcom_api_key'),
+                'api_accessible': False,
+                'error': str(e),
+                'details': 'Celcom SMS API check failed'
+            }
+    
+    def _check_system_resources(self) -> Dict[str, Any]:
+        """Check system resource utilization"""
+        try:
+            cpu_percent = psutil.cpu_percent(interval=1)
+            memory = psutil.virtual_memory()
+            disk = psutil.disk_usage('/')
+            
+            status = 'healthy'
+            warnings = []
+            
+            if cpu_percent > 80:
+                status = 'degraded'
+                warnings.append(f'High CPU usage: {cpu_percent}%')
+            
+            if memory.percent > 85:
+                status = 'degraded'
+                warnings.append(f'High memory usage: {memory.percent}%')
+            
+            if disk.percent > 90:
+                status = 'degraded'
+                warnings.append(f'Low disk space: {disk.percent}% used')
+            
+            return {
+                'status': status,
+                'cpu_percent': cpu_percent,
+                'memory_percent': memory.percent,
+                'disk_percent': disk.percent,
+                'warnings': warnings,
+                'details': f'CPU: {cpu_percent}%, Memory: {memory.percent}%, Disk: {disk.percent}%'
+            }
+            
+        except Exception as e:
+            self.logger.error(f"System resources check failed: {e}")
+            return {
+                'status': 'unknown',
+                'error': str(e),
+                'details': 'System resource check failed'
+            }
+    
+    def _check_telegram_health(self) -> Dict[str, Any]:
+        """Check Telegram bot health"""
+        bot_token = self.config.get('TELEGRAM_BOT_TOKEN')
+        chat_id = self.config.get('TELEGRAM_CHAT_ID')
+        
+        if not bot_token or bot_token == 'your_bot_token_here':
+            return {
+                'status': 'unknown',
+                'configured': False,
+                'details': 'Telegram bot not configured'
+            }
+        
+        return {
+            'status': 'healthy',
+            'configured': True,
+            'details': 'Telegram bot configured'
+        }
+    
+    def _get_pending_withdrawals_count(self) -> Dict[str, Any]:
+        """Get pending withdrawals metrics"""
+        try:
+            pending_withdrawals = SupabaseDB.get_pending_withdrawals()
+            count = len(pending_withdrawals)
+            total_amount = sum(abs(t['amount']) for t in pending_withdrawals)
+            
+            status = 'normal'
+            if count > 20:
+                status = 'high'
+            elif count > 50:
+                status = 'critical'
+            
+            return {
+                'status': status,
+                'count': count,
+                'total_amount': total_amount,
+                'details': f'{count} pending withdrawals (KSH {total_amount:,.2f})'
+            }
+            
+        except Exception as e:
+            return {
+                'status': 'unknown',
+                'error': str(e),
+                'details': 'Failed to get pending withdrawals'
+            }
+    
+    def _get_pending_payments_count(self) -> Dict[str, Any]:
+        """Get pending payments metrics"""
+        try:
+            pending_payments = SupabaseDB.get_pending_payments()
+            count = len(pending_payments)
+            
+            return {
+                'count': count,
+                'details': f'{count} pending registration payments'
+            }
+            
+        except Exception as e:
+            return {
+                'count': 0,
+                'error': str(e),
+                'details': 'Failed to get pending payments'
+            }
+    
+    def _get_recent_errors(self) -> Dict[str, Any]:
+        """Get recent error metrics"""
+        try:
+            # Get errors from security logs in last hour
+            one_hour_ago = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+            
+            response = self.supabase.table('security_logs') \
+                .select('*', count='exact') \
+                .like('event_type', '%FAILED%') \
+                .gte('created_at', one_hour_ago) \
+                .execute()
+            
+            error_count = len(response.data)
+            
+            return {
+                'count': error_count,
+                'period': '1h',
+                'details': f'{error_count} errors in last hour'
+            }
+            
+        except Exception as e:
+            return {
+                'count': 0,
+                'error': str(e),
+                'details': 'Failed to get error count'
+            }
+    
+    def _get_system_uptime(self) -> Dict[str, Any]:
+        """Get system uptime information"""
+        try:
+            uptime_seconds = time.time() - psutil.boot_time()
+            uptime_hours = uptime_seconds / 3600
+            
+            return {
+                'hours': round(uptime_hours, 2),
+                'details': f'System uptime: {uptime_hours:.2f} hours'
+            }
+            
+        except Exception as e:
+            return {
+                'hours': 0,
+                'error': str(e),
+                'details': 'Failed to get uptime'
+            }
+
+# =============================================================================
+# UTILITY FUNCTIONS
+# =============================================================================
+
+# Admin required decorator
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin:
+            flash('Access denied. Admin privileges required.', 'error')
+            return redirect(url_for('dashboard'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def validate_referral_code(code):
+    if not code:
+        return None
+    referrer = SupabaseDB.get_user_by_referral_code(code)
+    if not referrer:
+        return None
+    if not referrer.is_verified:
+        return None
+    return referrer
+
+def extract_mpesa_code(message):
+    patterns = [
+        r'[A-Z0-9]{10}',
+        r'[A-Z0-9]{9}',
     ]
     
-    missing_vars = []
-    for var in required_vars:
-        if not os.environ.get(var):
-            missing_vars.append(var)
+    for pattern in patterns:
+        match = re.search(pattern, message)
+        if match:
+            return match.group(0)
     
-    if missing_vars:
-        raise Exception(f"Missing required environment variables: {', '.join(missing_vars)}")
+    return 'PENDING'
+
+def get_user_ranking(user_id):
+    user = SupabaseDB.get_user_by_id(user_id)
+    if not user:
+        return None
     
-    current_app.logger.info("✓ All required environment variables are set")
-
-# Updated initialization function
-# Updated initialization function
-def init_db():
-    """Initialize and verify Supabase database connection (no local SQL)."""
-    max_retries = 3
-    retry_count = 0
-
-    while retry_count < max_retries:
-        try:
-            current_app.logger.info("🔍 Testing Supabase connection...")
-            response = supabase.table("users").select("*").limit(1).execute()
-
-            if response.data is not None:
-                current_app.logger.info("✅ Supabase client verified successfully")
-                
-                # Test Redis connection
-                try:
-                    redis_client.ping()
-                    current_app.logger.info("✅ Redis connection verified successfully")
-                except Exception as e:
-                    current_app.logger.error(f"❌ Redis connection failed: {e}")
-                    return False
-
-                # Optionally check if admin exists
-                if os.environ.get("CREATE_ADMIN_USER") == "true":
-                    create_admin_user_if_missing()
-                    current_app.logger.info("✅ Admin user checked/created")
-
-                return True
-            else:
-                current_app.logger.warning("⚠️ No data returned from Supabase - table may be empty")
-                return True  # Still fine, as Supabase is reachable
-
-        except Exception as e:
-            retry_count += 1
-            current_app.logger.error(f"❌ Database initialization attempt {retry_count} failed: {e}")
-
-            if retry_count < max_retries:
-                wait_time = 2 ** retry_count
-                current_app.logger.info(f"Retrying Supabase check in {wait_time} seconds...")
-                time.sleep(wait_time)
-            else:
-                current_app.logger.critical("❌ All Supabase connection attempts failed")
-                return False
-
-# Enhanced before_request with health checks (add Redis check)
-@app.before_request
-def before_request():
-    """Enhanced request preprocessing with health checks"""
-    try:
-        # Quick health check with retry logic
-        response = supabase_check('users', limit=1)
-        
-        # Quick Redis health check
-        redis_client.ping()
-        
-    except Exception as e:
-        current_app.logger.error(f"Health check failed: {e}")
-        return jsonify({'error': 'Service temporarily unavailable'}), 503
-
-    # Log security events for sensitive endpoints
-    if request.endpoint in ['api_request_withdrawal', 'withdraw', 'admin_dashboard']:
-        SecurityMonitor.log_security_event(
-            "SENSITIVE_ENDPOINT_ACCESS",
-            current_user.id if current_user.is_authenticated else None,
-            {
-                "endpoint": request.endpoint,
-                "ip": request.remote_addr,
-                "method": request.method
+    ranked_users = SupabaseDB.get_top_users(limit=1000)  # Get all users for ranking
+    
+    for index, ranked_user_data in enumerate(ranked_users):
+        ranked_user = User(ranked_user_data)
+        if ranked_user.id == user_id:
+            return {
+                'position': index + 1,
+                'total_users': len(ranked_users),
+                'user_rank': user.user_rank
             }
-        )
+    return None
 
-# Add utility functions to Jinja2 context
-@app.context_processor
-def utility_processor():
-    return {
-        'abs': abs,
-        'min': min,
-        'max': max,
-        'round': round,
-        'len': len,
-        'now': datetime.now(timezone.utc)
-    }
+# Updated send_sms function to use Celcom SMS
+def send_sms(phone, message):
+    """
+    Main SMS function that uses Celcom SMS service
+    This maintains backward compatibility with existing code
+    """
+    return CelcomSMS.send_sms(phone, message)
 
 # =============================================================================
 # BLUEPRINTS AND ROUTES
@@ -2908,141 +2719,110 @@ def confirm_2fa_withdrawal():
         current_app.logger.error(f"2FA confirmation error: {str(e)}")
         return jsonify({"error": "Confirmation failed"}), 500
 
-# Updated send_sms function to use Celcom SMS
-def send_sms(phone, message):
-    """
-    Main SMS function that uses Celcom SMS service
-    This maintains backward compatibility with existing code
-    """
-    return CelcomSMS.send_sms(phone, message)
-
-# Telegram Functions
-async def send_telegram_message_async(message: str):
-    """Send Telegram message asynchronously (safe for Flask contexts)."""
-    try:
-        # Use app context safely
-        app = current_app._get_current_object()
-        token = app.config.get("TELEGRAM_BOT_TOKEN") or os.environ.get("TELEGRAM_BOT_TOKEN")
-        chat_id = app.config.get("TELEGRAM_CHAT_ID") or os.environ.get("TELEGRAM_CHAT_ID")
-
-        if not token or not chat_id:
-            app.logger.warning("⚠️ Telegram credentials missing — skipping alert")
-            return
-
-        safe_message = html.escape(message)
-        url = f"https://api.telegram.org/bot{token}/sendMessage"
-        payload = {"chat_id": chat_id, "text": safe_message, "parse_mode": "HTML"}
-
-        # Run the request non-blocking
-        await asyncio.to_thread(requests.post, url, json=payload, timeout=10)
-        app.logger.info("✅ Telegram notification sent successfully")
-
-    except Exception as e:
-        try:
-            app.logger.error(f"Telegram notification failed: {html.escape(str(e))}")
-        except Exception:
-            print(f"Telegram notification failed: {str(e)}")
-
-
-def send_telegram_notification(message: str):
-    """Send Telegram notifications safely from any thread or async context."""
-    try:
-        from app import app as flask_app
-        app = flask_app
-        with app.app_context():
-            token = app.config.get("TELEGRAM_BOT_TOKEN")
-            chat_id = app.config.get("TELEGRAM_CHAT_ID")
-            if not token or not chat_id:
-                app.logger.warning("⚠️ Telegram credentials missing — skipping alert")
-                return
-
-            safe_message = html.escape(message)
-            url = f"https://api.telegram.org/bot{token}/sendMessage"
-            payload = {"chat_id": chat_id, "text": safe_message, "parse_mode": "HTML"}
-
-            # Run sync HTTP in a thread (safe for background threads)
-            threading.Thread(target=requests.post, args=(url,), kwargs={"json": payload, "timeout": 10}).start()
-            app.logger.info("✅ Telegram notification sent successfully")
-    except Exception as e:
-        app.logger.error(f"Telegram notification failed: {html.escape(str(e))}")
-           
-def send_withdrawal_notification_to_telegram(user, transaction):
-    """Send withdrawal notification to Telegram"""
-    try:
-        message = f"""
-💰 <b>New Withdrawal Request</b>
-
-👤 <b>User Details:</b>
-• Username: {user.username}
-• Email: {user.email}
-• Phone: {user.phone}
-• User ID: #{user.id}
-
-💸 <b>Withdrawal Information:</b>
-• Amount: KSH {abs(transaction['amount'])}
-• Phone: {transaction['phone_number']}
-• Status: ⏳ Pending Processing
-
-⏰ <b>Time Submitted:</b>
-{transaction['created_at']}
-
-<i>Please process this withdrawal in the admin dashboard.</i>
-"""
-        thread = threading.Thread(target=send_telegram_notification, args=(message,))
-        thread.daemon = True
-        thread.start()
-        return True
-    except Exception as e:
-        current_app.logger.error(f"Error sending withdrawal notification to Telegram: {str(e)}")
-        return False
-
 # Register Blueprints
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
 app.register_blueprint(mpesa_bp, url_prefix='/api')
 app.register_blueprint(withdraw_bp, url_prefix='/api')
 
-# Helper Functions
-def validate_referral_code(code):
-    if not code:
-        return None
-    referrer = SupabaseDB.get_user_by_referral_code(code)
-    if not referrer:
-        return None
-    if not referrer.is_verified:
-        return None
-    return referrer
-
-def extract_mpesa_code(message):
-    patterns = [
-        r'[A-Z0-9]{10}',
-        r'[A-Z0-9]{9}',
-    ]
-    
-    for pattern in patterns:
-        match = re.search(pattern, message)
-        if match:
-            return match.group(0)
-    
-    return 'PENDING'
-
-# Error Handlers
-@app.errorhandler(404)
-def not_found_error(error):
-    return render_template('404.html'), 404
-
-@app.errorhandler(500)
-def internal_error(error):
-    app.logger.error(f"Internal Server Error: {error}")
-    return render_template('500.html'), 500
-
-@app.errorhandler(Exception)
-def handle_exception(error):
-    app.logger.error(f"Unhandled Exception: {error}")
-    return render_template('500.html'), 500
-
 # =============================================================================
-# APPLICATION ROUTES
+# FLASK ROUTES
 # =============================================================================
+
+@app.context_processor
+def utility_processor():
+    def safe_strftime(dt, fmt="%b %d, %Y %I:%M %p"):
+        try:
+            return dt.strftime(fmt) if dt else ""
+        except Exception:
+            return ""
+    return dict(safe_strftime=safe_strftime)
+
+# Health Check Routes
+@app.route('/health')
+def health_check():
+    """Basic health check for load balancers"""
+    try:
+        response = supabase_check('users', limit=1)
+        return jsonify({
+            'status': 'healthy',
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'database': 'connected',
+            'version': '1.0.0'
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'unhealthy',
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'database': 'error',
+            'error': str(e)
+        }), 503
+
+@app.route('/health/detailed')
+@login_required
+@admin_required
+def detailed_health_check():
+    """Detailed health check for administrators"""
+    health_monitor = HealthMonitor(supabase, redis_client, app.config)  # Add redis_client
+    health_status = health_monitor.comprehensive_health_check()
+    
+    return jsonify(health_status)
+
+@app.route('/health/readiness')
+def readiness_check():
+    try:
+        supabase_check('users', limit=1)
+        return jsonify({'status': 'ready', 'timestamp': datetime.now(timezone.utc).isoformat()})
+    except Exception as e:
+        return jsonify({'status': 'not_ready', 'timestamp': datetime.now(timezone.utc).isoformat(), 'error': str(e)}), 503
+
+@app.route('/health/liveness')
+def liveness_check():
+    return jsonify({'status': 'alive', 'timestamp': datetime.now(timezone.utc).isoformat()})
+
+# Health monitoring background task
+def start_health_monitoring():
+    """Start background health monitoring safely in a thread."""
+    
+    def monitor_health():
+        
+        # Make sure we have Flask context in this thread
+        with app.app_context():
+            health_monitor = HealthMonitor(supabase, redis_client, app.config)  # Add redis_client
+
+            while True:
+                try:
+                    health_status = health_monitor.comprehensive_health_check()
+
+                    if health_status['status'] != 'healthy':
+                        current_app.logger.warning(
+                            f"System health degraded: {health_status['status']}"
+                        )
+
+                    # Alert on critical issues safely
+                    if health_status['status'] == 'unhealthy':
+                        _alert_on_critical_health_issue(health_status)
+
+                except Exception as e:
+                    safe_error = html.escape(str(e))
+                    current_app.logger.error(f"Health monitoring error: {safe_error}")
+
+                # Run every 5 minutes
+                time.sleep(300)
+
+    def _alert_on_critical_health_issue(health_status):
+        critical_issues = []
+        for component, status in health_status['components']['critical'].items():
+            if status['status'] == 'unhealthy':
+                critical_issues.append(f"{component}: {status.get('error', 'Unknown error')}")
+
+        if critical_issues:
+            message = "🚨 CRITICAL HEALTH ALERT:\n" + "\n".join([html.escape(i) for i in critical_issues])
+            # This is now safe in a thread
+            send_telegram_notification(message)
+
+    # Start monitoring in a daemon thread
+    thread = threading.Thread(target=monitor_health, daemon=True)
+    thread.start()
 
 @app.route('/')
 def index():
@@ -3069,23 +2849,6 @@ def dashboard():
                          total_withdrawn=total_withdrawn,
                          pending_withdrawals=pending_withdrawals,
                          withdrawals=withdrawals)
-
-def get_user_ranking(user_id):
-    user = SupabaseDB.get_user_by_id(user_id)
-    if not user:
-        return None
-    
-    ranked_users = SupabaseDB.get_top_users(limit=1000)  # Get all users for ranking
-    
-    for index, ranked_user_data in enumerate(ranked_users):
-        ranked_user = User(ranked_user_data)
-        if ranked_user.id == user_id:
-            return {
-                'position': index + 1,
-                'total_users': len(ranked_users),
-                'user_rank': user.user_rank
-            }
-    return None
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -3116,7 +2879,7 @@ def login():
                 flash('Account temporarily locked. Please try again later.', 'error')
                 return render_template('auth/login.html')
 
-            # ✅ Use Werkzeug’s built-in password verification
+            # ✅ Use Werkzeug's built-in password verification
             if check_password_hash(user.password_hash, password):
                 app.logger.info(f"Login successful for {username}")
 
@@ -3172,7 +2935,7 @@ def login():
                 )
 
         else:
-            # User doesn’t exist
+            # User doesn't exist
             app.logger.warning(f"Login failed — user not found: {username}")
             flash('Invalid username or password.', 'error')
 
@@ -3900,6 +3663,191 @@ def withdraw():
     transactions = SupabaseDB.get_transactions_by_user(current_user.id, transaction_type='withdrawal', limit=5)
     
     return render_template('withdraw.html', transactions=transactions)
+
+@app.route('/jobs')
+@login_required
+def jobs():
+    """Jobs page for students to view available job opportunities"""
+    if not current_user.is_verified:
+        flash('Please complete payment verification to access jobs.', 'warning')
+        return redirect(url_for('account_activation'))
+    
+    # Get filter parameters
+    category = request.args.get('category', '')
+    search = request.args.get('search', '')
+    
+    # Get all active jobs
+    jobs_data = SupabaseDB.get_all_jobs(active_only=True)
+    
+    # Apply filters
+    filtered_jobs = []
+    for job in jobs_data:
+        if category and job.get('category') != category:
+            continue
+        if search and search.lower() not in job.get('title', '').lower() and search.lower() not in job.get('company', '').lower():
+            continue
+        filtered_jobs.append(job)
+    
+    # Get unique categories for filter dropdown
+    categories = list(set(job.get('category') for job in jobs_data if job.get('category')))
+    
+    return render_template('jobs.html', 
+                         jobs=filtered_jobs,
+                         categories=categories,
+                         selected_category=category,
+                         search_query=search)
+
+@app.route('/admin/jobs')
+@login_required
+@admin_required
+def admin_jobs():
+    """Admin page to manage job postings"""
+    jobs_data = SupabaseDB.get_all_jobs(active_only=False, limit=100)
+    return render_template('admin_jobs.html', jobs=jobs_data)
+
+@app.route('/admin/jobs/create', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def create_job():
+    """Create a new job posting"""
+    if request.method == 'POST':
+        try:
+            job_data = {
+                'id': str(uuid.uuid4()),
+                'title': request.form.get('title', '').strip(),
+                'description': request.form.get('description', '').strip(),
+                'company': request.form.get('company', '').strip(),
+                'job_link': request.form.get('job_link', '').strip(),
+                'category': request.form.get('category', 'Other'),
+                'location': request.form.get('location', '').strip(),
+                'salary_range': request.form.get('salary_range', '').strip(),
+                'application_deadline': request.form.get('application_deadline'),
+                'is_active': bool(request.form.get('is_active')),
+                'is_featured': bool(request.form.get('is_featured')),
+                'created_by': current_user.id,
+                'created_at': datetime.now(timezone.utc).isoformat()
+            }
+            
+            # Validate required fields
+            if not job_data['title'] or not job_data['job_link']:
+                flash('Title and Job Link are required fields.', 'error')
+                return redirect(url_for('create_job'))
+            
+            # Validate URL format
+            if not re.match(r'^https?://', job_data['job_link']):
+                flash('Please enter a valid job link (must start with http:// or https://).', 'error')
+                return redirect(url_for('create_job'))
+            
+            created_job = SupabaseDB.create_job(job_data)
+            
+            if created_job:
+                flash('Job posting created successfully!', 'success')
+                return redirect(url_for('admin_jobs'))
+            else:
+                flash('Failed to create job posting. Please try again.', 'error')
+                
+        except Exception as e:
+            app.logger.error(f"Error creating job: {str(e)}")
+            flash('Error creating job posting. Please try again.', 'error')
+    
+    return render_template('create_job.html')
+
+@app.route('/admin/jobs/<job_id>/edit', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def edit_job(job_id):
+    """Edit an existing job posting"""
+    job = SupabaseDB.get_job_by_id(job_id)
+    
+    if not job:
+        flash('Job not found.', 'error')
+        return redirect(url_for('admin_jobs'))
+    
+    if request.method == 'POST':
+        try:
+            update_data = {
+                'title': request.form.get('title', '').strip(),
+                'description': request.form.get('description', '').strip(),
+                'company': request.form.get('company', '').strip(),
+                'job_link': request.form.get('job_link', '').strip(),
+                'category': request.form.get('category', 'Other'),
+                'location': request.form.get('location', '').strip(),
+                'salary_range': request.form.get('salary_range', '').strip(),
+                'application_deadline': request.form.get('application_deadline'),
+                'is_active': bool(request.form.get('is_active')),
+                'is_featured': bool(request.form.get('is_featured'))
+            }
+            
+            # Validate required fields
+            if not update_data['title'] or not update_data['job_link']:
+                flash('Title and Job Link are required fields.', 'error')
+                return redirect(url_for('edit_job', job_id=job_id))
+            
+            # Validate URL format
+            if not re.match(r'^https?://', update_data['job_link']):
+                flash('Please enter a valid job link (must start with http:// or https://).', 'error')
+                return redirect(url_for('edit_job', job_id=job_id))
+            
+            updated_job = SupabaseDB.update_job(job_id, update_data)
+            
+            if updated_job:
+                flash('Job posting updated successfully!', 'success')
+                return redirect(url_for('admin_jobs'))
+            else:
+                flash('Failed to update job posting. Please try again.', 'error')
+                
+        except Exception as e:
+            app.logger.error(f"Error updating job: {str(e)}")
+            flash('Error updating job posting. Please try again.', 'error')
+    
+    return render_template('edit_job.html', job=job)
+
+@app.route('/admin/jobs/<job_id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_job(job_id):
+    """Delete a job posting"""
+    job = SupabaseDB.get_job_by_id(job_id)
+    
+    if not job:
+        flash('Job not found.', 'error')
+        return redirect(url_for('admin_jobs'))
+    
+    try:
+        success = SupabaseDB.delete_job(job_id)
+        if success:
+            flash('Job posting deleted successfully!', 'success')
+        else:
+            flash('Failed to delete job posting.', 'error')
+    except Exception as e:
+        app.logger.error(f"Error deleting job: {str(e)}")
+        flash('Error deleting job posting.', 'error')
+    
+    return redirect(url_for('admin_jobs'))
+
+@app.route('/admin/jobs/<job_id>/toggle', methods=['POST'])
+@login_required
+@admin_required
+def toggle_job_status(job_id):
+    """Toggle job active status"""
+    job = SupabaseDB.get_job_by_id(job_id)
+    
+    if not job:
+        return jsonify({'success': False, 'message': 'Job not found'})
+    
+    try:
+        new_status = not job.get('is_active', False)
+        updated_job = SupabaseDB.update_job(job_id, {'is_active': new_status})
+        
+        if updated_job:
+            status_text = "activated" if new_status else "deactivated"
+            return jsonify({'success': True, 'message': f'Job {status_text} successfully'})
+        else:
+            return jsonify({'success': False, 'message': 'Failed to update job status'})
+            
+    except Exception as e:
+        app.logger.error(f"Error toggling job status: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)})
 
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
@@ -4712,6 +4660,159 @@ def favicon():
     return '', 204
 
 # =============================================================================
+# ERROR HANDLERS
+# =============================================================================
+
+@app.errorhandler(404)
+def not_found_error(error):
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    app.logger.error(f"Internal Server Error: {error}")
+    return render_template('500.html'), 500
+
+@app.errorhandler(Exception)
+def handle_exception(error):
+    app.logger.error(f"Unhandled Exception: {error}")
+    return render_template('500.html'), 500
+
+# =============================================================================
+# APPLICATION INITIALIZATION
+# =============================================================================
+
+# Setup logging
+if not app.debug:
+    file_handler = RotatingFileHandler('error.log', maxBytes=10240, backupCount=10)
+    file_handler.setFormatter(logging.Formatter(
+        '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+    ))
+    file_handler.setLevel(logging.ERROR)
+    app.logger.addHandler(file_handler)
+    app.logger.setLevel(logging.INFO)
+    app.logger.info('Referral Ninja startup')
+    
+# Fix console logging encoding
+if sys.stdout.encoding != 'utf-8':
+    import codecs
+    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer)
+
+# Environment validation
+def validate_environment():
+    """Validate all required environment variables are set"""
+    required_vars = [
+        'SECRET_KEY',
+        'JWT_SECRET_KEY',
+        'SUPABASE_URL',
+        'SUPABASE_KEY',
+        'SUPABASE_SERVICE_ROLE_KEY',
+        'MPESA_CONSUMER_KEY',
+        'MPESA_CONSUMER_SECRET',
+        'MPESA_BUSINESS_SHORTCODE',
+        'MPESA_PASSKEY',
+        'MPESA_B2C_SHORTCODE',
+        'MPESA_B2C_INITIATOR_NAME',
+        'MPESA_B2C_SECURITY_CREDENTIAL',
+        'MPESA_CALLBACK_URL',
+        'MPESA_B2C_CALLBACK_URL',
+        'MPESA_B2C_QUEUE_TIMEOUT_URL',
+        'CELCOM_SMS_API_KEY'
+    ]
+    
+    missing_vars = []
+    for var in required_vars:
+        if not os.environ.get(var):
+            missing_vars.append(var)
+    
+    if missing_vars:
+        raise Exception(f"Missing required environment variables: {', '.join(missing_vars)}")
+    
+    current_app.logger.info("✓ All required environment variables are set")
+
+# Updated initialization function
+def init_db():
+    """Initialize and verify Supabase database connection (no local SQL)."""
+    max_retries = 3
+    retry_count = 0
+
+    while retry_count < max_retries:
+        try:
+            current_app.logger.info("🔍 Testing Supabase connection...")
+            response = supabase.table("users").select("*").limit(1).execute()
+
+            if response.data is not None:
+                current_app.logger.info("✅ Supabase client verified successfully")
+                
+                # Test Redis connection
+                try:
+                    redis_client.ping()
+                    current_app.logger.info("✅ Redis connection verified successfully")
+                except Exception as e:
+                    current_app.logger.error(f"❌ Redis connection failed: {e}")
+                    return False
+
+                # Optionally check if admin exists
+                if os.environ.get("CREATE_ADMIN_USER") == "true":
+                    create_admin_user_if_missing()
+                    current_app.logger.info("✅ Admin user checked/created")
+
+                return True
+            else:
+                current_app.logger.warning("⚠️ No data returned from Supabase - table may be empty")
+                return True  # Still fine, as Supabase is reachable
+
+        except Exception as e:
+            retry_count += 1
+            current_app.logger.error(f"❌ Database initialization attempt {retry_count} failed: {e}")
+
+            if retry_count < max_retries:
+                wait_time = 2 ** retry_count
+                current_app.logger.info(f"Retrying Supabase check in {wait_time} seconds...")
+                time.sleep(wait_time)
+            else:
+                current_app.logger.critical("❌ All Supabase connection attempts failed")
+                return False
+
+# Enhanced before_request with health checks (add Redis check)
+@app.before_request
+def before_request():
+    """Enhanced request preprocessing with health checks"""
+    try:
+        # Quick health check with retry logic
+        response = supabase_check('users', limit=1)
+        
+        # Quick Redis health check
+        redis_client.ping()
+        
+    except Exception as e:
+        current_app.logger.error(f"Health check failed: {e}")
+        return jsonify({'error': 'Service temporarily unavailable'}), 503
+
+    # Log security events for sensitive endpoints
+    if request.endpoint in ['api_request_withdrawal', 'withdraw', 'admin_dashboard']:
+        SecurityMonitor.log_security_event(
+            "SENSITIVE_ENDPOINT_ACCESS",
+            current_user.id if current_user.is_authenticated else None,
+            {
+                "endpoint": request.endpoint,
+                "ip": request.remote_addr,
+                "method": request.method
+            }
+        )
+
+# Add utility functions to Jinja2 context
+@app.context_processor
+def utility_processor():
+    return {
+        'abs': abs,
+        'min': min,
+        'max': max,
+        'round': round,
+        'len': len,
+        'now': datetime.now(timezone.utc)
+    }
+
+# =============================================================================
 # APPLICATION STARTUP
 # =============================================================================
 
@@ -4732,7 +4833,6 @@ with app.app_context():
     except Exception as e:
         app.logger.error(f"❌ Application initialization failed: {e}")
 
-# Production Startup Script
 # Production Startup Script
 if __name__ == '__main__':
     try:

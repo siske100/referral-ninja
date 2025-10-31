@@ -95,6 +95,15 @@
         
         <div class="nav-section">
             <span class="nav-section-label">Community</span>
+            <a href="{{ url_for('jobs') }}" class="nav-item {% if request.endpoint == 'jobs' %}active{% endif %}">
+                <span class="nav-icon">
+                    <div class="nav-icon-bg">
+                        <i class="fas fa-briefcase"></i>
+                    </div>
+                </span>
+                <span class="nav-text">Job Opportunities</span>
+            </a>
+            
             <a href="{{ url_for('leaderboard') }}" class="nav-item {% if request.endpoint == 'leaderboard' %}active{% endif %}">
                 <span class="nav-icon">
                     <div class="nav-icon-bg">
@@ -126,6 +135,15 @@
                 </span>
                 <span class="nav-text">Admin Panel</span>
                 <span class="nav-badge admin-badge">ADMIN</span>
+            </a>
+            
+            <a href="{{ url_for('admin_jobs') }}" class="nav-item admin-item {% if request.endpoint == 'admin_jobs' %}active{% endif %}">
+                <span class="nav-icon">
+                    <div class="nav-icon-bg">
+                        <i class="fas fa-briefcase"></i>
+                    </div>
+                </span>
+                <span class="nav-text">Manage Jobs</span>
             </a>
             
             <a href="{{ url_for('admin_withdrawals') }}" class="nav-item admin-item {% if request.endpoint == 'admin_withdrawals' %}active{% endif %}">
