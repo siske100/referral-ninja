@@ -4296,22 +4296,33 @@ def bulk_withdrawal_action():
 @login_required
 @admin_required
 def admin_withdrawals():
-    # Get all withdrawals with user info
-    withdrawals_data = supabase.table('transactions').select('*, users(*)').eq('transaction_type', 'withdrawal').order('created_at', desc=True).execute()
-    
-    withdrawals = []
-    for item in withdrawals_data.data:
-        transaction = item
-        user_data = item.get('users', {})
-        user = User(user_data) if user_data else None
-        withdrawals.append((transaction, user))
-    
-    pending_withdrawals_data = SupabaseDB.get_pending_withdrawals()
-    total_pending_withdrawals = sum(abs(t['amount']) for t in pending_withdrawals_data)
-    
-    return render_template('admin_withdrawals.html',
-                         withdrawals=withdrawals,
-                         total_pending_withdrawals=total_pending_withdrawals)
+    try:
+        app.logger.info("📦 Fetching all withdrawals from Supabase...")
+        withdrawals_data = supabase.table('transactions')\
+            .select('*, users(*)')\
+            .eq('transaction_type', 'withdrawal')\
+            .order('created_at', desc=True)\
+            .execute()
+        
+        app.logger.info(f"✅ Supabase response: {withdrawals_data}")
+
+        withdrawals = []
+        for item in withdrawals_data.data or []:
+            user_data = item.get('users', {})
+            user = User(user_data) if user_data else None
+            withdrawals.append((item, user))
+        
+        pending_withdrawals_data = SupabaseDB.get_pending_withdrawals()
+        total_pending_withdrawals = sum(abs(t['amount']) for t in pending_withdrawals_data)
+
+        return render_template(
+            'admin_withdrawals.html',
+            withdrawals=withdrawals,
+            total_pending_withdrawals=total_pending_withdrawals
+        )
+    except Exception as e:
+        app.logger.error(f"❌ Error loading withdrawals: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
 
 # Update admin withdrawal approval to handle automatic processing
 @app.route('/admin/approve-withdrawal/<transaction_id>', methods=['POST'])
