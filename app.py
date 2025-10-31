@@ -66,6 +66,7 @@ import math
 import asyncio
 from telegram import Bot
 import threading
+import html
 import requests
 import secrets
 import string
@@ -175,7 +176,6 @@ rate_limiter = Limiter(
 # PRODUCTION DATABASE SCHEMA MANAGER
 # =============================================================================
 def supabase_check(table_name: str, limit: int = 1, retries: int = 3):
-    """Simple helper to verify Supabase connectivity with retries."""
     for attempt in range(1, retries + 1):
         try:
             return supabase.table(table_name).select("*").limit(limit).execute()
@@ -995,44 +995,43 @@ def liveness_check():
 def start_health_monitoring():
     """Start background health monitoring safely"""
     def monitor_health():
-        with app.app_context():
-            health_monitor = HealthMonitor(supabase, app.config)
-            
-            while True:
-                try:
-                    health_status = health_monitor.comprehensive_health_check()
-                    
-                    # Log health status periodically
-                    if health_status['status'] != 'healthy':
-                        app.logger.warning(f"System health degraded: {health_status['status']}")
-                    
-                    # Alert on critical issues
-                    if health_status['status'] == 'unhealthy':
-                        _alert_on_critical_health_issue(health_status)
-                    
-                    time.sleep(300)  # Check every 5 minutes
-                    
-                except Exception as e:
-                    app.logger.error(f"Health monitoring error: {e}")
-                    time.sleep(60)  # Wait 1 minute on error
-    
-    monitor_thread = threading.Thread(target=monitor_health, daemon=True)
-    monitor_thread.start()
-    app.logger.info("✅ Background health monitoring started")
+        health_monitor = HealthMonitor(supabase, app.config)
+        while True:
+            try:
+                health_status = health_monitor.comprehensive_health_check()
+
+                if health_status['status'] != 'healthy':
+                    app.logger.warning(f"System health degraded: {health_status['status']}")
+
+                # Send alerts for critical issues safely
+                if health_status['status'] == 'unhealthy':
+                    _alert_on_critical_health_issue(health_status)
+
+            except Exception as e:
+                safe_error = html.escape(str(e))
+                app.logger.error(f"Health monitoring error: {safe_error}")
+
+            # Run every 5 minutes
+            time.sleep(300)
+
+    # Start the monitoring thread
+    thread = threading.Thread(target=monitor_health, daemon=True)
+    thread.start()
+
 
 def _alert_on_critical_health_issue(health_status):
     """Send alerts for critical health issues"""
-    with app.app_context():
-        critical_issues = []
-        
-        for component, status in health_status['components'].get('critical', {}).items():
-            if status['status'] == 'unhealthy':
-                critical_issues.append(f"{component}: {status.get('error', 'Unknown error')}")
-        
-        if critical_issues and app.config.get('TELEGRAM_BOT_TOKEN'):
-            message = "🚨 CRITICAL HEALTH ALERT:\n" + "\n".join(critical_issues)
+    critical_issues = []
+    for component, status in health_status['components']['critical'].items():
+        if status['status'] == 'unhealthy':
+            critical_issues.append(f"{component}: {status.get('error', 'Unknown error')}")
+
+    if critical_issues and app.config.get('TELEGRAM_BOT_TOKEN'):
+        message = "🚨 CRITICAL HEALTH ALERT:\n" + "\n".join([html.escape(i) for i in critical_issues])
+        try:
             send_telegram_notification(message)
-            
+        except Exception as e:
+            app.logger.warning(f"Telegram notification failed: {html.escape(str(e))}")         
 # =============================================================================
 # DATABASE MODELS AND UTILITIES
 # =============================================================================
@@ -2156,12 +2155,12 @@ def init_db():
 def before_request():
     """Enhanced request preprocessing with health checks"""
     try:
-        # Quick health check
-        response = supabase.table('users').select('*').limit(1).execute()
+        # Quick health check with retry logic
+        response = supabase_check('users', limit=1)
     except Exception as e:
         current_app.logger.error(f"Database health check failed: {e}")
         return jsonify({'error': 'Service temporarily unavailable'}), 503
-    
+
     # Log security events for sensitive endpoints
     if request.endpoint in ['api_request_withdrawal', 'withdraw', 'admin_dashboard']:
         SecurityMonitor.log_security_event(
@@ -2173,6 +2172,7 @@ def before_request():
                 "method": request.method
             }
         )
+
 
 # Add utility functions to Jinja2 context
 @app.context_processor
