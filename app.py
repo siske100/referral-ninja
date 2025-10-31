@@ -933,9 +933,9 @@ def admin_required(f):
 
 @app.context_processor
 def utility_processor():
-    def safe_strftime(dt):
+    def safe_strftime(dt, fmt="%b %d, %Y %I:%M %p"):
         try:
-            return dt.strftime("%b %d, %Y %I:%M %p")  # e.g. Oct 30, 2025 09:45 AM
+            return dt.strftime(fmt) if dt else ""
         except Exception:
             return ""
     return dict(safe_strftime=safe_strftime)
