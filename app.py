@@ -2123,40 +2123,38 @@ def validate_environment():
 
 # Updated initialization function
 def init_db():
-    """Production database initialization with proper error handling"""
+    """Initialize and verify Supabase database connection (no local SQL)."""
     max_retries = 3
     retry_count = 0
-    
-    db_manager = DatabaseManager(supabase)
-    
+
     while retry_count < max_retries:
         try:
-            # Test basic connection first
-            response = supabase.table('users').select('*').limit(1).execute()
-            current_app.logger.info("✓ Supabase connection successful")
-            
-            # Initialize database schema
-            if db_manager.initialize_database():
-                current_app.logger.info("Database schema verified/created successfully")
-                
-                # Create admin user if required
-                if os.environ.get('CREATE_ADMIN_USER') == 'true':
+            current_app.logger.info("🔍 Testing Supabase connection...")
+            response = supabase.table("users").select("*").limit(1).execute()
+
+            if response.data is not None:
+                current_app.logger.info("✅ Supabase client verified successfully")
+
+                # Optionally check if admin exists
+                if os.environ.get("CREATE_ADMIN_USER") == "true":
                     create_admin_user_if_missing()
-                
+                    current_app.logger.info("✅ Admin user checked/created")
+
                 return True
             else:
-                current_app.logger.error("❌ Database schema creation failed")
-                return False
-                
+                current_app.logger.warning("⚠️ No data returned from Supabase - table may be empty")
+                return True  # Still fine, as Supabase is reachable
+
         except Exception as e:
             retry_count += 1
             current_app.logger.error(f"❌ Database initialization attempt {retry_count} failed: {e}")
-            
+
             if retry_count < max_retries:
-                current_app.logger.info(f"Retrying database initialization in {2 ** retry_count} seconds...")
-                time.sleep(2 ** retry_count)
+                wait_time = 2 ** retry_count
+                current_app.logger.info(f"Retrying Supabase check in {wait_time} seconds...")
+                time.sleep(wait_time)
             else:
-                current_app.logger.error("❌ All database initialization attempts failed")
+                current_app.logger.critical("❌ All Supabase connection attempts failed")
                 return False
 
 # Enhanced before_request with health checks
