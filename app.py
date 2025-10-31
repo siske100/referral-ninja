@@ -50,6 +50,7 @@ except Exception as e:
     print(f"❌ PostgreSQL Connection failed: {e}")
     print("Continuing with Supabase client only...")
 
+
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, Blueprint, current_app
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
@@ -993,45 +994,49 @@ def liveness_check():
 
 # Health monitoring background task
 def start_health_monitoring():
-    """Start background health monitoring safely"""
+    """Start background health monitoring safely in a thread."""
+    
     def monitor_health():
-        health_monitor = HealthMonitor(supabase, app.config)
-        while True:
-            try:
-                health_status = health_monitor.comprehensive_health_check()
+        
+        # Make sure we have Flask context in this thread
+        with app.app_context():
+            health_monitor = HealthMonitor(supabase, app.config)
 
-                if health_status['status'] != 'healthy':
-                    app.logger.warning(f"System health degraded: {health_status['status']}")
+            while True:
+                try:
+                    health_status = health_monitor.comprehensive_health_check()
 
-                # Send alerts for critical issues safely
-                if health_status['status'] == 'unhealthy':
-                    _alert_on_critical_health_issue(health_status)
+                    if health_status['status'] != 'healthy':
+                        current_app.logger.warning(
+                            f"System health degraded: {health_status['status']}"
+                        )
 
-            except Exception as e:
-                safe_error = html.escape(str(e))
-                app.logger.error(f"Health monitoring error: {safe_error}")
+                    # Alert on critical issues safely
+                    if health_status['status'] == 'unhealthy':
+                        _alert_on_critical_health_issue(health_status)
 
-            # Run every 5 minutes
-            time.sleep(300)
+                except Exception as e:
+                    safe_error = html.escape(str(e))
+                    current_app.logger.error(f"Health monitoring error: {safe_error}")
 
-    # Start the monitoring thread
+                # Run every 5 minutes
+                time.sleep(300)
+
+    def _alert_on_critical_health_issue(health_status):
+        critical_issues = []
+        for component, status in health_status['components']['critical'].items():
+            if status['status'] == 'unhealthy':
+                critical_issues.append(f"{component}: {status.get('error', 'Unknown error')}")
+
+        if critical_issues:
+            message = "🚨 CRITICAL HEALTH ALERT:\n" + "\n".join([html.escape(i) for i in critical_issues])
+            # This is now safe in a thread
+            send_telegram_notification(message)
+
+    # Start monitoring in a daemon thread
     thread = threading.Thread(target=monitor_health, daemon=True)
     thread.start()
-
-
-def _alert_on_critical_health_issue(health_status):
-    """Send alerts for critical health issues"""
-    critical_issues = []
-    for component, status in health_status['components']['critical'].items():
-        if status['status'] == 'unhealthy':
-            critical_issues.append(f"{component}: {status.get('error', 'Unknown error')}")
-
-    if critical_issues and app.config.get('TELEGRAM_BOT_TOKEN'):
-        message = "🚨 CRITICAL HEALTH ALERT:\n" + "\n".join([html.escape(i) for i in critical_issues])
-        try:
-            send_telegram_notification(message)
-        except Exception as e:
-            app.logger.warning(f"Telegram notification failed: {html.escape(str(e))}")         
+            
 # =============================================================================
 # DATABASE MODELS AND UTILITIES
 # =============================================================================
@@ -2708,43 +2713,54 @@ def send_sms(phone, message):
 
 # Telegram Functions
 async def send_telegram_message_async(message: str):
-    """Send Telegram message asynchronously and safely."""
-    token = current_app.config.get("TELEGRAM_BOT_TOKEN") or os.environ.get("TELEGRAM_BOT_TOKEN")
-    chat_id = current_app.config.get("TELEGRAM_CHAT_ID") or os.environ.get("TELEGRAM_CHAT_ID")
-
-    if not token or not chat_id:
-        current_app.logger.warning("⚠️ Telegram credentials missing — skipping alert")
-        return
-
+    """Send Telegram message asynchronously (safe for Flask contexts)."""
     try:
-        safe_message = html.escape(message)  # prevents HTML parse errors
+        # Use app context safely
+        app = current_app._get_current_object()
+        token = app.config.get("TELEGRAM_BOT_TOKEN") or os.environ.get("TELEGRAM_BOT_TOKEN")
+        chat_id = app.config.get("TELEGRAM_CHAT_ID") or os.environ.get("TELEGRAM_CHAT_ID")
+
+        if not token or not chat_id:
+            app.logger.warning("⚠️ Telegram credentials missing — skipping alert")
+            return
+
+        safe_message = html.escape(message)
         url = f"https://api.telegram.org/bot{token}/sendMessage"
         payload = {"chat_id": chat_id, "text": safe_message, "parse_mode": "HTML"}
 
-        # Run the request in a non-blocking way
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            # If Flask is already async-aware
-            await asyncio.to_thread(requests.post, url, json=payload, timeout=10)
-        else:
-            await asyncio.run(asyncio.to_thread(requests.post, url, json=payload, timeout=10))
-
-        current_app.logger.info("✅ Telegram notification sent successfully")
+        # Run the request non-blocking
+        await asyncio.to_thread(requests.post, url, json=payload, timeout=10)
+        app.logger.info("✅ Telegram notification sent successfully")
 
     except Exception as e:
-        current_app.logger.error(f"Telegram notification failed: {html.escape(str(e))}")
+        try:
+            app.logger.error(f"Telegram notification failed: {html.escape(str(e))}")
+        except Exception:
+            print(f"Telegram notification failed: {str(e)}")
 
 
 def send_telegram_notification(message: str):
-    """Wrapper to safely send Telegram messages from sync Flask routes."""
+    """Send Telegram notifications safely from any thread or async context."""
     try:
-        asyncio.run(send_telegram_message_async(message))
-    except RuntimeError:
-        # Handles "event loop already running" error
-        asyncio.create_task(send_telegram_message_async(message))
+        from app import app as flask_app
+        app = flask_app
+        with app.app_context():
+            token = app.config.get("TELEGRAM_BOT_TOKEN")
+            chat_id = app.config.get("TELEGRAM_CHAT_ID")
+            if not token or not chat_id:
+                app.logger.warning("⚠️ Telegram credentials missing — skipping alert")
+                return
+
+            safe_message = html.escape(message)
+            url = f"https://api.telegram.org/bot{token}/sendMessage"
+            payload = {"chat_id": chat_id, "text": safe_message, "parse_mode": "HTML"}
+
+            # Run sync HTTP in a thread (safe for background threads)
+            threading.Thread(target=requests.post, args=(url,), kwargs={"json": payload, "timeout": 10}).start()
+            app.logger.info("✅ Telegram notification sent successfully")
     except Exception as e:
-        current_app.logger.error(f"Failed to send Telegram notification: {html.escape(str(e))}")
-        
+        app.logger.error(f"Telegram notification failed: {html.escape(str(e))}")
+           
 def send_withdrawal_notification_to_telegram(user, transaction):
     """Send withdrawal notification to Telegram"""
     try:
