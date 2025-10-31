@@ -174,6 +174,15 @@ rate_limiter = Limiter(
 # =============================================================================
 # PRODUCTION DATABASE SCHEMA MANAGER
 # =============================================================================
+def supabase_check(table_name: str, limit: int = 1, retries: int = 3):
+    """Simple helper to verify Supabase connectivity with retries."""
+    for attempt in range(1, retries + 1):
+        try:
+            return supabase.table(table_name).select("*").limit(limit).execute()
+        except Exception as e:
+            app.logger.warning(f"Supabase attempt {attempt} failed: {e}")
+            time.sleep(2 ** attempt)
+    raise ConnectionError(f"Supabase {table_name} check failed after {retries} attempts")
 
 class DatabaseHealthMonitor:
     """Monitor database health and performance"""
@@ -945,9 +954,7 @@ def utility_processor():
 def health_check():
     """Basic health check for load balancers"""
     try:
-        # Quick database check
-        response = supabase.table('users').select('*', count='exact').limit(1).execute()
-        
+        response = supabase_check('users', limit=1)
         return jsonify({
             'status': 'healthy',
             'timestamp': datetime.now(timezone.utc).isoformat(),
@@ -974,71 +981,58 @@ def detailed_health_check():
 
 @app.route('/health/readiness')
 def readiness_check():
-    """Kubernetes readiness probe"""
     try:
-        # Check if application can handle requests
-        response = supabase.table('users').select('*').limit(1).execute()
-        
-        return jsonify({
-            'status': 'ready',
-            'timestamp': datetime.now(timezone.utc).isoformat()
-        })
+        supabase_check('users', limit=1)
+        return jsonify({'status': 'ready', 'timestamp': datetime.now(timezone.utc).isoformat()})
     except Exception as e:
-        return jsonify({
-            'status': 'not_ready',
-            'timestamp': datetime.now(timezone.utc).isoformat(),
-            'error': str(e)
-        }), 503
+        return jsonify({'status': 'not_ready', 'timestamp': datetime.now(timezone.utc).isoformat(), 'error': str(e)}), 503
 
 @app.route('/health/liveness')
 def liveness_check():
-    """Kubernetes liveness probe"""
-    # Simple check to see if application is running
-    return jsonify({
-        'status': 'alive',
-        'timestamp': datetime.now(timezone.utc).isoformat()
-    })
+    return jsonify({'status': 'alive', 'timestamp': datetime.now(timezone.utc).isoformat()})
 
 # Health monitoring background task
 def start_health_monitoring():
-    """Start background health monitoring"""
+    """Start background health monitoring safely"""
     def monitor_health():
-        health_monitor = HealthMonitor(supabase, app.config)
-        
-        while True:
-            try:
-                health_status = health_monitor.comprehensive_health_check()
-                
-                # Log health status periodically
-                if health_status['status'] != 'healthy':
-                    app.logger.warning(f"System health degraded: {health_status['status']}")
-                
-                # Alert on critical issues
-                if health_status['status'] == 'unhealthy':
-                    _alert_on_critical_health_issue(health_status)
-                
-                time.sleep(300)  # Check every 5 minutes
-                
-            except Exception as e:
-                app.logger.error(f"Health monitoring error: {e}")
-                time.sleep(60)  # Wait 1 minute on error
+        with app.app_context():
+            health_monitor = HealthMonitor(supabase, app.config)
+            
+            while True:
+                try:
+                    health_status = health_monitor.comprehensive_health_check()
+                    
+                    # Log health status periodically
+                    if health_status['status'] != 'healthy':
+                        app.logger.warning(f"System health degraded: {health_status['status']}")
+                    
+                    # Alert on critical issues
+                    if health_status['status'] == 'unhealthy':
+                        _alert_on_critical_health_issue(health_status)
+                    
+                    time.sleep(300)  # Check every 5 minutes
+                    
+                except Exception as e:
+                    app.logger.error(f"Health monitoring error: {e}")
+                    time.sleep(60)  # Wait 1 minute on error
     
-    # Start monitoring thread
     monitor_thread = threading.Thread(target=monitor_health, daemon=True)
     monitor_thread.start()
+    app.logger.info("✅ Background health monitoring started")
 
 def _alert_on_critical_health_issue(health_status):
     """Send alerts for critical health issues"""
-    critical_issues = []
-    
-    for component, status in health_status['components']['critical'].items():
-        if status['status'] == 'unhealthy':
-            critical_issues.append(f"{component}: {status.get('error', 'Unknown error')}")
-    
-    if critical_issues and app.config.get('TELEGRAM_BOT_TOKEN'):
-        message = "🚨 CRITICAL HEALTH ALERT:\n" + "\n".join(critical_issues)
-        send_telegram_notification(message)
-
+    with app.app_context():
+        critical_issues = []
+        
+        for component, status in health_status['components'].get('critical', {}).items():
+            if status['status'] == 'unhealthy':
+                critical_issues.append(f"{component}: {status.get('error', 'Unknown error')}")
+        
+        if critical_issues and app.config.get('TELEGRAM_BOT_TOKEN'):
+            message = "🚨 CRITICAL HEALTH ALERT:\n" + "\n".join(critical_issues)
+            send_telegram_notification(message)
+            
 # =============================================================================
 # DATABASE MODELS AND UTILITIES
 # =============================================================================
