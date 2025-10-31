@@ -27,10 +27,26 @@
             --platinum: #e5e4e2;
             --diamond: #b9f2ff;
             --info: #3498db;
+            
+            /* Dark theme variables */
+            --dark-bg: #0f1419;
+            --dark-card: #1a1f2e;
+            --dark-text: #e4e6eb;
+            --dark-text-light: #b0b3b8;
+            --dark-border: #2d3748;
+            --dark-hover: #2d3748;
+        }
+
+        [data-theme="dark"] {
+            --light-bg: var(--dark-bg);
+            --text-dark: var(--dark-text);
+            --text-light: var(--dark-text-light);
+            --border-light: var(--dark-border);
         }
 
         * {
             font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
         }
 
         body {
@@ -38,6 +54,7 @@
             overflow-x: hidden;
             margin: 0;
             padding: 0;
+            color: var(--text-dark);
         }
 
         .app-container {
@@ -65,6 +82,83 @@
             min-height: calc(100vh - 80px);
         }
 
+        /* Theme Toggle Switch */
+        .theme-toggle {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 30px;
+            margin: 0 10px;
+        }
+
+        .theme-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .theme-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, var(--primary-red), var(--primary-dark));
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .theme-slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .theme-slider {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        input:checked + .theme-slider:before {
+            transform: translateX(30px);
+        }
+
+        .theme-slider .theme-icon {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 14px;
+            color: white;
+        }
+
+        .theme-slider .sun {
+            left: 8px;
+        }
+
+        .theme-slider .moon {
+            right: 8px;
+        }
+
+        .theme-toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .theme-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+
         /* Enhanced Flash Messages */
         .flash-message {
             padding: 1.25rem 1.5rem;
@@ -80,9 +174,17 @@
             position: relative;
         }
 
+        [data-theme="dark"] .flash-message {
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
         .flash-message:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        [data-theme="dark"] .flash-message:hover {
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
         }
 
         .flash-message.success {
@@ -91,10 +193,20 @@
             border-left: 4px solid var(--success);
         }
 
+        [data-theme="dark"] .flash-message.success {
+            background: linear-gradient(135deg, #1a3c27, #0f2919);
+            color: #4ade80;
+        }
+
         .flash-message.error {
             background: linear-gradient(135deg, #f8d7da, #f1b0b7);
             color: #721c24;
             border-left: 4px solid var(--danger);
+        }
+
+        [data-theme="dark"] .flash-message.error {
+            background: linear-gradient(135deg, #3c1a1f, #2a1215);
+            color: #f87171;
         }
 
         .flash-message.warning {
@@ -103,15 +215,73 @@
             border-left: 4px solid var(--warning);
         }
 
+        [data-theme="dark"] .flash-message.warning {
+            background: linear-gradient(135deg, #3c2e1a, #2c2112);
+            color: #fbbf24;
+        }
+
         .flash-message.info {
             background: linear-gradient(135deg, #d1ecf1, #b8e6f1);
             color: #0c5460;
             border-left: 4px solid var(--info);
         }
 
+        [data-theme="dark"] .flash-message.info {
+            background: linear-gradient(135deg, #1a2c3c, #14202c);
+            color: #60a5fa;
+        }
+
         .flash-icon {
             font-size: 1.2rem;
             margin-right: 0.75rem;
+        }
+
+        /* Dark theme specific styles */
+        [data-theme="dark"] .card {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text);
+        }
+
+        [data-theme="dark"] .card:hover {
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+        }
+
+        [data-theme="dark"] .table {
+            color: var(--dark-text);
+            background: var(--dark-card);
+        }
+
+        [data-theme="dark"] .table th,
+        [data-theme="dark"] .table td {
+            border-color: var(--dark-border);
+        }
+
+        [data-theme="dark"] .form-control {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text);
+        }
+
+        [data-theme="dark"] .form-control:focus {
+            background: var(--dark-card);
+            border-color: var(--primary-red);
+            color: var(--dark-text);
+        }
+
+        [data-theme="dark"] .form-label {
+            color: var(--dark-text);
+        }
+
+        [data-theme="dark"] .btn-outline-secondary {
+            border-color: var(--dark-border);
+            color: var(--dark-text);
+        }
+
+        [data-theme="dark"] .btn-outline-secondary:hover {
+            background: var(--dark-hover);
+            border-color: var(--dark-border);
+            color: var(--dark-text);
         }
 
         /* Mobile Responsive */
@@ -122,6 +292,10 @@
 
             .content {
                 padding: 1rem;
+            }
+
+            .theme-toggle-container {
+                padding: 0.5rem;
             }
         }
 
@@ -139,6 +313,10 @@
         ::-webkit-scrollbar-track {
             background: #f1f1f1;
             border-radius: 10px;
+        }
+
+        [data-theme="dark"] ::-webkit-scrollbar-track {
+            background: #2d3748;
         }
 
         ::-webkit-scrollbar-thumb {
@@ -160,6 +338,11 @@
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin-right: 10px;
+        }
+
+        [data-theme="dark"] .loading-spinner {
+            border: 3px solid #4a5568;
+            border-top: 3px solid var(--primary-red);
         }
 
         @keyframes spin {
@@ -206,6 +389,11 @@
             margin: 2rem 0;
         }
 
+        [data-theme="dark"] .error-state {
+            background: var(--dark-card);
+            color: var(--dark-text);
+        }
+
         .error-state i {
             font-size: 4rem;
             color: var(--danger);
@@ -217,9 +405,17 @@
             margin-bottom: 1rem;
         }
 
+        [data-theme="dark"] .error-state h3 {
+            color: var(--dark-text);
+        }
+
         .error-state p {
             color: var(--text-light);
             margin-bottom: 2rem;
+        }
+
+        [data-theme="dark"] .error-state p {
+            color: var(--dark-text-light);
         }
 
         /* Maintenance Mode */
@@ -291,15 +487,32 @@
             .content {
                 padding: 0;
             }
+
+            .theme-toggle-container {
+                display: none !important;
+            }
         }
     </style>
     {% block styles %}{% endblock %}
 </head>
-<body>
+<body data-theme="light">
     <div class="app-container">
         {% include 'sidebar.html' %}
         
         <div class="main-content" id="mainContent">
+            <!-- Theme Toggle in Header Area -->
+            <div class="theme-toggle-container d-md-none"> <!-- Show on mobile -->
+                <span class="theme-label me-2"><i class="fas fa-sun"></i></span>
+                <label class="theme-toggle">
+                    <input type="checkbox" id="themeToggle">
+                    <span class="theme-slider">
+                        <i class="fas fa-sun theme-icon sun"></i>
+                        <i class="fas fa-moon theme-icon moon"></i>
+                    </span>
+                </label>
+                <span class="theme-label ms-2"><i class="fas fa-moon"></i></span>
+            </div>
+
             <main class="content">
                 <!-- Connection Status Indicator -->
                 <div class="connection-status online" id="connectionStatus" style="display: none;">
@@ -336,6 +549,98 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Theme management
+        class ThemeManager {
+            constructor() {
+                this.themeToggle = document.getElementById('themeToggle');
+                this.currentTheme = localStorage.getItem('theme') || 'light';
+                this.init();
+            }
+
+            init() {
+                // Set initial theme
+                this.setTheme(this.currentTheme);
+                
+                // Set toggle state
+                if (this.themeToggle) {
+                    this.themeToggle.checked = this.currentTheme === 'dark';
+                    this.themeToggle.addEventListener('change', (e) => {
+                        this.setTheme(e.target.checked ? 'dark' : 'light');
+                    });
+                }
+
+                // Add theme toggle to sidebar if it exists
+                this.addThemeToggleToSidebar();
+            }
+
+            setTheme(theme) {
+                this.currentTheme = theme;
+                document.body.setAttribute('data-theme', theme);
+                localStorage.setItem('theme', theme);
+                
+                // Update meta theme-color for mobile browsers
+                this.updateMetaThemeColor(theme);
+                
+                // Dispatch event for other components to listen to
+                window.dispatchEvent(new CustomEvent('themeChanged', { detail: theme }));
+            }
+
+            updateMetaThemeColor(theme) {
+                let metaThemeColor = document.querySelector('meta[name="theme-color"]');
+                if (!metaThemeColor) {
+                    metaThemeColor = document.createElement('meta');
+                    metaThemeColor.name = 'theme-color';
+                    document.head.appendChild(metaThemeColor);
+                }
+                metaThemeColor.content = theme === 'dark' ? '#0f1419' : '#e74c3c';
+            }
+
+            addThemeToggleToSidebar() {
+                // Wait for sidebar to load, then add theme toggle
+                setTimeout(() => {
+                    const sidebar = document.querySelector('.sidebar');
+                    if (sidebar) {
+                        const existingToggle = sidebar.querySelector('.theme-toggle-container');
+                        if (!existingToggle) {
+                            const toggleContainer = document.createElement('div');
+                            toggleContainer.className = 'theme-toggle-container d-none d-md-flex'; // Show on desktop
+                            toggleContainer.innerHTML = `
+                                <span class="theme-label me-2"><i class="fas fa-sun"></i></span>
+                                <label class="theme-toggle">
+                                    <input type="checkbox" ${this.currentTheme === 'dark' ? 'checked' : ''}>
+                                    <span class="theme-slider">
+                                        <i class="fas fa-sun theme-icon sun"></i>
+                                        <i class="fas fa-moon theme-icon moon"></i>
+                                    </span>
+                                </label>
+                                <span class="theme-label ms-2"><i class="fas fa-moon"></i></span>
+                            `;
+                            
+                            // Insert at the bottom of sidebar
+                            sidebar.appendChild(toggleContainer);
+                            
+                            // Add event listener to sidebar toggle
+                            const sidebarToggle = toggleContainer.querySelector('input');
+                            sidebarToggle.addEventListener('change', (e) => {
+                                this.setTheme(e.target.checked ? 'dark' : 'light');
+                                // Sync with main toggle
+                                if (this.themeToggle) {
+                                    this.themeToggle.checked = e.target.checked;
+                                }
+                            });
+                        }
+                    }
+                }, 100);
+            }
+
+            toggle() {
+                this.setTheme(this.currentTheme === 'light' ? 'dark' : 'light');
+                if (this.themeToggle) {
+                    this.themeToggle.checked = this.currentTheme === 'dark';
+                }
+            }
+        }
+
         // Enhanced JavaScript with better error handling
         document.addEventListener('DOMContentLoaded', function() {
             const sidebar = document.getElementById('sidebar');
@@ -343,6 +648,9 @@
             const sidebarOverlay = document.getElementById('sidebarOverlay');
             const connectionStatus = document.getElementById('connectionStatus');
             const errorState = document.getElementById('errorState');
+
+            // Initialize theme manager
+            const themeManager = new ThemeManager();
 
             // Initialize components safely
             function initializeApp() {
@@ -503,6 +811,14 @@
                     toast.remove();
                 });
             };
+
+            // Theme toggle shortcut (Ctrl+Shift+T)
+            document.addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.shiftKey && e.key === 'T') {
+                    e.preventDefault();
+                    themeManager.toggle();
+                }
+            });
 
             // Initialize the application
             initializeApp();
