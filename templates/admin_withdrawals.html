@@ -229,6 +229,11 @@
             font-size: 0.8rem;
             color: #6c757d;
         }
+        
+        .auto-refresh-badge {
+            font-size: 0.7rem;
+            vertical-align: super;
+        }
     </style>
 </head>
 <body>
@@ -306,6 +311,10 @@
                             <p class="text-muted">Manage and process user withdrawal requests <span class="last-updated" id="lastUpdated">Last updated: Just now</span></p>
                         </div>
                         <div class="d-flex">
+                            <div class="form-check form-switch me-3 align-self-center">
+                                <input class="form-check-input" type="checkbox" id="autoRefreshToggle" checked>
+                                <label class="form-check-label" for="autoRefreshToggle">Auto-refresh</label>
+                            </div>
                             <button class="btn btn-primary me-2" id="refreshBtn">
                                 <i class="fas fa-sync-alt me-1"></i> Refresh
                             </button>
@@ -511,7 +520,7 @@
                         <div class="row mt-2">
                             <div class="col-6">
                                 <strong>Amount:</strong> <span id="rejectAmount">-</span>
-                            <input type="hidden" id="rejectTransactionId">
+                                <input type="hidden" id="rejectTransactionId">
                             </div>
                             <div class="col-6">
                                 <strong>Date:</strong> <span id="rejectDate">-</span>
@@ -561,6 +570,8 @@
         const itemsPerPage = 10;
         let updateInterval;
         let currentTransactionId = null;
+        let lastUpdateTime = null;
+        let autoRefreshEnabled = true;
 
         // Initialize the page
         document.addEventListener('DOMContentLoaded', function() {
@@ -604,6 +615,18 @@
                 const reason = document.getElementById('rejectReason').value;
                 rejectWithdrawal(currentTransactionId, reason);
             });
+
+            // Auto-refresh toggle
+            document.getElementById('autoRefreshToggle').addEventListener('change', function() {
+                autoRefreshEnabled = this.checked;
+                if (autoRefreshEnabled) {
+                    startLiveUpdates();
+                    showToast('Auto-refresh enabled');
+                } else {
+                    stopLiveUpdates();
+                    showToast('Auto-refresh disabled');
+                }
+            });
         }
 
         // Load withdrawals from the server
@@ -613,68 +636,27 @@
                 document.getElementById('emptyState').classList.add('d-none');
             }
 
-            // In a real app, this would be an API call to your backend
-            // For demonstration, we're using setTimeout to simulate API call
-            setTimeout(() => {
-                // Simulate API response
-                const mockData = {
-                    withdrawals: [
-                        {
-                            id: 'txn_001',
-                            user: { name: 'John Mwangi', id: 'USR-001', initials: 'JM' },
-                            phone: '+254 712 345 678',
-                            amount: 5000,
-                            date: '2023-04-15 14:30',
-                            status: 'pending'
-                        },
-                        {
-                            id: 'txn_002',
-                            user: { name: 'Alice Wanjiku', id: 'USR-005', initials: 'AW' },
-                            phone: '+254 723 456 789',
-                            amount: 3500,
-                            date: '2023-04-14 10:15',
-                            status: 'processing'
-                        },
-                        {
-                            id: 'txn_003',
-                            user: { name: 'Robert Kamau', id: 'USR-012', initials: 'RK' },
-                            phone: '+254 734 567 890',
-                            amount: 7200,
-                            date: '2023-04-13 16:45',
-                            status: 'completed'
-                        },
-                        {
-                            id: 'txn_004',
-                            user: { name: 'Sarah Njoroge', id: 'USR-008', initials: 'SN' },
-                            phone: '+254 745 678 901',
-                            amount: 2500,
-                            date: '2023-04-12 09:20',
-                            status: 'rejected'
-                        },
-                        {
-                            id: 'txn_005',
-                            user: { name: 'David Kariuki', id: 'USR-015', initials: 'DK' },
-                            phone: '+254 756 789 012',
-                            amount: 4800,
-                            date: '2023-04-11 11:30',
-                            status: 'pending'
-                        }
-                    ],
-                    stats: {
-                        pending: 9800,
-                        processing: 3500,
-                        completed: 7200,
-                        rejected: 2500
+            // Make API call to fetch withdrawals from database
+            fetch('/api/admin/withdrawals')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
                     }
-                };
-
-                currentWithdrawals = mockData.withdrawals;
-                updateStats(mockData.stats);
-                renderWithdrawals();
-                updateLastUpdated();
-
-                document.getElementById('loadingIndicator').classList.add('d-none');
-            }, 800);
+                    return response.json();
+                })
+                .then(data => {
+                    currentWithdrawals = data.withdrawals;
+                    updateStats(data.stats);
+                    renderWithdrawals();
+                    updateLastUpdated();
+                    
+                    document.getElementById('loadingIndicator').classList.add('d-none');
+                })
+                .catch(error => {
+                    console.error('Error fetching withdrawals:', error);
+                    showToast('Error loading withdrawals: ' + error.message, 'error');
+                    document.getElementById('loadingIndicator').classList.add('d-none');
+                });
         }
 
         // Update stats cards
@@ -732,7 +714,7 @@
                     </td>
                     <td>${withdrawal.phone}</td>
                     <td class="fw-bold">KSh ${withdrawal.amount.toLocaleString()}</td>
-                    <td>${withdrawal.date}</td>
+                    <td>${formatDateTime(withdrawal.date)}</td>
                     <td><span class="status-badge status-${withdrawal.status}">${capitalizeFirstLetter(withdrawal.status)}</span></td>
                     <td>
                         ${withdrawal.status === 'pending' ? `
@@ -812,7 +794,7 @@
             document.getElementById('approveUserName').textContent = withdrawal.user.name;
             document.getElementById('approvePhone').textContent = withdrawal.phone;
             document.getElementById('approveAmount').textContent = `KSh ${withdrawal.amount.toLocaleString()}`;
-            document.getElementById('approveDate').textContent = withdrawal.date;
+            document.getElementById('approveDate').textContent = formatDateTime(withdrawal.date);
 
             const approveModal = new bootstrap.Modal(document.getElementById('approveModal'));
             approveModal.show();
@@ -828,7 +810,7 @@
             document.getElementById('rejectUserName').textContent = withdrawal.user.name;
             document.getElementById('rejectPhone').textContent = withdrawal.phone;
             document.getElementById('rejectAmount').textContent = `KSh ${withdrawal.amount.toLocaleString()}`;
-            document.getElementById('rejectDate').textContent = withdrawal.date;
+            document.getElementById('rejectDate').textContent = formatDateTime(withdrawal.date);
             document.getElementById('rejectReason').value = '';
 
             const rejectModal = new bootstrap.Modal(document.getElementById('rejectModal'));
@@ -837,11 +819,17 @@
 
         // Approve withdrawal
         function approveWithdrawal(transactionId) {
-            // In a real app, this would be an API call to your backend
+            // Show loading state
+            const approveBtn = document.getElementById('confirmApprove');
+            const originalText = approveBtn.innerHTML;
+            approveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Processing...';
+            approveBtn.disabled = true;
+
             fetch(`/admin/approve-withdrawal/${transactionId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken() // You'll need to implement this function
                 }
             })
             .then(response => response.json())
@@ -853,13 +841,8 @@
                     const approveModal = bootstrap.Modal.getInstance(document.getElementById('approveModal'));
                     approveModal.hide();
                     
-                    // Update UI
-                    updateWithdrawalStatus(transactionId, 'processing');
-                    
-                    // Refresh data after a short delay
-                    setTimeout(() => {
-                        loadWithdrawals();
-                    }, 2000);
+                    // Refresh data
+                    loadWithdrawals();
                 } else {
                     showToast(data.message, 'error');
                 }
@@ -867,16 +850,27 @@
             .catch(error => {
                 console.error('Error:', error);
                 showToast('An error occurred while approving the withdrawal', 'error');
+            })
+            .finally(() => {
+                // Reset button state
+                approveBtn.innerHTML = originalText;
+                approveBtn.disabled = false;
             });
         }
 
         // Reject withdrawal
         function rejectWithdrawal(transactionId, reason) {
-            // In a real app, this would be an API call to your backend
+            // Show loading state
+            const rejectBtn = document.getElementById('confirmReject');
+            const originalText = rejectBtn.innerHTML;
+            rejectBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Processing...';
+            rejectBtn.disabled = true;
+
             fetch(`/admin/reject-withdrawal/${transactionId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken() // You'll need to implement this function
                 },
                 body: JSON.stringify({ reason: reason })
             })
@@ -889,13 +883,8 @@
                     const rejectModal = bootstrap.Modal.getInstance(document.getElementById('rejectModal'));
                     rejectModal.hide();
                     
-                    // Update UI
-                    updateWithdrawalStatus(transactionId, 'rejected');
-                    
-                    // Refresh data after a short delay
-                    setTimeout(() => {
-                        loadWithdrawals();
-                    }, 2000);
+                    // Refresh data
+                    loadWithdrawals();
                 } else {
                     showToast(data.message, 'error');
                 }
@@ -903,16 +892,12 @@
             .catch(error => {
                 console.error('Error:', error);
                 showToast('An error occurred while rejecting the withdrawal', 'error');
+            })
+            .finally(() => {
+                // Reset button state
+                rejectBtn.innerHTML = originalText;
+                rejectBtn.disabled = false;
             });
-        }
-
-        // Update withdrawal status in UI
-        function updateWithdrawalStatus(transactionId, newStatus) {
-            const withdrawalIndex = currentWithdrawals.findIndex(w => w.id === transactionId);
-            if (withdrawalIndex !== -1) {
-                currentWithdrawals[withdrawalIndex].status = newStatus;
-                renderWithdrawals();
-            }
         }
 
         // Show toast notification
@@ -937,67 +922,57 @@
 
         // Start live updates
         function startLiveUpdates() {
-            // In a real app, this would use WebSockets or Server-Sent Events
-            // For this example, we'll use periodic AJAX calls
-            updateInterval = setInterval(() => {
-                loadWithdrawals();
-            }, 30000); // Update every 30 seconds
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
             
-            // Simulate new withdrawal notifications
-            setInterval(() => {
-                simulateNewWithdrawal();
-            }, 45000); // Simulate new withdrawal every 45 seconds
+            if (autoRefreshEnabled) {
+                updateInterval = setInterval(() => {
+                    loadWithdrawals();
+                }, 10000); // Update every 10 seconds
+                
+                document.getElementById('connectionStatus').textContent = 'Connected - Receiving live updates';
+                document.getElementById('connectionAlert').classList.remove('alert-warning');
+                document.getElementById('connectionAlert').classList.add('alert-success');
+            }
         }
 
-        // Simulate new withdrawal (for demo purposes)
-        function simulateNewWithdrawal() {
-            if (Math.random() > 0.7) { // 30% chance of new withdrawal
-                const newWithdrawal = {
-                    id: 'txn_' + Math.random().toString(36).substr(2, 9),
-                    user: { 
-                        name: 'New User', 
-                        id: 'USR-' + Math.floor(Math.random() * 1000), 
-                        initials: 'NU' 
-                    },
-                    phone: '+254 7' + Math.floor(Math.random() * 90000000 + 10000000),
-                    amount: Math.floor(Math.random() * 10000) + 1000,
-                    date: new Date().toISOString().replace('T', ' ').substr(0, 16),
-                    status: 'pending'
-                };
-                
-                currentWithdrawals.unshift(newWithdrawal);
-                renderWithdrawals();
-                
-                // Highlight new withdrawal
-                const newRow = document.querySelector(`[data-id="${newWithdrawal.id}"]`);
-                if (newRow) {
-                    newRow.classList.add('new-withdrawal');
-                }
-                
-                // Update stats
-                updateStats({
-                    pending: parseInt(document.getElementById('pendingAmount').textContent.replace(/[^\d]/g, '')) + newWithdrawal.amount,
-                    processing: parseInt(document.getElementById('processingAmount').textContent.replace(/[^\d]/g, '')),
-                    completed: parseInt(document.getElementById('completedAmount').textContent.replace(/[^\d]/g, '')),
-                    rejected: parseInt(document.getElementById('rejectedAmount').textContent.replace(/[^\d]/g, ''))
-                });
-                
-                // Show notification
-                showToast(`New withdrawal request from ${newWithdrawal.user.name} for KSh ${newWithdrawal.amount.toLocaleString()}`);
-                
-                updateLastUpdated();
+        // Stop live updates
+        function stopLiveUpdates() {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+                updateInterval = null;
             }
+            
+            document.getElementById('connectionStatus').textContent = 'Live updates paused';
+            document.getElementById('connectionAlert').classList.remove('alert-success');
+            document.getElementById('connectionAlert').classList.add('alert-warning');
         }
 
         // Update last updated timestamp
         function updateLastUpdated() {
             const now = new Date();
             document.getElementById('lastUpdated').textContent = `Last updated: ${now.toLocaleTimeString()}`;
+            lastUpdateTime = now;
         }
 
         // Utility function to capitalize first letter
         function capitalizeFirstLetter(string) {
             return string.charAt(0).toUpperCase() + string.slice(1);
+        }
+
+        // Format date time for display
+        function formatDateTime(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+
+        // Get CSRF token for form submissions
+        function getCSRFToken() {
+            // This function should return the CSRF token from your page
+            // You might need to adjust this based on how your Flask app handles CSRF
+            const csrfToken = document.querySelector('meta[name="csrf-token"]');
+            return csrfToken ? csrfToken.getAttribute('content') : '';
         }
     </script>
 </body>
