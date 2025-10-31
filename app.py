@@ -146,23 +146,23 @@ login_manager.login_message_category = 'info'
 
 # Custom key function for rate limiting that uses user ID when available
 def get_limiter_key():
-    """Get key for rate limiting - uses user ID if authenticated, otherwise IP"""
-    if current_user.is_authenticated:
-        return current_user.id
+    """Use user ID if authenticated, otherwise IP address."""
+    try:
+        if current_user and current_user.is_authenticated:
+            return f"user:{current_user.id}"
+    except Exception:
+        pass
     return get_remote_address()
 
-# Rate limiter with Redis storage for persistence
+# Initialize rate limiter
 rate_limiter = Limiter(
     app=app,
     key_func=get_limiter_key,
-    storage_uri=app.config['REDIS_URL'],
-    default_limits=["200 per day", "50 per hour"],
+    storage_uri=app.config.get("REDIS_URL", "memory://"),
+    default_limits=["1000 per day", "200 per hour", "40 per minute"],
     strategy="fixed-window",  # or "moving-window"
-    on_breach=lambda request_limit: current_app.logger.warning(
-        f"Rate limit breached: {request_limit}"
-    )
+    on_breach=lambda limit: current_app.logger.warning(f"🚫 Rate limit hit: {limit}")
 )
-
 # =============================================================================
 # DATABASE MODELS
 # =============================================================================
@@ -4774,32 +4774,73 @@ def init_db():
                 return False
 
 # Enhanced before_request with health checks (add Redis check)
+_last_health_check = {"time": None, "ok": True}
+
+@rate_limiter.exempt  # Prevent rate-limiter interference
 @app.before_request
 def before_request():
-    """Enhanced request preprocessing with health checks"""
-    try:
-        # Quick health check with retry logic
-        response = supabase_check('users', limit=1)
-        
-        # Quick Redis health check
-        redis_client.ping()
-        
-    except Exception as e:
-        current_app.logger.error(f"Health check failed: {e}")
-        return jsonify({'error': 'Service temporarily unavailable'}), 503
+    """Optimized request pre-processing with retry + caching."""
+    global _last_health_check
 
-    # Log security events for sensitive endpoints
-    if request.endpoint in ['api_request_withdrawal', 'withdraw', 'admin_dashboard']:
-        SecurityMonitor.log_security_event(
-            "SENSITIVE_ENDPOINT_ACCESS",
-            current_user.id if current_user.is_authenticated else None,
-            {
-                "endpoint": request.endpoint,
-                "ip": request.remote_addr,
-                "method": request.method
-            }
-        )
+    now = datetime.utcnow()
+    cache_valid = (
+        _last_health_check["time"]
+        and (now - _last_health_check["time"]) < timedelta(minutes=2)
+    )
 
+    # ✅ Use cached result if health check is fresh
+    if cache_valid and _last_health_check["ok"]:
+        pass
+    else:
+        # 🔁 Retry logic for Supabase + Redis (3 attempts each)
+        success = True
+        for i in range(3):
+            try:
+                # Check Supabase connection (simple lightweight read)
+                response = supabase_check("users", limit=1)
+                current_app.logger.debug("Supabase OK ✅")
+                break
+            except Exception as e:
+                current_app.logger.warning(f"Supabase check failed (attempt {i+1}/3): {e}")
+                time.sleep(1)
+        else:
+            success = False
+
+        for i in range(3):
+            try:
+                redis_client.ping()
+                current_app.logger.debug("Redis OK ✅")
+                break
+            except Exception as e:
+                current_app.logger.warning(f"Redis check failed (attempt {i+1}/3): {e}")
+                time.sleep(1)
+        else:
+            success = False
+
+        _last_health_check.update({"time": now, "ok": success})
+
+        if not success:
+            current_app.logger.error("Health check failed after retries ❌")
+            return jsonify({"error": "Service temporarily unavailable"}), 503
+
+    # 🛡️ Log sensitive actions only
+    sensitive_endpoints = {"api_request_withdrawal", "withdraw", "admin_dashboard"}
+    if request.endpoint in sensitive_endpoints:
+        try:
+            user_id = current_user.id if current_user.is_authenticated else None
+            SecurityMonitor.log_security_event(
+                "SENSITIVE_ENDPOINT_ACCESS",
+                user_id,
+                {
+                    "endpoint": request.endpoint,
+                    "ip": request.remote_addr,
+                    "method": request.method,
+                },
+            )
+            current_app.logger.info(f"Security event logged for {request.endpoint}")
+        except Exception as e:
+            current_app.logger.warning(f"Security logging failed: {e}")
+            
 # Add utility functions to Jinja2 context
 @app.context_processor
 def utility_processor():
