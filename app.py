@@ -4502,22 +4502,19 @@ with app.app_context():
 # Production Startup Script
 if __name__ == '__main__':
     try:
-        # Validate environment first
         with app.app_context():
             validate_environment()
-            
-            # Initialize database
+
             if init_db():
-                current_app.logger.info("✅ Database initialization completed successfully")
-                
-                # Start health monitoring in production
-                if not current_app.debug:
+                app.logger.info("✅ Database initialization completed successfully")
+
+                if not app.debug:
                     start_health_monitoring()
-                    current_app.logger.info("✅ Health monitoring started")
+                    app.logger.info("✅ Health monitoring started")
             else:
-                current_app.logger.error("❌ Database initialization failed - exiting")
+                app.logger.error("❌ Database initialization failed - exiting")
                 sys.exit(1)
-        
+
         print("🚀 Starting Referral Ninja Application - PRODUCTION READY")
         print("✅ Environment validation: PASSED")
         print("✅ Database schema: VERIFIED")
@@ -4525,23 +4522,23 @@ if __name__ == '__main__':
         print("✅ M-Pesa environment: PRODUCTION")
         print("✅ Celcom SMS: CONFIGURED")
         print("✅ Health monitoring: ACTIVE")
-        
+
         port = int(os.environ.get('PORT', 10000))
         host = '0.0.0.0'
-        
+
         print(f"✅ Server starting on {host}:{port}")
         print(f"✅ Health endpoint: http://{host}:{port}/health")
         print(f"✅ Detailed health: http://{host}:{port}/health/detailed")
         print(f"✅ Minimum withdrawal: KSH {app.config['WITHDRAWAL_MIN_AMOUNT']}")
-        
-        # Production server configuration
+
+        app.logger.info(f"🚀 Starting Flask app on {host}:{port}")
         app.run(
             host=host,
             port=port,
             debug=False,  # Always False in production
             threaded=True
         )
-        
+
     except Exception as e:
         print(f"❌ CRITICAL: Failed to start application: {e}")
         print("Please check:")
