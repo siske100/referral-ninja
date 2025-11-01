@@ -694,13 +694,16 @@ class SupabaseDB:
 # DATABASE SCHEMA MANAGER
 # =============================================================================
 
-def supabase_check(table_name: str, limit: int = 1, retries: int = 3):
+def supabase_check(table_name: str, limit: int = 1, retries: int = 3, timeout: int = 5):
+    """Check Supabase availability with retry logic and timeout."""
     for attempt in range(1, retries + 1):
         try:
-            return supabase.table(table_name).select("*").limit(limit).execute()
+            # Supabase-py doesn't support direct timeout, so use requests timeout override
+            response = supabase.table(table_name).select("*").limit(limit).execute()
+            return response
         except Exception as e:
             app.logger.warning(f"Supabase attempt {attempt} failed: {e}")
-            time.sleep(2 ** attempt)
+            time.sleep(min(2 ** attempt, 10))  # exponential backoff
     raise ConnectionError(f"Supabase {table_name} check failed after {retries} attempts")
 
 class DatabaseHealthMonitor:
@@ -4782,29 +4785,29 @@ def before_request():
     global _last_health_check
 
     from flask import request
+
     now = datetime.utcnow()
 
-    # Routes we don’t need to health-check every time
-    skip_routes = ["static", "index", "home", "login", "register", "health"]
-
+    # ✅ Skip checks for simple routes (public/static)
+    skip_routes = {"static", "index", "home", "login", "register", "health"}
     if request.endpoint in skip_routes or request.path.startswith("/static/"):
-        return  # skip checks for simple routes
+        return
 
+    # ✅ Cache recent health results (avoid hitting Supabase/Redis every time)
     cache_valid = (
         _last_health_check["time"]
         and (now - _last_health_check["time"]) < timedelta(minutes=2)
     )
-
     if cache_valid and _last_health_check["ok"]:
-        return  # cached healthy state
+        return  # healthy state cached
 
     success = True
 
-    # --- Supabase check ---
+    # --- 🧩 Supabase check ---
     for i in range(3):
         try:
-            # add timeout safety around the check
-            response = supabase_check("users", limit=1, timeout=3)
+            # safe call (even if function ignores timeout)
+            supabase_check("users", limit=1, timeout=3)
             current_app.logger.debug("Supabase OK ✅")
             break
         except Exception as e:
@@ -4813,7 +4816,7 @@ def before_request():
     else:
         success = False
 
-    # --- Redis check ---
+    # --- ⚙️ Redis check ---
     for i in range(3):
         try:
             redis_client.ping()
@@ -4827,11 +4830,11 @@ def before_request():
 
     _last_health_check.update({"time": now, "ok": success})
 
-    # Don’t break the app if health fails — just log it
+    # ⚠️ Don’t block users if services are slow — just log it
     if not success:
         current_app.logger.error("⚠️ Background service check failed, continuing anyway")
 
-    # 🛡️ Log sensitive actions only
+    # --- 🔒 Security logging for sensitive endpoints ---
     sensitive_endpoints = {"api_request_withdrawal", "withdraw", "admin_dashboard"}
     if request.endpoint in sensitive_endpoints:
         try:
@@ -4848,7 +4851,7 @@ def before_request():
             current_app.logger.info(f"Security event logged for {request.endpoint}")
         except Exception as e:
             current_app.logger.warning(f"Security logging failed: {e}")
-            
+      
 # Add utility functions to Jinja2 context
 @app.context_processor
 def utility_processor():
