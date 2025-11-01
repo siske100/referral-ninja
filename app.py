@@ -4778,49 +4778,58 @@ _last_health_check = {"time": None, "ok": True}
 @rate_limiter.exempt  # Prevent rate-limiter interference
 @app.before_request
 def before_request():
-    """Optimized request pre-processing with retry + caching."""
+    """Fast health check before requests — skips public routes and caches results."""
     global _last_health_check
 
+    from flask import request
     now = datetime.utcnow()
+
+    # Routes we don’t need to health-check every time
+    skip_routes = ["static", "index", "home", "login", "register", "health"]
+
+    if request.endpoint in skip_routes or request.path.startswith("/static/"):
+        return  # skip checks for simple routes
+
     cache_valid = (
         _last_health_check["time"]
         and (now - _last_health_check["time"]) < timedelta(minutes=2)
     )
 
-    # ✅ Use cached result if health check is fresh
     if cache_valid and _last_health_check["ok"]:
-        pass
+        return  # cached healthy state
+
+    success = True
+
+    # --- Supabase check ---
+    for i in range(3):
+        try:
+            # add timeout safety around the check
+            response = supabase_check("users", limit=1, timeout=3)
+            current_app.logger.debug("Supabase OK ✅")
+            break
+        except Exception as e:
+            current_app.logger.warning(f"Supabase check failed (attempt {i+1}/3): {e}")
+            time.sleep(0.5)
     else:
-        # 🔁 Retry logic for Supabase + Redis (3 attempts each)
-        success = True
-        for i in range(3):
-            try:
-                # Check Supabase connection (simple lightweight read)
-                response = supabase_check("users", limit=1)
-                current_app.logger.debug("Supabase OK ✅")
-                break
-            except Exception as e:
-                current_app.logger.warning(f"Supabase check failed (attempt {i+1}/3): {e}")
-                time.sleep(1)
-        else:
-            success = False
+        success = False
 
-        for i in range(3):
-            try:
-                redis_client.ping()
-                current_app.logger.debug("Redis OK ✅")
-                break
-            except Exception as e:
-                current_app.logger.warning(f"Redis check failed (attempt {i+1}/3): {e}")
-                time.sleep(1)
-        else:
-            success = False
+    # --- Redis check ---
+    for i in range(3):
+        try:
+            redis_client.ping()
+            current_app.logger.debug("Redis OK ✅")
+            break
+        except Exception as e:
+            current_app.logger.warning(f"Redis check failed (attempt {i+1}/3): {e}")
+            time.sleep(0.5)
+    else:
+        success = False
 
-        _last_health_check.update({"time": now, "ok": success})
+    _last_health_check.update({"time": now, "ok": success})
 
-        if not success:
-            current_app.logger.error("Health check failed after retries ❌")
-            return jsonify({"error": "Service temporarily unavailable"}), 503
+    # Don’t break the app if health fails — just log it
+    if not success:
+        current_app.logger.error("⚠️ Background service check failed, continuing anyway")
 
     # 🛡️ Log sensitive actions only
     sensitive_endpoints = {"api_request_withdrawal", "withdraw", "admin_dashboard"}
