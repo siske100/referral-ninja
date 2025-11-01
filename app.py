@@ -18,8 +18,6 @@ from datetime import datetime, timezone, timedelta
 from urllib.parse import urlparse
 from functools import wraps
 from typing import Dict, List, Any, Tuple, Optional
-from app import db
-
 import psutil
 import psycopg2
 import redis
@@ -692,105 +690,6 @@ class SupabaseDB:
         except Exception as e:
             return SupabaseDB.handle_db_error("get_total_balance", e, False)
 
-    # =============================================================================
-    # PENDING USERS METHODS - NEW
-    # =============================================================================
-
-    @staticmethod
-    def create_pending_user(user_data):
-        try:
-            response = supabase.table('pending_users').insert(user_data).execute()
-            if response.data:
-                return response.data[0]
-            return None
-        except Exception as e:
-            return SupabaseDB.handle_db_error("create_pending_user", e, False)
-
-    @staticmethod
-    def get_pending_user_by_id(user_id):
-        try:
-            response = supabase.table('pending_users').select('*').eq('id', user_id).execute()
-            if response.data:
-                return response.data[0]
-            return None
-        except Exception as e:
-            return SupabaseDB.handle_db_error("get_pending_user_by_id", e, False)
-
-    @staticmethod
-    def get_pending_user_by_phone(phone):
-        try:
-            response = supabase.table('pending_users').select('*').eq('phone', phone).execute()
-            if response.data:
-                return response.data[0]
-            return None
-        except Exception as e:
-            return SupabaseDB.handle_db_error("get_pending_user_by_phone", e, False)
-
-    @staticmethod
-    def get_pending_user_by_username(username):
-        try:
-            response = supabase.table('pending_users').select('*').eq('username', username).execute()
-            if response.data:
-                return response.data[0]
-            return None
-        except Exception as e:
-            return SupabaseDB.handle_db_error("get_pending_user_by_username", e, False)
-
-    @staticmethod
-    def get_pending_user_by_email(email):
-        try:
-            response = supabase.table('pending_users').select('*').eq('email', email).execute()
-            if response.data:
-                return response.data[0]
-            return None
-        except Exception as e:
-            return SupabaseDB.handle_db_error("get_pending_user_by_email", e, False)
-
-    @staticmethod
-    def delete_pending_user(user_id):
-        try:
-            response = supabase.table('pending_users').delete().eq('id', user_id).execute()
-            return True
-        except Exception as e:
-            return SupabaseDB.handle_db_error("delete_pending_user", e, False)
-
-    @staticmethod
-    def activate_pending_user(pending_user_id):
-        try:
-            # Get pending user data
-            pending_user = SupabaseDB.get_pending_user_by_id(pending_user_id)
-            if not pending_user:
-                return None
-            
-            # Create user in main table
-            user_data = pending_user['user_data']
-            user_data['password_hash'] = pending_user['password_hash']
-            
-            response = supabase.table('users').insert(user_data).execute()
-            
-            if response.data:
-                # Delete from pending users
-                SupabaseDB.delete_pending_user(pending_user_id)
-                
-                # Send welcome SMS
-                CelcomSMS.send_registration_notification(
-                    pending_user['phone'], 
-                    pending_user['username']
-                )
-                
-                # Log successful registration
-                SecurityMonitor.log_security_event(
-                    "REGISTRATION_COMPLETED", 
-                    response.data[0]['id'], 
-                    {"ip": request.remote_addr}
-                )
-                
-                return response.data[0]
-            return None
-        except Exception as e:
-            current_app.logger.error(f"Error activating pending user: {str(e)}")
-            return None
-
 # =============================================================================
 # DATABASE SCHEMA MANAGER
 # =============================================================================
@@ -826,7 +725,7 @@ class DatabaseHealthMonitor:
             metrics['connection_status'] = 'healthy'
             
             # Get table counts
-            tables = ['users', 'transactions', 'referrals', 'security_logs', 'mpesa_callbacks', 'two_factor_codes', 'pending_users']
+            tables = ['users', 'transactions', 'referrals', 'security_logs', 'mpesa_callbacks', 'two_factor_codes']
             for table in tables:
                 try:
                     response = supabase.table(table).select('*', count='exact').execute()
@@ -970,27 +869,6 @@ class DatabaseManager:
             );
             """),
             
-            ("pending_users", """
-            CREATE TABLE IF NOT EXISTS pending_users (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                username VARCHAR(50) UNIQUE NOT NULL,
-                email VARCHAR(255) UNIQUE,
-                phone VARCHAR(20) UNIQUE NOT NULL,
-                name VARCHAR(255) NOT NULL,
-                password_hash TEXT NOT NULL,
-                referral_code VARCHAR(20),
-                referred_by VARCHAR(20),
-                referral_source VARCHAR(50) DEFAULT 'direct',
-                user_data JSONB NOT NULL,
-                created_at TIMESTAMPTZ DEFAULT NOW(),
-                expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '24 hours'),
-                -- Additional constraints
-                CONSTRAINT valid_phone_pending CHECK (phone ~ '^254[17]\\d{8}$'),
-                CONSTRAINT valid_email_pending CHECK (email IS NULL OR email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$'),
-                CONSTRAINT chk_username_length_pending CHECK (LENGTH(username) >= 3)
-            );
-            """),
-            
             ("transactions", """
             CREATE TABLE IF NOT EXISTS transactions (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1118,12 +996,6 @@ class DatabaseManager:
             ("idx_users_created_at", "CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at);"),
             ("idx_users_is_verified", "CREATE INDEX IF NOT EXISTS idx_users_is_verified ON users(is_verified) WHERE is_verified = true;"),
             
-            # Pending users table indexes
-            ("idx_pending_users_phone", "CREATE INDEX IF NOT EXISTS idx_pending_users_phone ON pending_users(phone);"),
-            ("idx_pending_users_email", "CREATE INDEX IF NOT EXISTS idx_pending_users_email ON pending_users(email);"),
-            ("idx_pending_users_created_at", "CREATE INDEX IF NOT EXISTS idx_pending_users_created_at ON pending_users(created_at);"),
-            ("idx_pending_users_expires", "CREATE INDEX IF NOT EXISTS idx_pending_users_expires ON pending_users(expires_at) WHERE expires_at < NOW();"),
-            
             # Transactions table indexes
             ("idx_transactions_user_id", "CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);"),
             ("idx_transactions_status", "CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status);"),
@@ -1154,7 +1026,7 @@ class DatabaseManager:
     def verify_schema(self) -> dict:
         """Verify all tables and indexes exist and are accessible"""
         verification_results = {}
-        tables_to_check = ['users', 'pending_users', 'transactions', 'referrals', 'security_logs', 'mpesa_callbacks', 'two_factor_codes']
+        tables_to_check = ['users', 'transactions', 'referrals', 'security_logs', 'mpesa_callbacks', 'two_factor_codes']
         
         for table in tables_to_check:
             try:
@@ -2365,60 +2237,50 @@ def api_register():
         if len(password) < 6:
             return jsonify({"error": "Password must be at least 6 characters"}), 400
         
-        # Check both main users and pending users for duplicates
-        if SupabaseDB.get_user_by_phone(phone) or SupabaseDB.get_pending_user_by_phone(phone):
+        if SupabaseDB.get_user_by_phone(phone):
             return jsonify({"error": "Phone number already registered"}), 409
         
-        if SupabaseDB.get_user_by_username(username) or SupabaseDB.get_pending_user_by_username(username):
-            return jsonify({"error": "Username already exists"}), 409
-        
-        if SupabaseDB.get_user_by_email(email) or SupabaseDB.get_pending_user_by_email(email):
-            return jsonify({"error": "Email already registered"}), 409
-        
-        # Create pending user instead of main user
+        # Create user
         user_data = {
             'id': str(uuid.uuid4()),
-            'username': username,
-            'email': email,
             'phone': phone,
             'name': name,
+            'email': email,
+            'username': username,
             'is_verified': False,
             'created_at': datetime.now(timezone.utc).isoformat()
         }
         
         user = User(user_data)
+        
+        # When creating a new user - hash the password
         hashed_pw = generate_password_hash(password)
         user.password_hash = hashed_pw
+        
         user.generate_phone_linked_referral_code()
         
-        # Store all user data in JSON format for later creation
-        pending_user_data = {
-            'username': username,
-            'email': email,
-            'phone': phone,
-            'name': name,
-            'password_hash': user.password_hash,
-            'referral_code': user.referral_code,
-            'referred_by': None,  # Will be handled after payment
-            'referral_source': 'direct',
-            'user_data': user.to_dict()  # Store complete user data
-        }
+        # Save to database
+        user_dict = user.to_dict()
+        user_dict.pop('password_hash', None)  # Remove the method
+        user_dict['password_hash'] = user.password_hash  # Add the actual hash
         
-        created_pending_user = SupabaseDB.create_pending_user(pending_user_data)
+        created_user = SupabaseDB.create_user(user_dict)
         
-        if not created_pending_user:
-            return jsonify({"error": "Failed to create user registration"}), 500
+        if not created_user:
+            return jsonify({"error": "Failed to create user"}), 500
         
-        # Don't send welcome SMS yet - wait for payment
+        # Send welcome SMS
+        CelcomSMS.send_registration_notification(phone, username)
+        
         SecurityMonitor.log_security_event(
-            "REGISTRATION_ATTEMPT", 
-            created_pending_user['id'], 
+            "REGISTRATION", 
+            created_user.id, 
             {"ip": request.remote_addr}
         )
         
         return jsonify({
             "message": "Registration successful. Please complete KSH 200 payment to activate your account.",
-            "pending_user_id": created_pending_user['id']
+            "user_id": created_user.id
         }), 201
         
     except Exception as e:
@@ -3079,7 +2941,6 @@ def login():
     # Render login page
     return render_template('auth/login.html')
 
-# UPDATED REGISTER ROUTE - Save to pending_users instead of users
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
@@ -3111,16 +2972,15 @@ def register():
         if phone_number.startswith('07'):
             phone_number = '254' + phone_number[1:]
         
-        # Check both main users and pending users for duplicates
-        if SupabaseDB.get_user_by_phone(phone_number) or SupabaseDB.get_pending_user_by_phone(phone_number):
+        if SupabaseDB.get_user_by_phone(phone_number):
             flash('Phone number already registered.', 'error')
             return render_template('auth/register.html', referral_code=referral_code)
         
-        if SupabaseDB.get_user_by_username(username) or SupabaseDB.get_pending_user_by_username(username):
+        if SupabaseDB.get_user_by_username(username):
             flash('Username already exists.', 'error')
             return render_template('auth/register.html', referral_code=referral_code)
         
-        if SupabaseDB.get_user_by_email(email) or SupabaseDB.get_pending_user_by_email(email):
+        if SupabaseDB.get_user_by_email(email):
             flash('Email already registered.', 'error')
             return render_template('auth/register.html', referral_code=referral_code)
         
@@ -3131,7 +2991,6 @@ def register():
                 flash('Invalid referral code. Please check and try again.', 'error')
                 return render_template('auth/register.html', referral_code=referral_code)
         
-        # Prepare user data but don't save to main table yet
         user_data = {
             'id': str(uuid.uuid4()),
             'username': username,
@@ -3143,8 +3002,11 @@ def register():
         }
         
         user = User(user_data)
+        
+        # When creating a new user - hash the password
         hashed_pw = generate_password_hash(password)
         user.password_hash = hashed_pw
+        
         user.generate_phone_linked_referral_code()
         
         if referrer:
@@ -3159,40 +3021,29 @@ def register():
             user.referral_source = 'direct'
         
         try:
-            # Save to PENDING_USERS table instead of main users table
+            # Save to database
             user_dict = user.to_dict()
             user_dict.pop('password_hash', None)
             user_dict['password_hash'] = user.password_hash
             
-            # Store all user data in JSON format for later creation
-            pending_user_data = {
-                'username': username,
-                'email': email,
-                'phone': phone_number,
-                'name': name,
-                'password_hash': user.password_hash,
-                'referral_code': user.referral_code,
-                'referred_by': user.referred_by,
-                'referral_source': user.referral_source,
-                'user_data': user_dict  # Store complete user data
-            }
+            created_user = SupabaseDB.create_user(user_dict)
             
-            created_pending_user = SupabaseDB.create_pending_user(pending_user_data)
-            
-            if not created_pending_user:
+            if not created_user:
                 flash('Error during registration. Please try again.', 'error')
                 return render_template('auth/register.html', referral_code=referral_code)
             
-            # Don't send welcome SMS yet - wait for payment
-            # Log security event for registration attempt
+            # Send welcome SMS
+            CelcomSMS.send_registration_notification(phone_number, username)
+            
+            # Log security event
             SecurityMonitor.log_security_event(
-                "REGISTRATION_ATTEMPT", 
-                created_pending_user['id'], 
+                "REGISTRATION", 
+                created_user.id, 
                 {"ip": request.remote_addr, "referral_code": referral_code}
             )
             
             flash('Registration successful! Please complete KSH 200 payment to activate your account.', 'success')
-            session['pending_user_id'] = created_pending_user['id']
+            session['pending_verification_user'] = created_user.id
             return redirect(url_for('account_activation'))
         except Exception as e:
             app.logger.error(f"Error during registration: {str(e)}")
@@ -3213,26 +3064,35 @@ def logout():
     flash('You have been logged out successfully.', 'success')
     return redirect(url_for('login'))
 
-# UPDATED Account Activation Route
+# Account Activation Route
 @app.route('/account-activation')
 def account_activation():
-    pending_user_id = session.get('pending_user_id')
-    if not pending_user_id:
+    user_id = session.get('pending_verification_user')
+    if not user_id:
         flash('Invalid access. Please register or login first.', 'error')
         return redirect(url_for('register'))
     
-    pending_user = SupabaseDB.get_pending_user_by_id(pending_user_id)
-    if not pending_user:
-        flash('Registration session expired. Please register again.', 'error')
+    user = SupabaseDB.get_user_by_id(user_id)
+    if not user:
+        flash('User not found.', 'error')
         return redirect(url_for('register'))
+    
+    if current_user.is_authenticated and current_user.id != user_id:
+        flash('Access denied.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    if user.is_verified:
+        flash('Your account is already verified.', 'info')
+        session.pop('pending_verification_user', None)
+        return redirect(url_for('login'))
     
     # Pass user data to the template
     user_data = {
-        'username': pending_user['username'],
-        'phone': pending_user['phone'],
-        'email': pending_user['email'],
-        'full_name': pending_user['name'],
-        'referral_code': pending_user['referral_code']
+        'username': user.username,
+        'phone': user.phone,
+        'email': user.email,
+        'full_name': user.name,
+        'referral_code': user.referral_code
     }
     
     return render_template('account_activation.html', user_data=user_data)
@@ -3245,16 +3105,16 @@ def payment_instructions():
 # Enhanced STK Push Routes
 @app.route('/initiate-stk-push', methods=['POST'])
 def initiate_stk_push_route():
-    pending_user_id = session.get('pending_user_id')
-    if not pending_user_id:
+    user_id = session.get('pending_verification_user')
+    if not user_id:
         return jsonify({'success': False, 'message': 'Session expired. Please register again.'})
     
-    pending_user = SupabaseDB.get_pending_user_by_id(pending_user_id)
-    if not pending_user:
+    user = SupabaseDB.get_user_by_id(user_id)
+    if not user:
         return jsonify({'success': False, 'message': 'User not found'})
     
     # Check if there's already a pending transaction
-    existing_transactions = SupabaseDB.get_pending_payments()
+    existing_transactions = SupabaseDB.get_transactions_by_user(user.id, transaction_type='registration_fee')
     existing_transaction = next((t for t in existing_transactions if t['status'] == 'pending'), None)
     
     if existing_transaction:
@@ -3264,11 +3124,11 @@ def initiate_stk_push_route():
         # Create new transaction
         transaction_data = {
             'id': str(uuid.uuid4()),
-            'user_id': pending_user_id,  # Use pending_user_id as reference
+            'user_id': user.id,
             'amount': 200.0,
             'transaction_type': 'registration_fee',
             'status': 'pending',
-            'phone_number': pending_user['phone'],
+            'phone_number': user.phone,
             'description': 'Account registration fee - STK Push initiated',
             'ip_address': request.remote_addr,
             'created_at': datetime.now(timezone.utc).isoformat()
@@ -3277,7 +3137,7 @@ def initiate_stk_push_route():
     
     try:
         # Format phone number for M-PESA (254 format)
-        phone_number = pending_user['phone']
+        phone_number = user.phone
         if phone_number.startswith('0'):
             phone_number = '254' + phone_number[1:]
         elif phone_number.startswith('+'):
@@ -3287,7 +3147,7 @@ def initiate_stk_push_route():
         stk_response = initiate_stk_push(
             phone_number=phone_number,
             amount=1 if app.config['MPESA_ENVIRONMENT'] == 'sandbox' else 200,
-            account_reference=pending_user['referral_code'],
+            account_reference=user.referral_code,
             transaction_desc="ReferralNinja Registration"
         )
         
@@ -3315,61 +3175,59 @@ def initiate_stk_push_route():
 
 @app.route('/check-payment-status', methods=['POST'])
 def check_payment_status():
-    pending_user_id = session.get('pending_user_id')
-    if not pending_user_id:
+    user_id = session.get('pending_verification_user')
+    if not user_id:
         return jsonify({'success': False, 'message': 'Session expired'})
     
-    pending_user = SupabaseDB.get_pending_user_by_id(pending_user_id)
-    if not pending_user:
+    user = SupabaseDB.get_user_by_id(user_id)
+    if not user:
         return jsonify({'success': False, 'message': 'User not found'})
     
     # Check for completed payment
-    transactions = SupabaseDB.get_pending_payments()
+    transactions = SupabaseDB.get_transactions_by_user(user.id, transaction_type='registration_fee')
     transaction = next((t for t in transactions if t['status'] == 'completed'), None)
     
     if transaction:
-        # Activate the user - move from pending to main users table
-        activated_user = SupabaseDB.activate_pending_user(pending_user_id)
+        # Auto-verify user and log them in
+        SupabaseDB.update_user(user.id, {'is_verified': True})
         
-        if activated_user:
-            # Handle referral commission immediately
-            if pending_user['referred_by']:
-                referrer = SupabaseDB.get_user_by_referral_code(pending_user['referred_by'])
-                if referrer:
-                    referrer.referral_balance += 50
-                    referrer.balance += 50
-                    referrer.total_commission += 50
-                    referrer.referral_count += 1
-                    referrer.update_rank()
-                    
-                    referral_data = {
-                        'referrer_id': referrer.id,
-                        'referred_id': activated_user['id'],
-                        'referral_code_used': pending_user['referred_by'],
-                        'commission_earned': 50.0,
-                        'status': 'active',
-                        'created_at': datetime.now(timezone.utc).isoformat()
-                    }
-                    SupabaseDB.create_referral(referral_data)
-                    
-                    # Update referrer in database
-                    SupabaseDB.update_user(referrer.id, {
-                        'referral_balance': referrer.referral_balance,
-                        'balance': referrer.balance,
-                        'total_commission': referrer.total_commission,
-                        'referral_count': referrer.referral_count,
-                        'user_rank': referrer.user_rank
-                    })
-                    
-                    # Send referral bonus notification
-                    CelcomSMS.send_referral_notification(referrer.phone, referrer.username, 50)
-            
-            # Log the user in automatically
-            user = User(activated_user)
-            login_user(user)
-            session.pop('pending_user_id', None)
-            
-            return jsonify({'success': True, 'verified': True, 'message': 'Payment verified! You have been logged in successfully.'})
+        # Handle referral commission immediately
+        if user.referred_by:
+            referrer = SupabaseDB.get_user_by_referral_code(user.referred_by)
+            if referrer:
+                referrer.referral_balance += 50
+                referrer.balance += 50
+                referrer.total_commission += 50
+                referrer.referral_count += 1
+                referrer.update_rank()
+                
+                referral_data = {
+                    'referrer_id': referrer.id,
+                    'referred_id': user.id,
+                    'referral_code_used': user.referred_by,
+                    'commission_earned': 50.0,
+                    'status': 'active',
+                    'created_at': datetime.now(timezone.utc).isoformat()
+                }
+                SupabaseDB.create_referral(referral_data)
+                
+                # Update referrer in database
+                SupabaseDB.update_user(referrer.id, {
+                    'referral_balance': referrer.referral_balance,
+                    'balance': referrer.balance,
+                    'total_commission': referrer.total_commission,
+                    'referral_count': referrer.referral_count,
+                    'user_rank': referrer.user_rank
+                })
+                
+                # Send referral bonus notification
+                CelcomSMS.send_referral_notification(referrer.phone, referrer.username, 50)
+        
+        # Log the user in automatically
+        login_user(user)
+        session.pop('pending_verification_user', None)
+        
+        return jsonify({'success': True, 'verified': True, 'message': 'Payment verified! You have been logged in successfully.'})
     
     # Check STK status for pending transactions
     pending_transaction = next((t for t in transactions if t['status'] == 'pending'), None)
@@ -3386,48 +3244,44 @@ def check_payment_status():
                     'mpesa_code': stk_status.get('MpesaReceiptNumber')
                 })
                 
-                # Activate the user
-                activated_user = SupabaseDB.activate_pending_user(pending_user_id)
+                SupabaseDB.update_user(user.id, {'is_verified': True})
                 
-                if activated_user:
-                    # Handle referral commission
-                    if pending_user['referred_by']:
-                        referrer = SupabaseDB.get_user_by_referral_code(pending_user['referred_by'])
-                        if referrer:
-                            referrer.referral_balance += 50
-                            referrer.balance += 50
-                            referrer.total_commission += 50
-                            referrer.referral_count += 1
-                            referrer.update_rank()
-                            
-                            referral_data = {
-                                'referrer_id': referrer.id,
-                                'referred_id': activated_user['id'],
-                                'referral_code_used': pending_user['referred_by'],
-                                'commission_earned': 50.0,
-                                'status': 'active',
-                                'created_at': datetime.now(timezone.utc).isoformat()
-                            }
-                            SupabaseDB.create_referral(referral_data)
-                            
-                            # Update referrer in database
-                            SupabaseDB.update_user(referrer.id, {
-                                'referral_balance': referrer.referral_balance,
-                                'balance': referrer.balance,
-                                'total_commission': referrer.total_commission,
-                                'referral_count': referrer.referral_count,
-                                'user_rank': referrer.user_rank
-                            })
-                            
-                            # Send referral bonus notification
-                            CelcomSMS.send_referral_notification(referrer.phone, referrer.username, 50)
-                    
-                    # Log the user in automatically
-                    user = User(activated_user)
-                    login_user(user)
-                    session.pop('pending_user_id', None)
-                    
-                    return jsonify({'success': True, 'verified': True, 'message': 'Payment verified via query! You have been logged in successfully.'})
+                # Handle referral commission
+                if user.referred_by:
+                    referrer = SupabaseDB.get_user_by_referral_code(user.referred_by)
+                    if referrer:
+                        referrer.referral_balance += 50
+                        referrer.balance += 50
+                        referrer.total_commission += 50
+                        referrer.referral_count += 1
+                        referrer.update_rank()
+                        
+                        referral_data = {
+                            'referrer_id': referrer.id,
+                            'referred_id': user.id,
+                            'referral_code_used': user.referred_by,
+                            'commission_earned': 50.0,
+                            'status': 'active',
+                            'created_at': datetime.now(timezone.utc).isoformat()
+                        }
+                        SupabaseDB.create_referral(referral_data)
+                        
+                        # Update referrer in database
+                        SupabaseDB.update_user(referrer.id, {
+                            'referral_balance': referrer.referral_balance,
+                            'balance': referrer.balance,
+                            'total_commission': referrer.total_commission,
+                            'referral_count': referrer.referral_count,
+                            'user_rank': referrer.user_rank
+                        })
+                        
+                        # Send referral bonus notification
+                        CelcomSMS.send_referral_notification(referrer.phone, referrer.username, 50)
+                
+                login_user(user)
+                session.pop('pending_verification_user', None)
+                
+                return jsonify({'success': True, 'verified': True, 'message': 'Payment verified via query! You have been logged in successfully.'})
     
     # Check if there's a pending transaction
     if pending_transaction:
@@ -3438,7 +3292,7 @@ def check_payment_status():
 # Enhanced M-PESA callback handler (for production)
 @app.route('/mpesa-callback', methods=['POST'])
 def mpesa_callback():
-    """Handle M-PESA STK push callback - AUTO ACTIVATE USER"""
+    """Handle M-PESA STK push callback - AUTO VERIFY USER"""
     try:
         callback_data = request.get_json()
         
@@ -3458,7 +3312,7 @@ def mpesa_callback():
         
         if transaction:
             if result_code == 0:
-                # Payment successful - AUTO ACTIVATE USER
+                # Payment successful - AUTO VERIFY USER
                 update_data = {'status': 'completed'}
                 
                 # Extract metadata
@@ -3474,14 +3328,14 @@ def mpesa_callback():
                 
                 SupabaseDB.update_transaction(transaction['id'], update_data)
                 
-                # Activate user immediately - move from pending to main users
-                activated_user = SupabaseDB.activate_pending_user(transaction['user_id'])
-                
-                if activated_user:
+                # Activate user immediately
+                user = SupabaseDB.get_user_by_id(transaction['user_id'])
+                if user:
+                    SupabaseDB.update_user(user.id, {'is_verified': True})
+                    
                     # Handle referral commission immediately
-                    pending_user = SupabaseDB.get_pending_user_by_id(transaction['user_id'])
-                    if pending_user and pending_user['referred_by']:
-                        referrer = SupabaseDB.get_user_by_referral_code(pending_user['referred_by'])
+                    if user.referred_by:
+                        referrer = SupabaseDB.get_user_by_referral_code(user.referred_by)
                         if referrer:
                             referrer.referral_balance += 50
                             referrer.balance += 50
@@ -3491,8 +3345,8 @@ def mpesa_callback():
                             
                             referral_data = {
                                 'referrer_id': referrer.id,
-                                'referred_id': activated_user['id'],
-                                'referral_code_used': pending_user['referred_by'],
+                                'referred_id': user.id,
+                                'referral_code_used': user.referred_by,
                                 'commission_earned': 50.0,
                                 'status': 'active',
                                 'created_at': datetime.now(timezone.utc).isoformat()
@@ -3511,7 +3365,7 @@ def mpesa_callback():
                             # Send referral bonus notification
                             CelcomSMS.send_referral_notification(referrer.phone, referrer.username, 50)
                 
-                app.logger.info(f"✅ User {activated_user['username']} auto-activated via STK push callback")
+                app.logger.info(f"✅ User {user.username} auto-verified via STK push callback")
                 
             else:
                 # Payment failed
@@ -3621,21 +3475,18 @@ def mpesa_b2c_timeout():
 
 @app.route('/api/payment-status')
 def api_payment_status():
-    pending_user_id = session.get('pending_user_id')
-    if not pending_user_id:
+    user_id = session.get('pending_verification_user')
+    if not user_id:
         return jsonify({'verified': False, 'error': 'Session expired'})
     
-    pending_user = SupabaseDB.get_pending_user_by_id(pending_user_id)
-    if not pending_user:
+    user = SupabaseDB.get_user_by_id(user_id)
+    if not user:
         return jsonify({'verified': False, 'error': 'User not found'})
     
-    # Check if user has been activated
-    user = SupabaseDB.get_user_by_phone(pending_user['phone'])
-    if user and user.is_verified:
-        session.pop('pending_user_id', None)
-        return jsonify({'verified': True})
+    if user.is_verified:
+        session.pop('pending_verification_user', None)
     
-    return jsonify({'verified': False})
+    return jsonify({'verified': user.is_verified})
 
 @app.route('/referral-system')
 @login_required
@@ -4194,7 +4045,7 @@ def forgot_password():
 
 
 @app.route('/change-password', methods=['POST'])
-@login_required  # if you use Flask-Login
+@login_required
 def change_password():
     from flask import request, redirect, flash, url_for
     from werkzeug.security import check_password_hash, generate_password_hash
@@ -4203,18 +4054,25 @@ def change_password():
     new_pw = request.form.get('new_password')
     confirm_pw = request.form.get('confirm_password')
 
-    user = current_user  # or however you fetch the logged-in user
+    user = current_user  # Flask-Login user
 
+    # Verify old password
     if not check_password_hash(user.password, current_pw):
         flash("Current password is incorrect.", "danger")
         return redirect(url_for('settings'))
 
+    # Confirm both new passwords match
     if new_pw != confirm_pw:
         flash("New passwords do not match.", "warning")
         return redirect(url_for('settings'))
 
-    user.password = generate_password_hash(new_pw)
-    db.session.commit()
+    # Hash and update in Supabase
+    new_hashed_pw = generate_password_hash(new_pw)
+
+    supabase.table("users").update({
+        "password": new_hashed_pw
+    }).eq("id", user.id).execute()
+
     flash("Password updated successfully!", "success")
     return redirect(url_for('settings'))
 
@@ -4242,7 +4100,7 @@ def admin_database():
     
     # Get table sizes and info
     table_info = {}
-    tables = ['users', 'pending_users', 'transactions', 'referrals', 'security_logs', 'mpesa_callbacks']
+    tables = ['users', 'transactions', 'referrals', 'security_logs', 'mpesa_callbacks']
     
     for table in tables:
         try:
