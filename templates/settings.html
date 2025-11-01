@@ -184,7 +184,8 @@
                         </div>
                     </div>
 
-                    <form method="POST" id="quickPasswordForm">
+                    <!-- Updated form action -->
+                    <form method="POST" id="quickPasswordForm" action="{{ url_for('change_password') }}">
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <div class="form-floating">
@@ -212,6 +213,7 @@
                             </div>
                         </div>
 
+                        <!-- Password strength and requirements (unchanged) -->
                         <div class="password-strength mt-3">
                             <div class="progress mb-2" style="height: 8px;">
                                 <div class="progress-bar" id="passwordStrengthBar" role="progressbar" 
