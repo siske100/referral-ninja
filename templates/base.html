@@ -72,6 +72,18 @@
             min-height: calc(100vh - 80px);
         }
 
+        /* Sidebar Logo */
+        .sidebar-logo {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+            margin-right: 10px;
+            border-radius: 10px;
+            box-shadow: 
+                0 4px 15px rgba(102, 126, 234, 0.4),
+                0 0 0 1px rgba(255,255,255,0.1);
+        }
+
         /* Desktop Toggle Button */
         .sidebar-toggle {
             position: fixed;
@@ -541,7 +553,210 @@
 </head>
 <body>
     <div class="app-container">
-        {% include 'sidebar.html' %}
+        <!-- Updated Sidebar with Logo -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <a href="{{ url_for('home') }}">
+                        <img src="{{ url_for('static', filename='images/3890dc6b-18a8-4fd4-9b98-099d60d23087.png') }}" 
+                             alt="Referral Ninja Logo" 
+                             class="sidebar-logo">
+                    </a>
+                    <div class="logo-text">
+                        <h2>Referral Ninja</h2>
+                        <span class="logo-subtitle">Earn & Grow</span>
+                    </div>
+                </div>
+            </div>
+            
+            {% if current_user.is_authenticated %}
+            <div class="sidebar-user">
+                <div class="user-avatar">
+                    <div class="avatar-gradient">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="user-status"></div>
+                </div>
+                <div class="user-info">
+                    <div class="user-name">{{ current_user.username }}</div>
+                    <div class="user-balance-mini">
+                        <i class="fas fa-coins"></i>
+                        Ksh {{ "%.2f"|format(current_user.balance) }}
+                    </div>
+                    <div class="user-referrals">
+                        <i class="fas fa-users"></i>
+                        {{ current_user.referral_count }} Referrals
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <span class="nav-section-label">Main Menu</span>
+                    <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                        <span class="nav-icon">
+                            <div class="nav-icon-bg">
+                                <i class="fas fa-home"></i>
+                            </div>
+                        </span>
+                        <span class="nav-text">Dashboard</span>
+                    </a>
+                    
+                    <a href="{{ url_for('profile') }}" class="nav-item {% if request.endpoint == 'profile' %}active{% endif %}">
+                        <span class="nav-icon">
+                            <div class="nav-icon-bg">
+                                <i class="fas fa-user-circle"></i>
+                            </div>
+                        </span>
+                        <span class="nav-text">Profile</span>
+                    </a>
+                    
+                    <a href="{{ url_for('referral_system') }}" class="nav-item {% if request.endpoint in ['referral_system', 'referrals'] %}active{% endif %}">
+                        <span class="nav-icon">
+                            <div class="nav-icon-bg">
+                                <i class="fas fa-users"></i>
+                            </div>
+                        </span>
+                        <span class="nav-text">Referrals</span>
+                        {% if current_user.referral_count > 0 %}
+                        <span class="nav-badge">{{ current_user.referral_count }}</span>
+                        {% endif %}
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <span class="nav-section-label">Earnings</span>
+                    <a href="{{ url_for('withdraw') }}" class="nav-item {% if request.endpoint == 'withdraw' %}active{% endif %}">
+                        <span class="nav-icon">
+                            <div class="nav-icon-bg">
+                                <i class="fas fa-wallet"></i>
+                            </div>
+                        </span>
+                        <span class="nav-text">Withdraw</span>
+                    </a>
+                    
+                    <a href="{{ url_for('statistics') }}" class="nav-item {% if request.endpoint == 'statistics' %}active{% endif %}">
+                        <span class="nav-icon">
+                            <div class="nav-icon-bg">
+                                <i class="fas fa-chart-bar"></i>
+                            </div>
+                        </span>
+                        <span class="nav-text">Statistics</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <span class="nav-section-label">Community</span>
+                    <a href="{{ url_for('jobs') }}" class="nav-item {% if request.endpoint == 'jobs' %}active{% endif %}">
+                        <span class="nav-icon">
+                            <div class="nav-icon-bg">
+                                <i class="fas fa-briefcase"></i>
+                            </div>
+                        </span>
+                        <span class="nav-text">Job Opportunities</span>
+                    </a>
+                    
+                    <a href="{{ url_for('leaderboard') }}" class="nav-item {% if request.endpoint == 'leaderboard' %}active{% endif %}">
+                        <span class="nav-icon">
+                            <div class="nav-icon-bg">
+                                <i class="fas fa-trophy"></i>
+                            </div>
+                        </span>
+                        <span class="nav-text">Leaderboard</span>
+                    </a>
+                    
+                    <a href="{{ url_for('settings') }}" class="nav-item {% if request.endpoint == 'settings' %}active{% endif %}">
+                        <span class="nav-icon">
+                            <div class="nav-icon-bg">
+                                <i class="fas fa-cog"></i>
+                            </div>
+                        </span>
+                        <span class="nav-text">Settings</span>
+                    </a>
+                </div>
+                
+                <!-- ADMIN SECTION - ONLY VISIBLE TO ADMIN USERS -->
+                {% if current_user.is_authenticated and current_user.is_admin %}
+                <div class="nav-section admin-section">
+                    <span class="nav-section-label">Administration</span>
+                    <a href="{{ url_for('admin_dashboard') }}" class="nav-item admin-item {% if request.endpoint == 'admin_dashboard' %}active{% endif %}">
+                        <span class="nav-icon">
+                            <div class="nav-icon-bg">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                        </span>
+                        <span class="nav-text">Admin Panel</span>
+                        <span class="nav-badge admin-badge">ADMIN</span>
+                    </a>
+                    
+                    <a href="{{ url_for('admin_jobs') }}" class="nav-item admin-item {% if request.endpoint == 'admin_jobs' %}active{% endif %}">
+                        <span class="nav-icon">
+                            <div class="nav-icon-bg">
+                                <i class="fas fa-briefcase"></i>
+                            </div>
+                        </span>
+                        <span class="nav-text">Manage Jobs</span>
+                    </a>
+                    
+                    <a href="{{ url_for('admin_withdrawals') }}" class="nav-item admin-item {% if request.endpoint == 'admin_withdrawals' %}active{% endif %}">
+                        <span class="nav-icon">
+                            <div class="nav-icon-bg">
+                                <i class="fas fa-money-bill-wave"></i>
+                            </div>
+                        </span>
+                        <span class="nav-text">Withdrawals</span>
+                    </a>
+                    
+                    <a href="{{ url_for('admin_users') }}" class="nav-item admin-item {% if request.endpoint == 'admin_users' %}active{% endif %}">
+                        <span class="nav-icon">
+                            <div class="nav-icon-bg">
+                                <i class="fas fa-users-cog"></i>
+                            </div>
+                        </span>
+                        <span class="nav-text">User Management</span>
+                    </a>
+                </div>
+                {% endif %}
+            </nav>
+            
+            {% if current_user.is_authenticated %}
+            <div class="sidebar-footer">
+                <div class="balance-card">
+                    <div class="balance-header">
+                        <i class="fas fa-wallet"></i>
+                        <span>Available Balance</span>
+                    </div>
+                    <div class="balance-amount">Ksh {{ "%.2f"|format(current_user.balance) }}</div>
+                    <div class="balance-actions">
+                        <a href="{{ url_for('withdraw') }}" class="balance-btn">
+                            <i class="fas fa-arrow-up"></i>
+                            Withdraw
+                        </a>
+                    </div>
+                </div>
+                
+                <a href="{{ url_for('logout') }}" class="logout-btn">
+                    <div class="logout-icon">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </div>
+                    <span class="logout-text">Logout</span>
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Mobile Menu Toggle Button -->
+        <button class="mobile-menu-toggle" id="mobileMenuToggle">
+            <div class="toggle-icon">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </button>
+
+        <!-- Mobile Overlay -->
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
         
         <div class="main-content" id="mainContent">
             <!-- Desktop Toggle Button -->
@@ -606,6 +821,7 @@
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('mainContent');
             const sidebarToggle = document.getElementById('sidebarToggle');
+            const mobileMenuToggle = document.getElementById('mobileMenuToggle');
             const sidebarOverlay = document.getElementById('sidebarOverlay');
             const connectionStatus = document.getElementById('connectionStatus');
             const errorState = document.getElementById('errorState');
@@ -614,6 +830,7 @@
             function initializeApp() {
                 try {
                     setupSidebarToggle();
+                    setupMobileMenu();
                     setupFlashMessages();
                     setupConnectionMonitor();
                     setupErrorHandling();
@@ -643,6 +860,41 @@
                             if (mainContent) mainContent.classList.toggle('expanded');
                             localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
                         }
+                    });
+                }
+            }
+
+            function setupMobileMenu() {
+                // Toggle mobile menu
+                if (mobileMenuToggle) {
+                    mobileMenuToggle.addEventListener('click', function() {
+                        sidebar.classList.toggle('active');
+                        sidebarOverlay.classList.toggle('active');
+                        mobileMenuToggle.classList.toggle('active');
+                        document.body.style.overflow = sidebar.classList.contains('active') ? 'hidden' : '';
+                    });
+                }
+
+                // Close sidebar when clicking overlay
+                if (sidebarOverlay) {
+                    sidebarOverlay.addEventListener('click', function() {
+                        sidebar.classList.remove('active');
+                        sidebarOverlay.classList.remove('active');
+                        mobileMenuToggle.classList.remove('active');
+                        document.body.style.overflow = '';
+                    });
+                }
+
+                // Close mobile sidebar when clicking nav items
+                if (window.innerWidth <= 768) {
+                    const navItems = document.querySelectorAll('.nav-item');
+                    navItems.forEach(item => {
+                        item.addEventListener('click', function() {
+                            sidebar.classList.remove('active');
+                            sidebarOverlay.classList.remove('active');
+                            mobileMenuToggle.classList.remove('active');
+                            document.body.style.overflow = '';
+                        });
                     });
                 }
             }
@@ -759,6 +1011,16 @@
                     if (sidebarOverlay) sidebarOverlay.classList.remove('active');
                     const mobileMenuToggle = document.getElementById('mobileMenuToggle');
                     if (mobileMenuToggle) mobileMenuToggle.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+            });
+
+            // Close sidebar when pressing Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    sidebar.classList.remove('active');
+                    sidebarOverlay.classList.remove('active');
+                    mobileMenuToggle.classList.remove('active');
                     document.body.style.overflow = '';
                 }
             });
