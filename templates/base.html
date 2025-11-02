@@ -4,10 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Referral Ninja{% endblock %}</title>
-
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
-
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -32,11 +28,6 @@
             --platinum: #e5e4e2;
             --diamond: #b9f2ff;
             --info: #17a2b8;
-            --sidebar-width: 280px;
-            --sidebar-collapsed-width: 70px;
-            --sidebar-accent: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --glass-blur: blur(20px);
-            --glass-border: 1px solid rgba(255,255,255,0.2);
         }
 
         * {
@@ -60,120 +51,20 @@
 
         .main-content {
             flex: 1;
-            margin-left: var(--sidebar-width);
-            transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-left: 0;
+            transition: all 0.3s ease;
             position: relative;
             min-height: 100vh;
         }
 
-        .main-content.expanded {
-            margin-left: var(--sidebar-collapsed-width);
+        .main-content.sidebar-expanded {
+            margin-left: 280px;
         }
 
         .content {
             padding: 2rem;
             background: var(--light-bg);
             min-height: calc(100vh - 80px);
-        }
-
-        /* Sidebar Logo */
-        .sidebar-logo {
-            width: 50px;
-            height: 50px;
-            object-fit: contain;
-            margin-right: 10px;
-            border-radius: 10px;
-            box-shadow: 
-                0 4px 15px rgba(102, 126, 234, 0.4),
-                0 0 0 1px rgba(255,255,255,0.1);
-        }
-
-        /* Desktop Toggle Button */
-        .sidebar-toggle {
-            position: fixed;
-            top: 20px;
-            left: calc(var(--sidebar-width) - 16px);
-            background: var(--sidebar-accent);
-            border: var(--glass-border);
-            color: white;
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            backdrop-filter: var(--glass-blur);
-            -webkit-backdrop-filter: var(--glass-blur);
-            box-shadow: 
-                0 2px 10px rgba(0,0,0,0.3),
-                0 0 0 1px rgba(255,255,255,0.1);
-            z-index: 1001;
-        }
-
-        .main-content.expanded .sidebar-toggle {
-            left: calc(var(--sidebar-collapsed-width) - 16px);
-        }
-
-        .sidebar-toggle:hover {
-            transform: scale(1.1);
-            box-shadow: 
-                0 4px 15px rgba(102, 126, 234, 0.5),
-                0 0 0 1px rgba(255,255,255,0.2);
-        }
-
-        .toggle-icon {
-            width: 16px;
-            height: 16px;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .toggle-icon span {
-            display: block;
-            height: 2px;
-            width: 100%;
-            background: white;
-            border-radius: 1px;
-            position: absolute;
-            left: 0;
-            transition: all 0.3s ease;
-        }
-
-        .toggle-icon span:nth-child(1) {
-            transform: rotate(45deg);
-            top: 7px;
-            width: 60%;
-        }
-
-        .toggle-icon span:nth-child(2) {
-            opacity: 0;
-        }
-
-        .toggle-icon span:nth-child(3) {
-            transform: rotate(-45deg);
-            top: 7px;
-            width: 60%;
-        }
-
-        .main-content.expanded .sidebar-toggle .toggle-icon span:nth-child(1) {
-            transform: none;
-            top: 0;
-            width: 100%;
-        }
-
-        .main-content.expanded .sidebar-toggle .toggle-icon span:nth-child(2) {
-            opacity: 1;
-            top: 7px;
-        }
-
-        .main-content.expanded .sidebar-toggle .toggle-icon span:nth-child(3) {
-            transform: none;
-            top: 14px;
-            width: 100%;
         }
 
         /* Support Button */
@@ -420,12 +311,8 @@
 
         /* Mobile Responsive */
         @media (max-width: 768px) {
-            .main-content {
-                margin-left: 0 !important;
-            }
-
-            .main-content.expanded {
-                margin-left: 0 !important;
+            .main-content.sidebar-expanded {
+                margin-left: 0;
             }
 
             .content {
@@ -445,15 +332,11 @@
                 padding: 10px 16px;
                 font-size: 0.875rem;
             }
-
-            .sidebar-toggle {
-                display: none;
-            }
         }
 
         @media (min-width: 769px) {
             .main-content {
-                margin-left: var(--sidebar-width);
+                margin-left: 280px;
             }
         }
 
@@ -547,231 +430,15 @@
             .community-button {
                 display: none !important;
             }
-
-            .sidebar-toggle {
-                display: none !important;
-            }
         }
     </style>
     {% block styles %}{% endblock %}
 </head>
 <body>
     <div class="app-container">
-        <!-- Updated Sidebar with Logo -->
-        <div class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <div class="logo-container">
-                    <a href="{{ url_for('profile') }}">
-                        <img src="{{ url_for('static', filename='images/logo.png') }}" 
-                             alt="Referral Ninja Logo" 
-                             class="sidebar-logo">
-                    </a>
-                    <div class="logo-text">
-                        <h2>Referral Ninja</h2>
-                        <span class="logo-subtitle">Earn & Grow</span>
-                    </div>
-                </div>
-            </div>
-            
-            {% if current_user.is_authenticated %}
-            <div class="sidebar-user">
-                <div class="user-avatar">
-                    <div class="avatar-gradient">
-                        <i class="fas fa-user"></i>
-                    </div>
-                    <div class="user-status"></div>
-                </div>
-                <div class="user-info">
-                    <div class="user-name">{{ current_user.username }}</div>
-                    <div class="user-balance-mini">
-                        <i class="fas fa-coins"></i>
-                        Ksh {{ "%.2f"|format(current_user.balance) }}
-                    </div>
-                    <div class="user-referrals">
-                        <i class="fas fa-users"></i>
-                        {{ current_user.referral_count }} Referrals
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-            
-            <nav class="sidebar-nav">
-                <div class="nav-section">
-                    <span class="nav-section-label">Main Menu</span>
-                    <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
-                        <span class="nav-icon">
-                            <div class="nav-icon-bg">
-                                <i class="fas fa-home"></i>
-                            </div>
-                        </span>
-                        <span class="nav-text">Dashboard</span>
-                    </a>
-                    
-                    <a href="{{ url_for('profile') }}" class="nav-item {% if request.endpoint == 'profile' %}active{% endif %}">
-                        <span class="nav-icon">
-                            <div class="nav-icon-bg">
-                                <i class="fas fa-user-circle"></i>
-                            </div>
-                        </span>
-                        <span class="nav-text">Profile</span>
-                    </a>
-                    
-                    <a href="{{ url_for('referral_system') }}" class="nav-item {% if request.endpoint in ['referral_system', 'referrals'] %}active{% endif %}">
-                        <span class="nav-icon">
-                            <div class="nav-icon-bg">
-                                <i class="fas fa-users"></i>
-                            </div>
-                        </span>
-                        <span class="nav-text">Referrals</span>
-                        {% if current_user.referral_count > 0 %}
-                        <span class="nav-badge">{{ current_user.referral_count }}</span>
-                        {% endif %}
-                    </a>
-                </div>
-                
-                <div class="nav-section">
-                    <span class="nav-section-label">Earnings</span>
-                    <a href="{{ url_for('withdraw') }}" class="nav-item {% if request.endpoint == 'withdraw' %}active{% endif %}">
-                        <span class="nav-icon">
-                            <div class="nav-icon-bg">
-                                <i class="fas fa-wallet"></i>
-                            </div>
-                        </span>
-                        <span class="nav-text">Withdraw</span>
-                    </a>
-                    
-                    <a href="{{ url_for('statistics') }}" class="nav-item {% if request.endpoint == 'statistics' %}active{% endif %}">
-                        <span class="nav-icon">
-                            <div class="nav-icon-bg">
-                                <i class="fas fa-chart-bar"></i>
-                            </div>
-                        </span>
-                        <span class="nav-text">Statistics</span>
-                    </a>
-                </div>
-                
-                <div class="nav-section">
-                    <span class="nav-section-label">Community</span>
-                    <a href="{{ url_for('jobs') }}" class="nav-item {% if request.endpoint == 'jobs' %}active{% endif %}">
-                        <span class="nav-icon">
-                            <div class="nav-icon-bg">
-                                <i class="fas fa-briefcase"></i>
-                            </div>
-                        </span>
-                        <span class="nav-text">Job Opportunities</span>
-                    </a>
-                    
-                    <a href="{{ url_for('leaderboard') }}" class="nav-item {% if request.endpoint == 'leaderboard' %}active{% endif %}">
-                        <span class="nav-icon">
-                            <div class="nav-icon-bg">
-                                <i class="fas fa-trophy"></i>
-                            </div>
-                        </span>
-                        <span class="nav-text">Leaderboard</span>
-                    </a>
-                    
-                    <a href="{{ url_for('settings') }}" class="nav-item {% if request.endpoint == 'settings' %}active{% endif %}">
-                        <span class="nav-icon">
-                            <div class="nav-icon-bg">
-                                <i class="fas fa-cog"></i>
-                            </div>
-                        </span>
-                        <span class="nav-text">Settings</span>
-                    </a>
-                </div>
-                
-                <!-- ADMIN SECTION - ONLY VISIBLE TO ADMIN USERS -->
-                {% if current_user.is_authenticated and current_user.is_admin %}
-                <div class="nav-section admin-section">
-                    <span class="nav-section-label">Administration</span>
-                    <a href="{{ url_for('admin_dashboard') }}" class="nav-item admin-item {% if request.endpoint == 'admin_dashboard' %}active{% endif %}">
-                        <span class="nav-icon">
-                            <div class="nav-icon-bg">
-                                <i class="fas fa-shield-alt"></i>
-                            </div>
-                        </span>
-                        <span class="nav-text">Admin Panel</span>
-                        <span class="nav-badge admin-badge">ADMIN</span>
-                    </a>
-                    
-                    <a href="{{ url_for('admin_jobs') }}" class="nav-item admin-item {% if request.endpoint == 'admin_jobs' %}active{% endif %}">
-                        <span class="nav-icon">
-                            <div class="nav-icon-bg">
-                                <i class="fas fa-briefcase"></i>
-                            </div>
-                        </span>
-                        <span class="nav-text">Manage Jobs</span>
-                    </a>
-                    
-                    <a href="{{ url_for('admin_withdrawals') }}" class="nav-item admin-item {% if request.endpoint == 'admin_withdrawals' %}active{% endif %}">
-                        <span class="nav-icon">
-                            <div class="nav-icon-bg">
-                                <i class="fas fa-money-bill-wave"></i>
-                            </div>
-                        </span>
-                        <span class="nav-text">Withdrawals</span>
-                    </a>
-                    
-                    <a href="{{ url_for('admin_users') }}" class="nav-item admin-item {% if request.endpoint == 'admin_users' %}active{% endif %}">
-                        <span class="nav-icon">
-                            <div class="nav-icon-bg">
-                                <i class="fas fa-users-cog"></i>
-                            </div>
-                        </span>
-                        <span class="nav-text">User Management</span>
-                    </a>
-                </div>
-                {% endif %}
-            </nav>
-            
-            {% if current_user.is_authenticated %}
-            <div class="sidebar-footer">
-                <div class="balance-card">
-                    <div class="balance-header">
-                        <i class="fas fa-wallet"></i>
-                        <span>Available Balance</span>
-                    </div>
-                    <div class="balance-amount">Ksh {{ "%.2f"|format(current_user.balance) }}</div>
-                    <div class="balance-actions">
-                        <a href="{{ url_for('withdraw') }}" class="balance-btn">
-                            <i class="fas fa-arrow-up"></i>
-                            Withdraw
-                        </a>
-                    </div>
-                </div>
-                
-                <a href="{{ url_for('logout') }}" class="logout-btn">
-                    <div class="logout-icon">
-                        <i class="fas fa-sign-out-alt"></i>
-                    </div>
-                    <span class="logout-text">Logout</span>
-                </a>
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- Mobile Menu Toggle Button -->
-        <button class="mobile-menu-toggle" id="mobileMenuToggle">
-            <div class="toggle-icon">
-                <span></span>
-                <span></span>
-                <span></span>
-            </div>
-        </button>
-
-        <!-- Mobile Overlay -->
-        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+        {% include 'sidebar.html' %}
         
         <div class="main-content" id="mainContent">
-            <!-- Desktop Toggle Button -->
-            <button class="sidebar-toggle" id="sidebarToggle">
-                <div class="toggle-icon">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                </div>
-            </button>
-
             <main class="content">
                 <!-- Connection Status Indicator -->
                 <div class="connection-status online" id="connectionStatus" style="display: none;">
@@ -824,8 +491,6 @@
         document.addEventListener('DOMContentLoaded', function() {
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('mainContent');
-            const sidebarToggle = document.getElementById('sidebarToggle');
-            const mobileMenuToggle = document.getElementById('mobileMenuToggle');
             const sidebarOverlay = document.getElementById('sidebarOverlay');
             const connectionStatus = document.getElementById('connectionStatus');
             const errorState = document.getElementById('errorState');
@@ -833,8 +498,6 @@
             // Initialize components safely
             function initializeApp() {
                 try {
-                    setupSidebarToggle();
-                    setupMobileMenu();
                     setupFlashMessages();
                     setupConnectionMonitor();
                     setupErrorHandling();
@@ -842,64 +505,6 @@
                 } catch (error) {
                     console.error('Error initializing app:', error);
                     showErrorState();
-                }
-            }
-
-            function setupSidebarToggle() {
-                // Check if sidebar state is stored
-                const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-                const isMobile = window.innerWidth <= 768;
-
-                // Initialize sidebar state
-                if (isCollapsed && !isMobile) {
-                    sidebar.classList.add('collapsed');
-                    if (mainContent) mainContent.classList.add('expanded');
-                }
-
-                // Toggle sidebar collapse (desktop)
-                if (sidebarToggle) {
-                    sidebarToggle.addEventListener('click', function() {
-                        if (window.innerWidth > 768) {
-                            sidebar.classList.toggle('collapsed');
-                            if (mainContent) mainContent.classList.toggle('expanded');
-                            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
-                        }
-                    });
-                }
-            }
-
-            function setupMobileMenu() {
-                // Toggle mobile menu
-                if (mobileMenuToggle) {
-                    mobileMenuToggle.addEventListener('click', function() {
-                        sidebar.classList.toggle('active');
-                        sidebarOverlay.classList.toggle('active');
-                        mobileMenuToggle.classList.toggle('active');
-                        document.body.style.overflow = sidebar.classList.contains('active') ? 'hidden' : '';
-                    });
-                }
-
-                // Close sidebar when clicking overlay
-                if (sidebarOverlay) {
-                    sidebarOverlay.addEventListener('click', function() {
-                        sidebar.classList.remove('active');
-                        sidebarOverlay.classList.remove('active');
-                        mobileMenuToggle.classList.remove('active');
-                        document.body.style.overflow = '';
-                    });
-                }
-
-                // Close mobile sidebar when clicking nav items
-                if (window.innerWidth <= 768) {
-                    const navItems = document.querySelectorAll('.nav-item');
-                    navItems.forEach(item => {
-                        item.addEventListener('click', function() {
-                            sidebar.classList.remove('active');
-                            sidebarOverlay.classList.remove('active');
-                            mobileMenuToggle.classList.remove('active');
-                            document.body.style.overflow = '';
-                        });
-                    });
                 }
             }
 
@@ -995,39 +600,60 @@
                 }
             }
 
-            // Handle window resize
-            window.addEventListener('resize', function() {
-                const isMobileNow = window.innerWidth <= 768;
-                
-                if (isMobileNow) {
-                    sidebar.classList.remove('collapsed');
-                    if (mainContent) mainContent.classList.remove('expanded');
-                    sidebar.classList.remove('active');
-                    if (sidebarOverlay) sidebarOverlay.classList.remove('active');
-                    const mobileMenuToggle = document.getElementById('mobileMenuToggle');
-                    if (mobileMenuToggle) mobileMenuToggle.classList.remove('active');
-                } else {
-                    const wasCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-                    if (wasCollapsed) {
-                        sidebar.classList.add('collapsed');
-                        if (mainContent) mainContent.classList.add('expanded');
+            // Utility functions
+            window.makeRequest = function(url, options = {}) {
+                const defaultOptions = {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
                     }
-                    if (sidebarOverlay) sidebarOverlay.classList.remove('active');
-                    const mobileMenuToggle = document.getElementById('mobileMenuToggle');
-                    if (mobileMenuToggle) mobileMenuToggle.classList.remove('active');
-                    document.body.style.overflow = '';
-                }
-            });
+                };
 
-            // Close sidebar when pressing Escape key
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    sidebar.classList.remove('active');
-                    sidebarOverlay.classList.remove('active');
-                    mobileMenuToggle.classList.remove('active');
-                    document.body.style.overflow = '';
+                const mergedOptions = { ...defaultOptions, ...options };
+                
+                return fetch(url, mergedOptions)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .catch(error => {
+                        console.error('Request failed:', error);
+                        throw error;
+                    });
+            };
+
+            window.showToast = function(message, type = 'info') {
+                // Create toast element
+                const toast = document.createElement('div');
+                toast.className = `toast align-items-center text-bg-${type} border-0`;
+                toast.innerHTML = `
+                    <div class="d-flex">
+                        <div class="toast-body">${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                `;
+
+                // Add to toast container
+                let container = document.getElementById('toastContainer');
+                if (!container) {
+                    container = document.createElement('div');
+                    container.id = 'toastContainer';
+                    container.className = 'toast-container position-fixed top-0 end-0 p-3';
+                    container.style.zIndex = '9999';
+                    document.body.appendChild(container);
                 }
-            });
+
+                container.appendChild(toast);
+                const bsToast = new bootstrap.Toast(toast);
+                bsToast.show();
+
+                // Remove after hide
+                toast.addEventListener('hidden.bs.toast', () => {
+                    toast.remove();
+                });
+            };
 
             // Initialize the application
             initializeApp();
