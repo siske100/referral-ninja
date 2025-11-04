@@ -230,53 +230,74 @@
 
     <!-- Recent Activity & Pending Actions -->
     <div class="row">
-        <!-- Recent Users -->
+        <!-- Recent Verified Users - SCROLLING SECTION -->
         <div class="col-xl-6 col-lg-6">
             <div class="card shadow mb-4">
                 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                    <h6 class="m-0 font-weight-bold text-primary">Recent Verified Users</h6>
-                    <a href="{{ url_for('admin_users') }}" class="btn btn-sm btn-primary">View All</a>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
-                            <thead>
-                                <tr>
-                                    <th>Username</th>
-                                    <th>Email</th>
-                                    <th>Phone</th>
-                                    <th>Joined</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for user in recent_users|default([]) %}
-                                <tr>
-                                    <td>
-                                        <strong>{{ user.username }}</strong>
-                                        {% if user.is_admin %}
-                                            <span class="badge bg-danger ms-1">Admin</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>{{ user.email }}</td>
-                                    <td>{{ user.phone }}</td>
-                                    <td>{{ user.created_at[:16].replace('T', ' ') if user.created_at else 'N/A' }}</td>
-                                    <td>
-                                        {% if user.is_active %}
-                                            <span class="badge bg-success">Active</span>
-                                        {% else %}
-                                            <span class="badge bg-danger">Inactive</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% else %}
-                                <tr>
-                                    <td colspan="5" class="text-center">No recent users</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-user-check me-1"></i>
+                        Recent Verified Users 
+                        <span class="badge bg-success ms-2">{{ recent_verified_users|length|default(0) }}</span>
+                    </h6>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary me-1" onclick="refreshVerifiedUsers()">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                        <a href="{{ url_for('admin_users') }}" class="btn btn-sm btn-primary">View All</a>
                     </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="verified-users-scroller" style="max-height: 400px; overflow-y: auto;">
+                        <div class="list-group list-group-flush">
+                            {% for user in recent_verified_users|default([]) %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    <div class="user-avatar-sm me-3">
+                                        {{ user.username[:2]|upper }}
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">
+                                            {{ user.username }}
+                                            {% if user.is_admin %}
+                                                <span class="badge bg-danger ms-1">Admin</span>
+                                            {% endif %}
+                                        </h6>
+                                        <small class="text-muted">
+                                            {{ user.phone }} • {{ user.email if user.email else 'No email' }}
+                                        </small>
+                                        <div class="mt-1">
+                                            <small class="text-muted">
+                                                <i class="fas fa-clock me-1"></i>
+                                                {{ user.created_at[:16].replace('T', ' ') if user.created_at else 'N/A' }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-success mb-1">
+                                        <i class="fas fa-check-circle me-1"></i>
+                                        Verified
+                                    </span>
+                                    <br>
+                                    <small class="text-muted">
+                                        KSH {{ "%.2f"|format(user.balance|default(0)) }}
+                                    </small>
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="list-group-item text-center py-4">
+                                <i class="fas fa-user-check fa-2x text-muted mb-2"></i>
+                                <p class="text-muted mb-0">No verified users yet</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-light">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Showing {{ recent_verified_users|length|default(0) }} most recent verified users
+                    </small>
                 </div>
             </div>
         </div>
@@ -528,8 +549,12 @@ function refreshDashboard() {
     window.location.reload();
 }
 
+function refreshVerifiedUsers() {
+    // You can implement AJAX refresh here if needed
+    refreshDashboard();
+}
+
 function viewWithdrawalDetails(transactionId) {
-    // Simple details display - you can expand this to fetch more details
     const content = `
         <div class="text-center">
             <i class="fas fa-info-circle fa-3x text-primary mb-3"></i>
@@ -593,7 +618,7 @@ function rejectWithdrawal(transactionId) {
 // Auto-refresh every 30 seconds
 setTimeout(refreshDashboard, 30000);
 
-// Add hover effects
+// Add hover effects and smooth scrolling
 document.addEventListener('DOMContentLoaded', function() {
     const cards = document.querySelectorAll('.hover-card');
     cards.forEach(card => {
@@ -605,6 +630,12 @@ document.addEventListener('DOMContentLoaded', function() {
             this.style.transform = 'translateY(0)';
         });
     });
+
+    // Smooth scrolling for verified users list
+    const scroller = document.querySelector('.verified-users-scroller');
+    if (scroller) {
+        scroller.style.scrollBehavior = 'smooth';
+    }
 });
 </script>
 
@@ -716,6 +747,62 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .position-relative {
     position: relative;
+}
+
+/* Verified Users Scroller Styles */
+.verified-users-scroller {
+    scrollbar-width: thin;
+    scrollbar-color: #c1c1c1 #f1f1f1;
+}
+
+.verified-users-scroller::-webkit-scrollbar {
+    width: 6px;
+}
+
+.verified-users-scroller::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.verified-users-scroller::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.verified-users-scroller::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+.list-group-item {
+    border: none;
+    border-bottom: 1px solid #e3e6f0;
+    transition: background-color 0.2s ease;
+}
+
+.list-group-item:last-child {
+    border-bottom: none;
+}
+
+.list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+/* Custom badge styles */
+.badge {
+    font-size: 0.7em;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .verified-users-scroller {
+        max-height: 300px !important;
+    }
+    
+    .user-avatar-sm {
+        width: 28px;
+        height: 28px;
+        font-size: 0.7rem;
+    }
 }
 </style>
 {% endblock %}
