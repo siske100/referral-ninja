@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Withdrawals Management</title>
+    <title>Admin Dashboard - Withdrawals Management</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --primary: #4361ee;
@@ -257,43 +258,6 @@
             filter: invert(1);
         }
         
-        .pulse {
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-        
-        .new-withdrawal {
-            background-color: rgba(76, 201, 240, 0.1);
-            animation: highlight 3s ease-out;
-        }
-        
-        @keyframes highlight {
-            0% { background-color: rgba(76, 201, 240, 0.5); }
-            100% { background-color: rgba(76, 201, 240, 0.1); }
-        }
-        
-        .connection-status {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            z-index: 1000;
-        }
-        
-        .last-updated {
-            font-size: 0.8rem;
-            color: #6c757d;
-        }
-        
-        .auto-refresh-badge {
-            font-size: 0.7rem;
-            vertical-align: super;
-        }
-        
         .page-header {
             background: var(--gradient-primary);
             color: white;
@@ -425,6 +389,23 @@
             border-radius: 10px;
             border: none;
         }
+        
+        .new-withdrawal {
+            background-color: rgba(76, 201, 240, 0.1);
+            animation: highlight 3s ease-out;
+        }
+        
+        @keyframes highlight {
+            0% { background-color: rgba(76, 201, 240, 0.5); }
+            100% { background-color: rgba(76, 201, 240, 0.1); }
+        }
+        
+        .connection-status {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
@@ -465,27 +446,27 @@
                     <h5 class="mb-4 fw-bold">Admin Panel</h5>
                     <ul class="nav flex-column">
                         <li class="nav-item">
-                            <a class="nav-link" href="#">
+                            <a class="nav-link" href="#" onclick="showSection('dashboard')">
                                 <i class="fas fa-tachometer-alt me-2"></i> Dashboard
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#">
+                            <a class="nav-link" href="#" onclick="showSection('users')">
                                 <i class="fas fa-users me-2"></i> User Management
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link active" href="#">
+                            <a class="nav-link active" href="#" onclick="showSection('withdrawals')">
                                 <i class="fas fa-money-bill-wave me-2"></i> Withdrawals
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#">
+                            <a class="nav-link" href="#" onclick="showSection('transactions')">
                                 <i class="fas fa-history me-2"></i> Transaction History
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#">
+                            <a class="nav-link" href="#" onclick="showSection('settings')">
                                 <i class="fas fa-cog me-2"></i> System Settings
                             </a>
                         </li>
@@ -495,290 +476,233 @@
 
             <!-- Main Content Area -->
             <div class="col-lg-9">
-                <!-- Page Header -->
-                <div class="page-header mb-4">
-                    <div class="row align-items-center">
-                        <div class="col-md-8">
-                            <h1 class="mb-1 fw-bold">Withdrawal Management</h1>
-                            <p class="mb-0 opacity-75">Manage and process user withdrawal requests</p>
-                        </div>
-                        <div class="col-md-4 text-md-end">
-                            <div class="d-flex justify-content-md-end">
-                                <div class="form-check form-switch me-3 align-self-center">
-                                    <input class="form-check-input" type="checkbox" id="autoRefreshToggle" checked>
-                                    <label class="form-check-label text-white" for="autoRefreshToggle">Auto-refresh</label>
-                                </div>
-                                <button class="btn btn-light me-2" id="refreshBtn">
-                                    <i class="fas fa-sync-alt me-1"></i> Refresh
-                                </button>
-                                <button class="btn btn-light">
-                                    <i class="fas fa-download me-1"></i> Export
-                                </button>
+                <!-- Dashboard Section (Hidden by default) -->
+                <div id="dashboard-section" class="d-none">
+                    <div class="page-header mb-4">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h1 class="mb-1 fw-bold">Dashboard</h1>
+                                <p class="mb-0 opacity-75">Overview of system performance</p>
                             </div>
                         </div>
+                    </div>
+                    <div class="main-content">
+                        <p>Dashboard content goes here...</p>
                     </div>
                 </div>
 
-                <!-- Stats Cards -->
-                <div class="row mb-4">
-                    <div class="col-md-3 mb-3">
-                        <div class="card stats-card pending">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <h3 class="card-title text-warning fw-bold" id="pendingAmount">KSh 12,450</h3>
-                                        <p class="card-text">Pending Withdrawals</p>
-                                    </div>
-                                    <div class="stats-icon pending">
-                                        <i class="fas fa-clock"></i>
-                                    </div>
-                                </div>
-                                <div class="mt-3">
-                                    <small class="text-muted">Updated just now</small>
-                                </div>
+                <!-- Users Section (Hidden by default) -->
+                <div id="users-section" class="d-none">
+                    <div class="page-header mb-4">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h1 class="mb-1 fw-bold">User Management</h1>
+                                <p class="mb-0 opacity-75">Manage system users</p>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3 mb-3">
-                        <div class="card stats-card processing">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <h3 class="card-title text-primary fw-bold" id="processingAmount">KSh 8,200</h3>
-                                        <p class="card-text">Processing</p>
-                                    </div>
-                                    <div class="stats-icon processing">
-                                        <i class="fas fa-sync"></i>
-                                    </div>
-                                </div>
-                                <div class="mt-3">
-                                    <small class="text-muted">Updated just now</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <div class="card stats-card completed">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <h3 class="card-title text-info fw-bold" id="completedAmount">KSh 42,150</h3>
-                                        <p class="card-text">Completed</p>
-                                    </div>
-                                    <div class="stats-icon completed">
-                                        <i class="fas fa-check-circle"></i>
-                                    </div>
-                                </div>
-                                <div class="mt-3">
-                                    <small class="text-muted">Today</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <div class="card stats-card rejected">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between">
-                                    <div>
-                                        <h3 class="card-title text-danger fw-bold" id="rejectedAmount">KSh 1,500</h3>
-                                        <p class="card-text">Rejected</p>
-                                    </div>
-                                    <div class="stats-icon rejected">
-                                        <i class="fas fa-times-circle"></i>
-                                    </div>
-                                </div>
-                                <div class="mt-3">
-                                    <small class="text-muted">This week</small>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="main-content">
+                        <p>User management content goes here...</p>
                     </div>
                 </div>
 
-                <div class="main-content">
-                    <!-- Filters -->
-                    <div class="d-flex justify-content-between mb-4">
-                        <div class="btn-group" role="group">
-                            <button type="button" class="filter-btn active" data-filter="all">All</button>
-                            <button type="button" class="filter-btn" data-filter="pending">Pending</button>
-                            <button type="button" class="filter-btn" data-filter="processing">Processing</button>
-                            <button type="button" class="filter-btn" data-filter="completed">Completed</button>
-                            <button type="button" class="filter-btn" data-filter="rejected">Rejected</button>
-                        </div>
-                        <div class="d-flex">
-                            <div class="input-group me-2" style="width: 250px;">
-                                <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
-                                <input type="text" class="form-control search-box border-start-0" id="searchInput" placeholder="Search withdrawals...">
+                <!-- Withdrawals Section (Visible by default) -->
+                <div id="withdrawals-section">
+                    <!-- Page Header -->
+                    <div class="page-header mb-4">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h1 class="mb-1 fw-bold">Withdrawal Management</h1>
+                                <p class="mb-0 opacity-75">Manage and process user withdrawal requests</p>
                             </div>
-                            <button class="btn btn-outline-primary">
-                                <i class="fas fa-filter me-1"></i> Filters
+                            <div class="col-md-4 text-md-end">
+                                <div class="d-flex justify-content-md-end">
+                                    <div class="form-check form-switch me-3 align-self-center">
+                                        <input class="form-check-input" type="checkbox" id="autoRefreshToggle" checked>
+                                        <label class="form-check-label text-white" for="autoRefreshToggle">Auto-refresh</label>
+                                    </div>
+                                    <button class="btn btn-light me-2" id="refreshBtn">
+                                        <i class="fas fa-sync-alt me-1"></i> Refresh
+                                    </button>
+                                    <button class="btn btn-light" id="exportBtn">
+                                        <i class="fas fa-download me-1"></i> Export
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stats Cards -->
+                    <div class="row mb-4">
+                        <div class="col-md-3 mb-3">
+                            <div class="card stats-card pending">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <h3 class="card-title text-warning fw-bold" id="pendingAmount">KSh 0</h3>
+                                            <p class="card-text">Pending Withdrawals</p>
+                                        </div>
+                                        <div class="stats-icon pending">
+                                            <i class="fas fa-clock"></i>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <small class="text-muted" id="pendingCount">0 withdrawals</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card stats-card processing">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <h3 class="card-title text-primary fw-bold" id="processingAmount">KSh 0</h3>
+                                            <p class="card-text">Processing</p>
+                                        </div>
+                                        <div class="stats-icon processing">
+                                            <i class="fas fa-sync"></i>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <small class="text-muted" id="processingCount">0 withdrawals</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card stats-card completed">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <h3 class="card-title text-info fw-bold" id="completedAmount">KSh 0</h3>
+                                            <p class="card-text">Completed</p>
+                                        </div>
+                                        <div class="stats-icon completed">
+                                            <i class="fas fa-check-circle"></i>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <small class="text-muted" id="completedCount">0 withdrawals</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card stats-card rejected">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <h3 class="card-title text-danger fw-bold" id="rejectedAmount">KSh 0</h3>
+                                            <p class="card-text">Rejected</p>
+                                        </div>
+                                        <div class="stats-icon rejected">
+                                            <i class="fas fa-times-circle"></i>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <small class="text-muted" id="rejectedCount">0 withdrawals</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="main-content">
+                        <!-- Filters -->
+                        <div class="d-flex justify-content-between mb-4">
+                            <div class="btn-group" role="group">
+                                <button type="button" class="filter-btn active" data-filter="all">All</button>
+                                <button type="button" class="filter-btn" data-filter="pending">Pending</button>
+                                <button type="button" class="filter-btn" data-filter="processing">Processing</button>
+                                <button type="button" class="filter-btn" data-filter="completed">Completed</button>
+                                <button type="button" class="filter-btn" data-filter="rejected">Rejected</button>
+                            </div>
+                            <div class="d-flex">
+                                <div class="input-group me-2" style="width: 250px;">
+                                    <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
+                                    <input type="text" class="form-control search-box border-start-0" id="searchInput" placeholder="Search withdrawals...">
+                                </div>
+                                <button class="btn btn-outline-primary" id="filterBtn">
+                                    <i class="fas fa-filter me-1"></i> Filters
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Withdrawals Table -->
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>User</th>
+                                        <th>Phone Number</th>
+                                        <th>Amount</th>
+                                        <th>Date</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="withdrawalsTableBody">
+                                    <!-- Data will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Loading Indicator -->
+                        <div id="loadingIndicator" class="text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading withdrawals...</p>
+                        </div>
+
+                        <!-- Empty State -->
+                        <div id="emptyState" class="empty-state d-none">
+                            <i class="fas fa-inbox"></i>
+                            <h4>No withdrawals found</h4>
+                            <p class="text-muted">There are no withdrawal requests matching your current filters.</p>
+                            <button class="btn btn-primary mt-2" id="resetFiltersBtn">
+                                <i class="fas fa-redo me-1"></i> Reset Filters
                             </button>
                         </div>
-                    </div>
 
-                    <!-- Withdrawals Table -->
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>User</th>
-                                    <th>Phone Number</th>
-                                    <th>Amount</th>
-                                    <th>Date</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="withdrawalsTableBody">
-                                <!-- Data will be populated by JavaScript -->
-                                <tr class="withdrawal-item pending">
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="user-avatar me-3">
-                                                JM
-                                            </div>
-                                            <div>
-                                                <div class="fw-bold">John Mwangi</div>
-                                                <small class="text-muted">ID: 23456</small>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>+254 712 345 678</td>
-                                    <td class="fw-bold">KSh 2,500</td>
-                                    <td>2023-05-15 14:30</td>
-                                    <td><span class="status-badge status-pending">Pending</span></td>
-                                    <td>
-                                        <button class="btn btn-approve action-btn me-1" onclick="openApproveModal('1')">
-                                            <i class="fas fa-check me-1"></i> Approve
-                                        </button>
-                                        <button class="btn btn-reject action-btn" onclick="openRejectModal('1')">
-                                            <i class="fas fa-times me-1"></i> Reject
-                                        </button>
-                                    </td>
-                                </tr>
-                                <tr class="withdrawal-item processing">
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="user-avatar me-3">
-                                                AK
-                                            </div>
-                                            <div>
-                                                <div class="fw-bold">Alice Kamau</div>
-                                                <small class="text-muted">ID: 23457</small>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>+254 723 456 789</td>
-                                    <td class="fw-bold">KSh 5,700</td>
-                                    <td>2023-05-15 13:45</td>
-                                    <td><span class="status-badge status-processing">Processing</span></td>
-                                    <td>
-                                        <button class="btn btn-secondary action-btn" disabled>
-                                            <i class="fas fa-sync me-1"></i> Processing
-                                        </button>
-                                    </td>
-                                </tr>
-                                <tr class="withdrawal-item completed">
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="user-avatar me-3">
-                                                RW
-                                            </div>
-                                            <div>
-                                                <div class="fw-bold">Robert Wanjiku</div>
-                                                <small class="text-muted">ID: 23458</small>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>+254 734 567 890</td>
-                                    <td class="fw-bold">KSh 3,200</td>
-                                    <td>2023-05-15 11:20</td>
-                                    <td><span class="status-badge status-completed">Completed</span></td>
-                                    <td>
-                                        <span class="text-muted">Processed</span>
-                                    </td>
-                                </tr>
-                                <tr class="withdrawal-item rejected">
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="user-avatar me-3">
-                                                SK
-                                            </div>
-                                            <div>
-                                                <div class="fw-bold">Sarah Kariuki</div>
-                                                <small class="text-muted">ID: 23459</small>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>+254 745 678 901</td>
-                                    <td class="fw-bold">KSh 1,500</td>
-                                    <td>2023-05-14 16:40</td>
-                                    <td><span class="status-badge status-rejected">Rejected</span></td>
-                                    <td>
-                                        <span class="text-muted">Refunded</span>
-                                    </td>
-                                </tr>
-                                <tr class="withdrawal-item pending new-withdrawal">
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="user-avatar me-3">
-                                                DM
-                                            </div>
-                                            <div>
-                                                <div class="fw-bold">David Maina</div>
-                                                <small class="text-muted">ID: 23460</small>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>+254 756 789 012</td>
-                                    <td class="fw-bold">KSh 4,250</td>
-                                    <td>2023-05-15 15:10</td>
-                                    <td><span class="status-badge status-pending">Pending</span></td>
-                                    <td>
-                                        <button class="btn btn-approve action-btn me-1" onclick="openApproveModal('5')">
-                                            <i class="fas fa-check me-1"></i> Approve
-                                        </button>
-                                        <button class="btn btn-reject action-btn" onclick="openRejectModal('5')">
-                                            <i class="fas fa-times me-1"></i> Reject
-                                        </button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <!-- Pagination -->
+                        <nav aria-label="Withdrawal pagination" class="mt-4">
+                            <ul class="pagination justify-content-center" id="paginationContainer">
+                                <!-- Pagination will be populated by JavaScript -->
+                            </ul>
+                        </nav>
                     </div>
+                </div>
 
-                    <!-- Loading Indicator -->
-                    <div id="loadingIndicator" class="text-center py-4 d-none">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Loading...</span>
+                <!-- Transactions Section (Hidden by default) -->
+                <div id="transactions-section" class="d-none">
+                    <div class="page-header mb-4">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h1 class="mb-1 fw-bold">Transaction History</h1>
+                                <p class="mb-0 opacity-75">View all system transactions</p>
+                            </div>
                         </div>
-                        <p class="mt-2">Loading withdrawals...</p>
                     </div>
-
-                    <!-- Empty State -->
-                    <div id="emptyState" class="empty-state d-none">
-                        <i class="fas fa-inbox"></i>
-                        <h4>No withdrawals found</h4>
-                        <p class="text-muted">There are no withdrawal requests matching your current filters.</p>
-                        <button class="btn btn-primary mt-2">
-                            <i class="fas fa-redo me-1"></i> Reset Filters
-                        </button>
+                    <div class="main-content">
+                        <p>Transaction history content goes here...</p>
                     </div>
+                </div>
 
-                    <!-- Pagination -->
-                    <nav aria-label="Withdrawal pagination" class="mt-4">
-                        <ul class="pagination justify-content-center" id="paginationContainer">
-                            <li class="page-item disabled">
-                                <a class="page-link" href="#">Previous</a>
-                            </li>
-                            <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                            <li class="page-item"><a class="page-link" href="#">2</a></li>
-                            <li class="page-item"><a class="page-link" href="#">3</a></li>
-                            <li class="page-item">
-                                <a class="page-link" href="#">Next</a>
-                            </li>
-                        </ul>
-                    </nav>
+                <!-- Settings Section (Hidden by default) -->
+                <div id="settings-section" class="d-none">
+                    <div class="page-header mb-4">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h1 class="mb-1 fw-bold">System Settings</h1>
+                                <p class="mb-0 opacity-75">Configure system parameters</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="main-content">
+                        <p>System settings content goes here...</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -801,18 +725,18 @@
                     <div class="withdrawal-details p-3 bg-light rounded">
                         <div class="row">
                             <div class="col-6">
-                                <strong>User:</strong> <span id="approveUserName">John Mwangi</span>
+                                <strong>User:</strong> <span id="approveUserName">-</span>
                             </div>
                             <div class="col-6">
-                                <strong>Phone:</strong> <span id="approvePhone">+254 712 345 678</span>
+                                <strong>Phone:</strong> <span id="approvePhone">-</span>
                             </div>
                         </div>
                         <div class="row mt-2">
                             <div class="col-6">
-                                <strong>Amount:</strong> <span id="approveAmount">KSh 2,500</span>
+                                <strong>Amount:</strong> <span id="approveAmount">-</span>
                             </div>
                             <div class="col-6">
-                                <strong>Date:</strong> <span id="approveDate">2023-05-15 14:30</span>
+                                <strong>Date:</strong> <span id="approveDate">-</span>
                             </div>
                         </div>
                     </div>
@@ -842,19 +766,19 @@
                     <div class="withdrawal-details p-3 bg-light rounded">
                         <div class="row">
                             <div class="col-6">
-                                <strong>User:</strong> <span id="rejectUserName">John Mwangi</span>
+                                <strong>User:</strong> <span id="rejectUserName">-</span>
                             </div>
                             <div class="col-6">
-                                <strong>Phone:</strong> <span id="rejectPhone">+254 712 345 678</span>
+                                <strong>Phone:</strong> <span id="rejectPhone">-</span>
                             </div>
                         </div>
                         <div class="row mt-2">
                             <div class="col-6">
-                                <strong>Amount:</strong> <span id="rejectAmount">KSh 2,500</span>
+                                <strong>Amount:</strong> <span id="rejectAmount">-</span>
                                 <input type="hidden" id="rejectTransactionId">
                             </div>
                             <div class="col-6">
-                                <strong>Date:</strong> <span id="rejectDate">2023-05-15 14:30</span>
+                                <strong>Date:</strong> <span id="rejectDate">-</span>
                             </div>
                         </div>
                     </div>
@@ -894,6 +818,12 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Initialize Supabase client
+        const SUPABASE_URL = 'https://your-project.supabase.co';
+        const SUPABASE_ANON_KEY = 'your-anon-key';
+        
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
         // Global variables
         let currentWithdrawals = [];
         let currentFilter = 'all';
@@ -901,7 +831,6 @@
         const itemsPerPage = 10;
         let updateInterval;
         let currentTransactionId = null;
-        let lastUpdateTime = null;
         let autoRefreshEnabled = true;
 
         // Initialize the page
@@ -909,6 +838,7 @@
             loadWithdrawals();
             setupEventListeners();
             startLiveUpdates();
+            setupRealtimeSubscription();
         });
 
         // Set up event listeners
@@ -931,8 +861,24 @@
                 loadWithdrawals(true);
             });
 
+            // Export button
+            document.getElementById('exportBtn').addEventListener('click', function() {
+                exportWithdrawals();
+            });
+
             // Search input
             document.getElementById('searchInput').addEventListener('input', function() {
+                renderWithdrawals();
+            });
+
+            // Reset filters button
+            document.getElementById('resetFiltersBtn').addEventListener('click', function() {
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.querySelector('.filter-btn[data-filter="all"]').classList.add('active');
+                currentFilter = 'all';
+                document.getElementById('searchInput').value = '';
                 renderWithdrawals();
             });
 
@@ -960,104 +906,343 @@
             });
         }
 
-        // Load withdrawals from the server
-        function loadWithdrawals(showLoading = false) {
+        // Load withdrawals from Supabase
+        async function loadWithdrawals(showLoading = false) {
             if (showLoading) {
                 document.getElementById('loadingIndicator').classList.remove('d-none');
                 document.getElementById('emptyState').classList.add('d-none');
             }
 
-            // Simulate API call with timeout
-            setTimeout(() => {
-                // In a real application, you would fetch data from your server
-                // currentWithdrawals = data.withdrawals;
-                // updateStats(data.stats);
-                
-                // For demo purposes, we'll just update the last updated time
+            try {
+                // Fetch withdrawals from Supabase
+                const { data, error } = await supabase
+                    .from('withdrawals')
+                    .select(`
+                        id,
+                        amount,
+                        status,
+                        phone_number,
+                        created_at,
+                        users (
+                            id,
+                            username,
+                            email,
+                            phone
+                        )
+                    `)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                currentWithdrawals = data || [];
+                updateStats();
+                renderWithdrawals();
                 updateLastUpdated();
                 
                 document.getElementById('loadingIndicator').classList.add('d-none');
-            }, 1000);
+            } catch (error) {
+                console.error('Error fetching withdrawals:', error);
+                showToast('Error loading withdrawals: ' + error.message, 'error');
+                document.getElementById('loadingIndicator').classList.add('d-none');
+            }
         }
 
         // Update stats cards
-        function updateStats(stats) {
-            // In a real application, you would update these with actual data
-            // document.getElementById('pendingAmount').textContent = `KSh ${stats.pending.toLocaleString()}`;
-            // document.getElementById('processingAmount').textContent = `KSh ${stats.processing.toLocaleString()}`;
-            // document.getElementById('completedAmount').textContent = `KSh ${stats.completed.toLocaleString()}`;
-            // document.getElementById('rejectedAmount').textContent = `KSh ${stats.rejected.toLocaleString()}`;
+        function updateStats() {
+            const pendingWithdrawals = currentWithdrawals.filter(w => w.status === 'pending');
+            const processingWithdrawals = currentWithdrawals.filter(w => w.status === 'processing');
+            const completedWithdrawals = currentWithdrawals.filter(w => w.status === 'completed');
+            const rejectedWithdrawals = currentWithdrawals.filter(w => w.status === 'rejected');
+            
+            const pendingAmount = pendingWithdrawals.reduce((sum, w) => sum + w.amount, 0);
+            const processingAmount = processingWithdrawals.reduce((sum, w) => sum + w.amount, 0);
+            const completedAmount = completedWithdrawals.reduce((sum, w) => sum + w.amount, 0);
+            const rejectedAmount = rejectedWithdrawals.reduce((sum, w) => sum + w.amount, 0);
+            
+            document.getElementById('pendingAmount').textContent = `KSh ${pendingAmount.toLocaleString()}`;
+            document.getElementById('processingAmount').textContent = `KSh ${processingAmount.toLocaleString()}`;
+            document.getElementById('completedAmount').textContent = `KSh ${completedAmount.toLocaleString()}`;
+            document.getElementById('rejectedAmount').textContent = `KSh ${rejectedAmount.toLocaleString()}`;
+            
+            document.getElementById('pendingCount').textContent = `${pendingWithdrawals.length} withdrawals`;
+            document.getElementById('processingCount').textContent = `${processingWithdrawals.length} withdrawals`;
+            document.getElementById('completedCount').textContent = `${completedWithdrawals.length} withdrawals`;
+            document.getElementById('rejectedCount').textContent = `${rejectedWithdrawals.length} withdrawals`;
         }
 
         // Render withdrawals table
         function renderWithdrawals() {
-            // This would filter and display withdrawals based on current filter and search term
-            // For this demo, we're not implementing the full filtering logic
+            const tableBody = document.getElementById('withdrawalsTableBody');
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            // Filter withdrawals based on current filter and search term
+            let filteredWithdrawals = currentWithdrawals.filter(withdrawal => {
+                const matchesFilter = currentFilter === 'all' || withdrawal.status === currentFilter;
+                const matchesSearch = 
+                    withdrawal.users.username.toLowerCase().includes(searchTerm) ||
+                    withdrawal.phone_number.includes(searchTerm) ||
+                    withdrawal.amount.toString().includes(searchTerm);
+                
+                return matchesFilter && matchesSearch;
+            });
+
+            // Show empty state if no results
+            if (filteredWithdrawals.length === 0) {
+                tableBody.innerHTML = '';
+                document.getElementById('emptyState').classList.remove('d-none');
+                document.getElementById('paginationContainer').innerHTML = '';
+                return;
+            } else {
+                document.getElementById('emptyState').classList.add('d-none');
+            }
+
+            // Pagination
+            const totalPages = Math.ceil(filteredWithdrawals.length / itemsPerPage);
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const paginatedWithdrawals = filteredWithdrawals.slice(startIndex, startIndex + itemsPerPage);
+
+            // Generate table rows
+            tableBody.innerHTML = paginatedWithdrawals.map(withdrawal => {
+                const user = withdrawal.users;
+                const initials = user.username.split(' ').map(n => n[0]).join('').toUpperCase();
+                const date = new Date(withdrawal.created_at).toLocaleDateString() + ' ' + 
+                             new Date(withdrawal.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
+                return `
+                    <tr class="withdrawal-item ${withdrawal.status}" data-id="${withdrawal.id}">
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="user-avatar me-3">
+                                    ${initials}
+                                </div>
+                                <div>
+                                    <div class="fw-bold">${user.username}</div>
+                                    <small class="text-muted">ID: ${user.id.substring(0, 8)}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>${withdrawal.phone_number}</td>
+                        <td class="fw-bold">KSh ${withdrawal.amount.toLocaleString()}</td>
+                        <td>${date}</td>
+                        <td><span class="status-badge status-${withdrawal.status}">${capitalizeFirstLetter(withdrawal.status)}</span></td>
+                        <td>
+                            ${withdrawal.status === 'pending' ? `
+                                <button class="btn btn-approve action-btn me-1" onclick="openApproveModal('${withdrawal.id}')">
+                                    <i class="fas fa-check me-1"></i> Approve
+                                </button>
+                                <button class="btn btn-reject action-btn" onclick="openRejectModal('${withdrawal.id}')">
+                                    <i class="fas fa-times me-1"></i> Reject
+                                </button>
+                            ` : withdrawal.status === 'processing' ? `
+                                <button class="btn btn-secondary action-btn" disabled>
+                                    <i class="fas fa-sync me-1"></i> Processing
+                                </button>
+                            ` : withdrawal.status === 'completed' ? `
+                                <span class="text-muted">Processed</span>
+                            ` : `
+                                <span class="text-muted">Refunded</span>
+                            `}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Generate pagination
+            renderPagination(totalPages);
+        }
+
+        // Render pagination
+        function renderPagination(totalPages) {
+            const paginationContainer = document.getElementById('paginationContainer');
+            
+            if (totalPages <= 1) {
+                paginationContainer.innerHTML = '';
+                return;
+            }
+
+            let paginationHTML = '';
+            
+            // Previous button
+            if (currentPage > 1) {
+                paginationHTML += `<li class="page-item"><a class="page-link" href="#" onclick="changePage(${currentPage - 1})">Previous</a></li>`;
+            } else {
+                paginationHTML += `<li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>`;
+            }
+
+            // Page numbers
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === currentPage) {
+                    paginationHTML += `<li class="page-item active"><a class="page-link" href="#">${i}</a></li>`;
+                } else {
+                    paginationHTML += `<li class="page-item"><a class="page-link" href="#" onclick="changePage(${i})">${i}</a></li>`;
+                }
+            }
+
+            // Next button
+            if (currentPage < totalPages) {
+                paginationHTML += `<li class="page-item"><a class="page-link" href="#" onclick="changePage(${currentPage + 1})">Next</a></li>`;
+            } else {
+                paginationHTML += `<li class="page-item disabled"><a class="page-link" href="#">Next</a></li>`;
+            }
+
+            paginationContainer.innerHTML = paginationHTML;
+        }
+
+        // Change page
+        function changePage(page) {
+            currentPage = page;
+            renderWithdrawals();
         }
 
         // Open approve modal
         function openApproveModal(transactionId) {
+            const withdrawal = currentWithdrawals.find(w => w.id === transactionId);
+            if (!withdrawal) return;
+
             currentTransactionId = transactionId;
             
-            // In a real application, you would fetch the withdrawal details
-            // const withdrawal = currentWithdrawals.find(w => w.id === transactionId);
+            const user = withdrawal.users;
+            const date = new Date(withdrawal.created_at).toLocaleDateString() + ' ' + 
+                         new Date(withdrawal.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             
+            document.getElementById('approveUserName').textContent = user.username;
+            document.getElementById('approvePhone').textContent = withdrawal.phone_number;
+            document.getElementById('approveAmount').textContent = `KSh ${withdrawal.amount.toLocaleString()}`;
+            document.getElementById('approveDate').textContent = date;
+
             const approveModal = new bootstrap.Modal(document.getElementById('approveModal'));
             approveModal.show();
         }
 
         // Open reject modal
         function openRejectModal(transactionId) {
+            const withdrawal = currentWithdrawals.find(w => w.id === transactionId);
+            if (!withdrawal) return;
+
             currentTransactionId = transactionId;
             
-            // In a real application, you would fetch the withdrawal details
+            const user = withdrawal.users;
+            const date = new Date(withdrawal.created_at).toLocaleDateString() + ' ' + 
+                         new Date(withdrawal.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             
+            document.getElementById('rejectUserName').textContent = user.username;
+            document.getElementById('rejectPhone').textContent = withdrawal.phone_number;
+            document.getElementById('rejectAmount').textContent = `KSh ${withdrawal.amount.toLocaleString()}`;
+            document.getElementById('rejectDate').textContent = date;
+            document.getElementById('rejectReason').value = '';
+
             const rejectModal = new bootstrap.Modal(document.getElementById('rejectModal'));
             rejectModal.show();
         }
 
         // Approve withdrawal
-        function approveWithdrawal(transactionId) {
+        async function approveWithdrawal(transactionId) {
             // Show loading state
             const approveBtn = document.getElementById('confirmApprove');
             const originalText = approveBtn.innerHTML;
             approveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Processing...';
             approveBtn.disabled = true;
 
-            // Simulate API call
-            setTimeout(() => {
+            try {
+                // Update withdrawal status in Supabase
+                const { data, error } = await supabase
+                    .from('withdrawals')
+                    .update({ status: 'processing' })
+                    .eq('id', transactionId)
+                    .select();
+
+                if (error) throw error;
+
                 showToast('Withdrawal approved successfully!');
                 
                 // Close modal
                 const approveModal = bootstrap.Modal.getInstance(document.getElementById('approveModal'));
                 approveModal.hide();
                 
+                // Refresh data
+                loadWithdrawals();
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('An error occurred while approving the withdrawal', 'error');
+            } finally {
                 // Reset button state
                 approveBtn.innerHTML = originalText;
                 approveBtn.disabled = false;
-            }, 1500);
+            }
         }
 
         // Reject withdrawal
-        function rejectWithdrawal(transactionId, reason) {
+        async function rejectWithdrawal(transactionId, reason) {
             // Show loading state
             const rejectBtn = document.getElementById('confirmReject');
             const originalText = rejectBtn.innerHTML;
             rejectBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Processing...';
             rejectBtn.disabled = true;
 
-            // Simulate API call
-            setTimeout(() => {
+            try {
+                // Update withdrawal status in Supabase
+                const { data, error } = await supabase
+                    .from('withdrawals')
+                    .update({ 
+                        status: 'rejected',
+                        rejection_reason: reason
+                    })
+                    .eq('id', transactionId)
+                    .select();
+
+                if (error) throw error;
+
                 showToast('Withdrawal rejected successfully!');
                 
                 // Close modal
                 const rejectModal = bootstrap.Modal.getInstance(document.getElementById('rejectModal'));
                 rejectModal.hide();
                 
+                // Refresh data
+                loadWithdrawals();
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('An error occurred while rejecting the withdrawal', 'error');
+            } finally {
                 // Reset button state
                 rejectBtn.innerHTML = originalText;
                 rejectBtn.disabled = false;
-            }, 1500);
+            }
+        }
+
+        // Export withdrawals
+        function exportWithdrawals() {
+            // Filter withdrawals based on current filter and search term
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            let filteredWithdrawals = currentWithdrawals.filter(withdrawal => {
+                const matchesFilter = currentFilter === 'all' || withdrawal.status === currentFilter;
+                const matchesSearch = 
+                    withdrawal.users.username.toLowerCase().includes(searchTerm) ||
+                    withdrawal.phone_number.includes(searchTerm) ||
+                    withdrawal.amount.toString().includes(searchTerm);
+                
+                return matchesFilter && matchesSearch;
+            });
+
+            // Create CSV content
+            let csv = 'User,Phone,Amount,Status,Date\n';
+            filteredWithdrawals.forEach(withdrawal => {
+                const date = new Date(withdrawal.created_at).toLocaleDateString();
+                csv += `"${withdrawal.users.username}","${withdrawal.phone_number}","${withdrawal.amount}","${withdrawal.status}","${date}"\n`;
+            });
+
+            // Create and download CSV file
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('hidden', '');
+            a.setAttribute('href', url);
+            a.setAttribute('download', 'withdrawals_export.csv');
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            showToast('Withdrawals exported successfully!');
         }
 
         // Show toast notification
@@ -1113,7 +1298,65 @@
         function updateLastUpdated() {
             const now = new Date();
             document.getElementById('lastUpdated').textContent = `Last updated: ${now.toLocaleTimeString()}`;
-            lastUpdateTime = now;
+        }
+
+        // Setup real-time subscription to withdrawals table
+        function setupRealtimeSubscription() {
+            const subscription = supabase
+                .channel('withdrawals-changes')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'withdrawals'
+                    },
+                    (payload) => {
+                        // When a change occurs, reload the withdrawals
+                        loadWithdrawals();
+                        
+                        // Highlight the new or updated row
+                        if (payload.eventType === 'INSERT') {
+                            const newRow = document.querySelector(`tr[data-id="${payload.new.id}"]`);
+                            if (newRow) {
+                                newRow.classList.add('new-withdrawal');
+                                setTimeout(() => {
+                                    newRow.classList.remove('new-withdrawal');
+                                }, 3000);
+                            }
+                        }
+                    }
+                )
+                .subscribe();
+        }
+
+        // Utility function to capitalize first letter
+        function capitalizeFirstLetter(string) {
+            return string.charAt(0).toUpperCase() + string.slice(1);
+        }
+
+        // Show different sections based on sidebar navigation
+        function showSection(section) {
+            // Hide all sections
+            document.getElementById('dashboard-section').classList.add('d-none');
+            document.getElementById('users-section').classList.add('d-none');
+            document.getElementById('withdrawals-section').classList.add('d-none');
+            document.getElementById('transactions-section').classList.add('d-none');
+            document.getElementById('settings-section').classList.add('d-none');
+            
+            // Show selected section
+            document.getElementById(`${section}-section`).classList.remove('d-none');
+            
+            // Update active state in sidebar
+            document.querySelectorAll('.sidebar .nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // If showing withdrawals, ensure data is loaded
+            if (section === 'withdrawals') {
+                loadWithdrawals();
+            }
         }
     </script>
 </body>
