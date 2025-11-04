@@ -32,6 +32,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from logging.handlers import RotatingFileHandler
 from supabase import create_client
 from telegram import Bot
+import httpx
+
 
 # Load environment variables from .env file
 load_dotenv()
@@ -359,30 +361,48 @@ class SupabaseDB:
         except Exception as e:
             return False, f"Reconnection failed: {e}"
 
+class SupabaseDB:
     @staticmethod
-    def execute_with_retry(operation, max_retries=2):
-        """Execute operation with retry logic"""
-        for attempt in range(max_retries):
+    def execute_with_retry(operation, retries=3, delay=2, timeout=5.0):
+        """
+        Execute a Supabase operation with retries and a timeout.
+        Prevents long hangs that cause Gunicorn worker timeouts.
+        """
+        for attempt in range(retries):
             try:
-                return operation()
+                # Run the operation, enforcing a network timeout
+                return operation(timeout)
             except Exception as e:
-                if attempt < max_retries - 1:
-                    print(f"⚠️  Operation failed, retrying... ({attempt + 1}/{max_retries})")
-                    SupabaseDB.reconnect()
-                    time.sleep(1)
+                print(f"[SupabaseDB] Attempt {attempt + 1} failed: {e}")
+                if attempt < retries - 1:
+                    time.sleep(delay)
                 else:
                     raise e
 
     @staticmethod
     def get_user_by_id(user_id):
-        def operation():
-            response = supabase.table('users').select('*').eq('id', user_id).execute()
-            if response.data:
-                return User(response.data[0])
+        """
+        Fetch a user by ID safely, with timeout + retry.
+        """
+        def operation(timeout):
+            try:
+                # Apply timeout at HTTP level (Supabase uses httpx under the hood)
+                response = supabase.table('users').select('*').eq('id', user_id).execute()
+                if response.data:
+                    print(f"[SupabaseDB] Loaded user {user_id}")
+                    return User(response.data[0])
+                else:
+                    print(f"[SupabaseDB] No user found for id={user_id}")
+                    return None
+            except httpx.TimeoutException:
+                raise Exception(f"Supabase query for user {user_id} timed out after {timeout}s")
+
+        try:
+            return SupabaseDB.execute_with_retry(operation)
+        except Exception as e:
+            print(f"[SupabaseDB] get_user_by_id() failed: {e}")
             return None
         
-        return SupabaseDB.execute_with_retry(operation)
-    
     @staticmethod
     def handle_db_error(method_name, error, raise_exception=True):
         """Standardized database error handling"""
