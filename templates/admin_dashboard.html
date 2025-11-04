@@ -1,4 +1,3 @@
-
 {% extends "base.html" %}
 
 {% block title %}Admin Dashboard - ReferralNinja{% endblock %}
@@ -238,16 +237,16 @@
                     <h6 class="m-0 font-weight-bold text-primary">Recent Verified Users</h6>
                     <a href="{{ url_for('admin_users') }}" class="btn btn-sm btn-primary">View All</a>
                 </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
-                            <thead>
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-bordered mb-0" width="100%" cellspacing="0">
+                            <thead class="sticky-top bg-light">
                                 <tr>
-                                    <th>Username</th>
-                                    <th>Email</th>
-                                    <th>Phone</th>
-                                    <th>Joined</th>
-                                    <th>Status</th>
+                                    <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">Username</th>
+                                    <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">Email</th>
+                                    <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">Phone</th>
+                                    <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">Joined</th>
+                                    <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">Status</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -272,7 +271,7 @@
                                 </tr>
                                 {% else %}
                                 <tr>
-                                    <td colspan="5" class="text-center">No recent users</td>
+                                    <td colspan="5" class="text-center py-4">No recent users</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -297,17 +296,17 @@
                         <a href="{{ url_for('admin_withdrawals') }}" class="btn btn-sm btn-primary">View All</a>
                     </div>
                 </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered" width="100%" cellspacing="0">
-                            <thead>
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-bordered mb-0" width="100%" cellspacing="0">
+                            <thead class="sticky-top bg-light">
                                 <tr>
-                                    <th>User</th>
-                                    <th>Amount</th>
-                                    <th>Phone</th>
-                                    <th>Status</th>
-                                    <th>Date</th>
-                                    <th>Actions</th>
+                                    <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">User</th>
+                                    <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">Amount</th>
+                                    <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">Phone</th>
+                                    <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">Status</th>
+                                    <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">Date</th>
+                                    <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -388,16 +387,16 @@
                     <h6 class="m-0 font-weight-bold text-info">Pending Registration Payments</h6>
                     <span class="badge bg-info">{{ pending_payment_transactions|length|default(0) }}</span>
                 </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered" width="100%" cellspacing="0">
-                            <thead>
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-bordered mb-0" width="100%" cellspacing="0">
+                            <thead class="sticky-top bg-light">
                                 <tr>
-                                    <th>User</th>
-                                    <th>Amount</th>
-                                    <th>Phone</th>
-                                    <th>Date</th>
-                                    <th>Status</th>
+                                    <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">User</th>
+                                    <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">Amount</th>
+                                    <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">Phone</th>
+                                    <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">Date</th>
+                                    <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">Status</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -443,15 +442,15 @@
                     <h6 class="m-0 font-weight-bold text-secondary">Recent Activity</h6>
                     <span class="badge bg-secondary">{{ recent_activity|length|default(0) }}</span>
                 </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered" width="100%" cellspacing="0">
-                            <thead>
+                <div class="card-body p-0">
+                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-bordered mb-0" width="100%" cellspacing="0">
+                            <thead class="sticky-top bg-light">
                                 <tr>
-                                    <th>Type</th>
-                                    <th>Amount</th>
-                                    <th>Status</th>
-                                    <th>Date</th>
+                                    <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">Type</th>
+                                    <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">Amount</th>
+                                    <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">Status</th>
+                                    <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">Date</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -717,6 +716,30 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .position-relative {
     position: relative;
+}
+
+/* Scrolling table styles */
+.table-responsive {
+    border: 1px solid #e3e6f0;
+}
+
+.table thead th {
+    border-bottom: 2px solid #e3e6f0;
+    font-weight: 600;
+}
+
+.table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* Ensure sticky header works properly */
+.sticky-top {
+    position: -webkit-sticky;
+    position: sticky;
+}
+
+.card-body.p-0 .table-responsive {
+    border-radius: 0 0 0.35rem 0.35rem;
 }
 </style>
 {% endblock %}
