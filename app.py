@@ -690,20 +690,6 @@ class SupabaseDB:
         except Exception as e:
             return SupabaseDB.handle_db_error("get_total_balance", e, False)
 
-    # Add this method to your SupabaseDB class
-    @staticmethod
-    def get_recent_verified_users(limit=20):
-        try:
-            response = supabase.table('users')\
-                .select('*')\
-                .eq('is_verified', True)\
-                .order('created_at', desc=True)\
-                .limit(limit)\
-                .execute()
-            return response.data
-        except Exception as e:
-            return SupabaseDB.handle_db_error("get_recent_verified_users", e, False)
-
 # =============================================================================
 # DATABASE SCHEMA MANAGER
 # =============================================================================
@@ -4227,10 +4213,6 @@ def admin_dashboard():
             app.logger.error(f"Error fetching recent activity: {e}")
             recent_activity = []
         
-        # Add this line to get recent verified users
-        recent_verified_users_data = SupabaseDB.get_recent_verified_users(limit=20)
-        recent_verified_users = [User(user_data) for user_data in recent_verified_users_data]
-        
         current_time = datetime.now(timezone.utc)
         
         app.logger.info("All queries successful, rendering template...")
@@ -4248,7 +4230,6 @@ def admin_dashboard():
                              pending_withdrawal_transactions=pending_withdrawal_transactions,
                              pending_payment_transactions=pending_payment_transactions,
                              recent_activity=recent_activity,
-                             recent_verified_users=recent_verified_users,
                              current_time=current_time)
                              
     except Exception as e:
