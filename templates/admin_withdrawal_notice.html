@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -7,78 +7,283 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3f37c9;
+            --success: #4cc9f0;
+            --info: #4895ef;
+            --warning: #f72585;
+            --danger: #e63946;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gradient-primary: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%);
+            --gradient-success: linear-gradient(135deg, #4cc9f0 0%, #4361ee 100%);
+            --gradient-warning: linear-gradient(135deg, #f72585 0%, #b5179e 100%);
+            --gradient-info: linear-gradient(135deg, #4895ef 0%, #4cc9f0 100%);
+        }
+        
+        body {
+            background-color: #f5f7fb;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
         .status-badge {
             font-size: 0.75em;
             padding: 0.35em 0.65em;
+            border-radius: 20px;
         }
+        
         .withdrawal-card {
-            border-left: 4px solid #0d6efd;
+            border-left: 4px solid var(--primary);
             transition: all 0.3s ease;
+            border-radius: 10px;
+            overflow: hidden;
         }
+        
         .withdrawal-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
         }
+        
         .withdrawal-card.under-review {
-            border-left-color: #ffc107;
+            border-left-color: var(--warning);
         }
+        
         .withdrawal-card.processing {
-            border-left-color: #0dcaf0;
+            border-left-color: var(--info);
         }
+        
         .withdrawal-card.urgent {
-            border-left-color: #dc3545;
+            border-left-color: var(--danger);
             background-color: #fff5f5;
         }
+        
         .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--gradient-primary);
             color: white;
-            border-radius: 10px;
+            border-radius: 12px;
             padding: 20px;
             margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
         }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
         .bulk-actions {
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            padding: 15px;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
             margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border-left: 4px solid var(--info);
         }
+        
         .user-avatar {
-            width: 40px;
-            height: 40px;
+            width: 45px;
+            height: 45px;
             border-radius: 50%;
-            background: #0d6efd;
+            background: var(--gradient-primary);
             color: white;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
+        
         .amount-display {
-            font-size: 1.5em;
+            font-size: 1.4em;
             font-weight: bold;
             color: #198754;
         }
+        
         .action-buttons .btn {
             margin: 2px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        
+        .table-responsive {
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .table thead {
+            background: var(--gradient-primary);
+            color: white;
+        }
+        
+        .table th {
+            border: none;
+            padding: 15px 12px;
+            font-weight: 600;
+        }
+        
+        .table td {
+            padding: 15px 12px;
+            vertical-align: middle;
+            border-bottom: 1px solid #eaeaea;
+        }
+        
+        .table tbody tr {
+            transition: background-color 0.2s ease;
+        }
+        
+        .table tbody tr:hover {
+            background-color: rgba(67, 97, 238, 0.05);
+        }
+        
+        .custom-checkbox {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            border: 2px solid #ddd;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .custom-checkbox.checked {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        .custom-checkbox.checked:after {
+            content: "✓";
+            color: white;
+            font-weight: bold;
+        }
+        
+        .nav-tabs .nav-link {
+            border: none;
+            color: #6c757d;
+            font-weight: 500;
+            padding: 10px 20px;
+        }
+        
+        .nav-tabs .nav-link.active {
+            color: var(--primary);
+            border-bottom: 3px solid var(--primary);
+            background: transparent;
+        }
+        
+        .filter-section {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .page-header {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .empty-state {
+            padding: 40px 20px;
+            text-align: center;
+            color: #6c757d;
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+        
+        .progress-bar-custom {
+            height: 6px;
+            border-radius: 3px;
+            background-color: #e9ecef;
+            overflow: hidden;
+        }
+        
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+        }
+        
+        .btn-primary {
+            background: var(--gradient-primary);
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        
+        .btn-success {
+            background: var(--gradient-success);
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        
+        .btn-warning {
+            background: var(--gradient-warning);
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        
+        .modal-content {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+        
+        .modal-header {
+            background: var(--gradient-primary);
+            color: white;
+            border-radius: 12px 12px 0 0;
+            padding: 15px 20px;
+        }
+        
+        .modal-header .btn-close {
+            filter: invert(1);
+        }
+        
+        .form-control, .form-select {
+            border-radius: 8px;
+            padding: 10px 15px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 0.2rem rgba(67, 97, 238, 0.25);
         }
     </style>
 </head>
 <body>
     <div class="container-fluid py-4">
         <!-- Header -->
-        <div class="row mb-4">
-            <div class="col">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h1 class="h3 mb-1">
-                            <i class="fas fa-bell text-warning me-2"></i>
-                            Withdrawal Notices
-                        </h1>
-                        <p class="text-muted mb-0">Manage pending withdrawal requests</p>
+        <div class="page-header">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <div class="bg-primary rounded-circle p-3 d-inline-flex">
+                                <i class="fas fa-bell text-white fa-lg"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <h1 class="h3 mb-1 fw-bold text-dark">Withdrawal Notices</h1>
+                            <p class="text-muted mb-0">Manage and process pending withdrawal requests</p>
+                        </div>
                     </div>
-                    <div>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <div class="btn-group">
                         <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-primary me-2">
-                            <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+                            <i class="fas fa-arrow-left me-1"></i> Dashboard
                         </a>
                         <a href="{{ url_for('admin_withdrawals') }}" class="btn btn-primary">
                             <i class="fas fa-list me-1"></i> All Withdrawals
@@ -94,43 +299,83 @@
                 <div class="stat-card">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h4 class="mb-0">{{ stats.total_pending }}</h4>
-                            <small>Total Pending</small>
+                            <h3 class="mb-0 fw-bold">{{ stats.total_pending }}</h3>
+                            <small class="opacity-75">Total Pending</small>
                         </div>
                         <i class="fas fa-clock fa-2x opacity-50"></i>
                     </div>
+                    <div class="progress-bar-custom mt-3">
+                        <div class="progress-bar-fill bg-warning" style="width: 100%"></div>
+                    </div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <div class="stat-card" style="background: var(--gradient-warning);">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h4 class="mb-0">KSH {{ "%.2f"|format(stats.total_amount) }}</h4>
-                            <small>Total Amount</small>
+                            <h3 class="mb-0 fw-bold">KSH {{ "%.2f"|format(stats.total_amount) }}</h3>
+                            <small class="opacity-75">Total Amount</small>
                         </div>
                         <i class="fas fa-money-bill-wave fa-2x opacity-50"></i>
                     </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h4 class="mb-0">{{ stats.under_review }}</h4>
-                            <small>Under Review</small>
-                        </div>
-                        <i class="fas fa-eye fa-2x opacity-50"></i>
+                    <div class="progress-bar-custom mt-3">
+                        <div class="progress-bar-fill bg-info" style="width: 100%"></div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
-                <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                <div class="stat-card" style="background: var(--gradient-info);">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h4 class="mb-0">{{ stats.processing }}</h4>
-                            <small>Processing</small>
+                            <h3 class="mb-0 fw-bold">{{ stats.under_review }}</h3>
+                            <small class="opacity-75">Under Review</small>
+                        </div>
+                        <i class="fas fa-eye fa-2x opacity-50"></i>
+                    </div>
+                    <div class="progress-bar-custom mt-3">
+                        <div class="progress-bar-fill bg-light" style="width: 100%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card" style="background: var(--gradient-success);">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h3 class="mb-0 fw-bold">{{ stats.processing }}</h3>
+                            <small class="opacity-75">Processing</small>
                         </div>
                         <i class="fas fa-cog fa-2x opacity-50"></i>
+                    </div>
+                    <div class="progress-bar-custom mt-3">
+                        <div class="progress-bar-fill bg-light" style="width: 100%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter and Tabs -->
+        <div class="filter-section">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <ul class="nav nav-tabs border-0">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#">All Requests</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Under Review</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Processing</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">Urgent</a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-0"><i class="fas fa-search text-muted"></i></span>
+                        <input type="text" class="form-control border-0 bg-light" placeholder="Search withdrawals...">
                     </div>
                 </div>
             </div>
@@ -140,8 +385,8 @@
         <div class="bulk-actions">
             <div class="row align-items-center">
                 <div class="col-md-8">
-                    <h5 class="mb-2"><i class="fas fa-bulk me-2"></i>Bulk Actions</h5>
-                    <p class="text-muted mb-2">Select multiple withdrawals and perform actions in bulk</p>
+                    <h5 class="mb-2 fw-bold"><i class="fas fa-tasks me-2"></i>Bulk Actions</h5>
+                    <p class="text-muted mb-0">Select multiple withdrawals and perform actions in bulk</p>
                 </div>
                 <div class="col-md-4 text-end">
                     <div class="btn-group">
@@ -159,9 +404,9 @@
         <!-- Withdrawal List -->
         <div class="row">
             <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">
+                <div class="card border-0">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h5 class="card-title mb-0 fw-bold">
                             <i class="fas fa-list me-2"></i>
                             Pending Withdrawal Requests
                             <span class="badge bg-primary ms-2">{{ pending_withdrawals|length }}</span>
@@ -171,18 +416,18 @@
                         {% if pending_withdrawals %}
                             <div class="table-responsive">
                                 <table class="table table-hover mb-0">
-                                    <thead class="table-light">
+                                    <thead>
                                         <tr>
-                                            <th width="30">
-                                                <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
+                                            <th width="40" class="ps-4">
+                                                <div class="custom-checkbox" id="selectAll" onclick="toggleSelectAll(this)"></div>
                                             </th>
                                             <th>User</th>
                                             <th>Amount</th>
-                                            <th>Phone</th>
+                                            <th>Payment Details</th>
                                             <th>Status</th>
                                             <th>Days Pending</th>
                                             <th>Submitted</th>
-                                            <th>Actions</th>
+                                            <th class="text-end pe-4">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -192,8 +437,8 @@
                                             {% set days_pending = item.days_pending %}
                                             
                                             <tr class="{{ 'table-warning' if transaction.status == 'Under Review' else 'table-info' if transaction.status == 'processing' else '' }}">
-                                                <td>
-                                                    <input type="checkbox" class="withdrawal-checkbox" value="{{ transaction.id }}">
+                                                <td class="ps-4">
+                                                    <div class="custom-checkbox withdrawal-checkbox" onclick="toggleCheckbox(this)" data-id="{{ transaction.id }}"></div>
                                                 </td>
                                                 <td>
                                                     <div class="d-flex align-items-center">
@@ -201,8 +446,7 @@
                                                             {{ user.username[:2]|upper }}
                                                         </div>
                                                         <div>
-                                                            <strong>{{ user.username }}</strong>
-                                                            <br>
+                                                            <strong class="d-block">{{ user.username }}</strong>
                                                             <small class="text-muted">{{ user.name }}</small>
                                                         </div>
                                                     </div>
@@ -211,9 +455,11 @@
                                                     <span class="amount-display">KSH {{ "%.2f"|format(transaction.amount|abs) }}</span>
                                                 </td>
                                                 <td>
-                                                    {{ transaction.phone_number }}
-                                                    <br>
-                                                    <small class="text-muted">{{ user.phone }}</small>
+                                                    <div>
+                                                        <strong>{{ transaction.phone_number }}</strong>
+                                                        <br>
+                                                        <small class="text-muted">{{ user.phone }}</small>
+                                                    </div>
                                                 </td>
                                                 <td>
                                                     {% if transaction.status == 'Under Review' %}
@@ -232,25 +478,25 @@
                                                 </td>
                                                 <td>
                                                     {% if days_pending > 2 %}
-                                                        <span class="badge bg-danger">{{ days_pending }} days</span>
+                                                        <span class="badge bg-danger rounded-pill">{{ days_pending }} days</span>
                                                     {% elif days_pending > 1 %}
-                                                        <span class="badge bg-warning">{{ days_pending }} days</span>
+                                                        <span class="badge bg-warning rounded-pill">{{ days_pending }} days</span>
                                                     {% else %}
-                                                        <span class="badge bg-success">{{ days_pending }} day</span>
+                                                        <span class="badge bg-success rounded-pill">{{ days_pending }} day</span>
                                                     {% endif %}
                                                 </td>
                                                 <td>
-                                                    <small>
+                                                    <small class="text-muted">
                                                         {{ transaction.created_at[:16].replace('T', ' ') }}
                                                     </small>
                                                 </td>
-                                                <td>
+                                                <td class="text-end pe-4">
                                                     <div class="action-buttons">
                                                         {% if transaction.status == 'Under Review' %}
                                                             <button class="btn btn-sm btn-success" 
                                                                     onclick="updateStatus('{{ transaction.id }}', 'processing', 'Approved for processing')"
                                                                     title="Approve">
-                                                                <i class="fas fa-check"></i>
+                                                                <i class="fas fa-check me-1"></i> Approve
                                                             </button>
                                                         {% endif %}
                                                         
@@ -279,10 +525,13 @@
                                 </table>
                             </div>
                         {% else %}
-                            <div class="text-center py-5">
-                                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-                                <h4>No Pending Withdrawals</h4>
+                            <div class="empty-state">
+                                <i class="fas fa-check-circle text-success"></i>
+                                <h4 class="fw-bold">No Pending Withdrawals</h4>
                                 <p class="text-muted">All withdrawal requests have been processed.</p>
+                                <button class="btn btn-primary mt-2">
+                                    <i class="fas fa-sync-alt me-1"></i> Refresh
+                                </button>
                             </div>
                         {% endif %}
                     </div>
@@ -303,7 +552,7 @@
                     <form id="statusUpdateForm">
                         <input type="hidden" id="modalTransactionId">
                         <div class="mb-3">
-                            <label class="form-label">Status</label>
+                            <label class="form-label fw-bold">Status</label>
                             <select class="form-select" id="modalStatus" required>
                                 <option value="processing">Processing</option>
                                 <option value="completed">Completed</option>
@@ -312,7 +561,7 @@
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Notes</label>
+                            <label class="form-label fw-bold">Notes</label>
                             <textarea class="form-control" id="modalNotes" rows="3" 
                                       placeholder="Add any notes or reasons for this status change..."></textarea>
                         </div>
@@ -330,14 +579,36 @@
     <script>
         // Bulk selection
         function toggleSelectAll(checkbox) {
+            const isChecked = checkbox.classList.toggle('checked');
             const checkboxes = document.querySelectorAll('.withdrawal-checkbox');
-            checkboxes.forEach(cb => cb.checked = checkbox.checked);
+            checkboxes.forEach(cb => {
+                if (isChecked) {
+                    cb.classList.add('checked');
+                } else {
+                    cb.classList.remove('checked');
+                }
+            });
+        }
+        
+        function toggleCheckbox(checkbox) {
+            checkbox.classList.toggle('checked');
+            
+            // Update select all checkbox state
+            const allCheckboxes = document.querySelectorAll('.withdrawal-checkbox');
+            const checkedCheckboxes = document.querySelectorAll('.withdrawal-checkbox.checked');
+            const selectAll = document.getElementById('selectAll');
+            
+            if (checkedCheckboxes.length === allCheckboxes.length) {
+                selectAll.classList.add('checked');
+            } else {
+                selectAll.classList.remove('checked');
+            }
         }
 
         // Bulk actions
         function bulkAction(action) {
-            const selected = Array.from(document.querySelectorAll('.withdrawal-checkbox:checked'))
-                                .map(cb => cb.value);
+            const selected = Array.from(document.querySelectorAll('.withdrawal-checkbox.checked'))
+                                .map(cb => cb.getAttribute('data-id'));
             
             if (selected.length === 0) {
                 alert('Please select at least one withdrawal to perform bulk action.');
