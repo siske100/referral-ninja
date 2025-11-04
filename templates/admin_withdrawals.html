@@ -9,13 +9,18 @@
     <style>
         :root {
             --primary: #4361ee;
-            --secondary: #3f37c9;
+            --secondary: #3a0ca3;
             --success: #4cc9f0;
             --danger: #f72585;
             --warning: #f8961e;
             --info: #4895ef;
             --light: #f8f9fa;
             --dark: #212529;
+            --gradient-primary: linear-gradient(135deg, var(--primary), var(--secondary));
+            --gradient-success: linear-gradient(135deg, var(--success), #4361ee);
+            --gradient-warning: linear-gradient(135deg, var(--warning), #b5179e);
+            --gradient-danger: linear-gradient(135deg, var(--danger), #b5179e);
+            --gradient-info: linear-gradient(135deg, var(--info), var(--success));
         }
         
         body {
@@ -24,14 +29,14 @@
         }
         
         .navbar {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background: var(--gradient-primary);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
         
         .sidebar {
             background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
             height: fit-content;
             position: sticky;
             top: 20px;
@@ -39,37 +44,40 @@
         
         .sidebar .nav-link {
             color: var(--dark);
-            padding: 12px 20px;
+            padding: 14px 20px;
             border-radius: 8px;
             margin-bottom: 5px;
             transition: all 0.3s;
+            font-weight: 500;
         }
         
         .sidebar .nav-link:hover, .sidebar .nav-link.active {
-            background-color: var(--primary);
+            background: var(--gradient-primary);
             color: white;
+            transform: translateX(5px);
         }
         
         .main-content {
             background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
             padding: 25px;
         }
         
         .card {
             border: none;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            transition: transform 0.3s;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s, box-shadow 0.3s;
         }
         
         .card:hover {
             transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
         }
         
         .status-badge {
-            padding: 6px 12px;
+            padding: 8px 16px;
             border-radius: 20px;
             font-size: 0.8rem;
             font-weight: 600;
@@ -78,91 +86,137 @@
         .status-pending {
             background-color: rgba(248, 150, 30, 0.1);
             color: var(--warning);
+            border: 1px solid rgba(248, 150, 30, 0.2);
         }
         
         .status-completed {
             background-color: rgba(76, 201, 240, 0.1);
             color: var(--success);
+            border: 1px solid rgba(76, 201, 240, 0.2);
         }
         
         .status-processing {
             background-color: rgba(67, 97, 238, 0.1);
             color: var(--primary);
+            border: 1px solid rgba(67, 97, 238, 0.2);
         }
         
         .status-rejected {
             background-color: rgba(247, 37, 133, 0.1);
             color: var(--danger);
+            border: 1px solid rgba(247, 37, 133, 0.2);
         }
         
         .table th {
             border-top: none;
             font-weight: 600;
             color: var(--dark);
+            background-color: rgba(67, 97, 238, 0.05);
+            padding: 15px 12px;
+        }
+        
+        .table td {
+            padding: 15px 12px;
+            vertical-align: middle;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
         }
         
         .action-btn {
-            padding: 6px 12px;
-            border-radius: 6px;
+            padding: 8px 16px;
+            border-radius: 8px;
             font-size: 0.85rem;
             font-weight: 500;
             transition: all 0.3s;
         }
         
         .btn-approve {
-            background-color: rgba(76, 201, 240, 0.1);
-            color: var(--success);
-            border: 1px solid var(--success);
+            background: var(--gradient-success);
+            color: white;
+            border: none;
         }
         
         .btn-approve:hover {
-            background-color: var(--success);
-            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(76, 201, 240, 0.3);
         }
         
         .btn-reject {
-            background-color: rgba(247, 37, 133, 0.1);
-            color: var(--danger);
-            border: 1px solid var(--danger);
+            background: var(--gradient-danger);
+            color: white;
+            border: none;
         }
         
         .btn-reject:hover {
-            background-color: var(--danger);
-            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(247, 37, 133, 0.3);
         }
         
         .stats-card {
             border-left: 4px solid;
+            overflow: hidden;
+        }
+        
+        .stats-card .card-body {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .stats-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.05;
+            z-index: 0;
         }
         
         .stats-card.pending {
             border-left-color: var(--warning);
         }
         
+        .stats-card.pending::before {
+            background-color: var(--warning);
+        }
+        
         .stats-card.processing {
             border-left-color: var(--primary);
+        }
+        
+        .stats-card.processing::before {
+            background-color: var(--primary);
         }
         
         .stats-card.completed {
             border-left-color: var(--success);
         }
         
+        .stats-card.completed::before {
+            background-color: var(--success);
+        }
+        
         .stats-card.rejected {
             border-left-color: var(--danger);
+        }
+        
+        .stats-card.rejected::before {
+            background-color: var(--danger);
         }
         
         .filter-btn {
             background-color: white;
             border: 1px solid #dee2e6;
             color: var(--dark);
-            border-radius: 6px;
-            padding: 6px 12px;
+            border-radius: 8px;
+            padding: 8px 16px;
             font-size: 0.85rem;
+            font-weight: 500;
             transition: all 0.3s;
         }
         
         .filter-btn.active, .filter-btn:hover {
-            background-color: var(--primary);
+            background: var(--gradient-primary);
             color: white;
             border-color: var(--primary);
         }
@@ -173,7 +227,7 @@
         }
         
         .withdrawal-item:hover {
-            background-color: #f8f9fa;
+            background-color: rgba(67, 97, 238, 0.03);
             transform: translateX(5px);
         }
         
@@ -194,8 +248,13 @@
         }
         
         .modal-header {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            background: var(--gradient-primary);
             color: white;
+            border-radius: 12px 12px 0 0;
+        }
+        
+        .modal-header .btn-close {
+            filter: invert(1);
         }
         
         .pulse {
@@ -234,13 +293,145 @@
             font-size: 0.7rem;
             vertical-align: super;
         }
+        
+        .page-header {
+            background: var(--gradient-primary);
+            color: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--gradient-primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        
+        .stats-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        
+        .stats-icon.pending {
+            background: rgba(248, 150, 30, 0.1);
+            color: var(--warning);
+        }
+        
+        .stats-icon.processing {
+            background: rgba(67, 97, 238, 0.1);
+            color: var(--primary);
+        }
+        
+        .stats-icon.completed {
+            background: rgba(76, 201, 240, 0.1);
+            color: var(--success);
+        }
+        
+        .stats-icon.rejected {
+            background: rgba(247, 37, 133, 0.1);
+            color: var(--danger);
+        }
+        
+        .search-box {
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            padding: 10px 15px;
+            transition: all 0.3s;
+        }
+        
+        .search-box:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 0.2rem rgba(67, 97, 238, 0.25);
+        }
+        
+        .empty-state {
+            padding: 60px 20px;
+            text-align: center;
+            color: #6c757d;
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+        
+        .btn-primary {
+            background: var(--gradient-primary);
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            padding: 10px 20px;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(67, 97, 238, 0.3);
+        }
+        
+        .btn-outline-primary {
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            border-radius: 8px;
+            font-weight: 500;
+            padding: 10px 20px;
+            transition: all 0.3s;
+        }
+        
+        .btn-outline-primary:hover {
+            background: var(--gradient-primary);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(67, 97, 238, 0.3);
+        }
+        
+        .form-check-input:checked {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        .pagination .page-link {
+            color: var(--primary);
+            border-radius: 8px;
+            margin: 0 3px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .pagination .page-item.active .page-link {
+            background: var(--gradient-primary);
+            border-color: var(--primary);
+        }
+        
+        .toast {
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .alert {
+            border-radius: 10px;
+            border: none;
+        }
     </style>
 </head>
 <body>
     <!-- Navigation Bar -->
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
-            <a class="navbar-brand" href="#">
+            <a class="navbar-brand fw-bold" href="#">
                 <i class="fas fa-piggy-bank me-2"></i>
                 FinanceAdmin
             </a>
@@ -250,8 +441,9 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user-circle me-1"></i> Admin User
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <div class="user-avatar me-2">AU</div>
+                            <span>Admin User</span>
                         </a>
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
@@ -269,8 +461,8 @@
         <div class="row">
             <!-- Sidebar -->
             <div class="col-lg-3 mb-4">
-                <div class="sidebar p-3">
-                    <h5 class="mb-3">Admin Panel</h5>
+                <div class="sidebar p-4">
+                    <h5 class="mb-4 fw-bold">Admin Panel</h5>
                     <ul class="nav flex-column">
                         <li class="nav-item">
                             <a class="nav-link" href="#">
@@ -303,93 +495,109 @@
 
             <!-- Main Content Area -->
             <div class="col-lg-9">
+                <!-- Page Header -->
+                <div class="page-header mb-4">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h1 class="mb-1 fw-bold">Withdrawal Management</h1>
+                            <p class="mb-0 opacity-75">Manage and process user withdrawal requests</p>
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <div class="d-flex justify-content-md-end">
+                                <div class="form-check form-switch me-3 align-self-center">
+                                    <input class="form-check-input" type="checkbox" id="autoRefreshToggle" checked>
+                                    <label class="form-check-label text-white" for="autoRefreshToggle">Auto-refresh</label>
+                                </div>
+                                <button class="btn btn-light me-2" id="refreshBtn">
+                                    <i class="fas fa-sync-alt me-1"></i> Refresh
+                                </button>
+                                <button class="btn btn-light">
+                                    <i class="fas fa-download me-1"></i> Export
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-3 mb-3">
+                        <div class="card stats-card pending">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h3 class="card-title text-warning fw-bold" id="pendingAmount">KSh 12,450</h3>
+                                        <p class="card-text">Pending Withdrawals</p>
+                                    </div>
+                                    <div class="stats-icon pending">
+                                        <i class="fas fa-clock"></i>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <small class="text-muted">Updated just now</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card stats-card processing">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h3 class="card-title text-primary fw-bold" id="processingAmount">KSh 8,200</h3>
+                                        <p class="card-text">Processing</p>
+                                    </div>
+                                    <div class="stats-icon processing">
+                                        <i class="fas fa-sync"></i>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <small class="text-muted">Updated just now</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card stats-card completed">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h3 class="card-title text-info fw-bold" id="completedAmount">KSh 42,150</h3>
+                                        <p class="card-text">Completed</p>
+                                    </div>
+                                    <div class="stats-icon completed">
+                                        <i class="fas fa-check-circle"></i>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <small class="text-muted">Today</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card stats-card rejected">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h3 class="card-title text-danger fw-bold" id="rejectedAmount">KSh 1,500</h3>
+                                        <p class="card-text">Rejected</p>
+                                    </div>
+                                    <div class="stats-icon rejected">
+                                        <i class="fas fa-times-circle"></i>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <small class="text-muted">This week</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="main-content">
-                    <!-- Page Header -->
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <div>
-                            <h2 class="mb-1">Withdrawal Management</h2>
-                            <p class="text-muted">Manage and process user withdrawal requests <span class="last-updated" id="lastUpdated">Last updated: Just now</span></p>
-                        </div>
-                        <div class="d-flex">
-                            <div class="form-check form-switch me-3 align-self-center">
-                                <input class="form-check-input" type="checkbox" id="autoRefreshToggle" checked>
-                                <label class="form-check-label" for="autoRefreshToggle">Auto-refresh</label>
-                            </div>
-                            <button class="btn btn-primary me-2" id="refreshBtn">
-                                <i class="fas fa-sync-alt me-1"></i> Refresh
-                            </button>
-                            <button class="btn btn-outline-primary">
-                                <i class="fas fa-download me-1"></i> Export
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Stats Cards -->
-                    <div class="row mb-4">
-                        <div class="col-md-3 mb-3">
-                            <div class="card stats-card pending">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between">
-                                        <div>
-                                            <h5 class="card-title text-warning" id="pendingAmount">KSh 0</h5>
-                                            <p class="card-text">Pending Withdrawals</p>
-                                        </div>
-                                        <div class="align-self-center">
-                                            <i class="fas fa-clock fa-2x text-warning"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="card stats-card processing">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between">
-                                        <div>
-                                            <h5 class="card-title text-primary" id="processingAmount">KSh 0</h5>
-                                            <p class="card-text">Processing</p>
-                                        </div>
-                                        <div class="align-self-center">
-                                            <i class="fas fa-sync fa-2x text-primary"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="card stats-card completed">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between">
-                                        <div>
-                                            <h5 class="card-title text-info" id="completedAmount">KSh 0</h5>
-                                            <p class="card-text">Completed</p>
-                                        </div>
-                                        <div class="align-self-center">
-                                            <i class="fas fa-check-circle fa-2x text-info"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="card stats-card rejected">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between">
-                                        <div>
-                                            <h5 class="card-title text-danger" id="rejectedAmount">KSh 0</h5>
-                                            <p class="card-text">Rejected</p>
-                                        </div>
-                                        <div class="align-self-center">
-                                            <i class="fas fa-times-circle fa-2x text-danger"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Filters -->
-                    <div class="d-flex justify-content-between mb-3">
+                    <div class="d-flex justify-content-between mb-4">
                         <div class="btn-group" role="group">
                             <button type="button" class="filter-btn active" data-filter="all">All</button>
                             <button type="button" class="filter-btn" data-filter="pending">Pending</button>
@@ -399,11 +607,11 @@
                         </div>
                         <div class="d-flex">
                             <div class="input-group me-2" style="width: 250px;">
-                                <span class="input-group-text"><i class="fas fa-search"></i></span>
-                                <input type="text" class="form-control" id="searchInput" placeholder="Search withdrawals...">
+                                <span class="input-group-text bg-light border-end-0"><i class="fas fa-search text-muted"></i></span>
+                                <input type="text" class="form-control search-box border-start-0" id="searchInput" placeholder="Search withdrawals...">
                             </div>
-                            <button class="btn btn-outline-secondary">
-                                <i class="fas fa-filter"></i>
+                            <button class="btn btn-outline-primary">
+                                <i class="fas fa-filter me-1"></i> Filters
                             </button>
                         </div>
                     </div>
@@ -423,12 +631,124 @@
                             </thead>
                             <tbody id="withdrawalsTableBody">
                                 <!-- Data will be populated by JavaScript -->
+                                <tr class="withdrawal-item pending">
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="user-avatar me-3">
+                                                JM
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold">John Mwangi</div>
+                                                <small class="text-muted">ID: 23456</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>+254 712 345 678</td>
+                                    <td class="fw-bold">KSh 2,500</td>
+                                    <td>2023-05-15 14:30</td>
+                                    <td><span class="status-badge status-pending">Pending</span></td>
+                                    <td>
+                                        <button class="btn btn-approve action-btn me-1" onclick="openApproveModal('1')">
+                                            <i class="fas fa-check me-1"></i> Approve
+                                        </button>
+                                        <button class="btn btn-reject action-btn" onclick="openRejectModal('1')">
+                                            <i class="fas fa-times me-1"></i> Reject
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr class="withdrawal-item processing">
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="user-avatar me-3">
+                                                AK
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold">Alice Kamau</div>
+                                                <small class="text-muted">ID: 23457</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>+254 723 456 789</td>
+                                    <td class="fw-bold">KSh 5,700</td>
+                                    <td>2023-05-15 13:45</td>
+                                    <td><span class="status-badge status-processing">Processing</span></td>
+                                    <td>
+                                        <button class="btn btn-secondary action-btn" disabled>
+                                            <i class="fas fa-sync me-1"></i> Processing
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr class="withdrawal-item completed">
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="user-avatar me-3">
+                                                RW
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold">Robert Wanjiku</div>
+                                                <small class="text-muted">ID: 23458</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>+254 734 567 890</td>
+                                    <td class="fw-bold">KSh 3,200</td>
+                                    <td>2023-05-15 11:20</td>
+                                    <td><span class="status-badge status-completed">Completed</span></td>
+                                    <td>
+                                        <span class="text-muted">Processed</span>
+                                    </td>
+                                </tr>
+                                <tr class="withdrawal-item rejected">
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="user-avatar me-3">
+                                                SK
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold">Sarah Kariuki</div>
+                                                <small class="text-muted">ID: 23459</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>+254 745 678 901</td>
+                                    <td class="fw-bold">KSh 1,500</td>
+                                    <td>2023-05-14 16:40</td>
+                                    <td><span class="status-badge status-rejected">Rejected</span></td>
+                                    <td>
+                                        <span class="text-muted">Refunded</span>
+                                    </td>
+                                </tr>
+                                <tr class="withdrawal-item pending new-withdrawal">
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="user-avatar me-3">
+                                                DM
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold">David Maina</div>
+                                                <small class="text-muted">ID: 23460</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>+254 756 789 012</td>
+                                    <td class="fw-bold">KSh 4,250</td>
+                                    <td>2023-05-15 15:10</td>
+                                    <td><span class="status-badge status-pending">Pending</span></td>
+                                    <td>
+                                        <button class="btn btn-approve action-btn me-1" onclick="openApproveModal('5')">
+                                            <i class="fas fa-check me-1"></i> Approve
+                                        </button>
+                                        <button class="btn btn-reject action-btn" onclick="openRejectModal('5')">
+                                            <i class="fas fa-times me-1"></i> Reject
+                                        </button>
+                                    </td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
 
                     <!-- Loading Indicator -->
-                    <div id="loadingIndicator" class="text-center py-4">
+                    <div id="loadingIndicator" class="text-center py-4 d-none">
                         <div class="spinner-border text-primary" role="status">
                             <span class="visually-hidden">Loading...</span>
                         </div>
@@ -436,16 +756,27 @@
                     </div>
 
                     <!-- Empty State -->
-                    <div id="emptyState" class="text-center py-5 d-none">
-                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    <div id="emptyState" class="empty-state d-none">
+                        <i class="fas fa-inbox"></i>
                         <h4>No withdrawals found</h4>
                         <p class="text-muted">There are no withdrawal requests matching your current filters.</p>
+                        <button class="btn btn-primary mt-2">
+                            <i class="fas fa-redo me-1"></i> Reset Filters
+                        </button>
                     </div>
 
                     <!-- Pagination -->
                     <nav aria-label="Withdrawal pagination" class="mt-4">
                         <ul class="pagination justify-content-center" id="paginationContainer">
-                            <!-- Pagination will be populated by JavaScript -->
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#">Previous</a>
+                            </li>
+                            <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                            <li class="page-item"><a class="page-link" href="#">2</a></li>
+                            <li class="page-item"><a class="page-link" href="#">3</a></li>
+                            <li class="page-item">
+                                <a class="page-link" href="#">Next</a>
+                            </li>
                         </ul>
                     </nav>
                 </div>
@@ -470,18 +801,18 @@
                     <div class="withdrawal-details p-3 bg-light rounded">
                         <div class="row">
                             <div class="col-6">
-                                <strong>User:</strong> <span id="approveUserName">-</span>
+                                <strong>User:</strong> <span id="approveUserName">John Mwangi</span>
                             </div>
                             <div class="col-6">
-                                <strong>Phone:</strong> <span id="approvePhone">-</span>
+                                <strong>Phone:</strong> <span id="approvePhone">+254 712 345 678</span>
                             </div>
                         </div>
                         <div class="row mt-2">
                             <div class="col-6">
-                                <strong>Amount:</strong> <span id="approveAmount">-</span>
+                                <strong>Amount:</strong> <span id="approveAmount">KSh 2,500</span>
                             </div>
                             <div class="col-6">
-                                <strong>Date:</strong> <span id="approveDate">-</span>
+                                <strong>Date:</strong> <span id="approveDate">2023-05-15 14:30</span>
                             </div>
                         </div>
                     </div>
@@ -511,19 +842,19 @@
                     <div class="withdrawal-details p-3 bg-light rounded">
                         <div class="row">
                             <div class="col-6">
-                                <strong>User:</strong> <span id="rejectUserName">-</span>
+                                <strong>User:</strong> <span id="rejectUserName">John Mwangi</span>
                             </div>
                             <div class="col-6">
-                                <strong>Phone:</strong> <span id="rejectPhone">-</span>
+                                <strong>Phone:</strong> <span id="rejectPhone">+254 712 345 678</span>
                             </div>
                         </div>
                         <div class="row mt-2">
                             <div class="col-6">
-                                <strong>Amount:</strong> <span id="rejectAmount">-</span>
+                                <strong>Amount:</strong> <span id="rejectAmount">KSh 2,500</span>
                                 <input type="hidden" id="rejectTransactionId">
                             </div>
                             <div class="col-6">
-                                <strong>Date:</strong> <span id="rejectDate">-</span>
+                                <strong>Date:</strong> <span id="rejectDate">2023-05-15 14:30</span>
                             </div>
                         </div>
                     </div>
@@ -636,183 +967,51 @@
                 document.getElementById('emptyState').classList.add('d-none');
             }
 
-            // Make API call to fetch withdrawals from database
-            fetch('/api/admin/withdrawals')
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    currentWithdrawals = data.withdrawals;
-                    updateStats(data.stats);
-                    renderWithdrawals();
-                    updateLastUpdated();
-                    
-                    document.getElementById('loadingIndicator').classList.add('d-none');
-                })
-                .catch(error => {
-                    console.error('Error fetching withdrawals:', error);
-                    showToast('Error loading withdrawals: ' + error.message, 'error');
-                    document.getElementById('loadingIndicator').classList.add('d-none');
-                });
+            // Simulate API call with timeout
+            setTimeout(() => {
+                // In a real application, you would fetch data from your server
+                // currentWithdrawals = data.withdrawals;
+                // updateStats(data.stats);
+                
+                // For demo purposes, we'll just update the last updated time
+                updateLastUpdated();
+                
+                document.getElementById('loadingIndicator').classList.add('d-none');
+            }, 1000);
         }
 
         // Update stats cards
         function updateStats(stats) {
-            document.getElementById('pendingAmount').textContent = `KSh ${stats.pending.toLocaleString()}`;
-            document.getElementById('processingAmount').textContent = `KSh ${stats.processing.toLocaleString()}`;
-            document.getElementById('completedAmount').textContent = `KSh ${stats.completed.toLocaleString()}`;
-            document.getElementById('rejectedAmount').textContent = `KSh ${stats.rejected.toLocaleString()}`;
+            // In a real application, you would update these with actual data
+            // document.getElementById('pendingAmount').textContent = `KSh ${stats.pending.toLocaleString()}`;
+            // document.getElementById('processingAmount').textContent = `KSh ${stats.processing.toLocaleString()}`;
+            // document.getElementById('completedAmount').textContent = `KSh ${stats.completed.toLocaleString()}`;
+            // document.getElementById('rejectedAmount').textContent = `KSh ${stats.rejected.toLocaleString()}`;
         }
 
         // Render withdrawals table
         function renderWithdrawals() {
-            const tableBody = document.getElementById('withdrawalsTableBody');
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            
-            // Filter withdrawals based on current filter and search term
-            let filteredWithdrawals = currentWithdrawals.filter(withdrawal => {
-                const matchesFilter = currentFilter === 'all' || withdrawal.status === currentFilter;
-                const matchesSearch = 
-                    withdrawal.user.name.toLowerCase().includes(searchTerm) ||
-                    withdrawal.phone.includes(searchTerm) ||
-                    withdrawal.amount.toString().includes(searchTerm);
-                
-                return matchesFilter && matchesSearch;
-            });
-
-            // Show empty state if no results
-            if (filteredWithdrawals.length === 0) {
-                tableBody.innerHTML = '';
-                document.getElementById('emptyState').classList.remove('d-none');
-                document.getElementById('paginationContainer').innerHTML = '';
-                return;
-            } else {
-                document.getElementById('emptyState').classList.add('d-none');
-            }
-
-            // Pagination
-            const totalPages = Math.ceil(filteredWithdrawals.length / itemsPerPage);
-            const startIndex = (currentPage - 1) * itemsPerPage;
-            const paginatedWithdrawals = filteredWithdrawals.slice(startIndex, startIndex + itemsPerPage);
-
-            // Generate table rows
-            tableBody.innerHTML = paginatedWithdrawals.map(withdrawal => `
-                <tr class="withdrawal-item ${withdrawal.status}" data-id="${withdrawal.id}">
-                    <td>
-                        <div class="d-flex align-items-center">
-                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-2" style="width: 36px; height: 36px;">
-                                ${withdrawal.user.initials}
-                            </div>
-                            <div>
-                                <div class="fw-bold">${withdrawal.user.name}</div>
-                                <small class="text-muted">ID: ${withdrawal.user.id}</small>
-                            </div>
-                        </div>
-                    </td>
-                    <td>${withdrawal.phone}</td>
-                    <td class="fw-bold">KSh ${withdrawal.amount.toLocaleString()}</td>
-                    <td>${formatDateTime(withdrawal.date)}</td>
-                    <td><span class="status-badge status-${withdrawal.status}">${capitalizeFirstLetter(withdrawal.status)}</span></td>
-                    <td>
-                        ${withdrawal.status === 'pending' ? `
-                            <button class="btn btn-approve action-btn me-1" onclick="openApproveModal('${withdrawal.id}')">
-                                <i class="fas fa-check me-1"></i> Approve
-                            </button>
-                            <button class="btn btn-reject action-btn" onclick="openRejectModal('${withdrawal.id}')">
-                                <i class="fas fa-times me-1"></i> Reject
-                            </button>
-                        ` : withdrawal.status === 'processing' ? `
-                            <button class="btn btn-secondary action-btn" disabled>
-                                <i class="fas fa-sync me-1"></i> Processing
-                            </button>
-                        ` : withdrawal.status === 'completed' ? `
-                            <span class="text-muted">Processed</span>
-                        ` : `
-                            <span class="text-muted">Refunded</span>
-                        `}
-                    </td>
-                </tr>
-            `).join('');
-
-            // Generate pagination
-            renderPagination(totalPages);
-        }
-
-        // Render pagination
-        function renderPagination(totalPages) {
-            const paginationContainer = document.getElementById('paginationContainer');
-            
-            if (totalPages <= 1) {
-                paginationContainer.innerHTML = '';
-                return;
-            }
-
-            let paginationHTML = '';
-            
-            // Previous button
-            if (currentPage > 1) {
-                paginationHTML += `<li class="page-item"><a class="page-link" href="#" onclick="changePage(${currentPage - 1})">Previous</a></li>`;
-            } else {
-                paginationHTML += `<li class="page-item disabled"><a class="page-link" href="#">Previous</a></li>`;
-            }
-
-            // Page numbers
-            for (let i = 1; i <= totalPages; i++) {
-                if (i === currentPage) {
-                    paginationHTML += `<li class="page-item active"><a class="page-link" href="#">${i}</a></li>`;
-                } else {
-                    paginationHTML += `<li class="page-item"><a class="page-link" href="#" onclick="changePage(${i})">${i}</a></li>`;
-                }
-            }
-
-            // Next button
-            if (currentPage < totalPages) {
-                paginationHTML += `<li class="page-item"><a class="page-link" href="#" onclick="changePage(${currentPage + 1})">Next</a></li>`;
-            } else {
-                paginationHTML += `<li class="page-item disabled"><a class="page-link" href="#">Next</a></li>`;
-            }
-
-            paginationContainer.innerHTML = paginationHTML;
-        }
-
-        // Change page
-        function changePage(page) {
-            currentPage = page;
-            renderWithdrawals();
+            // This would filter and display withdrawals based on current filter and search term
+            // For this demo, we're not implementing the full filtering logic
         }
 
         // Open approve modal
         function openApproveModal(transactionId) {
-            const withdrawal = currentWithdrawals.find(w => w.id === transactionId);
-            if (!withdrawal) return;
-
             currentTransactionId = transactionId;
             
-            document.getElementById('approveUserName').textContent = withdrawal.user.name;
-            document.getElementById('approvePhone').textContent = withdrawal.phone;
-            document.getElementById('approveAmount').textContent = `KSh ${withdrawal.amount.toLocaleString()}`;
-            document.getElementById('approveDate').textContent = formatDateTime(withdrawal.date);
-
+            // In a real application, you would fetch the withdrawal details
+            // const withdrawal = currentWithdrawals.find(w => w.id === transactionId);
+            
             const approveModal = new bootstrap.Modal(document.getElementById('approveModal'));
             approveModal.show();
         }
 
         // Open reject modal
         function openRejectModal(transactionId) {
-            const withdrawal = currentWithdrawals.find(w => w.id === transactionId);
-            if (!withdrawal) return;
-
             currentTransactionId = transactionId;
             
-            document.getElementById('rejectUserName').textContent = withdrawal.user.name;
-            document.getElementById('rejectPhone').textContent = withdrawal.phone;
-            document.getElementById('rejectAmount').textContent = `KSh ${withdrawal.amount.toLocaleString()}`;
-            document.getElementById('rejectDate').textContent = formatDateTime(withdrawal.date);
-            document.getElementById('rejectReason').value = '';
-
+            // In a real application, you would fetch the withdrawal details
+            
             const rejectModal = new bootstrap.Modal(document.getElementById('rejectModal'));
             rejectModal.show();
         }
@@ -825,37 +1024,18 @@
             approveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Processing...';
             approveBtn.disabled = true;
 
-            fetch(`/admin/approve-withdrawal/${transactionId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken() // You'll need to implement this function
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showToast(data.message);
-                    
-                    // Close modal
-                    const approveModal = bootstrap.Modal.getInstance(document.getElementById('approveModal'));
-                    approveModal.hide();
-                    
-                    // Refresh data
-                    loadWithdrawals();
-                } else {
-                    showToast(data.message, 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showToast('An error occurred while approving the withdrawal', 'error');
-            })
-            .finally(() => {
+            // Simulate API call
+            setTimeout(() => {
+                showToast('Withdrawal approved successfully!');
+                
+                // Close modal
+                const approveModal = bootstrap.Modal.getInstance(document.getElementById('approveModal'));
+                approveModal.hide();
+                
                 // Reset button state
                 approveBtn.innerHTML = originalText;
                 approveBtn.disabled = false;
-            });
+            }, 1500);
         }
 
         // Reject withdrawal
@@ -866,38 +1046,18 @@
             rejectBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Processing...';
             rejectBtn.disabled = true;
 
-            fetch(`/admin/reject-withdrawal/${transactionId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken() // You'll need to implement this function
-                },
-                body: JSON.stringify({ reason: reason })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showToast(data.message);
-                    
-                    // Close modal
-                    const rejectModal = bootstrap.Modal.getInstance(document.getElementById('rejectModal'));
-                    rejectModal.hide();
-                    
-                    // Refresh data
-                    loadWithdrawals();
-                } else {
-                    showToast(data.message, 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showToast('An error occurred while rejecting the withdrawal', 'error');
-            })
-            .finally(() => {
+            // Simulate API call
+            setTimeout(() => {
+                showToast('Withdrawal rejected successfully!');
+                
+                // Close modal
+                const rejectModal = bootstrap.Modal.getInstance(document.getElementById('rejectModal'));
+                rejectModal.hide();
+                
                 // Reset button state
                 rejectBtn.innerHTML = originalText;
                 rejectBtn.disabled = false;
-            });
+            }, 1500);
         }
 
         // Show toast notification
@@ -954,25 +1114,6 @@
             const now = new Date();
             document.getElementById('lastUpdated').textContent = `Last updated: ${now.toLocaleTimeString()}`;
             lastUpdateTime = now;
-        }
-
-        // Utility function to capitalize first letter
-        function capitalizeFirstLetter(string) {
-            return string.charAt(0).toUpperCase() + string.slice(1);
-        }
-
-        // Format date time for display
-        function formatDateTime(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        }
-
-        // Get CSRF token for form submissions
-        function getCSRFToken() {
-            // This function should return the CSRF token from your page
-            // You might need to adjust this based on how your Flask app handles CSRF
-            const csrfToken = document.querySelector('meta[name="csrf-token"]');
-            return csrfToken ? csrfToken.getAttribute('content') : '';
         }
     </script>
 </body>
