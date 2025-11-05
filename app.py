@@ -299,16 +299,29 @@ class SupabaseDB:
             return SupabaseDB.handle_db_error("create_job", e, False)
 
     @staticmethod
-    def get_all_jobs(active_only=True, limit=50):
+    def get_all_jobs(user_id=None):
+        """
+        Get all jobs from the database
+        """
         try:
-            query = supabase.table('jobs').select('*')
-            if active_only:
-                query = query.eq('is_active', True)
-            query = query.order('created_at', desc=True).limit(limit)
-            response = query.execute()
-            return response.data
+            if user_id:
+                # Get jobs for specific user
+                response = supabase.table('jobs')\
+                    .select('*')\
+                    .eq('user_id', user_id)\
+                    .order('created_at', desc=True)\
+                    .execute()
+            else:
+                # Get all jobs (admin view)
+                response = supabase.table('jobs')\
+                    .select('*')\
+                    .order('created_at', desc=True)\
+                    .execute()
+            
+            return response.data if response.data else []
         except Exception as e:
-            return SupabaseDB.handle_db_error("get_all_jobs", e, False)
+            current_app.logger.error(f"Error getting jobs: {str(e)}")
+            return []
 
     @staticmethod
     def get_job_by_id(job_id):
@@ -361,7 +374,6 @@ class SupabaseDB:
         except Exception as e:
             return False, f"Reconnection failed: {e}"
 
-class SupabaseDB:
     @staticmethod
     def execute_with_retry(operation, retries=3, delay=2, timeout=5.0):
         """
@@ -3640,6 +3652,7 @@ def withdraw():
     
     return render_template('withdraw.html', transactions=transactions)
 
+# UPDATED JOBS ROUTE - Fixed the missing method error
 @app.route('/jobs')
 @login_required
 def jobs():
@@ -3648,38 +3661,55 @@ def jobs():
         flash('Please complete payment verification to access jobs.', 'warning')
         return redirect(url_for('account_activation'))
     
-    # Get filter parameters
-    category = request.args.get('category', '')
-    search = request.args.get('search', '')
-    
-    # Get all active jobs
-    jobs_data = SupabaseDB.get_all_jobs(active_only=True)
-    
-    # Apply filters
-    filtered_jobs = []
-    for job in jobs_data:
-        if category and job.get('category') != category:
-            continue
-        if search and search.lower() not in job.get('title', '').lower() and search.lower() not in job.get('company', '').lower():
-            continue
-        filtered_jobs.append(job)
-    
-    # Get unique categories for filter dropdown
-    categories = list(set(job.get('category') for job in jobs_data if job.get('category')))
-    
-    return render_template('jobs.html', 
-                         jobs=filtered_jobs,
-                         categories=categories,
-                         selected_category=category,
-                         search_query=search)
+    try:
+        # Get filter parameters
+        category = request.args.get('category', '')
+        search = request.args.get('search', '')
+        
+        # Get all active jobs using the instance method
+        db = SupabaseDB()
+        jobs_data = db.get_all_jobs()
+        
+        # Apply filters
+        filtered_jobs = []
+        for job in jobs_data:
+            # Check if job is active
+            if not job.get('is_active', True):
+                continue
+                
+            if category and job.get('category') != category:
+                continue
+            if search and search.lower() not in job.get('title', '').lower() and search.lower() not in job.get('company', '').lower():
+                continue
+            filtered_jobs.append(job)
+        
+        # Get unique categories for filter dropdown
+        categories = list(set(job.get('category') for job in jobs_data if job.get('category')))
+        
+        return render_template('jobs.html', 
+                             jobs=filtered_jobs,
+                             categories=categories,
+                             selected_category=category,
+                             search_query=search)
+                             
+    except Exception as e:
+        current_app.logger.error(f"Error loading jobs page: {str(e)}")
+        flash('Error loading jobs page. Please try again.', 'error')
+        return redirect(url_for('dashboard'))
 
 @app.route('/admin/jobs')
 @login_required
 @admin_required
 def admin_jobs():
     """Admin page to manage job postings"""
-    jobs_data = SupabaseDB.get_all_jobs(active_only=False, limit=100)
-    return render_template('admin_jobs.html', jobs=jobs_data)
+    try:
+        db = SupabaseDB()
+        jobs_data = db.get_all_jobs()
+        return render_template('admin_jobs.html', jobs=jobs_data)
+    except Exception as e:
+        current_app.logger.error(f"Error loading admin jobs: {str(e)}")
+        flash('Error loading jobs management page.', 'error')
+        return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/jobs/create', methods=['GET', 'POST'])
 @login_required
@@ -3714,7 +3744,8 @@ def create_job():
                 flash('Please enter a valid job link (must start with http:// or https://).', 'error')
                 return redirect(url_for('create_job'))
             
-            created_job = SupabaseDB.create_job(job_data)
+            db = SupabaseDB()
+            created_job = db.create_job(job_data)
             
             if created_job:
                 flash('Job posting created successfully!', 'success')
@@ -3733,7 +3764,8 @@ def create_job():
 @admin_required
 def edit_job(job_id):
     """Edit an existing job posting"""
-    job = SupabaseDB.get_job_by_id(job_id)
+    db = SupabaseDB()
+    job = db.get_job_by_id(job_id)
     
     if not job:
         flash('Job not found.', 'error')
@@ -3764,7 +3796,7 @@ def edit_job(job_id):
                 flash('Please enter a valid job link (must start with http:// or https://).', 'error')
                 return redirect(url_for('edit_job', job_id=job_id))
             
-            updated_job = SupabaseDB.update_job(job_id, update_data)
+            updated_job = db.update_job(job_id, update_data)
             
             if updated_job:
                 flash('Job posting updated successfully!', 'success')
@@ -3783,14 +3815,15 @@ def edit_job(job_id):
 @admin_required
 def delete_job(job_id):
     """Delete a job posting"""
-    job = SupabaseDB.get_job_by_id(job_id)
+    db = SupabaseDB()
+    job = db.get_job_by_id(job_id)
     
     if not job:
         flash('Job not found.', 'error')
         return redirect(url_for('admin_jobs'))
     
     try:
-        success = SupabaseDB.delete_job(job_id)
+        success = db.delete_job(job_id)
         if success:
             flash('Job posting deleted successfully!', 'success')
         else:
@@ -3806,14 +3839,15 @@ def delete_job(job_id):
 @admin_required
 def toggle_job_status(job_id):
     """Toggle job active status"""
-    job = SupabaseDB.get_job_by_id(job_id)
+    db = SupabaseDB()
+    job = db.get_job_by_id(job_id)
     
     if not job:
         return jsonify({'success': False, 'message': 'Job not found'})
     
     try:
         new_status = not job.get('is_active', False)
-        updated_job = SupabaseDB.update_job(job_id, {'is_active': new_status})
+        updated_job = db.update_job(job_id, {'is_active': new_status})
         
         if updated_job:
             status_text = "activated" if new_status else "deactivated"
