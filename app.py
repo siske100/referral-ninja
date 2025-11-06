@@ -18,6 +18,7 @@ from datetime import datetime, timezone, timedelta
 from urllib.parse import urlparse
 from functools import wraps
 from typing import Dict, List, Any, Tuple, Optional
+
 import psutil
 import psycopg2
 import redis
@@ -33,7 +34,6 @@ from logging.handlers import RotatingFileHandler
 from supabase import create_client
 from telegram import Bot
 import httpx
-
 
 # Load environment variables from .env file
 load_dotenv()
@@ -164,6 +164,7 @@ rate_limiter = Limiter(
     strategy="fixed-window",  # or "moving-window"
     on_breach=lambda limit: current_app.logger.warning(f"🚫 Rate limit hit: {limit}")
 )
+
 # =============================================================================
 # DATABASE MODELS
 # =============================================================================
