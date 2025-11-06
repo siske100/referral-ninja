@@ -2862,6 +2862,83 @@ def utility_processor():
             return ""
     return dict(safe_strftime=safe_strftime)
 
+@app.route('/robots.txt')
+def robots():
+    robots_txt = '''User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /health/detailed
+Disallow: /debug-settings
+
+Sitemap: https://www.referralninja.co.ke/sitemap.xml'''
+    return app.response_class(robots_txt, mimetype='text/plain')
+
+
+@app.route('/sitemap.xml')
+def sitemap():
+    """Generate dynamic sitemap"""
+    from flask import render_template_string
+    import datetime
+    
+    base_url = 'https://www.referralninja.co.ke'
+    today = datetime.datetime.now().strftime('%Y-%m-%d')
+    
+    sitemap_xml = f'''<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>{base_url}/</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>{base_url}/login</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>{base_url}/register</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>{base_url}/dashboard</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>{base_url}/referral-system</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>{base_url}/withdraw</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>{base_url}/jobs</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>{base_url}/leaderboard</loc>
+    <lastmod>{today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+  </url>
+</urlset>'''
+    
+    return app.response_class(sitemap_xml, mimetype='application/xml')
+
+
 # Health Check Routes
 @app.route('/health')
 def health_check():

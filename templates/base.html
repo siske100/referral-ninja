@@ -5,13 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Referral Ninja{% endblock %}</title>
 
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Referral Ninja - Earn money by referring friends and discovering job opportunities in Kenya. Join our platform for student referrals and job placements.">
+    <meta name="keywords" content="referral, earn money, jobs Kenya, student jobs, referrals, mobile money, M-Pesa">
+    <meta name="author" content="Referral Ninja">
+    <meta property="og:title" content="Referral Ninja - Earn Money Through Referrals">
+    <meta property="og:description" content="Join Referral Ninja to earn money by referring friends and discover job opportunities in Kenya.">
+    <meta property="og:url" content="https://www.referralninja.co.ke">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="{{ url_for('static', filename='images/og-image.png') }}">
+    <meta name="twitter:card" content="summary_large_image">
+
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
 
-    <!-- Your other CSS/JS links -->
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+
+    <!-- Performance Optimizations -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
+    <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
+    <link rel="dns-prefetch" href="//fonts.googleapis.com">
+    
+    <noscript>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    </noscript>
+
+    <!-- External Resources -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
         :root {
             --primary-red: #dc3545;
@@ -314,6 +339,23 @@
             color: white;
         }
 
+        /* Toast Container */
+        .toast-container {
+            z-index: 9999;
+        }
+
+        /* Form Validation */
+        .is-invalid {
+            border-color: var(--danger) !important;
+            box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.1) !important;
+        }
+
+        .invalid-feedback {
+            color: var(--danger);
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+
         /* Mobile Responsive */
         @media (max-width: 768px) {
             .main-content.sidebar-expanded {
@@ -414,6 +456,22 @@
             outline-offset: 2px;
         }
 
+        /* Dark Mode Support */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --light-bg: #1a1a1a;
+                --card-bg: #2d2d2d;
+                --text-dark: #ffffff;
+                --text-light: #b0b0b0;
+                --border-light: #404040;
+            }
+            
+            body {
+                background: var(--light-bg);
+                color: var(--text-dark);
+            }
+        }
+
         /* Print Styles */
         @media print {
             .rank-badge {
@@ -440,6 +498,9 @@
     {% block styles %}{% endblock %}
 </head>
 <body>
+    <!-- Skip to main content for accessibility -->
+    <a href="#mainContent" class="sr-only">Skip to main content</a>
+
     <div class="app-container">
         {% include 'sidebar.html' %}
         
@@ -492,11 +553,9 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Enhanced JavaScript with better error handling
+        // Enhanced JavaScript with better error handling and performance
         document.addEventListener('DOMContentLoaded', function() {
-            const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('mainContent');
-            const sidebarOverlay = document.getElementById('sidebarOverlay');
             const connectionStatus = document.getElementById('connectionStatus');
             const errorState = document.getElementById('errorState');
 
@@ -504,9 +563,11 @@
             function initializeApp() {
                 try {
                     setupFlashMessages();
-                    setupConnectionMonitor();
+                    setupEnhancedConnectionMonitor();
                     setupErrorHandling();
                     setupAccessibility();
+                    setupFormValidation();
+                    monitorPerformance();
                 } catch (error) {
                     console.error('Error initializing app:', error);
                     showErrorState();
@@ -525,28 +586,47 @@
                 });
             }
 
-            function setupConnectionMonitor() {
-                // Monitor online/offline status
-                window.addEventListener('online', () => {
-                    if (connectionStatus) {
-                        connectionStatus.classList.remove('offline');
-                        connectionStatus.classList.add('online');
-                        connectionStatus.innerHTML = '<i class="fas fa-wifi me-2"></i><span>Connected</span>';
-                        connectionStatus.style.display = 'block';
-                        setTimeout(() => {
-                            connectionStatus.style.display = 'none';
-                        }, 3000);
-                    }
-                });
+            function setupEnhancedConnectionMonitor() {
+                let isOnline = navigator.onLine;
+                let checkInterval;
 
-                window.addEventListener('offline', () => {
+                function updateConnectionStatus(online) {
+                    if (online === isOnline) return;
+                    
+                    isOnline = online;
+                    
                     if (connectionStatus) {
-                        connectionStatus.classList.remove('online');
-                        connectionStatus.classList.add('offline');
-                        connectionStatus.innerHTML = '<i class="fas fa-wifi-slash me-2"></i><span>Offline</span>';
+                        connectionStatus.classList.toggle('online', online);
+                        connectionStatus.classList.toggle('offline', !online);
+                        connectionStatus.innerHTML = online 
+                            ? '<i class="fas fa-wifi me-2"></i><span>Connected</span>'
+                            : '<i class="fas fa-wifi-slash me-2"></i><span>Offline - Check Connection</span>';
                         connectionStatus.style.display = 'block';
+                        
+                        if (online) {
+                            setTimeout(() => connectionStatus.style.display = 'none', 3000);
+                        }
                     }
-                });
+
+                    // Dispatch custom event for other components
+                    window.dispatchEvent(new CustomEvent('connectionChange', { 
+                        detail: { online } 
+                    }));
+                }
+
+                // Initial status
+                updateConnectionStatus(isOnline);
+
+                // Event listeners
+                window.addEventListener('online', () => updateConnectionStatus(true));
+                window.addEventListener('offline', () => updateConnectionStatus(false));
+
+                // Periodic check (every 30 seconds)
+                checkInterval = setInterval(() => {
+                    fetch('/health', { method: 'HEAD', cache: 'no-cache' })
+                        .then(() => updateConnectionStatus(true))
+                        .catch(() => updateConnectionStatus(false));
+                }, 30000);
             }
 
             function setupErrorHandling() {
@@ -574,13 +654,6 @@
             }
 
             function setupAccessibility() {
-                // Add skip to main content link
-                const skipLink = document.createElement('a');
-                skipLink.href = '#mainContent';
-                skipLink.className = 'sr-only';
-                skipLink.innerHTML = 'Skip to main content';
-                document.body.insertBefore(skipLink, document.body.firstChild);
-
                 // Handle focus for modal dialogs
                 document.addEventListener('keydown', function(e) {
                     if (e.key === 'Escape') {
@@ -591,6 +664,39 @@
                         }
                     }
                 });
+            }
+
+            function setupFormValidation() {
+                // Auto-remove validation styles on input
+                document.addEventListener('input', function(e) {
+                    if (e.target.hasAttribute('required')) {
+                        e.target.classList.remove('is-invalid');
+                    }
+                });
+            }
+
+            function monitorPerformance() {
+                // Report page load time
+                window.addEventListener('load', () => {
+                    const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
+                    console.log(`Page loaded in ${loadTime}ms`);
+                    
+                    if (loadTime > 3000) {
+                        console.warn('Slow page load detected');
+                    }
+                });
+
+                // Monitor long tasks
+                if ('PerformanceObserver' in window) {
+                    const observer = new PerformanceObserver((list) => {
+                        for (const entry of list.getEntries()) {
+                            if (entry.duration > 50) {
+                                console.warn('Long task detected:', entry);
+                            }
+                        }
+                    });
+                    observer.observe({ entryTypes: ['longtask'] });
+                }
             }
 
             function showErrorState() {
@@ -604,61 +710,6 @@
                     errorState.style.display = 'none';
                 }
             }
-
-            // Utility functions
-            window.makeRequest = function(url, options = {}) {
-                const defaultOptions = {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                };
-
-                const mergedOptions = { ...defaultOptions, ...options };
-                
-                return fetch(url, mergedOptions)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
-                        return response.json();
-                    })
-                    .catch(error => {
-                        console.error('Request failed:', error);
-                        throw error;
-                    });
-            };
-
-            window.showToast = function(message, type = 'info') {
-                // Create toast element
-                const toast = document.createElement('div');
-                toast.className = `toast align-items-center text-bg-${type} border-0`;
-                toast.innerHTML = `
-                    <div class="d-flex">
-                        <div class="toast-body">${message}</div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                    </div>
-                `;
-
-                // Add to toast container
-                let container = document.getElementById('toastContainer');
-                if (!container) {
-                    container = document.createElement('div');
-                    container.id = 'toastContainer';
-                    container.className = 'toast-container position-fixed top-0 end-0 p-3';
-                    container.style.zIndex = '9999';
-                    document.body.appendChild(container);
-                }
-
-                container.appendChild(toast);
-                const bsToast = new bootstrap.Toast(toast);
-                bsToast.show();
-
-                // Remove after hide
-                toast.addEventListener('hidden.bs.toast', () => {
-                    toast.remove();
-                });
-            };
 
             // Initialize the application
             initializeApp();
@@ -714,11 +765,95 @@
                         submitButton.innerHTML = originalText;
                         submitButton.disabled = false;
                     });
-
-                    // Note: For actual form submission, the page will reload so we don't need to revert
                 }
             });
         });
+
+        // Utility functions
+        window.makeRequest = function(url, options = {}) {
+            const defaultOptions = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            };
+
+            const mergedOptions = { ...defaultOptions, ...options };
+            
+            return fetch(url, mergedOptions)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .catch(error => {
+                    console.error('Request failed:', error);
+                    throw error;
+                });
+        };
+
+        // Enhanced request with retry logic
+        window.retryRequest = async function(url, options = {}, maxRetries = 3) {
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    return await response.json();
+                } catch (error) {
+                    if (attempt === maxRetries) throw error;
+                    await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+                }
+            }
+        };
+
+        // Form validation helper
+        window.validateForm = function(form) {
+            const inputs = form.querySelectorAll('input[required], select[required], textarea[required]');
+            let isValid = true;
+
+            inputs.forEach(input => {
+                if (!input.value.trim()) {
+                    input.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    input.classList.remove('is-invalid');
+                }
+            });
+
+            return isValid;
+        };
+
+        window.showToast = function(message, type = 'info') {
+            // Create toast element
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-bg-${type} border-0`;
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+
+            // Add to toast container
+            let container = document.getElementById('toastContainer');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toastContainer';
+                container.className = 'toast-container position-fixed top-0 end-0 p-3';
+                container.style.zIndex = '9999';
+                document.body.appendChild(container);
+            }
+
+            container.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+
+            // Remove after hide
+            toast.addEventListener('hidden.bs.toast', () => {
+                toast.remove();
+            });
+        };
 
         // Global error handler for uncaught errors
         window.addEventListener('unhandledrejection', function(event) {
@@ -733,6 +868,19 @@
                 // Page is visible
             }
         });
+
+        // Service Worker Registration for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(function(registration) {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch(function(registrationError) {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
     </script>
     
     {% block scripts %}{% endblock %}

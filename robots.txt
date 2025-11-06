@@ -1,4 +1,8 @@
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /health/detailed
+Disallow: /debug-settings
 
 Sitemap: https://www.referralninja.co.ke/sitemap.xml
