@@ -5,19 +5,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Referral Ninja{% endblock %}</title>
 
-    <!-- Favicon Links -->
-    <link rel="icon" href="/favicon.ico" type="image/x-icon">
-    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+    <!-- Comprehensive Favicon Setup -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon-96x96.png') }}" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}" />
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}" />
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/apple-touch-icon.png') }}" />
+    <meta name="apple-mobile-web-app-title" content="Referral Ninja" />
+    <link rel="manifest" href="{{ url_for('static', filename='images/site.webmanifest') }}" />
+    
+    <!-- Additional Favicon Sizes for Better Compatibility -->
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='images/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='images/favicon-16x16.png') }}">
+    
+    <!-- Legacy ICO Format -->
+    <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}" type="image/x-icon">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}" type="image/x-icon">
 
-    <!-- Structured Data -->
+    <!-- Organization Logo for SEO -->
+    <link rel="logo" type="image/png" href="{{ url_for('static', filename='images/logo-120x120.png') }}">
+    <meta itemprop="logo" content="{{ url_for('static', filename='images/logo-120x120.png') }}">
+    <meta property="og:logo" content="{{ url_for('static', filename='images/logo-120x120.png') }}">
+
+    <!-- Enhanced Structured Data -->
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
         "@type": "Organization",
         "name": "Referral Ninja",
-        "url": "https://www.referralninja.com",
-        "logo": "https://www.referralninja.com/logo.png"
+        "url": "https://www.referralninja.co.ke",
+        "logo": "https://www.referralninja.co.ke/static/images/logo-120x120.png",
+        "description": "Referral Ninja - Earn money by referring friends and discovering job opportunities in Kenya. Join our platform for student referrals and job placements.",
+        "address": {
+            "@type": "PostalAddress",
+            "addressCountry": "KE",
+            "addressRegion": "Nairobi"
+        },
+        "contactPoint": {
+            "@type": "ContactPoint",
+            "telephone": "+254799326074",
+            "contactType": "customer service",
+            "areaServed": "KE",
+            "availableLanguage": "English"
+        },
+        "sameAs": [
+            "https://chat.whatsapp.com/I1iZi0WjYjF0EDV0Byq7IW"
+        ]
     }
     </script>
 
@@ -30,7 +62,11 @@
     <meta property="og:url" content="https://www.referralninja.co.ke">
     <meta property="og:type" content="website">
     <meta property="og:image" content="{{ url_for('static', filename='images/og-image.png') }}">
+    <meta property="og:site_name" content="Referral Ninja">
     <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Referral Ninja - Earn Money Through Referrals">
+    <meta name="twitter:description" content="Join Referral Ninja to earn money by referring friends and discover job opportunities in Kenya.">
+    <meta name="twitter:image" content="{{ url_for('static', filename='images/logo-120x120.png') }}">
 
     <!-- PWA Manifest -->
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
