@@ -5,6 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Referral Ninja{% endblock %}</title>
 
+    <!-- Favicon Links -->
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Referral Ninja",
+        "url": "https://www.referralninja.com",
+        "logo": "https://www.referralninja.com/logo.png"
+    }
+    </script>
+
     <!-- SEO Meta Tags -->
     <meta name="description" content="Referral Ninja - Earn money by referring friends and discovering job opportunities in Kenya. Join our platform for student referrals and job placements.">
     <meta name="keywords" content="referral, earn money, jobs Kenya, student jobs, referrals, mobile money, M-Pesa">
@@ -15,9 +31,6 @@
     <meta property="og:type" content="website">
     <meta property="og:image" content="{{ url_for('static', filename='images/og-image.png') }}">
     <meta name="twitter:card" content="summary_large_image">
-
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
 
     <!-- PWA Manifest -->
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
