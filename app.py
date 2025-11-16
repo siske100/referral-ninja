@@ -194,7 +194,7 @@ else:
     logger.info("Production configuration loaded")
 
 # =============================================================================
-# SAFE REDIS INITIALIZATION
+# IMPROVED SAFE REDIS INITIALIZATION
 # =============================================================================
 
 class SafeRedis:
@@ -227,10 +227,14 @@ class SafeRedis:
         if self._client is None:
             self._connect()
             if self._client is None:
-                raise ConnectionError("Redis connection unavailable")
+                # Return a dummy method that returns None instead of raising error
+                return self._dummy_method
         
         attr = getattr(self._client, name)
         
+        if not callable(attr):
+            return attr
+            
         def safe_method(*args, **kwargs):
             try:
                 return attr(*args, **kwargs)
@@ -239,15 +243,18 @@ class SafeRedis:
                 self._connect()
                 if self._client is None:
                     return None
-                attr = getattr(self._client, name)
-                return attr(*args, **kwargs)
+                # Re-get the attribute after reconnection
+                new_attr = getattr(self._client, name)
+                return new_attr(*args, **kwargs)
             except Exception as e:
                 self.logger.error(f"Redis operation failed: {e}")
                 return None
         
-        if callable(attr):
-            return safe_method
-        return attr
+        return safe_method
+    
+    def _dummy_method(self, *args, **kwargs):
+        """Dummy method that returns None when Redis is unavailable"""
+        return None
     
     def exists(self, key):
         """Safe exists check"""
@@ -262,7 +269,8 @@ class SafeRedis:
         """Safe get with default"""
         try:
             if self._client:
-                return self._client.get(key)
+                result = self._client.get(key)
+                return result if result is not None else default
             return default
         except Exception:
             return default
@@ -275,9 +283,104 @@ class SafeRedis:
             return False
         except Exception:
             return False
+    
+    def incr(self, key):
+        """Safe increment with None handling"""
+        try:
+            if self._client:
+                result = self._client.incr(key)
+                return result if result is not None else 1
+            return 1
+        except Exception:
+            return 1
+    
+    def lpush(self, key, value):
+        """Safe list push"""
+        try:
+            if self._client:
+                return self._client.lpush(key, value)
+            return 0
+        except Exception:
+            return 0
+    
+    def lrange(self, key, start, end):
+        """Safe list range"""
+        try:
+            if self._client:
+                return self._client.lrange(key, start, end)
+            return []
+        except Exception:
+            return []
+    
+    def ltrim(self, key, start, end):
+        """Safe list trim"""
+        try:
+            if self._client:
+                return self._client.ltrim(key, start, end)
+            return False
+        except Exception:
+            return False
+    
+    def expire(self, key, time):
+        """Safe expire"""
+        try:
+            if self._client:
+                return self._client.expire(key, time)
+            return False
+        except Exception:
+            return False
+    
+    def delete(self, key):
+        """Safe delete"""
+        try:
+            if self._client:
+                return self._client.delete(key)
+            return 0
+        except Exception:
+            return 0
+    
+    def keys(self, pattern):
+        """Safe keys pattern matching"""
+        try:
+            if self._client:
+                return self._client.keys(pattern)
+            return []
+        except Exception:
+            return []
+    
+    def ping(self):
+        """Safe ping to test connection"""
+        try:
+            if self._client:
+                return self._client.ping()
+            return False
+        except Exception:
+            return False
 
 # Initialize Redis with safe wrapper
 redis_client = SafeRedis(app.config['REDIS_URL'])
+
+# Emergency fallback for Redis failures
+def safe_redis_operation(operation, default_return=None):
+    """Execute Redis operation with comprehensive error handling"""
+    try:
+        result = operation()
+        # Ensure we don't return None for critical operations that need numbers
+        if result is None and default_return is not None:
+            return default_return
+        return result
+    except Exception as e:
+        logger.error(f"Redis operation failed: {e}")
+        return default_return
+
+# Test Redis connection on startup
+try:
+    if redis_client.ping():
+        logger.info("✅ Redis connection successful")
+    else:
+        logger.warning("⚠️ Redis connection may be unstable")
+except Exception as e:
+    logger.error(f"❌ Redis connection test failed: {e}")
 
 # =============================================================================
 # DATABASE INITIALIZATION
@@ -297,25 +400,45 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message_category = 'info'
 
-# Custom key function for rate limiting that uses user ID when available
+# Improved key function for rate limiting that uses user ID when available
 def get_limiter_key():
     """Use user ID if authenticated, otherwise IP address."""
     try:
-        if current_user and current_user.is_authenticated:
+        # Import here to avoid circular imports
+        from flask_login import current_user
+        
+        if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated:
             return f"user:{current_user.id}"
-    except Exception:
-        pass
-    return get_remote_address()
+    except Exception as e:
+        # Log but don't crash
+        current_app.logger.debug(f"Rate limit key error: {e}")
+    
+    # Fall back to IP address
+    try:
+        return get_remote_address()
+    except Exception as e:
+        current_app.logger.error(f"Rate limit IP fallback failed: {e}")
+        return "unknown"
 
-# Initialize rate limiter
-rate_limiter = Limiter(
-    app=app,
-    key_func=get_limiter_key,
-    storage_uri=app.config.get("REDIS_URL", "memory://"),
-    default_limits=["1000 per day", "200 per hour", "40 per minute"],
-    strategy="fixed-window",  # or "moving-window"
-    on_breach=lambda limit: current_app.logger.warning(f"Rate limit hit: {limit}")
-)
+# Initialize rate limiter with fallback
+try:
+    rate_limiter = Limiter(
+        app=app,
+        key_func=get_limiter_key,
+        storage_uri=app.config.get("REDIS_URL", "memory://"),
+        default_limits=["1000 per day", "200 per hour", "40 per minute"],
+        strategy="fixed-window",
+        on_breach=lambda limit: current_app.logger.warning(f"Rate limit hit: {limit}")
+    )
+    logger.info("Redis-backed rate limiter initialized")
+except Exception as e:
+    logger.error(f"Redis rate limiter failed, using memory fallback: {e}")
+    rate_limiter = Limiter(
+        app=app,
+        key_func=get_limiter_key,
+        storage_uri="memory://",
+        default_limits=["500 per day", "100 per hour", "20 per minute"]  # More conservative limits for memory
+    )
 
 # =============================================================================
 # DATABASE MODELS
@@ -1218,10 +1341,16 @@ class SafeSecurityMiddleware:
             rate_limit_key = f"rate_limit:ip:{ip_address}"
             current = redis_client.incr(rate_limit_key)
             
+            # Ensure current is an integer for comparison
+            if current is None:
+                current = 1
+                
             if current == 1:
                 redis_client.expire(rate_limit_key, 60)  # 1 minute window
             
-            return current > 1000  # 1000 requests per minute
+            # Safe comparison - convert to int if needed
+            current_int = int(current) if current is not None else 1
+            return current_int > 1000  # 1000 requests per minute
         except Exception as e:
             print(f"Redis rate limit check failed: {str(e)}")
             return False  # Don't rate limit if Redis is down
@@ -2327,7 +2456,7 @@ class HealthMonitor:
         # Critical components (if any fail, overall status is unhealthy)
         critical_components = {
             'database': self._check_database_health(),
-            'redis': self._check_redis_health(),
+            'redis': self._check_redis_health_improved(),
             'mpesa_api': self._check_mpesa_health(),
             'celcom_sms': self._check_celcom_sms_health(),
         }
@@ -2402,33 +2531,38 @@ class HealthMonitor:
                 'details': 'Database connection failed'
             }
     
-    def _check_redis_health(self) -> Dict[str, Any]:
-        """Check Redis connection health"""
+    def _check_redis_health_improved(self) -> Dict[str, Any]:
+        """Improved Redis health check with better error handling"""
         try:
             start_time = time.time()
             
-            # Test basic connection
-            self.redis.ping()
+            # Test basic connection with ping
+            ping_result = self.redis.ping()
             connection_time = time.time() - start_time
             
-            # Test read/write operations
+            # Test read/write operations with safe defaults
             test_key = f"health_check_{int(time.time())}"
             test_value = "health_check_value"
             
-            self.redis.set(test_key, test_value, ex=10)  # Set with 10s expiry
-            retrieved_value = self.redis.get(test_key)
+            set_result = self.redis.setex(test_key, 10, test_value)  # Set with 10s expiry
+            retrieved_value = self.redis.get(test_key, "NOT_FOUND")
             
+            # Determine status based on operations
             status = 'healthy'
-            if connection_time > 0.1:  # More than 100ms is slow for Redis
+            if not ping_result:
+                status = 'unhealthy'
+            elif connection_time > 0.1:  # More than 100ms is slow for Redis
+                status = 'degraded'
+            elif retrieved_value != test_value:
                 status = 'degraded'
             
             return {
                 'status': status,
                 'response_time_ms': round(connection_time * 1000, 2),
-                'connection': True,
+                'connection': bool(ping_result),
                 'read_operation': retrieved_value == test_value,
-                'write_operation': True,
-                'details': f'Redis connection OK ({connection_time:.3f}s)'
+                'write_operation': bool(set_result),
+                'details': f'Redis connection OK ({connection_time:.3f}s)' if ping_result else 'Redis connection failed'
             }
             
         except Exception as e:
