@@ -406,6 +406,10 @@ supabase = create_client(app.config.get('SUPABASE_URL'), app.config.get('SUPABAS
 # ENHANCED RATE LIMITING CONFIGURATION - FIXED
 # =============================================================================
 
+# =============================================================================
+# ENHANCED RATE LIMITING CONFIGURATION - FIXED
+# =============================================================================
+
 def get_limiter_key():
     """Enhanced rate limiting key function with better error handling and localhost exemption"""
     # First try to use authenticated user ID
@@ -421,10 +425,10 @@ def get_limiter_key():
     try:
         ip_address = get_remote_address()
         
-        # ALWAYS exempt localhost and internal IPs from rate limiting
+        # ALWAYS exempt localhost and internal IPs from rate limiting by returning None
         exempt_ips = ['127.0.0.1', 'localhost', '::1']
         if ip_address in exempt_ips:
-            return "exempt_localhost"
+            return None  # Returning None exempts from rate limiting
         
         return f"ip:{ip_address}"
         
@@ -432,7 +436,7 @@ def get_limiter_key():
         current_app.logger.error(f"Rate limit IP fallback failed: {e}")
         return f"unknown:{int(time.time())}"
 
-# Safe rate limiter initialization with fallbacks
+# Safe rate limiter initialization with fallbacks - REMOVED exempt_when
 try:
     rate_limiter = Limiter(
         app=app,
@@ -442,8 +446,8 @@ try:
         strategy="moving-window",  # Better than fixed-window
         on_breach=lambda limit: current_app.logger.warning(f"Rate limit breached: {limit}"),
         headers_enabled=True,
-        fail_on_first_breach=False,  # Don't crash if Redis fails
-        exempt_when=lambda: get_limiter_key() == "exempt_localhost"  # Exempt localhost
+        fail_on_first_breach=False  # Don't crash if Redis fails
+        # REMOVED: exempt_when parameter causing the error
     )
     logger.info("Rate limiter initialized successfully")
 except Exception as e:
@@ -454,11 +458,11 @@ except Exception as e:
         key_func=get_limiter_key,
         storage_uri="memory://",
         default_limits=["1000 per day", "200 per hour", "20 per minute"],  # Conservative memory limits
-        strategy="moving-window",
-        exempt_when=lambda: get_limiter_key() == "exempt_localhost"  # Exempt localhost
+        strategy="moving-window"
+        # REMOVED: exempt_when parameter causing the error
     )
     logger.info("Rate limiter fallback to memory storage")
-
+    
 # =============================================================================
 # EXTENSIONS INITIALIZATION
 # =============================================================================
