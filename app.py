@@ -11,6 +11,7 @@ import logging
 import asyncio
 import threading
 import secrets
+from flask import abort
 import string
 import hashlib
 import requests
@@ -18,7 +19,8 @@ from datetime import datetime, timezone, timedelta
 from urllib.parse import urlparse
 from functools import wraps
 from typing import Dict, List, Any, Tuple, Optional
-from werkzeug.wrappers import Request as WerkzeugRequest
+from werkzeug import Request
+from flask import request
 import psutil
 import psycopg2
 import redis
@@ -1046,7 +1048,7 @@ class SecurityMiddleware:
         self.logger = logging.getLogger(__name__)
     
     def __call__(self, environ, start_response):
-        request = Request(environ)
+        request = Request(environ) 
         
         # Skip security checks for health endpoints and static files
         if (request.path.startswith('/health') or 
@@ -1056,7 +1058,11 @@ class SecurityMiddleware:
             return self.app(environ, start_response)
         
         # Check for suspicious requests before processing
-        self.pre_request_checks(request)
+        try:
+            self.pre_request_checks(request)
+        except Exception as e:
+            # If there's an error in security checks, log but don't block
+            self.logger.error(f"Security check error: {str(e)}")
         
         return self.app(environ, start_response)
     
@@ -1079,7 +1085,9 @@ class SecurityMiddleware:
         user_agent = request.headers.get('User-Agent', '')
         if self.is_suspicious_user_agent(user_agent):
             self.logger.warning(f"Suspicious User-Agent: {user_agent[:100]}")
-            SecurityMonitor.log_security_event(
+            # Just log for suspicious user agents, don't block
+            # You could add this to SecurityMonitor if available
+            self.log_security_event(
                 "SUSPICIOUS_USER_AGENT",
                 None,
                 {"ip": ip_address, "user_agent": user_agent}
@@ -1087,18 +1095,26 @@ class SecurityMiddleware:
     
     def is_ip_blacklisted(self, ip_address):
         """Check if IP is in blacklist"""
-        blacklist_key = f"ip_blacklist:{ip_address}"
-        return bool(redis_client.exists(blacklist_key))
+        try:
+            blacklist_key = f"ip_blacklist:{ip_address}"
+            return bool(redis_client.exists(blacklist_key))
+        except Exception as e:
+            self.logger.error(f"Redis blacklist check failed: {str(e)}")
+            return False
     
     def is_ip_rate_limited(self, ip_address):
         """Basic IP-based rate limiting"""
-        rate_limit_key = f"rate_limit:ip:{ip_address}"
-        current = redis_client.incr(rate_limit_key)
-        
-        if current == 1:
-            redis_client.expire(rate_limit_key, 60)  # 1 minute window
-        
-        return current > 1000  # 1000 requests per minute
+        try:
+            rate_limit_key = f"rate_limit:ip:{ip_address}"
+            current = redis_client.incr(rate_limit_key)
+            
+            if current == 1:
+                redis_client.expire(rate_limit_key, 60)  # 1 minute window
+            
+            return current > 1000  # 1000 requests per minute
+        except Exception as e:
+            self.logger.error(f"Redis rate limit check failed: {str(e)}")
+            return False  # Don't rate limit if Redis is down
     
     def is_suspicious_user_agent(self, user_agent):
         """Detect suspicious/bot user agents"""
@@ -1109,6 +1125,10 @@ class SecurityMiddleware:
         
         user_agent_lower = user_agent.lower()
         return any(pattern in user_agent_lower for pattern in suspicious_patterns)
+    
+    def log_security_event(self, event_type, user_id, metadata):
+        """Log security events - replace with your actual SecurityMonitor if available"""
+        self.logger.warning(f"Security event: {event_type}, User: {user_id}, Metadata: {metadata}")
 
 # Apply security middleware
 security_middleware = SecurityMiddleware(app, fraud_detector)
