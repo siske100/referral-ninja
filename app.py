@@ -403,11 +403,11 @@ except Exception as e:
 supabase = create_client(app.config.get('SUPABASE_URL'), app.config.get('SUPABASE_KEY'))
 
 # =============================================================================
-# ENHANCED RATE LIMITING CONFIGURATION
+# ENHANCED RATE LIMITING CONFIGURATION - FIXED
 # =============================================================================
 
 def get_limiter_key():
-    """Enhanced rate limiting key function with better error handling"""
+    """Enhanced rate limiting key function with better error handling and localhost exemption"""
     # First try to use authenticated user ID
     try:
         if hasattr(current_app, 'login_manager'):
@@ -421,15 +421,10 @@ def get_limiter_key():
     try:
         ip_address = get_remote_address()
         
-        # Don't rate limit localhost and internal IPs in development
+        # ALWAYS exempt localhost and internal IPs from rate limiting
         exempt_ips = ['127.0.0.1', 'localhost', '::1']
         if ip_address in exempt_ips:
-            # Check if we're in development mode safely
-            try:
-                if current_app.debug or current_app.config.get('ENV') == 'development':
-                    return "exempt_development"
-            except:
-                pass
+            return "exempt_localhost"
         
         return f"ip:{ip_address}"
         
@@ -447,7 +442,8 @@ try:
         strategy="moving-window",  # Better than fixed-window
         on_breach=lambda limit: current_app.logger.warning(f"Rate limit breached: {limit}"),
         headers_enabled=True,
-        fail_on_first_breach=False  # Don't crash if Redis fails
+        fail_on_first_breach=False,  # Don't crash if Redis fails
+        exempt_when=lambda: get_limiter_key() == "exempt_localhost"  # Exempt localhost
     )
     logger.info("Rate limiter initialized successfully")
 except Exception as e:
@@ -458,7 +454,8 @@ except Exception as e:
         key_func=get_limiter_key,
         storage_uri="memory://",
         default_limits=["1000 per day", "200 per hour", "20 per minute"],  # Conservative memory limits
-        strategy="moving-window"
+        strategy="moving-window",
+        exempt_when=lambda: get_limiter_key() == "exempt_localhost"  # Exempt localhost
     )
     logger.info("Rate limiter fallback to memory storage")
 
@@ -1315,7 +1312,7 @@ class EnhancedFraudDetector:
 fraud_detector = EnhancedFraudDetector(redis_client, supabase)
 
 # =============================================================================
-# SAFE SECURITY MIDDLEWARE (NO RECURSION)
+# SAFE SECURITY MIDDLEWARE (NO RECURSION) - FIXED RATE LIMITING
 # =============================================================================
 
 class SafeSecurityMiddleware:
@@ -1352,8 +1349,8 @@ class SafeSecurityMiddleware:
             self.logger.warning(f"Blocked blacklisted IP: {ip_address}")
             abort(403, description="Access denied")
         
-        # Rate limiting by IP (basic protection)
-        if self.safe_is_ip_rate_limited(ip_address):
+        # Rate limiting by IP (basic protection) - EXEMPT LOCALHOST
+        if ip_address not in ['127.0.0.1', 'localhost', '::1'] and self.safe_is_ip_rate_limited(ip_address):
             self.logger.warning(f"Rate limited IP: {ip_address}")
             abort(429, description="Too many requests")
     
@@ -1369,7 +1366,11 @@ class SafeSecurityMiddleware:
             return False
     
     def safe_is_ip_rate_limited(self, ip_address):
-        """Safe IP rate limiting without recursion"""
+        """Safe IP rate limiting without recursion - EXEMPT LOCALHOST"""
+        # Always exempt localhost from rate limiting
+        if ip_address in ['127.0.0.1', 'localhost', '::1']:
+            return False
+            
         try:
             rate_limit_key = f"rate_limit:ip:{ip_address}"
             current = redis_client.incr(rate_limit_key)
@@ -3680,8 +3681,9 @@ def sitemap():
     return app.response_class(sitemap_xml, mimetype='application/xml')
 
 
-# Health Check Routes
+# Health Check Routes - EXEMPT FROM RATE LIMITING
 @app.route('/health')
+@rate_limiter.exempt
 def health_check():
     """Basic health check for load balancers"""
     try:
@@ -3701,6 +3703,7 @@ def health_check():
         }), 503
 
 @app.route('/health/detailed')
+@rate_limiter.exempt
 @login_required
 @admin_required
 def detailed_health_check():
@@ -3711,6 +3714,7 @@ def detailed_health_check():
     return jsonify(health_status)
 
 @app.route('/health/readiness')
+@rate_limiter.exempt
 def readiness_check():
     try:
         supabase_check('users', limit=1)
@@ -3719,10 +3723,12 @@ def readiness_check():
         return jsonify({'status': 'not_ready', 'timestamp': datetime.now(timezone.utc).isoformat(), 'error': str(e)}), 503
 
 @app.route('/health/liveness')
+@rate_limiter.exempt
 def liveness_check():
     return jsonify({'status': 'alive', 'timestamp': datetime.now(timezone.utc).isoformat()})
 
 @app.route('/health/emergency')
+@rate_limiter.exempt
 def emergency_health_check():
     """Emergency health check that never fails"""
     health_info = {
@@ -3773,6 +3779,7 @@ def rate_limit_test():
     return test_function()
 
 @app.route('/rate-limit-status')
+@rate_limiter.exempt
 def rate_limit_status():
     """Check current rate limit status"""
     try:
