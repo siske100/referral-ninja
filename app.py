@@ -1316,24 +1316,30 @@ class EnhancedFraudDetector:
 fraud_detector = EnhancedFraudDetector(redis_client, supabase)
 
 # =============================================================================
-# SAFE SECURITY MIDDLEWARE (NO RECURSION) - FIXED RATE LIMITING
+# SAFE SECURITY MIDDLEWARE (NO RECURSION) - FIXED
 # =============================================================================
 
 class FixedSecurityMiddleware:
-    def __init__(self, wsgi_app, fraud_detector):
-        self.wsgi_app = wsgi_app  # Store the actual WSGI app, not Flask app
+    def __init__(self, app, fraud_detector):
+        self.app = app  # Store the Flask app, not wsgi_app
         self.fraud_detector = fraud_detector
         self.logger = logging.getLogger(__name__)
     
     def __call__(self, environ, start_response):
-        request = Request(environ) 
+        # Create request object safely
+        try:
+            request = Request(environ)
+            path = request.path
+        except Exception:
+            # If we can't parse the request, just pass through
+            return self.app(environ, start_response)
         
         # Skip security checks for health endpoints and static files
-        if (request.path.startswith('/health') or 
-            request.path.startswith('/static') or
-            request.path == '/robots.txt' or
-            request.path == '/sitemap.xml'):
-            return self.wsgi_app(environ, start_response)
+        if (path.startswith('/health') or 
+            path.startswith('/static') or
+            path == '/robots.txt' or
+            path == '/sitemap.xml'):
+            return self.app(environ, start_response)
         
         # Safe pre-request checks
         try:
@@ -1342,8 +1348,8 @@ class FixedSecurityMiddleware:
             # Log but don't let security checks break the app
             self.logger.error(f"Security check error: {str(e)}")
         
-        # Call the actual WSGI application, not self
-        return self.wsgi_app(environ, start_response)
+        # Call the actual Flask application
+        return self.app(environ, start_response)
     
     def safe_pre_request_checks(self, request):
         """Perform security checks without recursion risk"""
@@ -1394,9 +1400,9 @@ class FixedSecurityMiddleware:
             print(f"Redis rate limit check failed: {str(e)}")
             return False  # Don't rate limit if Redis is down
 
-# Apply the fixed security middleware
+# Apply the fixed security middleware - CORRECTED
 app.wsgi_app = FixedSecurityMiddleware(app.wsgi_app, fraud_detector)
-    
+
 # =============================================================================
 # DATABASE SCHEMA MANAGER
 # =============================================================================
