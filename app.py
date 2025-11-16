@@ -411,7 +411,7 @@ supabase = create_client(app.config.get('SUPABASE_URL'), app.config.get('SUPABAS
 # =============================================================================
 
 def get_limiter_key():
-    """Enhanced rate limiting key function with better error handling and localhost exemption"""
+    """Enhanced rate limiting key function with proper None handling"""
     # First try to use authenticated user ID
     try:
         if hasattr(current_app, 'login_manager'):
@@ -425,10 +425,11 @@ def get_limiter_key():
     try:
         ip_address = get_remote_address()
         
-        # ALWAYS exempt localhost and internal IPs from rate limiting by returning None
+        # ALWAYS exempt localhost and internal IPs from rate limiting
         exempt_ips = ['127.0.0.1', 'localhost', '::1']
         if ip_address in exempt_ips:
-            return None  # Returning None exempts from rate limiting
+            # Return a special exempt key instead of None
+            return f"exempt:{ip_address}"
         
         return f"ip:{ip_address}"
         
