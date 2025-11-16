@@ -37,58 +37,66 @@ from supabase import create_client
 from telegram import Bot
 import httpx
 
+# Emergency recursion limit and logging fixes
+import sys
+sys.setrecursionlimit(5000)
+
 # Load environment variables from .env file
 load_dotenv()
 
 # =============================================================================
-# COMPREHENSIVE LOGGING SETUP
+# SAFE LOGGING SETUP (NO RECURSION)
 # =============================================================================
 
-def setup_logging():
-    """Configure comprehensive logging for the application"""
+def setup_safe_logging():
+    """Configure safe logging without recursion risks"""
     
     # Create logs directory if it doesn't exist
     if not os.path.exists('logs'):
         os.makedirs('logs')
     
+    # Create a safe formatter that can't cause recursion
+    class SafeFormatter(logging.Formatter):
+        def format(self, record):
+            try:
+                return super().format(record)
+            except RecursionError:
+                return f"RECURSION_ERROR: {record.name} {record.levelname}: {record.msg}"
+            except Exception:
+                return f"LOG_FORMAT_ERROR: {record.msg}"
+    
     # Configure root logger
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s %(name)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]',
+        format='%(asctime)s %(name)s %(levelname)s: %(message)s',
         handlers=[
-            # File handler for errors
-            RotatingFileHandler(
-                'logs/error.log', 
-                maxBytes=10485760,  # 10MB
-                backupCount=10,
-                encoding='utf-8'
-            ),
-            # File handler for general logs
-            RotatingFileHandler(
-                'logs/app.log', 
-                maxBytes=10485760,  # 10MB
-                backupCount=5,
-                encoding='utf-8'
-            ),
+            # File handler for errors - simplified
+            logging.FileHandler('logs/error.log', encoding='utf-8'),
             # Console handler
             logging.StreamHandler(sys.stdout)
         ]
     )
     
-    # Set specific log levels for different components
+    # Apply safe formatter to all handlers
+    formatter = SafeFormatter('%(asctime)s %(name)s %(levelname)s: %(message)s')
+    for handler in logging.getLogger().handlers:
+        handler.setFormatter(formatter)
+    
+    # Set specific log levels
     logging.getLogger('werkzeug').setLevel(logging.WARNING)
     logging.getLogger('supabase').setLevel(logging.WARNING)
     logging.getLogger('httpx').setLevel(logging.WARNING)
     logging.getLogger('urllib3').setLevel(logging.WARNING)
+    logging.getLogger('redis').setLevel(logging.WARNING)
     
-    # Create logger instance for this module
+    # Create logger instance
     logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
     
     return logger
 
-# Initialize logging
-logger = setup_logging()
+# Initialize safe logging
+logger = setup_safe_logging()
 
 # Debug: Check if environment variables are loaded
 logger.info("Loading environment variables...")
@@ -186,14 +194,97 @@ else:
     logger.info("Production configuration loaded")
 
 # =============================================================================
+# SAFE REDIS INITIALIZATION
+# =============================================================================
+
+class SafeRedis:
+    def __init__(self, redis_url):
+        self.redis_url = redis_url
+        self._client = None
+        self.logger = logging.getLogger(__name__)
+        self._connect()
+    
+    def _connect(self):
+        """Initialize Redis connection with error handling"""
+        try:
+            self._client = redis.from_url(
+                self.redis_url, 
+                decode_responses=True,
+                socket_connect_timeout=5,
+                socket_timeout=5,
+                retry_on_timeout=True,
+                max_connections=10
+            )
+            # Test connection
+            self._client.ping()
+            self.logger.info("Redis connection established successfully")
+        except Exception as e:
+            self.logger.error(f"Redis connection failed: {e}")
+            self._client = None
+    
+    def __getattr__(self, name):
+        """Delegate to redis client with reconnection logic"""
+        if self._client is None:
+            self._connect()
+            if self._client is None:
+                raise ConnectionError("Redis connection unavailable")
+        
+        attr = getattr(self._client, name)
+        
+        def safe_method(*args, **kwargs):
+            try:
+                return attr(*args, **kwargs)
+            except (redis.ConnectionError, redis.TimeoutError):
+                self.logger.warning("Redis connection lost, reconnecting...")
+                self._connect()
+                if self._client is None:
+                    return None
+                attr = getattr(self._client, name)
+                return attr(*args, **kwargs)
+            except Exception as e:
+                self.logger.error(f"Redis operation failed: {e}")
+                return None
+        
+        if callable(attr):
+            return safe_method
+        return attr
+    
+    def exists(self, key):
+        """Safe exists check"""
+        try:
+            if self._client:
+                return self._client.exists(key)
+            return False
+        except Exception:
+            return False
+    
+    def get(self, key, default=None):
+        """Safe get with default"""
+        try:
+            if self._client:
+                return self._client.get(key)
+            return default
+        except Exception:
+            return default
+    
+    def setex(self, key, time, value):
+        """Safe setex"""
+        try:
+            if self._client:
+                return self._client.setex(key, time, value)
+            return False
+        except Exception:
+            return False
+
+# Initialize Redis with safe wrapper
+redis_client = SafeRedis(app.config['REDIS_URL'])
+
+# =============================================================================
 # DATABASE INITIALIZATION
 # =============================================================================
 
 # Initialize Supabase client
 supabase = create_client(app.config.get('SUPABASE_URL'), app.config.get('SUPABASE_KEY'))
-
-# Initialize Redis client
-redis_client = redis.from_url(app.config['REDIS_URL'], decode_responses=True)
 
 # =============================================================================
 # EXTENSIONS INITIALIZATION
@@ -823,44 +914,50 @@ class EnhancedFraudDetector:
             pass
         return {'country': 'Unknown', 'city': 'Unknown'}
     
-    def track_user_activity(self, user_id, ip_address, device_fingerprint, action):
-        """Track user activity for pattern analysis"""
-        timestamp = datetime.now(timezone.utc).isoformat()
-        key = f"user_activity:{user_id}"
-        
-        activity = {
-            'timestamp': timestamp,
-            'ip': ip_address,
-            'device': device_fingerprint,
-            'action': action
-        }
-        
-        # Store last 100 activities (rotate)
-        self.redis.lpush(key, json.dumps(activity))
-        self.redis.ltrim(key, 0, 99)
-        self.redis.expire(key, 86400 * 30)  # Keep for 30 days
-        
+    def safe_track_user_activity(self, user_id, ip_address, device_fingerprint, action):
+        """Safe user activity tracking"""
+        try:
+            timestamp = datetime.now(timezone.utc).isoformat()
+            key = f"user_activity:{user_id}"
+            
+            activity = {
+                'timestamp': timestamp,
+                'ip': ip_address,
+                'device': device_fingerprint,
+                'action': action
+            }
+            
+            # Store last 100 activities (rotate)
+            self.redis.lpush(key, json.dumps(activity))
+            self.redis.ltrim(key, 0, 99)
+            self.redis.expire(key, 86400 * 30)  # Keep for 30 days
+        except Exception as e:
+            print(f"Activity tracking failed: {e}")
+    
     def detect_suspicious_signup(self, ip_address, device_fingerprint, user_data):
         """Detect suspicious registration patterns"""
         warnings = []
         
-        # Check IP-based registrations
-        ip_key = f"signups:ip:{ip_address}"
-        ip_signups = self.redis.get(ip_key) or 0
-        if int(ip_signups) >= self.MAX_ACCOUNTS_PER_IP:
-            warnings.append(f"Too many accounts from this IP ({ip_signups})")
-        
-        # Check device-based registrations
-        device_key = f"signups:device:{device_fingerprint}"
-        device_signups = self.redis.get(device_key) or 0
-        if int(device_signups) >= self.MAX_ACCOUNTS_PER_DEVICE:
-            warnings.append(f"Too many accounts from this device ({device_signups})")
-        
-        # Check rapid succession registrations
-        recent_signups_key = f"recent_signups:{ip_address}"
-        recent_count = self.redis.llen(recent_signups_key)
-        if recent_count >= 2:  # More than 2 signups in short period
-            warnings.append("Rapid succession registrations detected")
+        try:
+            # Check IP-based registrations
+            ip_key = f"signups:ip:{ip_address}"
+            ip_signups = self.redis.get(ip_key) or 0
+            if int(ip_signups) >= self.MAX_ACCOUNTS_PER_IP:
+                warnings.append(f"Too many accounts from this IP ({ip_signups})")
+            
+            # Check device-based registrations
+            device_key = f"signups:device:{device_fingerprint}"
+            device_signups = self.redis.get(device_key) or 0
+            if int(device_signups) >= self.MAX_ACCOUNTS_PER_DEVICE:
+                warnings.append(f"Too many accounts from this device ({device_signups})")
+            
+            # Check rapid succession registrations
+            recent_signups_key = f"recent_signups:{ip_address}"
+            recent_count = self.redis.llen(recent_signups_key)
+            if recent_count >= 2:  # More than 2 signups in short period
+                warnings.append("Rapid succession registrations detected")
+        except Exception as e:
+            print(f"Fraud detection error: {e}")
         
         return warnings
     
@@ -871,177 +968,201 @@ class EnhancedFraudDetector:
         ip_address = request.remote_addr
         device_fingerprint = self.get_device_fingerprint(request)
         
-        # Amount-based checks
-        if amount > self.SUSPICIOUS_AMOUNT_THRESHOLD:
-            warnings.append("Amount exceeds normal threshold")
-        
-        # New user with large withdrawal
-        user_created = datetime.fromisoformat(user.created_at.replace('Z', '+00:00'))
-        user_age_days = (datetime.now(timezone.utc) - user_created).days
-        if user_age_days < 1 and amount > self.NEW_USER_WITHDRAWAL_LIMIT:
-            warnings.append("New user with large withdrawal")
-        
-        # Frequency checks
-        withdrawal_count = self.get_recent_withdrawals_count(user_id, hours=1)
-        if withdrawal_count >= self.MAX_WITHDRAWALS_PER_HOUR:
-            warnings.append("Too many withdrawals in short period")
-        
-        # Device/IP anomaly detection
-        if self.detect_behavior_anomaly(user_id, ip_address, device_fingerprint, 'withdrawal'):
-            warnings.append("Unusual withdrawal pattern detected")
-        
-        # Time-based anomaly (2AM - 5AM)
-        current_hour = datetime.now(timezone.utc).hour
-        if 2 <= current_hour <= 5:
-            warnings.append("Unusual withdrawal time")
-        
-        # Geolocation anomaly
-        if self.detect_geolocation_anomaly(user_id, ip_address):
-            warnings.append("Suspicious location change")
+        try:
+            # Amount-based checks
+            if amount > self.SUSPICIOUS_AMOUNT_THRESHOLD:
+                warnings.append("Amount exceeds normal threshold")
+            
+            # New user with large withdrawal
+            user_created = datetime.fromisoformat(user.created_at.replace('Z', '+00:00'))
+            user_age_days = (datetime.now(timezone.utc) - user_created).days
+            if user_age_days < 1 and amount > self.NEW_USER_WITHDRAWAL_LIMIT:
+                warnings.append("New user with large withdrawal")
+            
+            # Frequency checks
+            withdrawal_count = self.get_recent_withdrawals_count(user_id, hours=1)
+            if withdrawal_count >= self.MAX_WITHDRAWALS_PER_HOUR:
+                warnings.append("Too many withdrawals in short period")
+            
+            # Device/IP anomaly detection
+            if self.detect_behavior_anomaly(user_id, ip_address, device_fingerprint, 'withdrawal'):
+                warnings.append("Unusual withdrawal pattern detected")
+            
+            # Time-based anomaly (2AM - 5AM)
+            current_hour = datetime.now(timezone.utc).hour
+            if 2 <= current_hour <= 5:
+                warnings.append("Unusual withdrawal time")
+            
+            # Geolocation anomaly
+            if self.detect_geolocation_anomaly(user_id, ip_address):
+                warnings.append("Suspicious location change")
+        except Exception as e:
+            print(f"Withdrawal fraud detection error: {e}")
         
         return warnings
     
     def get_recent_withdrawals_count(self, user_id, hours=1):
         """Count recent withdrawals for a user"""
-        key = f"withdrawals:user:{user_id}:recent"
-        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours)
-        
-        # Get withdrawals from last hour and filter
-        withdrawals = self.redis.lrange(key, 0, -1)
-        recent_withdrawals = [
-            w for w in withdrawals 
-            if datetime.fromisoformat(json.loads(w)['timestamp']) > cutoff_time
-        ]
-        
-        return len(recent_withdrawals)
+        try:
+            key = f"withdrawals:user:{user_id}:recent"
+            cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours)
+            
+            # Get withdrawals from last hour and filter
+            withdrawals = self.redis.lrange(key, 0, -1)
+            recent_withdrawals = [
+                w for w in withdrawals 
+                if datetime.fromisoformat(json.loads(w)['timestamp']) > cutoff_time
+            ]
+            
+            return len(recent_withdrawals)
+        except Exception:
+            return 0
     
     def detect_behavior_anomaly(self, user_id, current_ip, current_device, action):
         """Detect anomalies in user behavior patterns"""
-        activity_key = f"user_activity:{user_id}"
-        activities = self.redis.lrange(activity_key, 0, 49)  # Last 50 activities
-        
-        if not activities:
+        try:
+            activity_key = f"user_activity:{user_id}"
+            activities = self.redis.lrange(activity_key, 0, 49)  # Last 50 activities
+            
+            if not activities:
+                return False
+            
+            # Analyze patterns
+            unique_ips = set()
+            unique_devices = set()
+            
+            for activity_json in activities:
+                activity = json.loads(activity_json)
+                unique_ips.add(activity['ip'])
+                unique_devices.add(activity['device'])
+            
+            # Check if current IP/device is new
+            if current_ip not in unique_ips and len(unique_ips) > 0:
+                return True
+            
+            if current_device not in unique_devices and len(unique_devices) > 0:
+                return True
+        except Exception:
             return False
-        
-        # Analyze patterns
-        unique_ips = set()
-        unique_devices = set()
-        
-        for activity_json in activities:
-            activity = json.loads(activity_json)
-            unique_ips.add(activity['ip'])
-            unique_devices.add(activity['device'])
-        
-        # Check if current IP/device is new
-        if current_ip not in unique_ips and len(unique_ips) > 0:
-            return True
-        
-        if current_device not in unique_devices and len(unique_devices) > 0:
-            return True
             
         return False
     
     def detect_geolocation_anomaly(self, user_id, current_ip):
         """Detect suspicious geolocation changes"""
-        current_geo = self.get_ip_geolocation(current_ip)
-        if current_geo.get('country') == 'Unknown':
+        try:
+            current_geo = self.get_ip_geolocation(current_ip)
+            if current_geo.get('country') == 'Unknown':
+                return False
+            
+            # Get previous locations from user activity
+            activity_key = f"user_activity:{user_id}"
+            activities = self.redis.lrange(activity_key, 0, 99)
+            
+            previous_countries = set()
+            for activity_json in activities:
+                activity = json.loads(activity_json)
+                geo = self.get_ip_geolocation(activity['ip'])
+                if geo.get('country') != 'Unknown':
+                    previous_countries.add(geo['country'])
+            
+            # If current country is different from all previous countries
+            if (previous_countries and 
+                current_geo.get('country') not in previous_countries):
+                return True
+        except Exception:
             return False
-        
-        # Get previous locations from user activity
-        activity_key = f"user_activity:{user_id}"
-        activities = self.redis.lrange(activity_key, 0, 99)
-        
-        previous_countries = set()
-        for activity_json in activities:
-            activity = json.loads(activity_json)
-            geo = self.get_ip_geolocation(activity['ip'])
-            if geo.get('country') != 'Unknown':
-                previous_countries.add(geo['country'])
-        
-        # If current country is different from all previous countries
-        if (previous_countries and 
-            current_geo.get('country') not in previous_countries):
-            return True
             
         return False
     
     def block_suspicious_activity(self, user_id, reason, duration_hours=24):
         """Temporarily block user due to suspicious activity"""
-        block_key = f"user_blocked:{user_id}"
-        block_data = {
-            'reason': reason,
-            'blocked_until': (datetime.now(timezone.utc) + 
-                            timedelta(hours=duration_hours)).isoformat(),
-            'blocked_at': datetime.now(timezone.utc).isoformat()
-        }
-        
-        self.redis.setex(block_key, duration_hours * 3600, json.dumps(block_data))
-        
-        # Log security event
-        SecurityMonitor.log_security_event(
-            "USER_BLOCKED_FRAUD",
-            user_id,
-            {"reason": reason, "duration_hours": duration_hours}
-        )
-        
-        self.logger.warning(f"User {user_id} blocked for {duration_hours}h: {reason}")
+        try:
+            block_key = f"user_blocked:{user_id}"
+            block_data = {
+                'reason': reason,
+                'blocked_until': (datetime.now(timezone.utc) + 
+                                timedelta(hours=duration_hours)).isoformat(),
+                'blocked_at': datetime.now(timezone.utc).isoformat()
+            }
+            
+            self.redis.setex(block_key, duration_hours * 3600, json.dumps(block_data))
+            
+            # Log security event
+            SecurityMonitor.log_security_event(
+                "USER_BLOCKED_FRAUD",
+                user_id,
+                {"reason": reason, "duration_hours": duration_hours}
+            )
+            
+            self.logger.warning(f"User {user_id} blocked for {duration_hours}h: {reason}")
+        except Exception as e:
+            print(f"Block user error: {e}")
     
-    def is_user_blocked(self, user_id):
-        """Check if user is currently blocked"""
-        block_key = f"user_blocked:{user_id}"
-        block_data = self.redis.get(block_key)
-        
-        if block_data:
-            data = json.loads(block_data)
-            blocked_until = datetime.fromisoformat(data['blocked_until'])
-            if datetime.now(timezone.utc) < blocked_until:
-                return True
-            else:
-                # Remove expired block
-                self.redis.delete(block_key)
-        
-        return False
+    def safe_is_user_blocked(self, user_id):
+        """Safe user block check"""
+        try:
+            block_key = f"user_blocked:{user_id}"
+            block_data = self.redis.get(block_key)
+            
+            if block_data:
+                data = json.loads(block_data)
+                blocked_until = datetime.fromisoformat(data['blocked_until'])
+                if datetime.now(timezone.utc) < blocked_until:
+                    return True
+                else:
+                    # Remove expired block
+                    self.redis.delete(block_key)
+            
+            return False
+        except Exception:
+            return False
     
     def increment_signup_counter(self, ip_address, device_fingerprint):
         """Increment counters for IP and device signups"""
-        # IP-based counter (reset after 24 hours)
-        ip_key = f"signups:ip:{ip_address}"
-        self.redis.incr(ip_key)
-        self.redis.expire(ip_key, 86400)  # 24 hours
-        
-        # Device-based counter (reset after 24 hours)
-        device_key = f"signups:device:{device_fingerprint}"
-        self.redis.incr(device_key)
-        self.redis.expire(device_key, 86400)  # 24 hours
-        
-        # Recent signups list (keep for 1 hour)
-        recent_key = f"recent_signups:{ip_address}"
-        self.redis.lpush(recent_key, datetime.now(timezone.utc).isoformat())
-        self.redis.expire(recent_key, 3600)  # 1 hour
-        self.redis.ltrim(recent_key, 0, 4)  # Keep only last 5
+        try:
+            # IP-based counter (reset after 24 hours)
+            ip_key = f"signups:ip:{ip_address}"
+            self.redis.incr(ip_key)
+            self.redis.expire(ip_key, 86400)  # 24 hours
+            
+            # Device-based counter (reset after 24 hours)
+            device_key = f"signups:device:{device_fingerprint}"
+            self.redis.incr(device_key)
+            self.redis.expire(device_key, 86400)  # 24 hours
+            
+            # Recent signups list (keep for 1 hour)
+            recent_key = f"recent_signups:{ip_address}"
+            self.redis.lpush(recent_key, datetime.now(timezone.utc).isoformat())
+            self.redis.expire(recent_key, 3600)  # 1 hour
+            self.redis.ltrim(recent_key, 0, 4)  # Keep only last 5
+        except Exception as e:
+            print(f"Increment signup counter error: {e}")
     
     def log_withdrawal_attempt(self, user_id, amount, ip_address, device_fingerprint):
         """Log withdrawal attempt for pattern analysis"""
-        withdrawal_data = {
-            'timestamp': datetime.now(timezone.utc).isoformat(),
-            'amount': amount,
-            'ip': ip_address,
-            'device': device_fingerprint
-        }
-        
-        key = f"withdrawals:user:{user_id}:recent"
-        self.redis.lpush(key, json.dumps(withdrawal_data))
-        self.redis.ltrim(key, 0, 99)  # Keep last 100 withdrawals
-        self.redis.expire(key, 86400 * 7)  # Keep for 7 days
+        try:
+            withdrawal_data = {
+                'timestamp': datetime.now(timezone.utc).isoformat(),
+                'amount': amount,
+                'ip': ip_address,
+                'device': device_fingerprint
+            }
+            
+            key = f"withdrawals:user:{user_id}:recent"
+            self.redis.lpush(key, json.dumps(withdrawal_data))
+            self.redis.ltrim(key, 0, 99)  # Keep last 100 withdrawals
+            self.redis.expire(key, 86400 * 7)  # Keep for 7 days
+        except Exception as e:
+            print(f"Log withdrawal attempt error: {e}")
 
 # Initialize enhanced fraud detector
 fraud_detector = EnhancedFraudDetector(redis_client, supabase)
 
 # =============================================================================
-# SECURITY MIDDLEWARE
+# SAFE SECURITY MIDDLEWARE (NO RECURSION)
 # =============================================================================
 
-class SecurityMiddleware:
+class SafeSecurityMiddleware:
     def __init__(self, app, fraud_detector):
         self.app = app
         self.fraud_detector = fraud_detector
@@ -1057,53 +1178,42 @@ class SecurityMiddleware:
             request.path == '/sitemap.xml'):
             return self.app(environ, start_response)
         
-        # Check for suspicious requests before processing
+        # Safe pre-request checks
         try:
-            self.pre_request_checks(request)
+            self.safe_pre_request_checks(request)
         except Exception as e:
-            # If there's an error in security checks, log but don't block
+            # Log but don't let security checks break the app
             self.logger.error(f"Security check error: {str(e)}")
         
         return self.app(environ, start_response)
     
-    def pre_request_checks(self, request):
-        """Perform security checks before processing request"""
+    def safe_pre_request_checks(self, request):
+        """Perform security checks without recursion risk"""
         ip_address = request.remote_addr
-        device_fingerprint = self.fraud_detector.get_device_fingerprint(request)
         
-        # Check for known malicious IPs
-        if self.is_ip_blacklisted(ip_address):
+        # Check for known malicious IPs (safe version)
+        if self.safe_is_ip_blacklisted(ip_address):
             self.logger.warning(f"Blocked blacklisted IP: {ip_address}")
             abort(403, description="Access denied")
         
         # Rate limiting by IP (basic protection)
-        if self.is_ip_rate_limited(ip_address):
+        if self.safe_is_ip_rate_limited(ip_address):
             self.logger.warning(f"Rate limited IP: {ip_address}")
             abort(429, description="Too many requests")
-        
-        # Check for suspicious user agents
-        user_agent = request.headers.get('User-Agent', '')
-        if self.is_suspicious_user_agent(user_agent):
-            self.logger.warning(f"Suspicious User-Agent: {user_agent[:100]}")
-            # Just log for suspicious user agents, don't block
-            # You could add this to SecurityMonitor if available
-            self.log_security_event(
-                "SUSPICIOUS_USER_AGENT",
-                None,
-                {"ip": ip_address, "user_agent": user_agent}
-            )
     
-    def is_ip_blacklisted(self, ip_address):
-        """Check if IP is in blacklist"""
+    def safe_is_ip_blacklisted(self, ip_address):
+        """Safe IP blacklist check without recursion"""
         try:
+            # Use direct Redis methods with safety
             blacklist_key = f"ip_blacklist:{ip_address}"
-            return bool(redis_client.exists(blacklist_key))
+            return redis_client.exists(blacklist_key)
         except Exception as e:
-            self.logger.error(f"Redis blacklist check failed: {str(e)}")
+            # Use print instead of logger to avoid recursion
+            print(f"Redis blacklist check failed: {str(e)}")
             return False
     
-    def is_ip_rate_limited(self, ip_address):
-        """Basic IP-based rate limiting"""
+    def safe_is_ip_rate_limited(self, ip_address):
+        """Safe IP rate limiting without recursion"""
         try:
             rate_limit_key = f"rate_limit:ip:{ip_address}"
             current = redis_client.incr(rate_limit_key)
@@ -1113,25 +1223,11 @@ class SecurityMiddleware:
             
             return current > 1000  # 1000 requests per minute
         except Exception as e:
-            self.logger.error(f"Redis rate limit check failed: {str(e)}")
+            print(f"Redis rate limit check failed: {str(e)}")
             return False  # Don't rate limit if Redis is down
-    
-    def is_suspicious_user_agent(self, user_agent):
-        """Detect suspicious/bot user agents"""
-        suspicious_patterns = [
-            'bot', 'crawler', 'spider', 'scraper', 'python-requests',
-            'curl', 'wget', 'masscan', 'zgrab', 'nmap'
-        ]
-        
-        user_agent_lower = user_agent.lower()
-        return any(pattern in user_agent_lower for pattern in suspicious_patterns)
-    
-    def log_security_event(self, event_type, user_id, metadata):
-        """Log security events - replace with your actual SecurityMonitor if available"""
-        self.logger.warning(f"Security event: {event_type}, User: {user_id}, Metadata: {metadata}")
 
-# Apply security middleware
-security_middleware = SecurityMiddleware(app, fraud_detector)
+# Apply safe security middleware
+security_middleware = SafeSecurityMiddleware(app, fraud_detector)
 app.wsgi_app = security_middleware
 
 # =============================================================================
@@ -3125,7 +3221,7 @@ def api_request_withdrawal():
             return jsonify({"error": "Account deactivated"}), 403
         
         # Check if user is blocked for fraud
-        if fraud_detector.is_user_blocked(user.id):
+        if fraud_detector.safe_is_user_blocked(user.id):
             return jsonify({"error": "Account temporarily blocked for security reasons. Please contact support."}), 423
         
         if user.is_locked():
@@ -3442,7 +3538,7 @@ def health_check():
 @admin_required
 def detailed_health_check():
     """Detailed health check for administrators"""
-    health_monitor = HealthMonitor(supabase, redis_client, app.config)  # Add redis_client
+    health_monitor = HealthMonitor(supabase, redis_client, app.config)
     health_status = health_monitor.comprehensive_health_check()
     
     return jsonify(health_status)
@@ -3459,6 +3555,32 @@ def readiness_check():
 def liveness_check():
     return jsonify({'status': 'alive', 'timestamp': datetime.now(timezone.utc).isoformat()})
 
+@app.route('/health/emergency')
+def emergency_health_check():
+    """Emergency health check that never fails"""
+    health_info = {
+        'status': 'alive',
+        'timestamp': datetime.now(timezone.utc).isoformat(),
+        'python_version': sys.version,
+        'platform': sys.platform
+    }
+    
+    # Test Redis
+    try:
+        redis_status = redis_client.ping() if hasattr(redis_client, 'ping') else 'unknown'
+        health_info['redis'] = redis_status
+    except Exception as e:
+        health_info['redis'] = f'error: {str(e)}'
+    
+    # Test Supabase
+    try:
+        response = supabase.table('users').select('*').limit(1).execute()
+        health_info['supabase'] = 'connected' if response.data is not None else 'no_data'
+    except Exception as e:
+        health_info['supabase'] = f'error: {str(e)}'
+    
+    return jsonify(health_info)
+
 # Health monitoring background task
 def start_health_monitoring():
     """Start background health monitoring safely in a thread."""
@@ -3467,7 +3589,7 @@ def start_health_monitoring():
         
         # Make sure we have Flask context in this thread
         with app.app_context():
-            health_monitor = HealthMonitor(supabase, redis_client, app.config)  # Add redis_client
+            health_monitor = HealthMonitor(supabase, redis_client, app.config)
 
             while True:
                 try:
@@ -5400,8 +5522,6 @@ def handle_exception(error):
 # APPLICATION INITIALIZATION
 # =============================================================================
 
-# Remove old logging setup since we now have comprehensive logging
-
 # Fix console logging encoding
 if sys.stdout.encoding != 'utf-8':
     import codecs
@@ -5629,6 +5749,7 @@ if __name__ == '__main__':
         print(f"Server starting on {host}:{port}")
         print(f"Health endpoint: http://{host}:{port}/health")
         print(f"Detailed health: http://{host}:{port}/health/detailed")
+        print(f"Emergency health: http://{host}:{port}/health/emergency")
         print(f"Fraud monitoring: http://{host}:{port}/admin/fraud-monitoring")
         print(f"Minimum withdrawal: KSH {app.config['WITHDRAWAL_MIN_AMOUNT']}")
 
