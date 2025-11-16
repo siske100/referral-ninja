@@ -180,6 +180,19 @@ class Config:
     SUSPICIOUS_AMOUNT_THRESHOLD = 2000
     NEW_USER_WITHDRAWAL_LIMIT = 1000
     FRAUD_BLOCK_DURATION_HOURS = 24
+    
+    # Rate limiting settings
+    RATE_LIMITING_ENABLED = True
+    RATE_LIMIT_STORAGE_URL = os.environ.get('REDIS_URL', 'memory://')
+    RATE_LIMIT_STRATEGY = 'moving-window'
+    RATE_LIMIT_HEADERS_ENABLED = True
+    
+    # Rate limit tiers
+    RATE_LIMITS = {
+        'strict': ["100 per day", "20 per hour"],
+        'normal': ["1000 per day", "100 per hour", "10 per minute"],
+        'generous': ["5000 per day", "1000 per hour", "100 per minute"]
+    }
 
 class DevelopmentConfig(Config):
     SESSION_COOKIE_SECURE = False
@@ -390,6 +403,66 @@ except Exception as e:
 supabase = create_client(app.config.get('SUPABASE_URL'), app.config.get('SUPABASE_KEY'))
 
 # =============================================================================
+# ENHANCED RATE LIMITING CONFIGURATION
+# =============================================================================
+
+def get_limiter_key():
+    """Enhanced rate limiting key function with better error handling"""
+    # First try to use authenticated user ID
+    try:
+        if hasattr(current_app, 'login_manager'):
+            from flask_login import current_user
+            if current_user.is_authenticated:
+                return f"user:{current_user.id}"
+    except Exception as e:
+        current_app.logger.debug(f"User-based rate limit key failed: {e}")
+    
+    # Fall back to IP address with safe handling
+    try:
+        ip_address = get_remote_address()
+        
+        # Don't rate limit localhost and internal IPs in development
+        exempt_ips = ['127.0.0.1', 'localhost', '::1']
+        if ip_address in exempt_ips:
+            # Check if we're in development mode safely
+            try:
+                if current_app.debug or current_app.config.get('ENV') == 'development':
+                    return "exempt_development"
+            except:
+                pass
+        
+        return f"ip:{ip_address}"
+        
+    except Exception as e:
+        current_app.logger.error(f"Rate limit IP fallback failed: {e}")
+        return f"unknown:{int(time.time())}"
+
+# Safe rate limiter initialization with fallbacks
+try:
+    rate_limiter = Limiter(
+        app=app,
+        key_func=get_limiter_key,
+        storage_uri=app.config.get("REDIS_URL", "memory://"),
+        default_limits=["2000 per day", "500 per hour", "50 per minute"],  # Balanced limits
+        strategy="moving-window",  # Better than fixed-window
+        on_breach=lambda limit: current_app.logger.warning(f"Rate limit breached: {limit}"),
+        headers_enabled=True,
+        fail_on_first_breach=False  # Don't crash if Redis fails
+    )
+    logger.info("Rate limiter initialized successfully")
+except Exception as e:
+    logger.error(f"Rate limiter initialization failed: {e}")
+    # Fallback to memory-based limiter
+    rate_limiter = Limiter(
+        app=app,
+        key_func=get_limiter_key,
+        storage_uri="memory://",
+        default_limits=["1000 per day", "200 per hour", "20 per minute"],  # Conservative memory limits
+        strategy="moving-window"
+    )
+    logger.info("Rate limiter fallback to memory storage")
+
+# =============================================================================
 # EXTENSIONS INITIALIZATION
 # =============================================================================
 
@@ -399,46 +472,6 @@ jwt = JWTManager(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message_category = 'info'
-
-# Improved key function for rate limiting that uses user ID when available
-def get_limiter_key():
-    """Use user ID if authenticated, otherwise IP address."""
-    try:
-        # Import here to avoid circular imports
-        from flask_login import current_user
-        
-        if hasattr(current_user, 'is_authenticated') and current_user.is_authenticated:
-            return f"user:{current_user.id}"
-    except Exception as e:
-        # Log but don't crash
-        current_app.logger.debug(f"Rate limit key error: {e}")
-    
-    # Fall back to IP address
-    try:
-        return get_remote_address()
-    except Exception as e:
-        current_app.logger.error(f"Rate limit IP fallback failed: {e}")
-        return "unknown"
-
-# Initialize rate limiter with fallback
-try:
-    rate_limiter = Limiter(
-        app=app,
-        key_func=get_limiter_key,
-        storage_uri=app.config.get("REDIS_URL", "memory://"),
-        default_limits=["1000 per day", "200 per hour", "40 per minute"],
-        strategy="fixed-window",
-        on_breach=lambda limit: current_app.logger.warning(f"Rate limit hit: {limit}")
-    )
-    logger.info("Redis-backed rate limiter initialized")
-except Exception as e:
-    logger.error(f"Redis rate limiter failed, using memory fallback: {e}")
-    rate_limiter = Limiter(
-        app=app,
-        key_func=get_limiter_key,
-        storage_uri="memory://",
-        default_limits=["500 per day", "100 per hour", "20 per minute"]  # More conservative limits for memory
-    )
 
 # =============================================================================
 # DATABASE MODELS
@@ -3715,6 +3748,57 @@ def emergency_health_check():
     
     return jsonify(health_info)
 
+# Rate limiting test routes
+@app.route('/rate-limit-test')
+def rate_limit_test():
+    """Test endpoint to check rate limiting"""
+    from flask_limiter import Limiter
+    from flask_limiter.util import get_remote_address
+    
+    test_limiter = Limiter(
+        key_func=get_remote_address,
+        storage_uri="memory://",
+        default_limits=["10 per minute"]
+    )
+    
+    @test_limiter.limit("5 per minute")
+    def test_function():
+        return jsonify({
+            "message": "Rate limit test successful",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "ip": get_remote_address(),
+            "limits": "5 requests per minute"
+        })
+    
+    return test_function()
+
+@app.route('/rate-limit-status')
+def rate_limit_status():
+    """Check current rate limit status"""
+    try:
+        from flask_limiter import Limiter
+        from flask_limiter.util import get_remote_address
+        
+        # Test Redis connection for rate limiting
+        if redis_client.ping():
+            storage_status = "redis"
+        else:
+            storage_status = "memory"
+        
+        return jsonify({
+            "status": "active",
+            "storage": storage_status,
+            "your_ip": get_remote_address(),
+            "key_used": get_limiter_key(),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
+
 # Health monitoring background task
 def start_health_monitoring():
     """Start background health monitoring safely in a thread."""
@@ -5876,6 +5960,7 @@ if __name__ == '__main__':
         print("PAYMENT-ONLY USER STORAGE: ENABLED")
         print("ENHANCED FRAUD DETECTION: ENABLED")
         print("IP/DEVICE TRACKING: ENABLED")
+        print("ENHANCED RATE LIMITING: ENABLED")
 
         port = int(os.environ.get('PORT', 10000))
         host = '0.0.0.0'
@@ -5885,6 +5970,7 @@ if __name__ == '__main__':
         print(f"Detailed health: http://{host}:{port}/health/detailed")
         print(f"Emergency health: http://{host}:{port}/health/emergency")
         print(f"Fraud monitoring: http://{host}:{port}/admin/fraud-monitoring")
+        print(f"Rate limit status: http://{host}:{port}/rate-limit-status")
         print(f"Minimum withdrawal: KSH {app.config['WITHDRAWAL_MIN_AMOUNT']}")
 
         logger.info(f"Starting Flask app on {host}:{port}")
