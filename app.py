@@ -23,7 +23,7 @@ import psutil
 import psycopg2
 import redis
 from dotenv import load_dotenv
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, Blueprint, current_app
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, Blueprint, current_app, abort
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from flask_bcrypt import Bcrypt
@@ -111,6 +111,15 @@ class Config:
     SESSION_COOKIE_SECURE = True  # Always True in production
     SESSION_COOKIE_HTTPONLY = True
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
+    
+    # Fraud Detection Settings
+    MAX_ACCOUNTS_PER_IP = 3
+    MAX_ACCOUNTS_PER_DEVICE = 2
+    MAX_WITHDRAWALS_PER_HOUR = 3
+    MAX_LOGIN_ATTEMPTS_PER_HOUR = 10
+    SUSPICIOUS_AMOUNT_THRESHOLD = 2000
+    NEW_USER_WITHDRAWAL_LIMIT = 1000
+    FRAUD_BLOCK_DURATION_HOURS = 24
 
 class DevelopmentConfig(Config):
     SESSION_COOKIE_SECURE = False
@@ -724,6 +733,338 @@ class SupabaseDB:
             return SupabaseDB.handle_db_error("get_total_balance", e, False)
 
 # =============================================================================
+# ENHANCED FRAUD DETECTION SYSTEM
+# =============================================================================
+
+class EnhancedFraudDetector:
+    def __init__(self, redis_client, supabase_client):
+        self.redis = redis_client
+        self.supabase = supabase_client
+        self.logger = logging.getLogger(__name__)
+        
+        # Fraud detection thresholds (configurable)
+        self.MAX_ACCOUNTS_PER_IP = app.config.get('MAX_ACCOUNTS_PER_IP', 3)
+        self.MAX_ACCOUNTS_PER_DEVICE = app.config.get('MAX_ACCOUNTS_PER_DEVICE', 2)
+        self.MAX_WITHDRAWALS_PER_HOUR = app.config.get('MAX_WITHDRAWALS_PER_HOUR', 3)
+        self.MAX_LOGIN_ATTEMPTS_PER_HOUR = app.config.get('MAX_LOGIN_ATTEMPTS_PER_HOUR', 10)
+        self.SUSPICIOUS_AMOUNT_THRESHOLD = app.config.get('SUSPICIOUS_AMOUNT_THRESHOLD', 2000)
+        self.NEW_USER_WITHDRAWAL_LIMIT = app.config.get('NEW_USER_WITHDRAWAL_LIMIT', 1000)
+        
+    def get_device_fingerprint(self, request):
+        """Generate a unique device fingerprint"""
+        user_agent = request.headers.get('User-Agent', '')
+        accept_language = request.headers.get('Accept-Language', '')
+        accept_encoding = request.headers.get('Accept-Encoding', '')
+        
+        fingerprint_string = f"{user_agent}{accept_language}{accept_encoding}"
+        device_hash = hashlib.md5(fingerprint_string.encode()).hexdigest()
+        return device_hash
+    
+    def get_ip_geolocation(self, ip_address):
+        """Get approximate geolocation for IP (using free service)"""
+        try:
+            # Using ipapi.co free tier (1000 requests/month)
+            response = requests.get(f"http://ipapi.co/{ip_address}/json/", timeout=5)
+            if response.status_code == 200:
+                return response.json()
+        except Exception:
+            pass
+        return {'country': 'Unknown', 'city': 'Unknown'}
+    
+    def track_user_activity(self, user_id, ip_address, device_fingerprint, action):
+        """Track user activity for pattern analysis"""
+        timestamp = datetime.now(timezone.utc).isoformat()
+        key = f"user_activity:{user_id}"
+        
+        activity = {
+            'timestamp': timestamp,
+            'ip': ip_address,
+            'device': device_fingerprint,
+            'action': action
+        }
+        
+        # Store last 100 activities (rotate)
+        self.redis.lpush(key, json.dumps(activity))
+        self.redis.ltrim(key, 0, 99)
+        self.redis.expire(key, 86400 * 30)  # Keep for 30 days
+        
+    def detect_suspicious_signup(self, ip_address, device_fingerprint, user_data):
+        """Detect suspicious registration patterns"""
+        warnings = []
+        
+        # Check IP-based registrations
+        ip_key = f"signups:ip:{ip_address}"
+        ip_signups = self.redis.get(ip_key) or 0
+        if int(ip_signups) >= self.MAX_ACCOUNTS_PER_IP:
+            warnings.append(f"Too many accounts from this IP ({ip_signups})")
+        
+        # Check device-based registrations
+        device_key = f"signups:device:{device_fingerprint}"
+        device_signups = self.redis.get(device_key) or 0
+        if int(device_signups) >= self.MAX_ACCOUNTS_PER_DEVICE:
+            warnings.append(f"Too many accounts from this device ({device_signups})")
+        
+        # Check rapid succession registrations
+        recent_signups_key = f"recent_signups:{ip_address}"
+        recent_count = self.redis.llen(recent_signups_key)
+        if recent_count >= 2:  # More than 2 signups in short period
+            warnings.append("Rapid succession registrations detected")
+        
+        return warnings
+    
+    def detect_suspicious_withdrawal(self, user, amount, request):
+        """Enhanced withdrawal fraud detection"""
+        warnings = []
+        user_id = user.id
+        ip_address = request.remote_addr
+        device_fingerprint = self.get_device_fingerprint(request)
+        
+        # Amount-based checks
+        if amount > self.SUSPICIOUS_AMOUNT_THRESHOLD:
+            warnings.append("Amount exceeds normal threshold")
+        
+        # New user with large withdrawal
+        user_created = datetime.fromisoformat(user.created_at.replace('Z', '+00:00'))
+        user_age_days = (datetime.now(timezone.utc) - user_created).days
+        if user_age_days < 1 and amount > self.NEW_USER_WITHDRAWAL_LIMIT:
+            warnings.append("New user with large withdrawal")
+        
+        # Frequency checks
+        withdrawal_count = self.get_recent_withdrawals_count(user_id, hours=1)
+        if withdrawal_count >= self.MAX_WITHDRAWALS_PER_HOUR:
+            warnings.append("Too many withdrawals in short period")
+        
+        # Device/IP anomaly detection
+        if self.detect_behavior_anomaly(user_id, ip_address, device_fingerprint, 'withdrawal'):
+            warnings.append("Unusual withdrawal pattern detected")
+        
+        # Time-based anomaly (2AM - 5AM)
+        current_hour = datetime.now(timezone.utc).hour
+        if 2 <= current_hour <= 5:
+            warnings.append("Unusual withdrawal time")
+        
+        # Geolocation anomaly
+        if self.detect_geolocation_anomaly(user_id, ip_address):
+            warnings.append("Suspicious location change")
+        
+        return warnings
+    
+    def get_recent_withdrawals_count(self, user_id, hours=1):
+        """Count recent withdrawals for a user"""
+        key = f"withdrawals:user:{user_id}:recent"
+        cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours)
+        
+        # Get withdrawals from last hour and filter
+        withdrawals = self.redis.lrange(key, 0, -1)
+        recent_withdrawals = [
+            w for w in withdrawals 
+            if datetime.fromisoformat(json.loads(w)['timestamp']) > cutoff_time
+        ]
+        
+        return len(recent_withdrawals)
+    
+    def detect_behavior_anomaly(self, user_id, current_ip, current_device, action):
+        """Detect anomalies in user behavior patterns"""
+        activity_key = f"user_activity:{user_id}"
+        activities = self.redis.lrange(activity_key, 0, 49)  # Last 50 activities
+        
+        if not activities:
+            return False
+        
+        # Analyze patterns
+        unique_ips = set()
+        unique_devices = set()
+        
+        for activity_json in activities:
+            activity = json.loads(activity_json)
+            unique_ips.add(activity['ip'])
+            unique_devices.add(activity['device'])
+        
+        # Check if current IP/device is new
+        if current_ip not in unique_ips and len(unique_ips) > 0:
+            return True
+        
+        if current_device not in unique_devices and len(unique_devices) > 0:
+            return True
+            
+        return False
+    
+    def detect_geolocation_anomaly(self, user_id, current_ip):
+        """Detect suspicious geolocation changes"""
+        current_geo = self.get_ip_geolocation(current_ip)
+        if current_geo.get('country') == 'Unknown':
+            return False
+        
+        # Get previous locations from user activity
+        activity_key = f"user_activity:{user_id}"
+        activities = self.redis.lrange(activity_key, 0, 99)
+        
+        previous_countries = set()
+        for activity_json in activities:
+            activity = json.loads(activity_json)
+            geo = self.get_ip_geolocation(activity['ip'])
+            if geo.get('country') != 'Unknown':
+                previous_countries.add(geo['country'])
+        
+        # If current country is different from all previous countries
+        if (previous_countries and 
+            current_geo.get('country') not in previous_countries):
+            return True
+            
+        return False
+    
+    def block_suspicious_activity(self, user_id, reason, duration_hours=24):
+        """Temporarily block user due to suspicious activity"""
+        block_key = f"user_blocked:{user_id}"
+        block_data = {
+            'reason': reason,
+            'blocked_until': (datetime.now(timezone.utc) + 
+                            timedelta(hours=duration_hours)).isoformat(),
+            'blocked_at': datetime.now(timezone.utc).isoformat()
+        }
+        
+        self.redis.setex(block_key, duration_hours * 3600, json.dumps(block_data))
+        
+        # Log security event
+        SecurityMonitor.log_security_event(
+            "USER_BLOCKED_FRAUD",
+            user_id,
+            {"reason": reason, "duration_hours": duration_hours}
+        )
+        
+        self.logger.warning(f"User {user_id} blocked for {duration_hours}h: {reason}")
+    
+    def is_user_blocked(self, user_id):
+        """Check if user is currently blocked"""
+        block_key = f"user_blocked:{user_id}"
+        block_data = self.redis.get(block_key)
+        
+        if block_data:
+            data = json.loads(block_data)
+            blocked_until = datetime.fromisoformat(data['blocked_until'])
+            if datetime.now(timezone.utc) < blocked_until:
+                return True
+            else:
+                # Remove expired block
+                self.redis.delete(block_key)
+        
+        return False
+    
+    def increment_signup_counter(self, ip_address, device_fingerprint):
+        """Increment counters for IP and device signups"""
+        # IP-based counter (reset after 24 hours)
+        ip_key = f"signups:ip:{ip_address}"
+        self.redis.incr(ip_key)
+        self.redis.expire(ip_key, 86400)  # 24 hours
+        
+        # Device-based counter (reset after 24 hours)
+        device_key = f"signups:device:{device_fingerprint}"
+        self.redis.incr(device_key)
+        self.redis.expire(device_key, 86400)  # 24 hours
+        
+        # Recent signups list (keep for 1 hour)
+        recent_key = f"recent_signups:{ip_address}"
+        self.redis.lpush(recent_key, datetime.now(timezone.utc).isoformat())
+        self.redis.expire(recent_key, 3600)  # 1 hour
+        self.redis.ltrim(recent_key, 0, 4)  # Keep only last 5
+    
+    def log_withdrawal_attempt(self, user_id, amount, ip_address, device_fingerprint):
+        """Log withdrawal attempt for pattern analysis"""
+        withdrawal_data = {
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'amount': amount,
+            'ip': ip_address,
+            'device': device_fingerprint
+        }
+        
+        key = f"withdrawals:user:{user_id}:recent"
+        self.redis.lpush(key, json.dumps(withdrawal_data))
+        self.redis.ltrim(key, 0, 99)  # Keep last 100 withdrawals
+        self.redis.expire(key, 86400 * 7)  # Keep for 7 days
+
+# Initialize enhanced fraud detector
+fraud_detector = EnhancedFraudDetector(redis_client, supabase)
+
+# =============================================================================
+# SECURITY MIDDLEWARE
+# =============================================================================
+
+class SecurityMiddleware:
+    def __init__(self, app, fraud_detector):
+        self.app = app
+        self.fraud_detector = fraud_detector
+        self.logger = logging.getLogger(__name__)
+    
+    def __call__(self, environ, start_response):
+        request = Request(environ)
+        
+        # Skip security checks for health endpoints and static files
+        if (request.path.startswith('/health') or 
+            request.path.startswith('/static') or
+            request.path == '/robots.txt' or
+            request.path == '/sitemap.xml'):
+            return self.app(environ, start_response)
+        
+        # Check for suspicious requests before processing
+        self.pre_request_checks(request)
+        
+        return self.app(environ, start_response)
+    
+    def pre_request_checks(self, request):
+        """Perform security checks before processing request"""
+        ip_address = request.remote_addr
+        device_fingerprint = self.fraud_detector.get_device_fingerprint(request)
+        
+        # Check for known malicious IPs
+        if self.is_ip_blacklisted(ip_address):
+            self.logger.warning(f"Blocked blacklisted IP: {ip_address}")
+            abort(403, description="Access denied")
+        
+        # Rate limiting by IP (basic protection)
+        if self.is_ip_rate_limited(ip_address):
+            self.logger.warning(f"Rate limited IP: {ip_address}")
+            abort(429, description="Too many requests")
+        
+        # Check for suspicious user agents
+        user_agent = request.headers.get('User-Agent', '')
+        if self.is_suspicious_user_agent(user_agent):
+            self.logger.warning(f"Suspicious User-Agent: {user_agent[:100]}")
+            SecurityMonitor.log_security_event(
+                "SUSPICIOUS_USER_AGENT",
+                None,
+                {"ip": ip_address, "user_agent": user_agent}
+            )
+    
+    def is_ip_blacklisted(self, ip_address):
+        """Check if IP is in blacklist"""
+        blacklist_key = f"ip_blacklist:{ip_address}"
+        return bool(redis_client.exists(blacklist_key))
+    
+    def is_ip_rate_limited(self, ip_address):
+        """Basic IP-based rate limiting"""
+        rate_limit_key = f"rate_limit:ip:{ip_address}"
+        current = redis_client.incr(rate_limit_key)
+        
+        if current == 1:
+            redis_client.expire(rate_limit_key, 60)  # 1 minute window
+        
+        return current > 1000  # 1000 requests per minute
+    
+    def is_suspicious_user_agent(self, user_agent):
+        """Detect suspicious/bot user agents"""
+        suspicious_patterns = [
+            'bot', 'crawler', 'spider', 'scraper', 'python-requests',
+            'curl', 'wget', 'masscan', 'zgrab', 'nmap'
+        ]
+        
+        user_agent_lower = user_agent.lower()
+        return any(pattern in user_agent_lower for pattern in suspicious_patterns)
+
+# Apply security middleware
+security_middleware = SecurityMiddleware(app, fraud_detector)
+app.wsgi_app = security_middleware
+
+# =============================================================================
 # DATABASE SCHEMA MANAGER
 # =============================================================================
 
@@ -921,6 +1262,8 @@ class DatabaseManager:
                 description TEXT,
                 ip_address INET,
                 user_agent TEXT,
+                device_fingerprint TEXT,
+                fraud_warnings TEXT,
                 created_at TIMESTAMPTZ DEFAULT NOW(),
                 processed_at TIMESTAMPTZ,
                 -- Constraints
@@ -956,6 +1299,7 @@ class DatabaseManager:
                 event_type VARCHAR(100) NOT NULL,
                 ip_address INET,
                 user_agent TEXT,
+                device_fingerprint TEXT,
                 details TEXT,
                 created_at TIMESTAMPTZ DEFAULT NOW(),
                 -- Index for faster querying
@@ -964,7 +1308,8 @@ class DatabaseManager:
                     'WITHDRAWAL_INITIATED', 'WITHDRAWAL_COMPLETED', 'WITHDRAWAL_FAILED',
                     'SUSPICIOUS_WITHDRAWAL', '2FA_SUCCESS', '2FA_FAILED',
                     'PASSWORD_CHANGE', 'PROFILE_UPDATE', 'SMS_SENT_SUCCESS',
-                    'SMS_SENT_FAILED', 'UNAUTHORIZED_ACCESS', 'ADMIN_ACTION'
+                    'SMS_SENT_FAILED', 'UNAUTHORIZED_ACCESS', 'ADMIN_ACTION',
+                    'SUSPICIOUS_REGISTRATION', 'USER_BLOCKED_FRAUD', 'SUSPICIOUS_USER_AGENT'
                 ))
             );
             """),
@@ -1038,6 +1383,7 @@ class DatabaseManager:
             ("idx_transactions_created_at", "CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at);"),
             ("idx_transactions_type_status", "CREATE INDEX IF NOT EXISTS idx_transactions_type_status ON transactions(transaction_type, status);"),
             ("idx_transactions_mpesa_code", "CREATE INDEX IF NOT EXISTS idx_transactions_mpesa_code ON transactions(mpesa_code) WHERE mpesa_code IS NOT NULL;"),
+            ("idx_transactions_device_fingerprint", "CREATE INDEX IF NOT EXISTS idx_transactions_device_fingerprint ON transactions(device_fingerprint);"),
             
             # Referrals table indexes
             ("idx_referrals_referrer_id", "CREATE INDEX IF NOT EXISTS idx_referrals_referrer_id ON referrals(referrer_id);"),
@@ -1048,6 +1394,7 @@ class DatabaseManager:
             ("idx_security_logs_user_id", "CREATE INDEX IF NOT EXISTS idx_security_logs_user_id ON security_logs(user_id);"),
             ("idx_security_logs_created_at", "CREATE INDEX IF NOT EXISTS idx_security_logs_created_at ON security_logs(created_at);"),
             ("idx_security_logs_event_type", "CREATE INDEX IF NOT EXISTS idx_security_logs_event_type ON security_logs(event_type);"),
+            ("idx_security_logs_device_fingerprint", "CREATE INDEX IF NOT EXISTS idx_security_logs_device_fingerprint ON security_logs(device_fingerprint);"),
             
             # Two-factor codes indexes
             ("idx_two_factor_codes_user_id", "CREATE INDEX IF NOT EXISTS idx_two_factor_codes_user_id ON two_factor_codes(user_id);"),
@@ -1162,6 +1509,7 @@ class SecurityMonitor:
             'event_type': event_type,
             'ip_address': request.remote_addr if request else None,
             'user_agent': request.headers.get('User-Agent') if request else None,
+            'device_fingerprint': fraud_detector.get_device_fingerprint(request) if request else None,
             'details': str(details),
             'created_at': datetime.now(timezone.utc).isoformat()
         }
@@ -1215,7 +1563,7 @@ class SecurityMonitor:
 
 class FraudDetector:
     @staticmethod
-    def check_suspicious_activity(user, amount, request_obj):
+    def check_suspicious_activity(user, amount, request):
         """Detect suspicious withdrawal patterns"""
         checks = []
         
@@ -1243,7 +1591,7 @@ class FraudDetector:
         # Check 4: New device/location
         if recent_withdrawals:
             recent_withdrawal = recent_withdrawals[0]
-            if recent_withdrawal.get('ip_address') != request_obj.remote_addr:
+            if recent_withdrawal.get('ip_address') != request.remote_addr:
                 checks.append("Different IP address from previous withdrawals")
         
         # Check 5: New user with large withdrawal
@@ -2368,6 +2716,10 @@ def api_register():
         email = data.get("email", "").strip()
         username = data.get("username", "").strip()
         
+        # Get IP and device info
+        ip_address = request.remote_addr
+        device_fingerprint = fraud_detector.get_device_fingerprint(request)
+        
         # Validation
         if not name or not name.strip():
             return jsonify({"error": "Full name is required"}), 400
@@ -2382,6 +2734,33 @@ def api_register():
         if SupabaseDB.get_user_by_phone(phone):
             return jsonify({"error": "Phone number already registered"}), 409
         
+        # FRAUD DETECTION: Check for suspicious registration patterns
+        fraud_warnings = fraud_detector.detect_suspicious_signup(
+            ip_address, device_fingerprint, {
+                'username': username,
+                'email': email,
+                'phone': phone
+            }
+        )
+        
+        if fraud_warnings:
+            current_app.logger.warning(f"Suspicious registration detected: {fraud_warnings}")
+            SecurityMonitor.log_security_event(
+                "SUSPICIOUS_REGISTRATION",
+                None,
+                {
+                    "ip": ip_address,
+                    "device": device_fingerprint,
+                    "warnings": fraud_warnings,
+                    "username": username,
+                    "phone": phone
+                }
+            )
+            
+            # For high-risk patterns, block immediately
+            if len(fraud_warnings) >= 2:
+                return jsonify({"error": "Registration blocked due to suspicious activity. Please contact support."}), 403
+        
         # Store temporary user data
         temp_user_data = {
             'id': str(uuid.uuid4()),
@@ -2390,6 +2769,8 @@ def api_register():
             'phone': phone,
             'name': name,
             'password': password,
+            'ip_address': ip_address,
+            'device_fingerprint': device_fingerprint,
             'created_at': datetime.now(timezone.utc).isoformat()
         }
         
@@ -2400,6 +2781,9 @@ def api_register():
         # Store temporary user data in session
         session['temp_user_data'] = temp_user_data
         session['pending_verification_user'] = temp_user_data['id']
+        
+        # Increment signup counters for fraud detection
+        fraud_detector.increment_signup_counter(ip_address, device_fingerprint)
         
         # Send welcome SMS
         CelcomSMS.send_registration_notification(phone, username)
@@ -2659,7 +3043,7 @@ def mpesa_withdraw_callback():
 @rate_limiter.limit("10 per hour", key_func=lambda: get_jwt_identity())
 @rate_limiter.limit("1000 per day", key_func=lambda: get_jwt_identity())
 def api_request_withdrawal():
-    """Secure withdrawal request with fraud detection"""
+    """Secure withdrawal request with enhanced fraud detection"""
     try:
         current_user_id = get_jwt_identity()
         user = SupabaseDB.get_user_by_id(current_user_id)
@@ -2670,12 +3054,20 @@ def api_request_withdrawal():
         if not user.is_active:
             return jsonify({"error": "Account deactivated"}), 403
         
+        # Check if user is blocked for fraud
+        if fraud_detector.is_user_blocked(user.id):
+            return jsonify({"error": "Account temporarily blocked for security reasons. Please contact support."}), 423
+        
         if user.is_locked():
             return jsonify({"error": "Account temporarily locked"}), 423
 
         data = request.get_json()
         amount = float(data.get("amount", 0))
         phone_number = data.get("phone_number")
+        
+        # Get IP and device info
+        ip_address = request.remote_addr
+        device_fingerprint = fraud_detector.get_device_fingerprint(request)
         
         # Input validation
         if amount < current_app.config['WITHDRAWAL_MIN_AMOUNT']:
@@ -2696,9 +3088,10 @@ def api_request_withdrawal():
             )
             return jsonify({"error": "Insufficient balance"}), 400
         
-        # Fraud detection
-        fraud_check = FraudDetector.check_suspicious_activity(user, amount, request)
-        if fraud_check:
+        # ENHANCED FRAUD DETECTION
+        fraud_warnings = fraud_detector.detect_suspicious_withdrawal(user, amount, request)
+        
+        if fraud_warnings:
             withdrawal_data = {
                 'id': str(uuid.uuid4()),
                 'user_id': user.id,
@@ -2706,8 +3099,10 @@ def api_request_withdrawal():
                 'transaction_type': 'withdrawal',
                 'status': 'Under Review',
                 'phone_number': phone_number,
-                'ip_address': request.remote_addr,
+                'ip_address': ip_address,
                 'user_agent': request.headers.get('User-Agent'),
+                'device_fingerprint': device_fingerprint,
+                'fraud_warnings': json.dumps(fraud_warnings),
                 'created_at': datetime.now(timezone.utc).isoformat()
             }
             SupabaseDB.create_transaction(withdrawal_data)
@@ -2717,16 +3112,23 @@ def api_request_withdrawal():
                 user.id, 
                 {
                     "amount": amount, 
-                    "reason": fraud_check,
+                    "warnings": fraud_warnings,
                     "withdrawal_id": withdrawal_data['id'],
-                    "ip": request.remote_addr
+                    "ip": ip_address,
+                    "device": device_fingerprint
                 }
             )
             
-            # Notify admins
-            SecurityMonitor.notify_admins(
-                f"Suspicious withdrawal: User {user.phone} attempted Ksh {amount}. Reason: {fraud_check}"
-            )
+            # Block user if multiple high-risk warnings
+            if len(fraud_warnings) >= 3:
+                fraud_detector.block_suspicious_activity(
+                    user.id, 
+                    f"Multiple fraud warnings: {', '.join(fraud_warnings)}"
+                )
+            
+            # Notify admins via Telegram
+            message = f"🚨 SUSPICIOUS WITHDRAWAL\nUser: {user.username}\nAmount: KSH {amount}\nWarnings: {', '.join(fraud_warnings)}\nIP: {ip_address}"
+            send_telegram_notification(message)
             
             return jsonify({
                 "message": "Withdrawal under review due to suspicious activity. We'll notify you.",
@@ -2753,10 +3155,14 @@ def api_request_withdrawal():
             'transaction_type': 'withdrawal',
             'status': 'processing',
             'phone_number': phone_number,
-            'ip_address': request.remote_addr,
+            'ip_address': ip_address,
             'user_agent': request.headers.get('User-Agent'),
+            'device_fingerprint': device_fingerprint,
             'created_at': datetime.now(timezone.utc).isoformat()
         }
+        
+        # Track withdrawal attempt
+        fraud_detector.log_withdrawal_attempt(user.id, amount, ip_address, device_fingerprint)
         
         # Deduct balance
         user.balance -= amount
@@ -2788,7 +3194,8 @@ def api_request_withdrawal():
             {
                 "amount": amount,
                 "withdrawal_id": withdrawal_id,
-                "ip": request.remote_addr
+                "ip": ip_address,
+                "device": device_fingerprint
             }
         )
         
@@ -3145,7 +3552,7 @@ def login():
     # Render login page
     return render_template('auth/login.html')
 
-# MODIFIED REGISTRATION ROUTE - Stores data temporarily until payment
+# MODIFIED REGISTRATION ROUTE - Stores data temporarily until payment with FRAUD DETECTION
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
@@ -3161,6 +3568,10 @@ def register():
         password = request.form.get('password')
         referral_code = request.form.get('referral_code')
         terms = request.form.get('terms')
+        
+        # Get IP and device info
+        ip_address = request.remote_addr
+        device_fingerprint = fraud_detector.get_device_fingerprint(request)
         
         if not name:
             flash('Full name is required.', 'error')
@@ -3191,6 +3602,34 @@ def register():
             flash('Email already registered.', 'error')
             return render_template('auth/register.html', referral_code=referral_code)
         
+        # FRAUD DETECTION: Check for suspicious registration patterns
+        fraud_warnings = fraud_detector.detect_suspicious_signup(
+            ip_address, device_fingerprint, {
+                'username': username,
+                'email': email,
+                'phone': phone_number
+            }
+        )
+        
+        if fraud_warnings:
+            app.logger.warning(f"Suspicious registration detected: {fraud_warnings}")
+            SecurityMonitor.log_security_event(
+                "SUSPICIOUS_REGISTRATION",
+                None,
+                {
+                    "ip": ip_address,
+                    "device": device_fingerprint,
+                    "warnings": fraud_warnings,
+                    "username": username,
+                    "phone": phone_number
+                }
+            )
+            
+            # For high-risk patterns, block immediately
+            if len(fraud_warnings) >= 2:
+                flash('Registration blocked due to suspicious activity. Please contact support.', 'error')
+                return render_template('auth/register.html', referral_code=referral_code)
+        
         referrer = None
         if referral_code:
             referrer = validate_referral_code(referral_code)
@@ -3209,6 +3648,8 @@ def register():
             'referral_code': referral_code,
             'referrer': referrer.id if referrer else None,
             'referral_source': 'referral_link' if request.args.get('ref') else 'manual_entry' if referral_code else 'direct',
+            'ip_address': ip_address,
+            'device_fingerprint': device_fingerprint,
             'created_at': datetime.now(timezone.utc).isoformat()
         }
         
@@ -3219,6 +3660,9 @@ def register():
         # Store temporary user data in session
         session['temp_user_data'] = temp_user_data
         session['pending_verification_user'] = temp_user_data['id']
+        
+        # Increment signup counters for fraud detection
+        fraud_detector.increment_signup_counter(ip_address, device_fingerprint)
         
         # Send welcome SMS
         CelcomSMS.send_registration_notification(phone_number, username)
@@ -3296,6 +3740,7 @@ def initiate_stk_push_route():
             'phone_number': temp_user_data['phone'],
             'description': 'Account registration fee - STK Push initiated',
             'ip_address': request.remote_addr,
+            'device_fingerprint': fraud_detector.get_device_fingerprint(request),
             'created_at': datetime.now(timezone.utc).isoformat()
         }
         transaction = SupabaseDB.create_transaction(transaction_data)
@@ -3621,7 +4066,7 @@ def statistics():
                          pending_balance=pending_balance,
                          referral_stats=referral_stats)
 
-# UPDATED WITHDRAW ROUTE - Now with automatic M-Pesa B2C processing
+# UPDATED WITHDRAW ROUTE - Now with enhanced fraud detection
 @app.route('/withdraw', methods=['GET', 'POST'])
 @login_required
 def withdraw():
@@ -3632,6 +4077,10 @@ def withdraw():
     if request.method == 'POST':
         amount = float(request.form.get('amount'))
         phone_number = request.form.get('phone_number')
+        
+        # Get IP and device info
+        ip_address = request.remote_addr
+        device_fingerprint = fraud_detector.get_device_fingerprint(request)
         
         # UPDATED: Minimum withdrawal amount changed from 100 to 400
         if amount < 400:
@@ -3653,9 +4102,9 @@ def withdraw():
         elif phone_number.startswith('+'):
             phone_number = phone_number[1:]
         
-        # Fraud detection for web withdrawals too
-        fraud_check = FraudDetector.check_suspicious_activity(current_user, amount, request)
-        if fraud_check:
+        # ENHANCED FRAUD DETECTION for web withdrawals
+        fraud_warnings = fraud_detector.detect_suspicious_withdrawal(current_user, amount, request)
+        if fraud_warnings:
             transaction_data = {
                 'id': str(uuid.uuid4()),
                 'user_id': current_user.id,
@@ -3663,8 +4112,10 @@ def withdraw():
                 'transaction_type': 'withdrawal',
                 'status': 'Under Review',
                 'phone_number': phone_number,
-                'ip_address': request.remote_addr,
+                'ip_address': ip_address,
                 'user_agent': request.headers.get('User-Agent'),
+                'device_fingerprint': device_fingerprint,
+                'fraud_warnings': json.dumps(fraud_warnings),
                 'created_at': datetime.now(timezone.utc).isoformat()
             }
             SupabaseDB.create_transaction(transaction_data)
@@ -3674,11 +4125,19 @@ def withdraw():
                 current_user.id, 
                 {
                     "amount": amount, 
-                    "reason": fraud_check,
+                    "warnings": fraud_warnings,
                     "withdrawal_id": transaction_data['id'],
-                    "ip": request.remote_addr
+                    "ip": ip_address,
+                    "device": device_fingerprint
                 }
             )
+            
+            # Block user if multiple high-risk warnings
+            if len(fraud_warnings) >= 3:
+                fraud_detector.block_suspicious_activity(
+                    current_user.id, 
+                    f"Multiple fraud warnings: {', '.join(fraud_warnings)}"
+                )
             
             flash('Withdrawal under review due to suspicious activity. We will notify you once processed.', 'warning')
             return redirect(url_for('dashboard'))
@@ -3691,10 +4150,14 @@ def withdraw():
             'status': 'pending',
             'phone_number': phone_number,
             'description': f'M-Pesa withdrawal to {phone_number} - Pending automatic processing',
-            'ip_address': request.remote_addr,
+            'ip_address': ip_address,
             'user_agent': request.headers.get('User-Agent'),
+            'device_fingerprint': device_fingerprint,
             'created_at': datetime.now(timezone.utc).isoformat()
         }
+        
+        # Track withdrawal attempt
+        fraud_detector.log_withdrawal_attempt(current_user.id, amount, ip_address, device_fingerprint)
         
         # Deduct balance immediately
         current_user.balance -= amount
@@ -3714,7 +4177,7 @@ def withdraw():
             'processing'
         )
         
-        # 🔄 NEW: Process withdrawal automatically via M-Pesa B2C
+        # 🔄 Process withdrawal automatically via M-Pesa B2C
         processing_result = process_automatic_withdrawal(transaction_data)
         
         if processing_result:
@@ -4236,6 +4699,58 @@ def admin_reconnect_database():
         flash(f'Database reconnection: FAILED - {message}', 'error')
     
     return redirect(url_for('admin_database'))
+
+# =============================================================================
+# ADMIN FRAUD MONITORING
+# =============================================================================
+
+@app.route('/admin/fraud-monitoring')
+@login_required
+@admin_required
+def admin_fraud_monitoring():
+    """Admin fraud monitoring dashboard"""
+    try:
+        # Get recent suspicious activities
+        suspicious_withdrawals = supabase.table('transactions')\
+            .select('*, users(*)')\
+            .eq('status', 'Under Review')\
+            .order('created_at', desc=True)\
+            .execute()
+        
+        # Get recent security events
+        recent_security_events = supabase.table('security_logs')\
+            .select('*')\
+            .in_('event_type', ['SUSPICIOUS_WITHDRAWAL', 'SUSPICIOUS_REGISTRATION', 'USER_BLOCKED_FRAUD'])\
+            .order('created_at', desc=True)\
+            .limit(50)\
+            .execute()
+        
+        # Get fraud statistics
+        stats = {
+            'blocked_users': len(redis_client.keys('user_blocked:*')),
+            'suspicious_signups_today': get_suspicious_signups_count(),
+            'pending_reviews': len(suspicious_withdrawals.data) if suspicious_withdrawals.data else 0
+        }
+        
+        return render_template('admin_fraud_monitoring.html',
+                             suspicious_withdrawals=suspicious_withdrawals.data,
+                             security_events=recent_security_events.data,
+                             stats=stats)
+                             
+    except Exception as e:
+        app.logger.error(f"Error loading fraud monitoring: {str(e)}")
+        flash('Error loading fraud monitoring dashboard.', 'error')
+        return redirect(url_for('admin_dashboard'))
+
+def get_suspicious_signups_count():
+    """Count suspicious signups in last 24 hours"""
+    count = 0
+    keys = redis_client.keys('signups:ip:*')
+    for key in keys:
+        signup_count = int(redis_client.get(key) or 0)
+        if signup_count >= 3:  # Threshold for suspicious
+            count += 1
+    return count
 
 @app.route('/admin/dashboard')
 @login_required
@@ -5044,6 +5559,8 @@ if __name__ == '__main__':
         print("✅ Celcom SMS: CONFIGURED")
         print("✅ Health monitoring: ACTIVE")
         print("✅ PAYMENT-ONLY USER STORAGE: ENABLED")
+        print("✅ ENHANCED FRAUD DETECTION: ENABLED")
+        print("✅ IP/DEVICE TRACKING: ENABLED")
 
         port = int(os.environ.get('PORT', 10000))
         host = '0.0.0.0'
@@ -5051,6 +5568,7 @@ if __name__ == '__main__':
         print(f"✅ Server starting on {host}:{port}")
         print(f"✅ Health endpoint: http://{host}:{port}/health")
         print(f"✅ Detailed health: http://{host}:{port}/health/detailed")
+        print(f"✅ Fraud monitoring: http://{host}:{port}/admin/fraud-monitoring")
         print(f"✅ Minimum withdrawal: KSH {app.config['WITHDRAWAL_MIN_AMOUNT']}")
 
         app.logger.info(f"🚀 Starting Flask app on {host}:{port}")
