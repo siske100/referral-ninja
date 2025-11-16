@@ -1319,9 +1319,9 @@ fraud_detector = EnhancedFraudDetector(redis_client, supabase)
 # SAFE SECURITY MIDDLEWARE (NO RECURSION) - FIXED RATE LIMITING
 # =============================================================================
 
-class SafeSecurityMiddleware:
-    def __init__(self, app, fraud_detector):
-        self.app = app
+class FixedSecurityMiddleware:
+    def __init__(self, wsgi_app, fraud_detector):
+        self.wsgi_app = wsgi_app  # Store the actual WSGI app, not Flask app
         self.fraud_detector = fraud_detector
         self.logger = logging.getLogger(__name__)
     
@@ -1333,7 +1333,7 @@ class SafeSecurityMiddleware:
             request.path.startswith('/static') or
             request.path == '/robots.txt' or
             request.path == '/sitemap.xml'):
-            return self.app(environ, start_response)
+            return self.wsgi_app(environ, start_response)
         
         # Safe pre-request checks
         try:
@@ -1342,7 +1342,8 @@ class SafeSecurityMiddleware:
             # Log but don't let security checks break the app
             self.logger.error(f"Security check error: {str(e)}")
         
-        return self.app(environ, start_response)
+        # Call the actual WSGI application, not self
+        return self.wsgi_app(environ, start_response)
     
     def safe_pre_request_checks(self, request):
         """Perform security checks without recursion risk"""
@@ -1393,10 +1394,9 @@ class SafeSecurityMiddleware:
             print(f"Redis rate limit check failed: {str(e)}")
             return False  # Don't rate limit if Redis is down
 
-# Apply safe security middleware
-security_middleware = SafeSecurityMiddleware(app, fraud_detector)
-app.wsgi_app = security_middleware
-
+# Apply the fixed security middleware
+app.wsgi_app = FixedSecurityMiddleware(app.wsgi_app, fraud_detector)
+    
 # =============================================================================
 # DATABASE SCHEMA MANAGER
 # =============================================================================
