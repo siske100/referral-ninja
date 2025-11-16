@@ -38,12 +38,62 @@ import httpx
 # Load environment variables from .env file
 load_dotenv()
 
+# =============================================================================
+# COMPREHENSIVE LOGGING SETUP
+# =============================================================================
+
+def setup_logging():
+    """Configure comprehensive logging for the application"""
+    
+    # Create logs directory if it doesn't exist
+    if not os.path.exists('logs'):
+        os.makedirs('logs')
+    
+    # Configure root logger
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s %(name)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]',
+        handlers=[
+            # File handler for errors
+            RotatingFileHandler(
+                'logs/error.log', 
+                maxBytes=10485760,  # 10MB
+                backupCount=10,
+                encoding='utf-8'
+            ),
+            # File handler for general logs
+            RotatingFileHandler(
+                'logs/app.log', 
+                maxBytes=10485760,  # 10MB
+                backupCount=5,
+                encoding='utf-8'
+            ),
+            # Console handler
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
+    
+    # Set specific log levels for different components
+    logging.getLogger('werkzeug').setLevel(logging.WARNING)
+    logging.getLogger('supabase').setLevel(logging.WARNING)
+    logging.getLogger('httpx').setLevel(logging.WARNING)
+    logging.getLogger('urllib3').setLevel(logging.WARNING)
+    
+    # Create logger instance for this module
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+    
+    return logger
+
+# Initialize logging
+logger = setup_logging()
+
 # Debug: Check if environment variables are loaded
-print(" Loading environment variables...")
-print("Current directory:", os.getcwd())
-print(".env file exists:", os.path.exists('.env'))
-print("SUPABASE_URL loaded:", bool(os.environ.get('SUPABASE_URL')))
-print("SUPABASE_KEY loaded:", bool(os.environ.get('SUPABASE_SERVICE_ROLE_KEY')))
+logger.info("Loading environment variables...")
+logger.info(f"Current directory: {os.getcwd()}")
+logger.info(f".env file exists: {os.path.exists('.env')}")
+logger.info(f"SUPABASE_URL loaded: {bool(os.environ.get('SUPABASE_URL'))}")
+logger.info(f"SUPABASE_KEY loaded: {bool(os.environ.get('SUPABASE_SERVICE_ROLE_KEY'))}")
 
 # Remove the PostgreSQL connection test entirely - only use Supabase
 
@@ -128,10 +178,10 @@ class DevelopmentConfig(Config):
 # Load appropriate config based on environment
 if os.getenv('FLASK_ENV') == 'development':
     app.config.from_object(DevelopmentConfig)
-    app.logger.info("Development configuration loaded")
+    logger.info("Development configuration loaded")
 else:
     app.config.from_object(Config)
-    app.logger.info("Production configuration loaded")
+    logger.info("Production configuration loaded")
 
 # =============================================================================
 # DATABASE INITIALIZATION
@@ -171,7 +221,7 @@ rate_limiter = Limiter(
     storage_uri=app.config.get("REDIS_URL", "memory://"),
     default_limits=["1000 per day", "200 per hour", "40 per minute"],
     strategy="fixed-window",  # or "moving-window"
-    on_breach=lambda limit: current_app.logger.warning(f"🚫 Rate limit hit: {limit}")
+    on_breach=lambda limit: current_app.logger.warning(f"Rate limit hit: {limit}")
 )
 
 # =============================================================================
@@ -330,7 +380,7 @@ class SupabaseDB:
             
             return response.data if response.data else []
         except Exception as e:
-            current_app.logger.error(f"Error getting jobs: {str(e)}")
+            logger.error(f"Error getting jobs: {str(e)}")
             return []
 
     @staticmethod
@@ -395,7 +445,7 @@ class SupabaseDB:
                 # Run the operation, enforcing a network timeout
                 return operation(timeout)
             except Exception as e:
-                print(f"[SupabaseDB] Attempt {attempt + 1} failed: {e}")
+                logger.warning(f"SupabaseDB Attempt {attempt + 1} failed: {e}")
                 if attempt < retries - 1:
                     time.sleep(delay)
                 else:
@@ -411,10 +461,10 @@ class SupabaseDB:
                 # Apply timeout at HTTP level (Supabase uses httpx under the hood)
                 response = supabase.table('users').select('*').eq('id', user_id).execute()
                 if response.data:
-                    print(f"[SupabaseDB] Loaded user {user_id}")
+                    logger.info(f"SupabaseDB Loaded user {user_id}")
                     return User(response.data[0])
                 else:
-                    print(f"[SupabaseDB] No user found for id={user_id}")
+                    logger.warning(f"SupabaseDB No user found for id={user_id}")
                     return None
             except httpx.TimeoutException:
                 raise Exception(f"Supabase query for user {user_id} timed out after {timeout}s")
@@ -422,14 +472,14 @@ class SupabaseDB:
         try:
             return SupabaseDB.execute_with_retry(operation)
         except Exception as e:
-            print(f"[SupabaseDB] get_user_by_id() failed: {e}")
+            logger.error(f"SupabaseDB get_user_by_id() failed: {e}")
             return None
         
     @staticmethod
     def handle_db_error(method_name, error, raise_exception=True):
         """Standardized database error handling"""
         error_msg = f"Database error in {method_name}: {str(error)}"
-        current_app.logger.error(error_msg)
+        logger.error(error_msg)
         
         if raise_exception:
             raise Exception(f"Database operation failed: {method_name}")
@@ -1076,7 +1126,7 @@ def supabase_check(table_name: str, limit: int = 1, retries: int = 3, timeout: i
             response = supabase.table(table_name).select("*").limit(limit).execute()
             return response
         except Exception as e:
-            app.logger.warning(f"Supabase attempt {attempt} failed: {e}")
+            logger.warning(f"Supabase attempt {attempt} failed: {e}")
             time.sleep(min(2 ** attempt, 10))  # exponential backoff
     raise ConnectionError(f"Supabase {table_name} check failed after {retries} attempts")
 
@@ -1125,9 +1175,9 @@ class DatabaseHealthMonitor:
         metrics = DatabaseHealthMonitor.get_database_metrics()
         
         if metrics['connection_status'] == 'healthy':
-            app.logger.info(f"Database health: {metrics['response_time']}ms response")
+            logger.info(f"Database health: {metrics['response_time']}ms response")
         else:
-            app.logger.error(f"Database health issue: {metrics.get('error', 'Unknown error')}")
+            logger.error(f"Database health issue: {metrics.get('error', 'Unknown error')}")
         
         return metrics
 
@@ -1459,7 +1509,7 @@ def create_admin_user_if_missing():
     try:
         admin_user = SupabaseDB.get_user_by_username('admin')
         if not admin_user:
-            print("👨‍💼 Creating admin user...")
+            logger.info("Creating admin user...")
             
             admin_data = {
                 'id': str(uuid.uuid4()),
@@ -1484,17 +1534,17 @@ def create_admin_user_if_missing():
             
             created_admin = SupabaseDB.create_user(admin_dict)
             if created_admin:
-                print("✅ Admin user created successfully")
-                print(f"   Username: admin")
-                print(f"   Password: {admin_password}")
-                print("   ⚠️  CHANGE THE PASSWORD IMMEDIATELY!")
+                logger.info("Admin user created successfully")
+                logger.info(f"Username: admin")
+                logger.info(f"Password: {admin_password}")
+                logger.info("CHANGE THE PASSWORD IMMEDIATELY!")
             else:
-                print("❌ Failed to create admin user")
+                logger.error("Failed to create admin user")
         else:
-            print("✅ Admin user already exists")
+            logger.info("Admin user already exists")
             
     except Exception as e:
-        print(f"❌ Admin user creation error: {e}")
+        logger.error(f"Admin user creation error: {e}")
 
 # =============================================================================
 # SECURITY CLASSES
@@ -1514,7 +1564,7 @@ class SecurityMonitor:
             'created_at': datetime.now(timezone.utc).isoformat()
         }
         SupabaseDB.create_security_log(security_log)
-        current_app.logger.info(f"Security Event: {event_type} - User: {user_id} - {details}")
+        logger.info(f"Security Event: {event_type} - User: {user_id} - {details}")
     
     @staticmethod
     def generate_2fa_code(user_id, purpose):
@@ -1537,7 +1587,7 @@ class SecurityMonitor:
         if user:
             CelcomSMS.send_2fa_code(user.phone, code)
         
-        current_app.logger.info(f"2FA Code for {user_id}: {code}")
+        logger.info(f"2FA Code for {user_id}: {code}")
         return code
     
     @staticmethod
@@ -1559,7 +1609,7 @@ class SecurityMonitor:
     @staticmethod
     def notify_admins(message):
         """Notify admins of security events"""
-        current_app.logger.warning(f"ADMIN ALERT: {message}")
+        logger.warning(f"ADMIN ALERT: {message}")
 
 class FraudDetector:
     @staticmethod
@@ -1638,15 +1688,15 @@ class CelcomSMS:
                 )
                 
                 # Log the request and response for debugging
-                current_app.logger.info(f"Celcom SMS API Request: {payload}")
-                current_app.logger.info(f"Celcom SMS API Response: {response.status_code} - {response.text}")
+                logger.info(f"Celcom SMS API Request: {payload}")
+                logger.info(f"Celcom SMS API Response: {response.status_code} - {response.text}")
                 
                 if response.status_code == 200:
                     result = response.json()
                     
                     # Check if SMS was sent successfully based on Celcom API response structure
                     if result.get('status') == 'success' or result.get('success') or response.status_code == 200:
-                        current_app.logger.info(f"✅ Celcom SMS sent successfully to {phone_clean}")
+                        logger.info(f"Celcom SMS sent successfully to {phone_clean}")
                         
                         # Log successful SMS delivery
                         SecurityMonitor.log_security_event(
@@ -1657,22 +1707,22 @@ class CelcomSMS:
                         return True
                     else:
                         error_msg = result.get('message', 'Unknown error from Celcom API')
-                        current_app.logger.error(f"❌ Celcom SMS failed: {error_msg}")
+                        logger.error(f"Celcom SMS failed: {error_msg}")
                 else:
-                    current_app.logger.error(f"❌ Celcom SMS HTTP error: {response.status_code} - {response.text}")
+                    logger.error(f"Celcom SMS HTTP error: {response.status_code} - {response.text}")
                 
                 # Wait before retry (exponential backoff)
                 if attempt < max_retries - 1:
                     wait_time = 2 ** attempt
-                    current_app.logger.info(f"Retrying SMS in {wait_time} seconds...")
+                    logger.info(f"Retrying SMS in {wait_time} seconds...")
                     time.sleep(wait_time)
                     
             except requests.exceptions.RequestException as e:
-                current_app.logger.error(f"Celcom SMS network error (attempt {attempt + 1}): {str(e)}")
+                logger.error(f"Celcom SMS network error (attempt {attempt + 1}): {str(e)}")
                 if attempt < max_retries - 1:
                     time.sleep(2 ** attempt)
             except Exception as e:
-                current_app.logger.error(f"Celcom SMS unexpected error (attempt {attempt + 1}): {str(e)}")
+                logger.error(f"Celcom SMS unexpected error (attempt {attempt + 1}): {str(e)}")
                 if attempt < max_retries - 1:
                     time.sleep(2 ** attempt)
         
@@ -1738,7 +1788,7 @@ class CelcomSMS:
         """
         Send welcome message after registration
         """
-        message = f"✅ Welcome to Referral Ninja, {username}! Complete your KSH 200 payment to activate your account and start earning."
+        message = f"Welcome to Referral Ninja, {username}! Complete your KSH 200 payment to activate your account and start earning."
         return CelcomSMS.send_sms(phone, message)
     
     @staticmethod
@@ -1746,7 +1796,7 @@ class CelcomSMS:
         """
         Send notification when referral bonus is earned
         """
-        message = f"💰 Hi {username}, you've earned Ksh {referral_bonus} referral bonus! Keep inviting friends to earn more."
+        message = f"Hi {username}, you've earned Ksh {referral_bonus} referral bonus! Keep inviting friends to earn more."
         return CelcomSMS.send_sms(phone, message)
 
 # =============================================================================
@@ -1786,10 +1836,10 @@ def get_mpesa_access_token():
         return access_token
         
     except requests.exceptions.RequestException as e:
-        current_app.logger.error(f"M-Pesa token request failed: {str(e)}")
+        logger.error(f"M-Pesa token request failed: {str(e)}")
         raise Exception("M-Pesa service unavailable")
     except Exception as e:
-        current_app.logger.error(f"M-Pesa token error: {str(e)}")
+        logger.error(f"M-Pesa token error: {str(e)}")
         raise
 
 def initiate_stk_push(phone_number, amount, account_reference, transaction_desc):
@@ -1839,18 +1889,18 @@ def initiate_stk_push(phone_number, amount, account_reference, transaction_desc)
         result = response.json()
         
         if result.get('ResponseCode') == '0':
-            current_app.logger.info(f"STK Push initiated for {phone_clean}, Amount: {amount}")
+            logger.info(f"STK Push initiated for {phone_clean}, Amount: {amount}")
             return result
         else:
             error_message = result.get('errorMessage', 'Unknown error')
-            current_app.logger.error(f"STK Push failed: {error_message}")
+            logger.error(f"STK Push failed: {error_message}")
             raise Exception(f"M-Pesa STK push failed: {error_message}")
             
     except requests.exceptions.RequestException as e:
-        current_app.logger.error(f"STK Push network error: {str(e)}")
+        logger.error(f"STK Push network error: {str(e)}")
         raise Exception("M-Pesa service unavailable")
     except Exception as e:
-        current_app.logger.error(f"STK Push error: {str(e)}")
+        logger.error(f"STK Push error: {str(e)}")
         raise
 
 def get_mpesa_b2c_access_token():
@@ -1873,10 +1923,10 @@ def get_mpesa_b2c_access_token():
         if response.status_code == 200:
             return response.json().get('access_token')
         else:
-            app.logger.error(f"M-PESA B2C token error: {response.status_code} - {response.text}")
+            logger.error(f"M-PESA B2C token error: {response.status_code} - {response.text}")
             return None
     except Exception as e:
-        app.logger.error(f"Error getting M-PESA B2C token: {e}")
+        logger.error(f"Error getting M-PESA B2C token: {e}")
         return None
 
 def initiate_b2c_payment(phone_number, amount, transaction_reference, remarks="Referral withdrawal"):
@@ -1884,7 +1934,7 @@ def initiate_b2c_payment(phone_number, amount, transaction_reference, remarks="R
     try:
         access_token = get_mpesa_b2c_access_token()
         if not access_token:
-            app.logger.error("Failed to get M-PESA B2C access token")
+            logger.error("Failed to get M-PESA B2C access token")
             return None
         
         # Format phone number
@@ -1926,18 +1976,18 @@ def initiate_b2c_payment(phone_number, amount, transaction_reference, remarks="R
         if response.status_code == 200:
             result = response.json()
             if result.get('ResponseCode') == '0':
-                app.logger.info(f"B2C payment initiated successfully for {phone_number}, Amount: {amount}")
+                logger.info(f"B2C payment initiated successfully for {phone_number}, Amount: {amount}")
                 return result
             else:
                 error_message = result.get('errorMessage', 'Unknown error')
-                app.logger.error(f"B2C payment failed: {error_message}")
+                logger.error(f"B2C payment failed: {error_message}")
                 return None
         else:
-            app.logger.error(f"B2C payment HTTP error: {response.status_code} - {response.text}")
+            logger.error(f"B2C payment HTTP error: {response.status_code} - {response.text}")
             return None
             
     except Exception as e:
-        app.logger.error(f"Error initiating B2C payment: {e}")
+        logger.error(f"Error initiating B2C payment: {e}")
         return None
 
 def process_automatic_withdrawal(withdrawal_transaction):
@@ -1945,7 +1995,7 @@ def process_automatic_withdrawal(withdrawal_transaction):
     try:
         user = SupabaseDB.get_user_by_id(withdrawal_transaction['user_id'])
         if not user:
-            app.logger.error(f"User not found for withdrawal: {withdrawal_transaction['id']}")
+            logger.error(f"User not found for withdrawal: {withdrawal_transaction['id']}")
             return False
         
         amount = abs(withdrawal_transaction['amount'])
@@ -1978,7 +2028,7 @@ def process_automatic_withdrawal(withdrawal_transaction):
                 'processing'
             )
             
-            app.logger.info(f"B2C payout initiated for user {user.username}, withdrawal ID: {withdrawal_transaction['id']}")
+            logger.info(f"B2C payout initiated for user {user.username}, withdrawal ID: {withdrawal_transaction['id']}")
             return True
         else:
             # B2C initiation failed, mark as failed and refund
@@ -2004,11 +2054,11 @@ def process_automatic_withdrawal(withdrawal_transaction):
                 'failed'
             )
             
-            app.logger.error(f"B2C payout initiation failed for user {user.username}")
+            logger.error(f"B2C payout initiation failed for user {user.username}")
             return False
             
     except Exception as e:
-        app.logger.error(f"Error processing automatic withdrawal: {e}")
+        logger.error(f"Error processing automatic withdrawal: {e}")
         return False
 
 def query_stk_push_status(checkout_request_id):
@@ -2046,11 +2096,11 @@ def query_stk_push_status(checkout_request_id):
         if response.status_code == 200:
             return response.json()
         else:
-            app.logger.error(f"STK Query error: {response.text}")
+            logger.error(f"STK Query error: {response.text}")
             return None
             
     except Exception as e:
-        app.logger.error(f"Error querying STK status: {e}")
+        logger.error(f"Error querying STK status: {e}")
         return None
 
 # =============================================================================
@@ -2066,7 +2116,7 @@ async def send_telegram_message_async(message: str):
         chat_id = app.config.get("TELEGRAM_CHAT_ID") or os.environ.get("TELEGRAM_CHAT_ID")
 
         if not token or not chat_id:
-            app.logger.warning("⚠️ Telegram credentials missing — skipping alert")
+            logger.warning("Telegram credentials missing — skipping alert")
             return
 
         safe_message = html.escape(message)
@@ -2075,11 +2125,11 @@ async def send_telegram_message_async(message: str):
 
         # Run the request non-blocking
         await asyncio.to_thread(requests.post, url, json=payload, timeout=10)
-        app.logger.info("✅ Telegram notification sent successfully")
+        logger.info("Telegram notification sent successfully")
 
     except Exception as e:
         try:
-            app.logger.error(f"Telegram notification failed: {html.escape(str(e))}")
+            logger.error(f"Telegram notification failed: {html.escape(str(e))}")
         except Exception:
             print(f"Telegram notification failed: {str(e)}")
 
@@ -2093,7 +2143,7 @@ def send_telegram_notification(message: str):
             token = app.config.get("TELEGRAM_BOT_TOKEN")
             chat_id = app.config.get("TELEGRAM_CHAT_ID")
             if not token or not chat_id:
-                app.logger.warning("⚠️ Telegram credentials missing — skipping alert")
+                logger.warning("Telegram credentials missing — skipping alert")
                 return
 
             safe_message = html.escape(message)
@@ -2102,38 +2152,38 @@ def send_telegram_notification(message: str):
 
             # Run sync HTTP in a thread (safe for background threads)
             threading.Thread(target=requests.post, args=(url,), kwargs={"json": payload, "timeout": 10}).start()
-            app.logger.info("✅ Telegram notification sent successfully")
+            logger.info("Telegram notification sent successfully")
     except Exception as e:
-        app.logger.error(f"Telegram notification failed: {html.escape(str(e))}")
+        logger.error(f"Telegram notification failed: {html.escape(str(e))}")
            
 def send_withdrawal_notification_to_telegram(user, transaction):
     """Send withdrawal notification to Telegram"""
     try:
         message = f"""
-💰 <b>New Withdrawal Request</b>
+New Withdrawal Request
 
-👤 <b>User Details:</b>
+User Details:
 • Username: {user.username}
 • Email: {user.email}
 • Phone: {user.phone}
 • User ID: #{user.id}
 
-💸 <b>Withdrawal Information:</b>
+Withdrawal Information:
 • Amount: KSH {abs(transaction['amount'])}
 • Phone: {transaction['phone_number']}
-• Status: ⏳ Pending Processing
+• Status: Pending Processing
 
-⏰ <b>Time Submitted:</b>
+Time Submitted:
 {transaction['created_at']}
 
-<i>Please process this withdrawal in the admin dashboard.</i>
+Please process this withdrawal in the admin dashboard.
 """
         thread = threading.Thread(target=send_telegram_notification, args=(message,))
         thread.daemon = True
         thread.start()
         return True
     except Exception as e:
-        current_app.logger.error(f"Error sending withdrawal notification to Telegram: {str(e)}")
+        logger.error(f"Error sending withdrawal notification to Telegram: {str(e)}")
         return False
 
 # =============================================================================
@@ -2627,7 +2677,7 @@ def create_permanent_user_after_payment(temp_user_data, transaction_id):
         created_user = SupabaseDB.create_user(user_dict)
         
         if not created_user:
-            app.logger.error(f"Failed to create permanent user for {temp_user_data['username']}")
+            logger.error(f"Failed to create permanent user for {temp_user_data['username']}")
             return None
         
         # Create transaction record
@@ -2682,11 +2732,11 @@ def create_permanent_user_after_payment(temp_user_data, transaction_id):
             {"ip": request.remote_addr if request else None, "transaction_id": transaction_id}
         )
         
-        app.logger.info(f"✅ Permanent user created after payment: {created_user.username}")
+        logger.info(f"Permanent user created after payment: {created_user.username}")
         return created_user
         
     except Exception as e:
-        app.logger.error(f"Error creating permanent user: {str(e)}")
+        logger.error(f"Error creating permanent user: {str(e)}")
         return None
 
 def cleanup_expired_temp_users():
@@ -2744,7 +2794,7 @@ def api_register():
         )
         
         if fraud_warnings:
-            current_app.logger.warning(f"Suspicious registration detected: {fraud_warnings}")
+            logger.warning(f"Suspicious registration detected: {fraud_warnings}")
             SecurityMonitor.log_security_event(
                 "SUSPICIOUS_REGISTRATION",
                 None,
@@ -2795,7 +2845,7 @@ def api_register():
         }), 201
         
     except Exception as e:
-        current_app.logger.error(f"Registration error: {str(e)}")
+        logger.error(f"Registration error: {str(e)}")
         return jsonify({"error": "Registration failed"}), 500
 
 @auth_bp.route("/login", methods=["POST"])
@@ -2818,7 +2868,7 @@ def api_login():
         
         # When verifying login
         if check_password_hash(user.password_hash, password):
-            print("Login successful!")
+            logger.info("Login successful!")
             
             if user.is_locked():
                 return jsonify({"error": "Account temporarily locked. Try again later."}), 423
@@ -2873,7 +2923,7 @@ def api_login():
             return jsonify({"error": "Invalid phone or password"}), 401
         
     except Exception as e:
-        current_app.logger.error(f"Login error: {str(e)}")
+        logger.error(f"Login error: {str(e)}")
         return jsonify({"error": "Login failed"}), 500
 
 @auth_bp.route("/verify-2fa", methods=["POST"])
@@ -2915,7 +2965,7 @@ def verify_2fa():
             return jsonify({"error": "Invalid 2FA code"}), 401
             
     except Exception as e:
-        current_app.logger.error(f"2FA verification error: {str(e)}")
+        logger.error(f"2FA verification error: {str(e)}")
         return jsonify({"error": "Verification failed"}), 500
 
 # M-Pesa Callback Handlers
@@ -2939,7 +2989,7 @@ def mpesa_withdraw_callback():
         
         # Verify Safaricom IP
         if not is_safaricom_ip(client_ip):
-            current_app.logger.warning(f"Suspicious callback from IP: {client_ip}")
+            logger.warning(f"Suspicious callback from IP: {client_ip}")
             SecurityMonitor.log_security_event(
                 "UNAUTHORIZED_CALLBACK", 
                 None, 
@@ -2948,7 +2998,7 @@ def mpesa_withdraw_callback():
             return jsonify({"ResultCode": 1, "ResultDesc": "Unauthorized"}), 401
         
         data = request.get_json(force=True)
-        current_app.logger.info(f"✅ M-Pesa callback: {json.dumps(data)}")
+        logger.info(f"M-Pesa callback: {json.dumps(data)}")
         
         result = data.get("Result", {})
         result_code = result.get("ResultCode")
@@ -2957,12 +3007,12 @@ def mpesa_withdraw_callback():
         originator_conversation_id = result.get("OriginatorConversationID")
         
         if not originator_conversation_id:
-            current_app.logger.error("❌ No withdrawal reference in callback")
+            logger.error("No withdrawal reference in callback")
             return jsonify({"ResultCode": 1, "ResultDesc": "Missing reference"})
         
         withdrawal_data = SupabaseDB.get_transaction_by_id(originator_conversation_id)
         if not withdrawal_data:
-            current_app.logger.error(f"❌ Withdrawal not found: {originator_conversation_id}")
+            logger.error(f"Withdrawal not found: {originator_conversation_id}")
             return jsonify({"ResultCode": 1, "ResultDesc": "Withdrawal not found"})
         
         user = SupabaseDB.get_user_by_id(withdrawal_data['user_id'])
@@ -3029,7 +3079,7 @@ def mpesa_withdraw_callback():
         return jsonify({"ResultCode": 0, "ResultDesc": "Success"})
         
     except Exception as e:
-        current_app.logger.error(f"❌ Callback processing error: {str(e)}")
+        logger.error(f"Callback processing error: {str(e)}")
         SecurityMonitor.log_security_event(
             "CALLBACK_ERROR", 
             None, 
@@ -3127,7 +3177,7 @@ def api_request_withdrawal():
                 )
             
             # Notify admins via Telegram
-            message = f"🚨 SUSPICIOUS WITHDRAWAL\nUser: {user.username}\nAmount: KSH {amount}\nWarnings: {', '.join(fraud_warnings)}\nIP: {ip_address}"
+            message = f"SUSPICIOUS WITHDRAWAL\nUser: {user.username}\nAmount: KSH {amount}\nWarnings: {', '.join(fraud_warnings)}\nIP: {ip_address}"
             send_telegram_notification(message)
             
             return jsonify({
@@ -3186,7 +3236,7 @@ def api_request_withdrawal():
         try:
             process_automatic_withdrawal(withdrawal_data)
         except Exception as e:
-            current_app.logger.error(f"M-Pesa initiation failed: {str(e)}")
+            logger.error(f"M-Pesa initiation failed: {str(e)}")
         
         SecurityMonitor.log_security_event(
             "WITHDRAWAL_INITIATED", 
@@ -3206,7 +3256,7 @@ def api_request_withdrawal():
         })
         
     except Exception as e:
-        current_app.logger.error(f"Withdrawal error: {str(e)}")
+        logger.error(f"Withdrawal error: {str(e)}")
         SecurityMonitor.log_security_event(
             "WITHDRAWAL_ERROR", 
             user.id if 'user' in locals() else None, 
@@ -3249,7 +3299,7 @@ def confirm_2fa_withdrawal():
             return jsonify({"error": "Invalid 2FA code"}), 401
             
     except Exception as e:
-        current_app.logger.error(f"2FA confirmation error: {str(e)}")
+        logger.error(f"2FA confirmation error: {str(e)}")
         return jsonify({"error": "Confirmation failed"}), 500
 
 # Register Blueprints
@@ -3404,7 +3454,7 @@ def start_health_monitoring():
                     health_status = health_monitor.comprehensive_health_check()
 
                     if health_status['status'] != 'healthy':
-                        current_app.logger.warning(
+                        logger.warning(
                             f"System health degraded: {health_status['status']}"
                         )
 
@@ -3414,7 +3464,7 @@ def start_health_monitoring():
 
                 except Exception as e:
                     safe_error = html.escape(str(e))
-                    current_app.logger.error(f"Health monitoring error: {safe_error}")
+                    logger.error(f"Health monitoring error: {safe_error}")
 
                 # Run every 5 minutes
                 time.sleep(300)
@@ -3426,7 +3476,7 @@ def start_health_monitoring():
                 critical_issues.append(f"{component}: {status.get('error', 'Unknown error')}")
 
         if critical_issues:
-            message = "🚨 CRITICAL HEALTH ALERT:\n" + "\n".join([html.escape(i) for i in critical_issues])
+            message = "CRITICAL HEALTH ALERT:\n" + "\n".join([html.escape(i) for i in critical_issues])
             # This is now safe in a thread
             send_telegram_notification(message)
 
@@ -3471,7 +3521,7 @@ def login():
         password = request.form.get('password')
         remember_me = bool(request.form.get('remember_me'))
 
-        app.logger.info(f"Login attempt for username: {username}")
+        logger.info(f"Login attempt for username: {username}")
 
         # Validate input
         if not username or not password:
@@ -3482,7 +3532,7 @@ def login():
         user = SupabaseDB.get_user_by_username(username)
 
         if user:
-            app.logger.info(f"User found: {user.username}, verified={user.is_verified}, active={user.is_active}")
+            logger.info(f"User found: {user.username}, verified={user.is_verified}, active={user.is_active}")
 
             # Check lock status
             if user.is_locked():
@@ -3491,7 +3541,7 @@ def login():
 
             # ✅ Use Werkzeug's built-in password verification
             if check_password_hash(user.password_hash, password):
-                app.logger.info(f"Login successful for {username}")
+                logger.info(f"Login successful for {username}")
 
                 # Require verification before login
                 if not user.is_verified:
@@ -3546,7 +3596,7 @@ def login():
 
         else:
             # User doesn't exist
-            app.logger.warning(f"Login failed — user not found: {username}")
+            logger.warning(f"Login failed — user not found: {username}")
             flash('Invalid username or password.', 'error')
 
     # Render login page
@@ -3612,7 +3662,7 @@ def register():
         )
         
         if fraud_warnings:
-            app.logger.warning(f"Suspicious registration detected: {fraud_warnings}")
+            logger.warning(f"Suspicious registration detected: {fraud_warnings}")
             SecurityMonitor.log_security_event(
                 "SUSPICIOUS_REGISTRATION",
                 None,
@@ -3780,7 +3830,7 @@ def initiate_stk_push_route():
             return jsonify({'success': False, 'message': f'STK Push failed: {error_message}'})
     
     except Exception as e:
-        app.logger.error(f"Error in STK push: {str(e)}")
+        logger.error(f"Error in STK push: {str(e)}")
         return jsonify({'success': False, 'message': f'Error initiating payment: {str(e)}'})
 
 # MODIFIED PAYMENT STATUS CHECK - Creates user on successful payment
@@ -3839,7 +3889,7 @@ def mpesa_callback():
         callback_data = request.get_json()
         
         # Log the callback for debugging
-        app.logger.info("M-PESA Callback received: %s", json.dumps(callback_data, indent=2))
+        logger.info("M-PESA Callback received: %s", json.dumps(callback_data, indent=2))
         
         # Extract relevant information from callback
         stk_callback = callback_data.get('Body', {}).get('stkCallback', {})
@@ -3875,7 +3925,7 @@ def mpesa_callback():
                 # This would require storing temp user data in a way we can retrieve it
                 # For now, we'll rely on the frontend to check payment status and create the user
                 
-                app.logger.info(f"✅ Payment completed for transaction {transaction['id']}")
+                logger.info(f"Payment completed for transaction {transaction['id']}")
                 
             else:
                 # Payment failed
@@ -3888,7 +3938,7 @@ def mpesa_callback():
         return jsonify({'ResultCode': 0, 'ResultDesc': 'Success'})
         
     except Exception as e:
-        app.logger.error(f"❌ Error processing M-PESA callback: {str(e)}")
+        logger.error(f"Error processing M-PESA callback: {str(e)}")
         return jsonify({'ResultCode': 1, 'ResultDesc': 'Failed'})
 
 # M-PESA B2C CALLBACK HANDLER
@@ -3899,7 +3949,7 @@ def mpesa_b2c_callback():
         callback_data = request.get_json()
         
         # Log the callback for debugging
-        app.logger.info("M-PESA B2C Callback received: %s", json.dumps(callback_data, indent=2))
+        logger.info("M-PESA B2C Callback received: %s", json.dumps(callback_data, indent=2))
         
         # Extract relevant information from callback
         result = callback_data.get('Result', {})
@@ -3913,12 +3963,12 @@ def mpesa_b2c_callback():
         withdrawal_transaction = SupabaseDB.get_transaction_by_id(originator_conversation_id)
         
         if not withdrawal_transaction:
-            app.logger.error(f"❌ Withdrawal transaction not found for ID: {originator_conversation_id}")
+            logger.error(f"Withdrawal transaction not found for ID: {originator_conversation_id}")
             return jsonify({'ResultCode': 1, 'ResultDesc': 'Transaction not found'})
         
         user = SupabaseDB.get_user_by_id(withdrawal_transaction['user_id'])
         if not user:
-            app.logger.error(f"❌ User not found for withdrawal: {withdrawal_transaction['id']}")
+            logger.error(f"User not found for withdrawal: {withdrawal_transaction['id']}")
             return jsonify({'ResultCode': 1, 'ResultDesc': 'User not found'})
         
         amount = abs(withdrawal_transaction['amount'])
@@ -3941,7 +3991,7 @@ def mpesa_b2c_callback():
                 transaction_id
             )
             
-            app.logger.info(f"✅ B2C payout completed for user {user.username}, transaction ID: {transaction_id}")
+            logger.info(f"B2C payout completed for user {user.username}, transaction ID: {transaction_id}")
             
         else:
             # B2C payment failed
@@ -3967,20 +4017,20 @@ def mpesa_b2c_callback():
                 'failed'
             )
             
-            app.logger.error(f"❌ B2C payout failed for user {user.username}: {result_desc}")
+            logger.error(f"B2C payout failed for user {user.username}: {result_desc}")
         
         # Always return success to M-PESA to stop retries
         return jsonify({'ResultCode': 0, 'ResultDesc': 'Success'})
         
     except Exception as e:
-        app.logger.error(f"❌ Error processing M-PESA B2C callback: {str(e)}")
+        logger.error(f"Error processing M-PESA B2C callback: {str(e)}")
         return jsonify({'ResultCode': 1, 'ResultDesc': 'System error'})
 
 @app.route('/mpesa-b2c-timeout', methods=['POST'])
 def mpesa_b2c_timeout():
     """Handle B2C timeout callbacks"""
     callback_data = request.get_json()
-    app.logger.warning(f"⚠️ M-PESA B2C Timeout callback: {json.dumps(callback_data)}")
+    logger.warning(f"M-PESA B2C Timeout callback: {json.dumps(callback_data)}")
     return jsonify({'ResultCode': 0, 'ResultDesc': 'Success'})
 
 @app.route('/api/payment-status')
@@ -4234,7 +4284,7 @@ def jobs():
                              search_query=search)
                              
     except Exception as e:
-        current_app.logger.error(f"Error loading jobs page: {str(e)}")
+        logger.error(f"Error loading jobs page: {str(e)}")
         flash('Error loading jobs page. Please try again.', 'error')
         return redirect(url_for('dashboard'))
 
@@ -4248,7 +4298,7 @@ def admin_jobs():
         jobs_data = db.get_all_jobs()
         return render_template('admin_jobs.html', jobs=jobs_data)
     except Exception as e:
-        current_app.logger.error(f"Error loading admin jobs: {str(e)}")
+        logger.error(f"Error loading admin jobs: {str(e)}")
         flash('Error loading jobs management page.', 'error')
         return redirect(url_for('admin_dashboard'))
 
@@ -4295,7 +4345,7 @@ def create_job():
                 flash('Failed to create job posting. Please try again.', 'error')
                 
         except Exception as e:
-            app.logger.error(f"Error creating job: {str(e)}")
+            logger.error(f"Error creating job: {str(e)}")
             flash('Error creating job posting. Please try again.', 'error')
     
     return render_template('create_job.html')
@@ -4346,7 +4396,7 @@ def edit_job(job_id):
                 flash('Failed to update job posting. Please try again.', 'error')
                 
         except Exception as e:
-            app.logger.error(f"Error updating job: {str(e)}")
+            logger.error(f"Error updating job: {str(e)}")
             flash('Error updating job posting. Please try again.', 'error')
     
     return render_template('edit_job.html', job=job)
@@ -4370,7 +4420,7 @@ def delete_job(job_id):
         else:
             flash('Failed to delete job posting.', 'error')
     except Exception as e:
-        app.logger.error(f"Error deleting job: {str(e)}")
+        logger.error(f"Error deleting job: {str(e)}")
         flash('Error deleting job posting.', 'error')
     
     return redirect(url_for('admin_jobs'))
@@ -4397,7 +4447,7 @@ def toggle_job_status(job_id):
             return jsonify({'success': False, 'message': 'Failed to update job status'})
             
     except Exception as e:
-        app.logger.error(f"Error toggling job status: {str(e)}")
+        logger.error(f"Error toggling job status: {str(e)}")
         return jsonify({'success': False, 'message': str(e)})
 
 @app.route('/profile', methods=['GET', 'POST'])
@@ -4464,7 +4514,7 @@ def settings():
         # Quick Supabase health check
         response = supabase.table('users').select('*').limit(1).execute()
     except Exception as e:
-        app.logger.error(f"Supabase error in settings: {e}")
+        logger.error(f"Supabase error in settings: {e}")
         flash('Database connection issue. Please try again later.', 'error')
         return redirect(url_for('dashboard'))
     
@@ -4545,7 +4595,7 @@ def settings():
             return redirect(url_for('settings'))
             
         except Exception as e:
-            app.logger.error(f"Error updating settings: {str(e)}")
+            logger.error(f"Error updating settings: {str(e)}")
             flash(f'Error updating settings: {str(e)}', 'error')
             return redirect(url_for('settings'))
     
@@ -4565,7 +4615,7 @@ def settings():
                              referred_count=referred_count)
                              
     except Exception as e:
-        app.logger.error(f"Error loading settings page: {str(e)}")
+        logger.error(f"Error loading settings page: {str(e)}")
         flash('Error loading settings page. Please try again.', 'error')
         return redirect(url_for('dashboard'))
 
@@ -4738,7 +4788,7 @@ def admin_fraud_monitoring():
                              stats=stats)
                              
     except Exception as e:
-        app.logger.error(f"Error loading fraud monitoring: {str(e)}")
+        logger.error(f"Error loading fraud monitoring: {str(e)}")
         flash('Error loading fraud monitoring dashboard.', 'error')
         return redirect(url_for('admin_dashboard'))
 
@@ -4756,78 +4806,78 @@ def get_suspicious_signups_count():
 @login_required
 @admin_required
 def admin_dashboard():
-    app.logger.info(f"Admin access attempt by: {current_user.username}, is_admin: {current_user.is_admin}")
+    logger.info(f"Admin access attempt by: {current_user.username}, is_admin: {current_user.is_admin}")
     
     try:
         # Test Supabase connection first
         response = supabase.table('users').select('*').limit(1).execute()
-        app.logger.info("Supabase connection test passed")
+        logger.info("Supabase connection test passed")
         
         # Admin statistics
         try:
             total_users = SupabaseDB.get_users_count()
-            app.logger.info(f"Total users: {total_users}")
+            logger.info(f"Total users: {total_users}")
         except Exception as e:
-            app.logger.error(f"Error counting users: {e}")
+            logger.error(f"Error counting users: {e}")
             total_users = 0
         
         try:
             total_verified = SupabaseDB.get_verified_users_count()
-            app.logger.info(f"Total verified: {total_verified}")
+            logger.info(f"Total verified: {total_verified}")
         except Exception as e:
-            app.logger.error(f"Error counting verified users: {e}")
+            logger.error(f"Error counting verified users: {e}")
             total_verified = 0
         
         try:
             total_referrals = SupabaseDB.get_referrals_count()
-            app.logger.info(f"Total referrals: {total_referrals}")
+            logger.info(f"Total referrals: {total_referrals}")
         except Exception as e:
-            app.logger.error(f"Error counting referrals: {e}")
+            logger.error(f"Error counting referrals: {e}")
             total_referrals = 0
         
         try:
             total_commission = SupabaseDB.get_total_commission()
-            app.logger.info(f"Total commission: {total_commission}")
+            logger.info(f"Total commission: {total_commission}")
         except Exception as e:
-            app.logger.error(f"Error calculating total commission: {e}")
+            logger.error(f"Error calculating total commission: {e}")
             total_commission = 0
         
         try:
             total_withdrawn_amount = SupabaseDB.get_total_withdrawn()
-            app.logger.info(f"Total withdrawn: {total_withdrawn_amount}")
+            logger.info(f"Total withdrawn: {total_withdrawn_amount}")
         except Exception as e:
-            app.logger.error(f"Error calculating total withdrawn: {e}")
+            logger.error(f"Error calculating total withdrawn: {e}")
             total_withdrawn_amount = 0
         
         try:
             total_balance = SupabaseDB.get_total_balance()
-            app.logger.info(f"Total balance: {total_balance}")
+            logger.info(f"Total balance: {total_balance}")
         except Exception as e:
-            app.logger.error(f"Error calculating total balance: {e}")
+            logger.error(f"Error calculating total balance: {e}")
             total_balance = 0
         
         try:
             pending_withdrawals_data = SupabaseDB.get_pending_withdrawals()
             pending_withdrawals = len(pending_withdrawals_data)
-            app.logger.info(f"Pending withdrawals: {pending_withdrawals}")
+            logger.info(f"Pending withdrawals: {pending_withdrawals}")
         except Exception as e:
-            app.logger.error(f"Error counting pending withdrawals: {e}")
+            logger.error(f"Error counting pending withdrawals: {e}")
             pending_withdrawals = 0
 
         try:
             pending_payments_data = SupabaseDB.get_pending_payments()
             pending_payments = len(pending_payments_data)
-            app.logger.info(f"Pending payments: {pending_payments}")
+            logger.info(f"Pending payments: {pending_payments}")
         except Exception as e:
-            app.logger.error(f"Error counting pending payments: {e}")
+            logger.error(f"Error counting pending payments: {e}")
             pending_payments = 0
         
         try:
             recent_users_data = SupabaseDB.get_recent_users(limit=10)
             recent_users = [User(user_data) for user_data in recent_users_data]
-            app.logger.info(f"Recent users: {len(recent_users)}")
+            logger.info(f"Recent users: {len(recent_users)}")
         except Exception as e:
-            app.logger.error(f"Error fetching recent users: {e}")
+            logger.error(f"Error fetching recent users: {e}")
             recent_users = []
         
         try:
@@ -4836,9 +4886,9 @@ def admin_dashboard():
             for withdrawal in pending_withdrawals_data:
                 user = SupabaseDB.get_user_by_id(withdrawal['user_id'])
                 pending_withdrawal_transactions.append((withdrawal, user))
-            app.logger.info(f"Pending withdrawal transactions: {len(pending_withdrawal_transactions)}")
+            logger.info(f"Pending withdrawal transactions: {len(pending_withdrawal_transactions)}")
         except Exception as e:
-            app.logger.error(f"Error fetching pending withdrawal transactions: {e}")
+            logger.error(f"Error fetching pending withdrawal transactions: {e}")
             pending_withdrawal_transactions = []
 
         try:
@@ -4847,22 +4897,22 @@ def admin_dashboard():
             for payment in pending_payments_data:
                 user = SupabaseDB.get_user_by_id(payment['user_id'])
                 pending_payment_transactions.append((payment, user))
-            app.logger.info(f"Pending payment transactions: {len(pending_payment_transactions)}")
+            logger.info(f"Pending payment transactions: {len(pending_payment_transactions)}")
         except Exception as e:
-            app.logger.error(f"Error fetching pending payment transactions: {e}")
+            logger.error(f"Error fetching pending payment transactions: {e}")
             pending_payment_transactions = []
         
         try:
             recent_activity_data = SupabaseDB.get_recent_activity(limit=10)
             recent_activity = recent_activity_data
-            app.logger.info(f"Recent activity: {len(recent_activity)}")
+            logger.info(f"Recent activity: {len(recent_activity)}")
         except Exception as e:
-            app.logger.error(f"Error fetching recent activity: {e}")
+            logger.error(f"Error fetching recent activity: {e}")
             recent_activity = []
         
         current_time = datetime.now(timezone.utc)
         
-        app.logger.info("All queries successful, rendering template...")
+        logger.info("All queries successful, rendering template...")
         
         return render_template('admin_dashboard.html',
                              total_users=total_users,
@@ -4880,7 +4930,7 @@ def admin_dashboard():
                              current_time=current_time)
                              
     except Exception as e:
-        app.logger.error(f"Error in admin_dashboard: {str(e)}")
+        logger.error(f"Error in admin_dashboard: {str(e)}")
         import traceback
         traceback.print_exc()
         flash(f'Error accessing admin dashboard: {str(e)}', 'error')
@@ -4932,7 +4982,7 @@ def admin_withdrawal_notice():
                              current_time=datetime.now(timezone.utc))
                              
     except Exception as e:
-        app.logger.error(f"Error loading withdrawal notice page: {str(e)}")
+        logger.error(f"Error loading withdrawal notice page: {str(e)}")
         flash('Error loading withdrawal notices.', 'error')
         return redirect(url_for('admin_dashboard'))
 
@@ -5015,7 +5065,7 @@ def update_withdrawal_status():
         })
         
     except Exception as e:
-        app.logger.error(f"Error updating withdrawal status: {str(e)}")
+        logger.error(f"Error updating withdrawal status: {str(e)}")
         return jsonify({'success': False, 'message': str(e)})
 
 @app.route('/admin/withdrawal-notice/bulk-action', methods=['POST'])
@@ -5119,7 +5169,7 @@ def bulk_withdrawal_action():
         })
         
     except Exception as e:
-        app.logger.error(f"Error in bulk withdrawal action: {str(e)}")
+        logger.error(f"Error in bulk withdrawal action: {str(e)}")
         return jsonify({'success': False, 'message': str(e)})
 
 @app.route('/admin/withdrawals')
@@ -5127,14 +5177,14 @@ def bulk_withdrawal_action():
 @admin_required
 def admin_withdrawals():
     try:
-        app.logger.info("📦 Fetching all withdrawals from Supabase...")
+        logger.info("Fetching all withdrawals from Supabase...")
         withdrawals_data = supabase.table('transactions')\
             .select('*, users(*)')\
             .eq('transaction_type', 'withdrawal')\
             .order('created_at', desc=True)\
             .execute()
         
-        app.logger.info(f"✅ Supabase response: {withdrawals_data}")
+        logger.info(f"Supabase response: {withdrawals_data}")
 
         withdrawals = []
         for item in withdrawals_data.data or []:
@@ -5151,7 +5201,7 @@ def admin_withdrawals():
             total_pending_withdrawals=total_pending_withdrawals
         )
     except Exception as e:
-        app.logger.error(f"❌ Error loading withdrawals: {e}")
+        logger.error(f"Error loading withdrawals: {e}")
         return jsonify({"success": False, "message": str(e)}), 500
 
 # Update admin withdrawal approval to handle automatic processing
@@ -5273,7 +5323,7 @@ def load_user(user_id):
     try:
         return SupabaseDB.get_user_by_id(user_id)
     except Exception as e:
-        app.logger.error(f"Error loading user {user_id}: {e}")
+        logger.error(f"Error loading user {user_id}: {e}")
         return None
 
 @app.route('/api/admin/stats')
@@ -5318,29 +5368,20 @@ def not_found_error(error):
 
 @app.errorhandler(500)
 def internal_error(error):
-    app.logger.error(f"Internal Server Error: {error}")
+    logger.error(f"Internal Server Error: {error}")
     return render_template('500.html'), 500
 
 @app.errorhandler(Exception)
 def handle_exception(error):
-    app.logger.error(f"Unhandled Exception: {error}")
+    logger.error(f"Unhandled Exception: {error}")
     return render_template('500.html'), 500
 
 # =============================================================================
 # APPLICATION INITIALIZATION
 # =============================================================================
 
-# Setup logging
-if not app.debug:
-    file_handler = RotatingFileHandler('error.log', maxBytes=10240, backupCount=10)
-    file_handler.setFormatter(logging.Formatter(
-        '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
-    ))
-    file_handler.setLevel(logging.ERROR)
-    app.logger.addHandler(file_handler)
-    app.logger.setLevel(logging.INFO)
-    app.logger.info('Referral Ninja startup')
-    
+# Remove old logging setup since we now have comprehensive logging
+
 # Fix console logging encoding
 if sys.stdout.encoding != 'utf-8':
     import codecs
@@ -5376,7 +5417,7 @@ def validate_environment():
     if missing_vars:
         raise Exception(f"Missing required environment variables: {', '.join(missing_vars)}")
     
-    current_app.logger.info("✓ All required environment variables are set")
+    logger.info("All required environment variables are set")
 
 # Updated initialization function
 def init_db():
@@ -5386,40 +5427,40 @@ def init_db():
 
     while retry_count < max_retries:
         try:
-            current_app.logger.info("🔍 Testing Supabase connection...")
+            logger.info("Testing Supabase connection...")
             response = supabase.table("users").select("*").limit(1).execute()
 
             if response.data is not None:
-                current_app.logger.info("✅ Supabase client verified successfully")
+                logger.info("Supabase client verified successfully")
                 
                 # Test Redis connection
                 try:
                     redis_client.ping()
-                    current_app.logger.info("✅ Redis connection verified successfully")
+                    logger.info("Redis connection verified successfully")
                 except Exception as e:
-                    current_app.logger.error(f"❌ Redis connection failed: {e}")
+                    logger.error(f"Redis connection failed: {e}")
                     return False
 
                 # Optionally check if admin exists
                 if os.environ.get("CREATE_ADMIN_USER") == "true":
                     create_admin_user_if_missing()
-                    current_app.logger.info("✅ Admin user checked/created")
+                    logger.info("Admin user checked/created")
 
                 return True
             else:
-                current_app.logger.warning("⚠️ No data returned from Supabase - table may be empty")
+                logger.warning("No data returned from Supabase - table may be empty")
                 return True  # Still fine, as Supabase is reachable
 
         except Exception as e:
             retry_count += 1
-            current_app.logger.error(f"❌ Database initialization attempt {retry_count} failed: {e}")
+            logger.error(f"Database initialization attempt {retry_count} failed: {e}")
 
             if retry_count < max_retries:
                 wait_time = 2 ** retry_count
-                current_app.logger.info(f"Retrying Supabase check in {wait_time} seconds...")
+                logger.info(f"Retrying Supabase check in {wait_time} seconds...")
                 time.sleep(wait_time)
             else:
-                current_app.logger.critical("❌ All Supabase connection attempts failed")
+                logger.error("All Supabase connection attempts failed")
                 return False
 
 # Enhanced before_request with health checks (add Redis check)
@@ -5455,10 +5496,10 @@ def before_request():
         try:
             # safe call (even if function ignores timeout)
             supabase_check("users", limit=1, timeout=3)
-            current_app.logger.debug("Supabase OK ✅")
+            logger.debug("Supabase OK")
             break
         except Exception as e:
-            current_app.logger.warning(f"Supabase check failed (attempt {i+1}/3): {e}")
+            logger.warning(f"Supabase check failed (attempt {i+1}/3): {e}")
             time.sleep(0.5)
     else:
         success = False
@@ -5467,21 +5508,21 @@ def before_request():
     for i in range(3):
         try:
             redis_client.ping()
-            current_app.logger.debug("Redis OK ✅")
+            logger.debug("Redis OK")
             break
         except Exception as e:
-            current_app.logger.warning(f"Redis check failed (attempt {i+1}/3): {e}")
+            logger.warning(f"Redis check failed (attempt {i+1}/3): {e}")
             time.sleep(0.5)
     else:
         success = False
 
     _last_health_check.update({"time": now, "ok": success})
 
-    # ⚠️ Don’t block users if services are slow — just log it
+    # ⚠️ Don't block users if services are slow — just log it
     if not success:
-        current_app.logger.error("⚠️ Background service check failed, continuing anyway")
+        logger.error("Background service check failed, continuing anyway")
 
-    # --- 🔒 Security logging for sensitive endpoints ---
+    # --- Security logging for sensitive endpoints ---
     sensitive_endpoints = {"api_request_withdrawal", "withdraw", "admin_dashboard"}
     if request.endpoint in sensitive_endpoints:
         try:
@@ -5495,9 +5536,9 @@ def before_request():
                     "method": request.method,
                 },
             )
-            current_app.logger.info(f"Security event logged for {request.endpoint}")
+            logger.info(f"Security event logged for {request.endpoint}")
         except Exception as e:
-            current_app.logger.warning(f"Security logging failed: {e}")
+            logger.warning(f"Security logging failed: {e}")
       
 # Add utility functions to Jinja2 context
 @app.context_processor
@@ -5521,16 +5562,16 @@ with app.app_context():
         validate_environment()
         
         if init_db():
-            app.logger.info("✅ Database initialization completed successfully")
+            logger.info("Database initialization completed successfully")
             
             # Start health monitoring in production
             if not app.debug:
                 start_health_monitoring()
-                app.logger.info("✅ Health monitoring started")
+                logger.info("Health monitoring started")
         else:
-            app.logger.error("❌ Database initialization failed")
+            logger.error("Database initialization failed")
     except Exception as e:
-        app.logger.error(f"❌ Application initialization failed: {e}")
+        logger.error(f"Application initialization failed: {e}")
 
 # Production Startup Script
 if __name__ == '__main__':
@@ -5539,39 +5580,39 @@ if __name__ == '__main__':
             validate_environment()
 
             if init_db():
-                app.logger.info("✅ Database initialization completed successfully")
-                app.logger.info("✅ Redis connection established")
+                logger.info("Database initialization completed successfully")
+                logger.info("Redis connection established")
 
                 if not app.debug:
                     start_health_monitoring()
-                    app.logger.info("✅ Health monitoring started")
+                    logger.info("Health monitoring started")
             else:
-                app.logger.error("❌ Database initialization failed - exiting")
+                logger.error("Database initialization failed - exiting")
                 sys.exit(1)
 
-        print("🚀 Starting Referral Ninja Application - PRODUCTION READY")
-        print("✅ Environment validation: PASSED")
-        print("✅ Database schema: VERIFIED")
-        print("✅ Redis cache: CONFIGURED")
-        print("✅ Rate limiting: ENABLED (Redis-backed)")
-        print("✅ Security configuration: ENABLED")
-        print("✅ M-Pesa environment: PRODUCTION")
-        print("✅ Celcom SMS: CONFIGURED")
-        print("✅ Health monitoring: ACTIVE")
-        print("✅ PAYMENT-ONLY USER STORAGE: ENABLED")
-        print("✅ ENHANCED FRAUD DETECTION: ENABLED")
-        print("✅ IP/DEVICE TRACKING: ENABLED")
+        print("Starting Referral Ninja Application - PRODUCTION READY")
+        print("Environment validation: PASSED")
+        print("Database schema: VERIFIED")
+        print("Redis cache: CONFIGURED")
+        print("Rate limiting: ENABLED (Redis-backed)")
+        print("Security configuration: ENABLED")
+        print("M-Pesa environment: PRODUCTION")
+        print("Celcom SMS: CONFIGURED")
+        print("Health monitoring: ACTIVE")
+        print("PAYMENT-ONLY USER STORAGE: ENABLED")
+        print("ENHANCED FRAUD DETECTION: ENABLED")
+        print("IP/DEVICE TRACKING: ENABLED")
 
         port = int(os.environ.get('PORT', 10000))
         host = '0.0.0.0'
 
-        print(f"✅ Server starting on {host}:{port}")
-        print(f"✅ Health endpoint: http://{host}:{port}/health")
-        print(f"✅ Detailed health: http://{host}:{port}/health/detailed")
-        print(f"✅ Fraud monitoring: http://{host}:{port}/admin/fraud-monitoring")
-        print(f"✅ Minimum withdrawal: KSH {app.config['WITHDRAWAL_MIN_AMOUNT']}")
+        print(f"Server starting on {host}:{port}")
+        print(f"Health endpoint: http://{host}:{port}/health")
+        print(f"Detailed health: http://{host}:{port}/health/detailed")
+        print(f"Fraud monitoring: http://{host}:{port}/admin/fraud-monitoring")
+        print(f"Minimum withdrawal: KSH {app.config['WITHDRAWAL_MIN_AMOUNT']}")
 
-        app.logger.info(f"🚀 Starting Flask app on {host}:{port}")
+        logger.info(f"Starting Flask app on {host}:{port}")
         app.run(
             host=host,
             port=port,
@@ -5580,7 +5621,7 @@ if __name__ == '__main__':
         )
 
     except Exception as e:
-        print(f"❌ CRITICAL: Failed to start application: {e}")
+        print(f"CRITICAL: Failed to start application: {e}")
         print("Please check:")
         print("1. All required environment variables are set")
         print("2. Supabase connection is working")
