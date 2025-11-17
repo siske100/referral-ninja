@@ -144,11 +144,15 @@
         }
 
         .content {
-            padding: 2rem;
             background: var(--light-bg);
             min-height: calc(100vh - 80px);
             width: 100%;
             overflow-x: hidden;
+        }
+
+        /* Responsive Content Padding */
+        .content-inner {
+            padding: 1rem;
         }
 
         /* Support Button */
@@ -526,7 +530,7 @@
 
         /* Extra Small Devices (Phones, 576px and down) */
         @media (max-width: 576px) {
-            .content {
+            .content-inner {
                 padding: 1rem;
             }
 
@@ -587,7 +591,7 @@
 
         /* Small Devices (576px to 768px) */
         @media (min-width: 576px) and (max-width: 768px) {
-            .content {
+            .content-inner {
                 padding: 1.5rem;
             }
 
@@ -612,7 +616,7 @@
 
         /* Medium Devices (768px to 992px) */
         @media (min-width: 768px) and (max-width: 992px) {
-            .content {
+            .content-inner {
                 padding: 1.75rem;
             }
 
@@ -623,14 +627,14 @@
 
         /* Large Devices (992px to 1200px) */
         @media (min-width: 992px) and (max-width: 1200px) {
-            .content {
+            .content-inner {
                 padding: 2rem;
             }
         }
 
         /* Extra Large Devices (1200px and up) */
         @media (min-width: 1200px) {
-            .content {
+            .content-inner {
                 padding: 2rem;
                 max-width: 1200px;
                 margin: 0 auto;
@@ -641,17 +645,6 @@
         @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
             .card {
                 box-shadow: 0 2px 20px rgba(0,0,0,0.1);
-            }
-        }
-
-        /* Dark Mode Support */
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --light-bg: #1a1a1a;
-                --card-bg: #2d2d2d;
-                --text-dark: #f0f0f0;
-                --text-light: #a0a0a0;
-                --border-light: #444;
             }
         }
 
@@ -666,13 +659,13 @@
 
         /* Orientation Specific */
         @media (orientation: portrait) {
-            .content {
+            .content-inner {
                 padding: 1.5rem;
             }
         }
 
         @media (orientation: landscape) and (max-height: 500px) {
-            .content {
+            .content-inner {
                 padding: 1rem;
             }
             
@@ -732,35 +725,37 @@
         
         <div class="main-content" id="mainContent">
             <main class="content">
-                <!-- Connection Status Indicator -->
-                <div class="connection-status online" id="connectionStatus" style="display: none;">
-                    <i class="fas fa-wifi me-2"></i>
-                    <span>Connected</span>
+                <div class="content-inner">
+                    <!-- Connection Status Indicator -->
+                    <div class="connection-status online" id="connectionStatus" style="display: none;">
+                        <i class="fas fa-wifi me-2"></i>
+                        <span>Connected</span>
+                    </div>
+
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="flash-message {{ category }}" role="alert">
+                                    <i class="flash-icon fas fa-{% if category == 'success' %}check-circle{% elif category == 'error' %}exclamation-triangle{% elif category == 'warning' %}exclamation-circle{% else %}info-circle{% endif %}"></i>
+                                    <span>{{ message }}</span>
+                                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <!-- Error State Fallback -->
+                    <div class="error-state" id="errorState" style="display: none;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>We're experiencing an issue</h3>
+                        <p>Please try again later. If the problem persists, contact support.</p>
+                        <button class="btn btn-primary" onclick="location.reload()">
+                            <i class="fas fa-redo me-2"></i>Reload Page
+                        </button>
+                    </div>
+
+                    {% block content %}{% endblock %}
                 </div>
-
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        {% for category, message in messages %}
-                            <div class="flash-message {{ category }}" role="alert">
-                                <i class="flash-icon fas fa-{% if category == 'success' %}check-circle{% elif category == 'error' %}exclamation-triangle{% elif category == 'warning' %}exclamation-circle{% else %}info-circle{% endif %}"></i>
-                                <span>{{ message }}</span>
-                                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
-                {% endwith %}
-
-                <!-- Error State Fallback -->
-                <div class="error-state" id="errorState" style="display: none;">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <h3>We're experiencing an issue</h3>
-                    <p>Please try again later. If the problem persists, contact support.</p>
-                    <button class="btn btn-primary" onclick="location.reload()">
-                        <i class="fas fa-redo me-2"></i>Reload Page
-                    </button>
-                </div>
-
-                {% block content %}{% endblock %}
 
                 <!-- Join Community Button -->
                 <a href="https://chat.whatsapp.com/I1iZi0WjYjF0EDV0Byq7IW" class="community-button" target="_blank" title="Join our WhatsApp Community">
