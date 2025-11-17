@@ -3942,23 +3942,19 @@ def login():
         remember_me = bool(request.form.get('remember_me'))
         recaptcha_response = request.form.get('g-recaptcha-response')
 
-        # Verify reCAPTCHA for login after multiple failed attempts
-        failed_attempts_key = f"login_attempts:{request.remote_addr}"
-        failed_attempts = int(redis_client.get(failed_attempts_key) or 0)
-        
-        if failed_attempts >= 3 and not verify_recaptcha(recaptcha_response, request.remote_addr):
+        # ALWAYS verify reCAPTCHA for login
+        if not verify_recaptcha(recaptcha_response, request.remote_addr):
             flash('Please complete the reCAPTCHA verification.', 'error')
             return render_template('auth/login.html', 
-                                 recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'],
-                                 show_recaptcha=True)
-
+                                 recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
 
         logger.info(f"Login attempt for username: {username}")
 
         # Validate input
         if not username or not password:
             flash('Please enter both username and password.', 'error')
-            return render_template('auth/login.html')
+            return render_template('auth/login.html', 
+                                 recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
 
         # Fetch user from Supabase
         user = SupabaseDB.get_user_by_username(username)
@@ -3969,7 +3965,8 @@ def login():
             # Check lock status
             if user.is_locked():
                 flash('Account temporarily locked. Please try again later.', 'error')
-                return render_template('auth/login.html')
+                return render_template('auth/login.html', 
+                                     recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
 
             # ✅ Use Werkzeug's built-in password verification
             if check_password_hash(user.password_hash, password):
@@ -4031,8 +4028,9 @@ def login():
             logger.warning(f"Login failed — user not found: {username}")
             flash('Invalid username or password.', 'error')
 
-    # Render login page
-    return render_template('auth/login.html')
+    # Render login page - ALWAYS pass recaptcha_site_key
+    return render_template('auth/login.html', 
+                         recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
 
 # MODIFIED REGISTRATION ROUTE - Stores data temporarily until payment with FRAUD DETECTION
 @app.route('/register', methods=['GET', 'POST'])
@@ -4057,7 +4055,9 @@ def register():
         # Verify reCAPTCHA
         if not verify_recaptcha(recaptcha_response, request.remote_addr):
             flash('Please complete the reCAPTCHA verification.', 'error')
-            return render_template('auth/register.html', referral_code=referral_code)
+            return render_template('auth/register.html', 
+                                 referral_code=referral_code,
+                                 recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
         
         # Get IP and device info
         ip_address = request.remote_addr
@@ -4065,15 +4065,21 @@ def register():
         
         if not name:
             flash('Full name is required.', 'error')
-            return render_template('auth/register.html', referral_code=referral_code)
+            return render_template('auth/register.html', 
+                                 referral_code=referral_code,
+                                 recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
         
         if not terms:
             flash('You must agree to the Terms of Service and Privacy Policy.', 'error')
-            return render_template('auth/register.html', referral_code=referral_code)
+            return render_template('auth/register.html', 
+                                 referral_code=referral_code,
+                                 recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
         
         if not re.match(r'^254[0-9]{9}$', phone_number) and not re.match(r'^07[0-9]{8}$', phone_number):
             flash('Please enter a valid Kenyan phone number.', 'error')
-            return render_template('auth/register.html', referral_code=referral_code)
+            return render_template('auth/register.html', 
+                                 referral_code=referral_code,
+                                 recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
         
         if phone_number.startswith('07'):
             phone_number = '254' + phone_number[1:]
@@ -4081,16 +4087,22 @@ def register():
         # Check if phone already exists in database (permanent users)
         if SupabaseDB.get_user_by_phone(phone_number):
             flash('Phone number already registered.', 'error')
-            return render_template('auth/register.html', referral_code=referral_code)
+            return render_template('auth/register.html', 
+                                 referral_code=referral_code,
+                                 recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
         
         # Check if username already exists in database (permanent users)
         if SupabaseDB.get_user_by_username(username):
             flash('Username already exists.', 'error')
-            return render_template('auth/register.html', referral_code=referral_code)
+            return render_template('auth/register.html', 
+                                 referral_code=referral_code,
+                                 recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
         
         if email and SupabaseDB.get_user_by_email(email):
             flash('Email already registered.', 'error')
-            return render_template('auth/register.html', referral_code=referral_code)
+            return render_template('auth/register.html', 
+                                 referral_code=referral_code,
+                                 recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
         
         # FRAUD DETECTION: Check for suspicious registration patterns
         fraud_warnings = fraud_detector.detect_suspicious_signup(
@@ -4118,14 +4130,18 @@ def register():
             # For high-risk patterns, block immediately
             if len(fraud_warnings) >= 2:
                 flash('Registration blocked due to suspicious activity. Please contact support.', 'error')
-                return render_template('auth/register.html', referral_code=referral_code)
+                return render_template('auth/register.html', 
+                                     referral_code=referral_code,
+                                     recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
         
         referrer = None
         if referral_code:
             referrer = validate_referral_code(referral_code)
             if not referrer:
                 flash('Invalid referral code. Please check and try again.', 'error')
-                return render_template('auth/register.html', referral_code=referral_code)
+                return render_template('auth/register.html', 
+                                     referral_code=referral_code,
+                                     recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
         
         # Store user data temporarily in session instead of creating database record
         temp_user_data = {
@@ -4161,10 +4177,9 @@ def register():
         return redirect(url_for('account_activation'))
     
     return render_template(
-    'auth/register.html',
-    referral_code=referral_code,
-    recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
-
+        'auth/register.html',
+        referral_code=referral_code,
+        recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
  
 @app.route('/logout')
 @login_required
