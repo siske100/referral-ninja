@@ -4160,11 +4160,12 @@ def register():
         flash('Registration successful! Please complete KSH 200 payment to activate your account.', 'success')
         return redirect(url_for('account_activation'))
     
-    return render_template('auth/register.html', 
-                           referral_code=referral_code 
-                           recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
- 
+    return render_template(
+    'auth/register.html',
+    referral_code=referral_code,
+    recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
 
+ 
 @app.route('/logout')
 @login_required
 def logout():
