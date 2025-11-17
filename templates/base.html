@@ -5,6 +5,82 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Referral Ninja{% endblock %}</title>
 
+    <!-- Comprehensive Favicon Setup -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon-96x96.png') }}" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}" />
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}" />
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/apple-touch-icon.png') }}" />
+    <meta name="apple-mobile-web-app-title" content="Referral Ninja" />
+    <link rel="manifest" href="{{ url_for('static', filename='images/site.webmanifest') }}" />
+    
+    <!-- Additional Favicon Sizes for Better Compatibility -->
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='images/favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='images/favicon-16x16.png') }}">
+    
+    <!-- Legacy ICO Format -->
+    <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}" type="image/x-icon">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}" type="image/x-icon">
+
+    <!-- Organization Logo for SEO -->
+    <link rel="logo" type="image/png" href="{{ url_for('static', filename='images/logo-120x120.png') }}">
+    <meta itemprop="logo" content="{{ url_for('static', filename='images/logo-120x120.png') }}">
+    <meta property="og:logo" content="{{ url_for('static', filename='images/logo-120x120.png') }}">
+
+    <!-- Enhanced Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Referral Ninja",
+        "url": "https://www.referralninja.co.ke",
+        "logo": "https://www.referralninja.co.ke/static/images/logo-120x120.png",
+        "description": "Referral Ninja - Earn money by referring friends and discovering job opportunities in Kenya. Join our platform for student referrals and job placements.",
+        "address": {
+            "@type": "PostalAddress",
+            "addressCountry": "KE",
+            "addressRegion": "Nairobi"
+        },
+        "contactPoint": {
+            "@type": "ContactPoint",
+            "telephone": "+254799326074",
+            "contactType": "customer service",
+            "areaServed": "KE",
+            "availableLanguage": "English"
+        },
+        "sameAs": [
+            "https://chat.whatsapp.com/I1iZi0WjYjF0EDV0Byq7IW"
+        ]
+    }
+    </script>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Referral Ninja - Earn money by referring friends and discovering job opportunities in Kenya. Join our platform for student referrals and job placements.">
+    <meta name="keywords" content="referral, earn money, jobs Kenya, student jobs, referrals, mobile money, M-Pesa">
+    <meta name="author" content="Referral Ninja">
+    <meta property="og:title" content="Referral Ninja - Earn Money Through Referrals">
+    <meta property="og:description" content="Join Referral Ninja to earn money by referring friends and discover job opportunities in Kenya.">
+    <meta property="og:url" content="https://www.referralninja.co.ke">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="{{ url_for('static', filename='images/og-image.png') }}">
+    <meta property="og:site_name" content="Referral Ninja">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Referral Ninja - Earn Money Through Referrals">
+    <meta name="twitter:description" content="Join Referral Ninja to earn money by referring friends and discover job opportunities in Kenya.">
+    <meta name="twitter:image" content="{{ url_for('static', filename='images/logo-120x120.png') }}">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+
+    <!-- Performance Optimizations -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
+    <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
+    <link rel="dns-prefetch" href="//fonts.googleapis.com">
+    
+    <noscript>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    </noscript>
+
     <!-- External Resources -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -15,11 +91,9 @@
             --primary-red: #dc3545;
             --primary-dark: #c82333;
             --primary-light: #e74c3c;
-            --secondary-dark: #34495e;
-            --accent-orange: #fd7e14;
             --light-bg: #f8f9fa;
             --card-bg: #ffffff;
-            --text-dark: #2d3748;
+            --text-dark: #212529;
             --text-light: #6c757d;
             --border-light: #dee2e6;
             --success: #28a745;
@@ -37,7 +111,6 @@
             margin: 0;
             padding: 0;
             overflow-x: hidden;
-            height: 100%;
         }
 
         body {
@@ -46,151 +119,45 @@
             min-height: 100vh;
         }
 
-        /* Main Layout Structure */
+        /* Enhanced App Layout with Sidebar */
         .app-container {
             display: flex;
             min-height: 100vh;
             background: var(--light-bg);
+            position: relative;
         }
 
-        /* Sidebar Styles */
-        .sidebar {
-            width: 250px;
-            background: white;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
-            z-index: 1000;
-            position: fixed;
-            height: 100vh;
-            left: 0;
-            top: 0;
-        }
-
+        /* Main Content with Sidebar Spacing */
         .main-content {
             flex: 1;
-            margin-left: 250px;
             transition: all 0.3s ease;
+            position: relative;
             min-height: 100vh;
-            width: calc(100% - 250px);
+            width: 100%;
+            margin-left: 0;
         }
 
-        /* Content Area */
+        /* Desktop Layout */
+        @media (min-width: 992px) {
+            .main-content {
+                margin-left: 250px; /* Sidebar width */
+                width: calc(100% - 250px);
+            }
+        }
+
         .content {
-            padding: 20px;
-            min-height: 100vh;
             background: var(--light-bg);
+            min-height: 100vh;
+            width: 100%;
+            overflow-x: hidden;
         }
 
         /* Responsive Content Padding */
-        .content-wrapper {
-            max-width: 1200px;
-            margin: 0 auto;
-            width: 100%;
-        }
-
-        /* Mobile Sidebar */
-        @media (max-width: 992px) {
-            .sidebar {
-                transform: translateX(-100%);
-                width: 280px;
-            }
-
-            .sidebar.mobile-open {
-                transform: translateX(0);
-            }
-
-            .main-content {
-                margin-left: 0;
-                width: 100%;
-            }
-
-            .sidebar-overlay {
-                display: none;
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: rgba(0,0,0,0.5);
-                z-index: 999;
-            }
-
-            .sidebar-overlay.active {
-                display: block;
-            }
-        }
-
-        /* Mobile Menu Toggle */
-        .mobile-menu-toggle {
-            display: none;
-            position: fixed;
-            top: 15px;
-            left: 15px;
-            z-index: 1001;
-            background: var(--primary-red);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 10px 15px;
-            font-size: 1.2rem;
-        }
-
-        @media (max-width: 992px) {
-            .mobile-menu-toggle {
-                display: block;
-            }
-        }
-
-        /* Enhanced Card System */
-        .card {
-            border: none;
-            border-radius: 12px;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.08);
-            background: var(--card-bg);
-            margin-bottom: 1.5rem;
-            transition: all 0.3s ease;
-        }
-
-        .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.12);
-        }
-
-        .card-header {
-            background: white;
-            border-bottom: 1px solid var(--border-light);
-            padding: 1.25rem 1.5rem;
-            font-weight: 600;
-        }
-
-        .card-body {
+        .content-inner {
             padding: 1.5rem;
         }
 
-        /* Responsive Grid System */
-        .responsive-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        /* Button Styles */
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary-red), var(--primary-dark));
-            border: none;
-            border-radius: 8px;
-            padding: 0.75rem 1.5rem;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
-        }
-
-        /* Support Buttons */
+        /* Support Button */
         .support-button {
             position: fixed;
             bottom: 20px;
@@ -208,8 +175,16 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            white-space: nowrap;
         }
 
+        .support-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 211, 102, 0.6);
+            color: white;
+        }
+
+        /* Community Button */
         .community-button {
             position: fixed;
             bottom: 80px;
@@ -227,144 +202,472 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            white-space: nowrap;
         }
 
-        /* Flash Messages */
+        .community-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+            color: white;
+        }
+
+        /* Enhanced Flash Messages */
         .flash-message {
-            padding: 1rem 1.5rem;
+            padding: 1.25rem 1.5rem;
             margin-bottom: 1.5rem;
-            border-radius: 8px;
+            border-radius: 12px;
             font-weight: 500;
             display: flex;
             align-items: center;
-            border-left: 4px solid;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            position: relative;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .flash-message:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.12);
         }
 
         .flash-message.success {
-            background: #d4edda;
+            background: linear-gradient(135deg, #e8f5e8, #d4edda);
             color: #155724;
-            border-left-color: var(--success);
+            border-left: 4px solid var(--success);
         }
 
         .flash-message.error {
-            background: #f8d7da;
+            background: linear-gradient(135deg, #fde8e8, #f8d7da);
             color: #721c24;
-            border-left-color: var(--danger);
+            border-left: 4px solid var(--danger);
         }
 
-        /* Table Responsiveness */
+        .flash-message.warning {
+            background: linear-gradient(135deg, #fff9e6, #fff3cd);
+            color: #856404;
+            border-left: 4px solid var(--warning);
+        }
+
+        .flash-message.info {
+            background: linear-gradient(135deg, #e8f4f8, #d1ecf1);
+            color: #0c5460;
+            border-left: 4px solid var(--info);
+        }
+
+        .flash-icon {
+            font-size: 1.2rem;
+            margin-right: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        /* Card Enhancements */
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            border-left: 4px solid var(--primary-red);
+            background: var(--card-bg);
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+        }
+
+        .card-header {
+            background: rgba(0,0,0,0.02);
+            border-bottom: 1px solid var(--border-light);
+            font-weight: 600;
+            color: var(--text-dark);
+            padding: 1rem 1.5rem;
+        }
+
+        /* Button Enhancements */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-red), var(--primary-dark));
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            width: auto;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+        }
+
+        .btn-outline-secondary {
+            border: 1px solid var(--border-light);
+            color: var(--text-light);
+            background: transparent;
+        }
+
+        .btn-outline-secondary:hover {
+            background: rgba(0,0,0,0.05);
+            border-color: var(--border-light);
+            color: var(--text-dark);
+        }
+
+        /* Form Controls */
+        .form-control {
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            background: var(--card-bg);
+            color: var(--text-dark);
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-red);
+            box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.1);
+            background: var(--card-bg);
+        }
+
+        .form-label {
+            color: var(--text-dark);
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Table Styling - Responsive */
         .table-responsive {
             overflow-x: auto;
+            width: 100%;
+        }
+
+        .table {
+            color: var(--text-dark);
+            background: var(--card-bg);
+            width: 100%;
+            min-width: 600px;
+        }
+
+        .table th {
+            border-color: var(--border-light);
+            background: rgba(0,0,0,0.02);
+            font-weight: 600;
+            color: var(--text-dark);
+            white-space: nowrap;
+        }
+
+        .table td {
+            border-color: var(--border-light);
+            word-break: break-word;
+        }
+
+        .table-hover tbody tr:hover {
+            background: rgba(0,0,0,0.03);
+        }
+
+        /* Error State Styles */
+        .error-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            background: var(--card-bg);
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            margin: 2rem 0;
+            width: 100%;
+        }
+
+        .error-state i {
+            font-size: 4rem;
+            color: var(--danger);
+            margin-bottom: 1.5rem;
+        }
+
+        .error-state h3 {
+            color: var(--text-dark);
+            margin-bottom: 1rem;
+        }
+
+        .error-state p {
+            color: var(--text-light);
+            margin-bottom: 2rem;
+        }
+
+        /* Connection Status */
+        .connection-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            font-weight: 600;
+            z-index: 1000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+        }
+
+        .connection-status.online {
+            background: var(--success);
+            color: white;
+        }
+
+        .connection-status.offline {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* Toast Container */
+        .toast-container {
+            z-index: 9999;
+        }
+
+        /* Form Validation */
+        .is-invalid {
+            border-color: var(--danger) !important;
+            box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.1) !important;
+        }
+
+        .invalid-feedback {
+            color: var(--danger);
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+
+        /* Enhanced Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, var(--primary-red), var(--primary-dark));
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, var(--primary-dark), #a2352a);
+        }
+
+        /* Loading Animation */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary-red);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Maintenance Mode */
+        .maintenance-mode {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            border-radius: 10px;
+            margin: 1rem 0;
+        }
+
+        /* Accessibility Improvements */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        /* Focus styles for better accessibility */
+        button:focus,
+        a:focus,
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: 2px solid var(--primary-red);
+            outline-offset: 2px;
+        }
+
+        /* Print Styles */
+        @media print {
+            .rank-badge {
+                display: none !important;
+            }
+            
+            .main-content {
+                margin-left: 0 !important;
+            }
+            
+            .content {
+                padding: 0;
+            }
+
+            .support-button {
+                display: none !important;
+            }
+
+            .community-button {
+                display: none !important;
+            }
         }
 
         /* ========== RESPONSIVE BREAKPOINTS ========== */
 
-        /* Large Laptops and Desktops (1200px and up) */
-        @media (min-width: 1200px) {
-            .content {
-                padding: 2rem;
-            }
-            
-            .content-wrapper {
-                max-width: 1400px;
-            }
-        }
-
-        /* Laptops (992px to 1199px) */
-        @media (min-width: 992px) and (max-width: 1199px) {
-            .content {
-                padding: 1.5rem;
-            }
-            
-            .sidebar {
-                width: 220px;
-            }
-            
-            .main-content {
-                margin-left: 220px;
-                width: calc(100% - 220px);
-            }
-        }
-
-        /* Tablets (768px to 991px) */
-        @media (min-width: 768px) and (max-width: 991px) {
-            .content {
-                padding: 1.25rem;
-            }
-            
-            .responsive-grid {
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-                gap: 1rem;
-            }
-        }
-
-        /* Mobile Landscape (576px to 767px) */
-        @media (min-width: 576px) and (max-width: 767px) {
-            .content {
+        /* Extra Small Devices (Phones, 576px and down) */
+        @media (max-width: 576px) {
+            .content-inner {
                 padding: 1rem;
             }
-            
-            .card-body {
-                padding: 1rem;
-            }
-            
-            .responsive-grid {
-                grid-template-columns: 1fr;
-                gap: 1rem;
-            }
-        }
 
-        /* Mobile Portrait (575px and down) */
-        @media (max-width: 575px) {
-            .content {
-                padding: 0.75rem;
-            }
-            
-            .card-body {
-                padding: 0.75rem;
-            }
-            
             .support-button,
             .community-button {
-                padding: 10px 15px;
+                padding: 10px 16px;
                 font-size: 0.875rem;
                 right: 15px;
+                bottom: 15px;
             }
-            
+
             .community-button {
                 bottom: 70px;
             }
-            
+
             .support-button span,
             .community-button span {
                 display: none;
             }
-            
+
             .support-button,
             .community-button {
                 width: 50px;
                 height: 50px;
                 border-radius: 50%;
                 justify-content: center;
+                padding: 0;
+            }
+
+            .flash-message {
+                padding: 1rem;
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .flash-icon {
+                margin-right: 0;
+                margin-bottom: 0.5rem;
+            }
+
+            .card-header {
+                padding: 0.75rem 1rem;
+            }
+
+            .btn-primary {
+                padding: 0.75rem 1rem;
+                width: 100%;
+            }
+
+            .error-state {
+                padding: 2rem 1rem;
+            }
+
+            .error-state i {
+                font-size: 3rem;
             }
         }
 
-        /* Small Mobile Devices */
-        @media (max-width: 375px) {
-            .content {
-                padding: 0.5rem;
+        /* Small Devices (576px to 768px) */
+        @media (min-width: 576px) and (max-width: 768px) {
+            .content-inner {
+                padding: 1.5rem;
             }
-            
-            .mobile-menu-toggle {
-                top: 10px;
-                left: 10px;
-                padding: 8px 12px;
+
+            .support-button,
+            .community-button {
+                padding: 10px 16px;
+                font-size: 0.875rem;
+            }
+
+            .community-button {
+                bottom: 75px;
+            }
+
+            .flash-message {
+                padding: 1.25rem 1.5rem;
+            }
+
+            .card-header {
+                padding: 1rem 1.25rem;
             }
         }
 
-        /* Height-based adjustments for landscape mobiles */
-        @media (max-height: 500px) and (orientation: landscape) {
-            .content {
+        /* Medium Devices (768px to 992px) */
+        @media (min-width: 768px) and (max-width: 992px) {
+            .content-inner {
+                padding: 1.75rem;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+        }
+
+        /* Large Devices (992px to 1200px) */
+        @media (min-width: 992px) and (max-width: 1200px) {
+            .content-inner {
+                padding: 2rem;
+            }
+        }
+
+        /* Extra Large Devices (1200px and up) */
+        @media (min-width: 1200px) {
+            .content-inner {
+                padding: 2rem;
+                max-width: 1200px;
+                margin: 0 auto;
+            }
+        }
+
+        /* High DPI Screens */
+        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+            .card {
+                box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+            }
+        }
+
+        /* Reduced Motion Support */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Orientation Specific */
+        @media (orientation: portrait) {
+            .content-inner {
+                padding: 1.5rem;
+            }
+        }
+
+        @media (orientation: landscape) and (max-height: 500px) {
+            .content-inner {
                 padding: 1rem;
             }
             
@@ -379,97 +682,91 @@
             }
         }
 
-        /* Print Styles */
-        @media print {
-            .sidebar,
-            .support-button,
-            .community-button,
-            .mobile-menu-toggle {
-                display: none !important;
-            }
-            
-            .main-content {
-                margin-left: 0 !important;
-                width: 100% !important;
-            }
-            
-            .content {
-                padding: 0 !important;
-            }
+        /* Grid System for Better Layout Control */
+        .responsive-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            width: 100%;
+        }
+
+        /* Flexbox for Form Layouts */
+        .form-row-responsive {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .form-row-responsive .form-group {
+            flex: 1 1 300px;
+        }
+
+        /* Text Responsiveness */
+        .responsive-text {
+            font-size: clamp(1rem, 2.5vw, 1.25rem);
+        }
+
+        .responsive-heading {
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+        }
+
+        /* Image Responsiveness */
+        .responsive-img {
+            max-width: 100%;
+            height: auto;
         }
     </style>
+    {% block styles %}{% endblock %}
 </head>
 <body>
+    <!-- Skip to main content for accessibility -->
+    <a href="#mainContent" class="sr-only">Skip to main content</a>
+
     <div class="app-container">
-        <!-- Mobile Menu Toggle -->
-        <button class="mobile-menu-toggle" id="mobileMenuToggle">
-            <i class="fas fa-bars"></i>
-        </button>
-
-        <!-- Sidebar Overlay for Mobile -->
-        <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-        <!-- Sidebar -->
-        <div class="sidebar" id="sidebar">
-            {% include 'sidebar.html' %}
-        </div>
-
-        <!-- Main Content -->
+        {% include 'sidebar.html' %}
+        
         <div class="main-content" id="mainContent">
             <main class="content">
-                <div class="content-wrapper">
-                    <!-- Connection Status -->
+                <div class="content-inner">
+                    <!-- Connection Status Indicator -->
                     <div class="connection-status online" id="connectionStatus" style="display: none;">
                         <i class="fas fa-wifi me-2"></i>
                         <span>Connected</span>
                     </div>
 
-                    <!-- Flash Messages -->
                     {% with messages = get_flashed_messages(with_categories=true) %}
                         {% if messages %}
                             {% for category, message in messages %}
                                 <div class="flash-message {{ category }}" role="alert">
-                                    <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'error' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
-                                    {{ message }}
-                                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+                                    <i class="flash-icon fas fa-{% if category == 'success' %}check-circle{% elif category == 'error' %}exclamation-triangle{% elif category == 'warning' %}exclamation-circle{% else %}info-circle{% endif %}"></i>
+                                    <span>{{ message }}</span>
+                                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
                                 </div>
                             {% endfor %}
                         {% endif %}
                     {% endwith %}
 
-                    <!-- Main Content Block -->
-                    {% block content %}
-                    <!-- Your content goes here -->
-                    <div class="responsive-grid">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="mb-0">Welcome to Referral Ninja</h5>
-                            </div>
-                            <div class="card-body">
-                                <p>This is a responsive layout that adapts to all screen sizes.</p>
-                                <button class="btn btn-primary">Get Started</button>
-                            </div>
-                        </div>
-                        
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="mb-0">Your Dashboard</h5>
-                            </div>
-                            <div class="card-body">
-                                <p>Monitor your referrals and earnings here.</p>
-                            </div>
-                        </div>
+                    <!-- Error State Fallback -->
+                    <div class="error-state" id="errorState" style="display: none;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>We're experiencing an issue</h3>
+                        <p>Please try again later. If the problem persists, contact support.</p>
+                        <button class="btn btn-primary" onclick="location.reload()">
+                            <i class="fas fa-redo me-2"></i>Reload Page
+                        </button>
                     </div>
-                    {% endblock %}
+
+                    {% block content %}{% endblock %}
                 </div>
 
-                <!-- Action Buttons -->
-                <a href="https://chat.whatsapp.com/I1iZi0WjYjF0EDV0Byq7IW" class="community-button" target="_blank">
+                <!-- Join Community Button -->
+                <a href="https://chat.whatsapp.com/I1iZi0WjYjF0EDV0Byq7IW" class="community-button" target="_blank" title="Join our WhatsApp Community">
                     <i class="fab fa-whatsapp"></i>
                     <span>Join Community</span>
                 </a>
 
-                <a href="https://wa.me/254799326074" class="support-button" target="_blank">
+                <!-- WhatsApp Support Button -->
+                <a href="https://wa.me/254799326074" class="support-button" target="_blank" title="Contact Support on WhatsApp">
                     <i class="fab fa-whatsapp"></i>
                     <span>Contact Support</span>
                 </a>
@@ -479,108 +776,425 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Enhanced JavaScript with responsive behavior
         document.addEventListener('DOMContentLoaded', function() {
-            const mobileMenuToggle = document.getElementById('mobileMenuToggle');
-            const sidebar = document.getElementById('sidebar');
-            const sidebarOverlay = document.getElementById('sidebarOverlay');
             const mainContent = document.getElementById('mainContent');
+            const connectionStatus = document.getElementById('connectionStatus');
+            const errorState = document.getElementById('errorState');
 
-            // Mobile sidebar toggle
-            function toggleMobileSidebar() {
-                sidebar.classList.toggle('mobile-open');
-                sidebarOverlay.classList.toggle('active');
-                document.body.style.overflow = sidebar.classList.contains('mobile-open') ? 'hidden' : '';
+            // Responsive initialization
+            function initializeResponsiveBehavior() {
+                setupResponsiveSidebar();
+                setupResponsiveButtons();
+                setupResponsiveTables();
+                setupViewportHandling();
             }
 
-            mobileMenuToggle.addEventListener('click', toggleMobileSidebar);
-            sidebarOverlay.addEventListener('click', toggleMobileSidebar);
+            // Handle sidebar behavior on different screen sizes
+            function setupResponsiveSidebar() {
+                const sidebar = document.querySelector('.sidebar');
+                if (!sidebar) return;
 
-            // Close sidebar when clicking on a link (mobile)
-            sidebar.addEventListener('click', function(e) {
-                if (e.target.tagName === 'A' && window.innerWidth <= 992) {
-                    toggleMobileSidebar();
-                }
-            });
-
-            // Handle window resize
-            function handleResize() {
-                if (window.innerWidth > 992) {
-                    sidebar.classList.remove('mobile-open');
-                    sidebarOverlay.classList.remove('active');
-                    document.body.style.overflow = '';
-                }
-            }
-
-            window.addEventListener('resize', handleResize);
-
-            // Connection status monitoring
-            function updateConnectionStatus() {
-                const connectionStatus = document.getElementById('connectionStatus');
-                if (connectionStatus) {
-                    const isOnline = navigator.onLine;
-                    connectionStatus.style.display = 'block';
-                    connectionStatus.className = `connection-status ${isOnline ? 'online' : 'offline'}`;
-                    connectionStatus.innerHTML = isOnline 
-                        ? '<i class="fas fa-wifi me-2"></i><span>Connected</span>'
-                        : '<i class="fas fa-wifi-slash me-2"></i><span>Offline</span>';
-
-                    if (isOnline) {
-                        setTimeout(() => {
-                            connectionStatus.style.display = 'none';
-                        }, 3000);
+                function handleSidebar() {
+                    if (window.innerWidth < 992) {
+                        // Mobile behavior - sidebar hidden or overlay
+                        sidebar.classList.add('mobile-sidebar');
+                        mainContent.style.marginLeft = '0';
+                        mainContent.style.width = '100%';
+                    } else {
+                        // Desktop behavior - sidebar visible
+                        sidebar.classList.remove('mobile-sidebar');
+                        mainContent.style.marginLeft = '250px';
+                        mainContent.style.width = 'calc(100% - 250px)';
                     }
                 }
+
+                // Initial setup
+                handleSidebar();
+                
+                // Update on resize
+                window.addEventListener('resize', handleSidebar);
             }
 
-            window.addEventListener('online', updateConnectionStatus);
-            window.addEventListener('offline', updateConnectionStatus);
-            updateConnectionStatus();
+            // Adjust button visibility and behavior
+            function setupResponsiveButtons() {
+                const supportButton = document.querySelector('.support-button');
+                const communityButton = document.querySelector('.community-button');
+                
+                function updateButtonText() {
+                    if (window.innerWidth < 576) {
+                        // Hide text on very small screens
+                        if (supportButton) supportButton.querySelector('span').style.display = 'none';
+                        if (communityButton) communityButton.querySelector('span').style.display = 'none';
+                    } else {
+                        // Show text on larger screens
+                        if (supportButton) supportButton.querySelector('span').style.display = 'inline';
+                        if (communityButton) communityButton.querySelector('span').style.display = 'inline';
+                    }
+                }
 
-            // Responsive button text
-            function updateButtonText() {
-                const supportButtons = document.querySelectorAll('.support-button, .community-button');
-                supportButtons.forEach(button => {
-                    const span = button.querySelector('span');
-                    if (span) {
-                        if (window.innerWidth <= 575) {
-                            span.style.display = 'none';
-                        } else {
-                            span.style.display = 'inline';
+                // Initial setup
+                updateButtonText();
+                
+                // Update on resize
+                window.addEventListener('resize', updateButtonText);
+            }
+
+            // Make tables responsive
+            function setupResponsiveTables() {
+                const tables = document.querySelectorAll('table');
+                tables.forEach(table => {
+                    if (!table.closest('.table-responsive')) {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'table-responsive';
+                        table.parentNode.insertBefore(wrapper, table);
+                        wrapper.appendChild(table);
+                    }
+                });
+            }
+
+            // Handle viewport changes and orientation
+            function setupViewportHandling() {
+                let vh = window.innerHeight * 0.01;
+                document.documentElement.style.setProperty('--vh', `${vh}px`);
+
+                window.addEventListener('resize', () => {
+                    let vh = window.innerHeight * 0.01;
+                    document.documentElement.style.setProperty('--vh', `${vh}px`);
+                });
+
+                // Handle orientation changes
+                window.addEventListener('orientationchange', function() {
+                    setTimeout(() => {
+                        let vh = window.innerHeight * 0.01;
+                        document.documentElement.style.setProperty('--vh', `${vh}px`);
+                    }, 300);
+                });
+            }
+
+            // Initialize components safely
+            function initializeApp() {
+                try {
+                    initializeResponsiveBehavior();
+                    setupFlashMessages();
+                    setupEnhancedConnectionMonitor();
+                    setupErrorHandling();
+                    setupAccessibility();
+                    setupFormValidation();
+                    monitorPerformance();
+                } catch (error) {
+                    console.error('Error initializing app:', error);
+                    showErrorState();
+                }
+            }
+
+            function setupFlashMessages() {
+                const flashMessages = document.querySelectorAll('.flash-message');
+                flashMessages.forEach(message => {
+                    setTimeout(() => {
+                        const closeButton = message.querySelector('.btn-close');
+                        if (closeButton) {
+                            closeButton.click();
+                        }
+                    }, 5000);
+                });
+            }
+
+            function setupEnhancedConnectionMonitor() {
+                let isOnline = navigator.onLine;
+                let checkInterval;
+
+                function updateConnectionStatus(online) {
+                    if (online === isOnline) return;
+                    
+                    isOnline = online;
+                    
+                    if (connectionStatus) {
+                        connectionStatus.classList.toggle('online', online);
+                        connectionStatus.classList.toggle('offline', !online);
+                        connectionStatus.innerHTML = online 
+                            ? '<i class="fas fa-wifi me-2"></i><span>Connected</span>'
+                            : '<i class="fas fa-wifi-slash me-2"></i><span>Offline - Check Connection</span>';
+                        connectionStatus.style.display = 'block';
+                        
+                        if (online) {
+                            setTimeout(() => connectionStatus.style.display = 'none', 3000);
+                        }
+                    }
+
+                    // Dispatch custom event for other components
+                    window.dispatchEvent(new CustomEvent('connectionChange', { 
+                        detail: { online } 
+                    }));
+                }
+
+                // Initial status
+                updateConnectionStatus(isOnline);
+
+                // Event listeners
+                window.addEventListener('online', () => updateConnectionStatus(true));
+                window.addEventListener('offline', () => updateConnectionStatus(false));
+
+                // Periodic check (every 30 seconds)
+                checkInterval = setInterval(() => {
+                    fetch('/health', { method: 'HEAD', cache: 'no-cache' })
+                        .then(() => updateConnectionStatus(true))
+                        .catch(() => updateConnectionStatus(false));
+                }, 30000);
+            }
+
+            function setupErrorHandling() {
+                // Global error handler
+                window.addEventListener('error', function(e) {
+                    console.error('Global error:', e.error);
+                    // Don't show error state for minor errors
+                });
+
+                // Network request error handling
+                const originalFetch = window.fetch;
+                window.fetch = function(...args) {
+                    return originalFetch.apply(this, args)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response;
+                        })
+                        .catch(error => {
+                            console.error('Fetch error:', error);
+                            throw error;
+                        });
+                };
+            }
+
+            function setupAccessibility() {
+                // Handle focus for modal dialogs
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') {
+                        const openModal = document.querySelector('.modal.show');
+                        if (openModal) {
+                            const closeBtn = openModal.querySelector('[data-bs-dismiss="modal"]');
+                            if (closeBtn) closeBtn.click();
                         }
                     }
                 });
             }
 
-            window.addEventListener('resize', updateButtonText);
-            updateButtonText();
+            function setupFormValidation() {
+                // Auto-remove validation styles on input
+                document.addEventListener('input', function(e) {
+                    if (e.target.hasAttribute('required')) {
+                        e.target.classList.remove('is-invalid');
+                    }
+                });
+            }
 
-            // Initialize tooltips if using Bootstrap
-            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-                return new bootstrap.Tooltip(tooltipTriggerEl);
+            function monitorPerformance() {
+                // Report page load time
+                window.addEventListener('load', () => {
+                    const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
+                    console.log(`Page loaded in ${loadTime}ms`);
+                    
+                    if (loadTime > 3000) {
+                        console.warn('Slow page load detected');
+                    }
+                });
+
+                // Monitor long tasks
+                if ('PerformanceObserver' in window) {
+                    const observer = new PerformanceObserver((list) => {
+                        for (const entry of list.getEntries()) {
+                            if (entry.duration > 50) {
+                                console.warn('Long task detected:', entry);
+                            }
+                        }
+                    });
+                    observer.observe({ entryTypes: ['longtask'] });
+                }
+            }
+
+            function showErrorState() {
+                if (errorState) {
+                    errorState.style.display = 'block';
+                }
+            }
+
+            function hideErrorState() {
+                if (errorState) {
+                    errorState.style.display = 'none';
+                }
+            }
+
+            // Initialize the application
+            initializeApp();
+
+            // Add loading state to buttons
+            document.addEventListener('click', function(e) {
+                const button = e.target.closest('.btn-loading');
+                if (button) {
+                    const originalText = button.innerHTML;
+                    button.innerHTML = '<span class="loading-spinner"></span> Loading...';
+                    button.disabled = true;
+                    
+                    // Revert after 10 seconds if still loading
+                    setTimeout(() => {
+                        if (button.disabled) {
+                            button.innerHTML = originalText;
+                            button.disabled = false;
+                            showToast('Request timed out. Please try again.', 'warning');
+                        }
+                    }, 10000);
+                }
+            });
+
+            // Smooth scrolling for anchor links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    const href = this.getAttribute('href');
+                    if (href !== '#') {
+                        e.preventDefault();
+                        const target = document.querySelector(href);
+                        if (target) {
+                            target.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'start'
+                            });
+                        }
+                    }
+                });
+            });
+
+            // Handle form submissions with loading states
+            document.addEventListener('submit', function(e) {
+                const form = e.target;
+                const submitButton = form.querySelector('button[type="submit"], input[type="submit"]');
+                
+                if (submitButton && !form.classList.contains('no-loading')) {
+                    const originalText = submitButton.innerHTML;
+                    submitButton.innerHTML = '<span class="loading-spinner"></span> Processing...';
+                    submitButton.disabled = true;
+
+                    // Revert if form submission fails
+                    form.addEventListener('ajax:error', function() {
+                        submitButton.innerHTML = originalText;
+                        submitButton.disabled = false;
+                    });
+                }
             });
         });
 
-        // Utility function for making API requests
-        window.makeRequest = async function(url, options = {}) {
-            try {
-                const response = await fetch(url, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    ...options
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+        // Utility functions
+        window.makeRequest = function(url, options = {}) {
+            const defaultOptions = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
                 }
-                
-                return await response.json();
-            } catch (error) {
-                console.error('Request failed:', error);
-                throw error;
+            };
+
+            const mergedOptions = { ...defaultOptions, ...options };
+            
+            return fetch(url, mergedOptions)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .catch(error => {
+                    console.error('Request failed:', error);
+                    throw error;
+                });
+        };
+
+        // Enhanced request with retry logic
+        window.retryRequest = async function(url, options = {}, maxRetries = 3) {
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    return await response.json();
+                } catch (error) {
+                    if (attempt === maxRetries) throw error;
+                    await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+                }
             }
         };
+
+        // Form validation helper
+        window.validateForm = function(form) {
+            const inputs = form.querySelectorAll('input[required], select[required], textarea[required]');
+            let isValid = true;
+
+            inputs.forEach(input => {
+                if (!input.value.trim()) {
+                    input.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    input.classList.remove('is-invalid');
+                }
+            });
+
+            return isValid;
+        };
+
+        window.showToast = function(message, type = 'info') {
+            // Create toast element
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-bg-${type} border-0`;
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+
+            // Add to toast container
+            let container = document.getElementById('toastContainer');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toastContainer';
+                container.className = 'toast-container position-fixed top-0 end-0 p-3';
+                container.style.zIndex = '9999';
+                document.body.appendChild(container);
+            }
+
+            container.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+
+            // Remove after hide
+            toast.addEventListener('hidden.bs.toast', () => {
+                toast.remove();
+            });
+        };
+
+        // Global error handler for uncaught errors
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('Unhandled promise rejection:', event.reason);
+        });
+
+        // Page visibility API for better resource management
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                // Page is hidden - could pause animations or heavy operations
+            } else {
+                // Page is visible
+            }
+        });
+
+        // Service Worker Registration for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(function(registration) {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch(function(registrationError) {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
     </script>
     
     {% block scripts %}{% endblock %}
