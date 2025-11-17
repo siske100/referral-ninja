@@ -50,6 +50,17 @@
                     </button>
                 </div>
             </div>
+
+            <!-- reCAPTCHA Section - Conditionally Shown -->
+            {% if show_recaptcha %}
+            <div class="mb-4">
+                <div class="form-label fw-semibold">Security Verification</div>
+                <div class="g-recaptcha" data-sitekey="{{ recaptcha_site_key }}"></div>
+                <div class="form-text text-muted">
+                    <i class="fas fa-shield-alt me-1"></i>Please verify you're not a robot
+                </div>
+            </div>
+            {% endif %}
             
             <div class="mb-4">
                 <div class="form-check">
@@ -82,6 +93,11 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- reCAPTCHA Script - Only Load if Needed -->
+{% if show_recaptcha %}
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+{% endif %}
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Focus on username field
@@ -120,6 +136,16 @@
                     showError('Please enter your password.');
                     return false;
                 }
+
+                // Check reCAPTCHA if it's shown
+                {% if show_recaptcha %}
+                const recaptchaResponse = grecaptcha.getResponse();
+                if (!recaptchaResponse) {
+                    e.preventDefault();
+                    showError('Please complete the reCAPTCHA verification.');
+                    return false;
+                }
+                {% endif %}
                 
                 // Add loading state to button
                 const submitBtn = this.querySelector('button[type="submit"]');
