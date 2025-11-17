@@ -13,7 +13,19 @@
             <span class="badge bg-light text-dark me-2">
                 <i class="fas fa-user me-1"></i>Total Users: {{ users|length }}
             </span>
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refreshPage()">
+            <div class="btn-group ms-2">
+                <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="fas fa-cog"></i> Bulk Actions
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#" onclick="bulkVerify()"><i class="fas fa-check-circle me-2"></i>Verify Selected</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="bulkActivate()"><i class="fas fa-user-check me-2"></i>Activate Selected</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="bulkDeactivate()"><i class="fas fa-user-slash me-2"></i>Deactivate Selected</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item text-danger" href="#" onclick="bulkDelete()"><i class="fas fa-trash me-2"></i>Delete Selected</a></li>
+                </ul>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="refreshPage()">
                 <i class="fas fa-sync-alt"></i> Refresh
             </button>
         </div>
@@ -111,24 +123,37 @@
         </div>
     </div>
 
-    <!-- Search Bar -->
-    <div class="card shadow mb-4">
-        <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">
-                <i class="fas fa-search me-2"></i>Search Users by Referral Code
-            </h6>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-8">
-                    <div class="input-group">
-                        <input type="text" class="form-control" id="searchInput" placeholder="Enter referral code to search (e.g., RNA1B2C3)..." onkeyup="searchUsers()">
-                        <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()">
-                            <i class="fas fa-times"></i> Clear
-                        </button>
+    <!-- Search and Filter Section -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-search me-2"></i>Search Users
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="searchInput" placeholder="Search by username, email, phone, or referral code..." onkeyup="searchUsers()">
+                                <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()">
+                                    <i class="fas fa-times"></i> Clear
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-4">
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-filter me-2"></i>Quick Filters
+                    </h6>
+                </div>
+                <div class="card-body">
                     <div class="form-group">
                         <select class="form-control" id="statusFilter" onchange="filterUsers()">
                             <option value="">All Statuses</option>
@@ -141,11 +166,66 @@
                     </div>
                 </div>
             </div>
-            <div class="mt-2">
-                <small class="text-muted">
-                    <i class="fas fa-info-circle me-1"></i>
-                    Search only by referral code. Type the full or partial referral code to filter users.
-                </small>
+        </div>
+    </div>
+
+    <!-- Advanced Filters -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-sliders-h me-2"></i>Advanced Filters
+            </h6>
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#advancedFilters">
+                <i class="fas fa-chevron-down"></i> Toggle
+            </button>
+        </div>
+        <div class="collapse" id="advancedFilters">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label class="small font-weight-bold">Date Range</label>
+                            <input type="date" class="form-control" id="dateFrom" onchange="applyAdvancedFilters()">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label class="small font-weight-bold">To</label>
+                            <input type="date" class="form-control" id="dateTo" onchange="applyAdvancedFilters()">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label class="small font-weight-bold">Min Balance</label>
+                            <input type="number" class="form-control" id="minBalance" placeholder="0.00" onchange="applyAdvancedFilters()">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label class="small font-weight-bold">Min Referrals</label>
+                            <input type="number" class="form-control" id="minReferrals" placeholder="0" onchange="applyAdvancedFilters()">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label class="small font-weight-bold">User Rank</label>
+                            <select class="form-control" id="rankFilter" onchange="applyAdvancedFilters()">
+                                <option value="">All Ranks</option>
+                                <option value="bronze">Bronze</option>
+                                <option value="silver">Silver</option>
+                                <option value="gold">Gold</option>
+                                <option value="platinum">Platinum</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-md-12 text-end">
+                        <button class="btn btn-sm btn-outline-danger" onclick="clearAdvancedFilters()">
+                            <i class="fas fa-times me-1"></i> Clear Filters
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -172,6 +252,9 @@
                     <table class="table table-bordered mb-0" id="usersTable" width="100%" cellspacing="0">
                         <thead class="sticky-top bg-light">
                             <tr>
+                                <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10; width: 30px;">
+                                    <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
+                                </th>
                                 <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">User Info</th>
                                 <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">Contact</th>
                                 <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">Stats</th>
@@ -184,10 +267,22 @@
                             {% for user in users %}
                             <tr class="user-row" 
                                 data-referral="{{ user.referral_code|lower }}"
+                                data-username="{{ user.username|lower }}"
+                                data-email="{{ user.email|lower }}"
+                                data-phone="{{ user.phone_number|lower }}"
+                                data-balance="{{ user.balance }}"
+                                data-referrals="{{ user.referral_count }}"
+                                data-rank="{{ user.user_rank|lower }}"
+                                data-joined="{{ user.created_at.strftime('%Y-%m-%d') }}"
                                 data-status="{% if user.is_verified %}verified{% else %}unverified{% endif %} {% if user.is_active %}active{% else %}inactive{% endif %} {% if user.is_admin %}admin{% endif %}">
                                 <td>
+                                    {% if not user.is_admin %}
+                                    <input type="checkbox" class="user-checkbox" value="{{ user.id }}" onchange="updateBulkActions()">
+                                    {% endif %}
+                                </td>
+                                <td>
                                     <div>
-                                        <strong>{{ user.username }}</strong>
+                                        <strong class="username">{{ user.username }}</strong>
                                         {% if user.is_admin %}
                                             <span class="badge bg-danger ms-1">Admin</span>
                                         {% endif %}
@@ -201,17 +296,17 @@
                                 </td>
                                 <td>
                                     <div>
-                                        <small>{{ user.email }}</small>
+                                        <small class="user-email">{{ user.email }}</small>
                                         <br>
-                                        <small>{{ user.phone_number }}</small>
+                                        <small class="user-phone">{{ user.phone_number }}</small>
                                     </div>
                                 </td>
                                 <td>
                                     <div class="text-center">
-                                        <div class="fw-bold text-success">Ksh {{ "%.2f"|format(user.balance) }}</div>
+                                        <div class="fw-bold text-success user-balance">Ksh {{ "%.2f"|format(user.balance) }}</div>
                                         <small class="text-muted">Balance</small>
                                         <br>
-                                        <span class="badge bg-info">{{ user.referral_count }} referrals</span>
+                                        <span class="badge bg-info user-referrals">{{ user.referral_count }} referrals</span>
                                     </div>
                                 </td>
                                 <td>
@@ -228,25 +323,30 @@
                                             <span class="badge bg-danger">Inactive</span>
                                         {% endif %}
                                         <br>
-                                        <small class="text-muted">{{ user.user_rank }}</small>
+                                        <small class="text-muted user-rank">{{ user.user_rank }}</small>
                                     </div>
                                 </td>
                                 <td>
-                                    <small>{{ user.created_at.strftime('%Y-%m-%d') }}</small>
+                                    <small class="join-date">{{ user.created_at.strftime('%Y-%m-%d') }}</small>
                                     <br>
                                     <small class="text-muted">{{ user.created_at.strftime('%H:%M') }}</small>
                                 </td>
                                 <td>
                                     {% if not user.is_admin %}
                                         <div class="btn-group-vertical btn-group-sm">
-                                            <button class="btn btn-{{ 'danger' if user.is_active else 'success' }}" 
+                                            <button class="btn btn-outline-primary btn-sm" 
+                                                    onclick="showUserDetails({{ user.id }})"
+                                                    title="View Details">
+                                                <i class="fas fa-eye"></i> View
+                                            </button>
+                                            <button class="btn btn-{{ 'danger' if user.is_active else 'success' }} btn-sm mt-1" 
                                                     onclick="toggleUserStatus({{ user.id }})"
                                                     title="{{ 'Deactivate' if user.is_active else 'Activate' }} User">
                                                 <i class="fas fa-{{ 'user-slash' if user.is_active else 'user-check' }}"></i>
                                                 {{ 'Deactivate' if user.is_active else 'Activate' }}
                                             </button>
                                             {% if not user.is_verified %}
-                                                <button class="btn btn-warning mt-1" 
+                                                <button class="btn btn-warning btn-sm mt-1" 
                                                         onclick="verifyUser({{ user.id }})"
                                                         title="Verify User">
                                                     <i class="fas fa-check-circle"></i> Verify
@@ -265,10 +365,22 @@
                 <!-- No Results Message -->
                 <div id="noResults" class="text-center py-4" style="display: none;">
                     <i class="fas fa-search fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">No users found with this referral code</p>
-                    <button class="btn btn-primary" onclick="clearSearch()">
-                        <i class="fas fa-times me-1"></i> Clear Search
+                    <p class="text-muted">No users found matching your criteria</p>
+                    <button class="btn btn-primary" onclick="clearAllFilters()">
+                        <i class="fas fa-times me-1"></i> Clear All Filters
                     </button>
+                </div>
+                
+                <!-- Pagination -->
+                <div class="d-flex justify-content-between align-items-center p-3 border-top">
+                    <div class="text-muted small">
+                        Showing <span id="showingCount">0</span> of <span id="totalCount">{{ users|length }}</span> users
+                    </div>
+                    <nav>
+                        <ul class="pagination mb-0" id="paginationControls">
+                            <!-- Pagination will be generated by JavaScript -->
+                        </ul>
+                    </nav>
                 </div>
             {% else %}
                 <div class="text-center py-4">
@@ -279,14 +391,74 @@
         </div>
     </div>
 </div>
+
+<!-- User Detail Modal -->
+<div class="modal fade" id="userDetailModal" tabindex="-1" aria-labelledby="userDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="userDetailModalLabel">
+                    <i class="fas fa-user me-2"></i>User Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="userDetailContent">
+                <!-- User details will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="editUser()">Edit User</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Spinner -->
+<div id="loadingSpinner" class="d-none position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background: rgba(0,0,0,0.1); z-index: 9999;">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+// Global variables
+let currentPage = 1;
+const usersPerPage = 10;
+let allUsers = []; // This would be populated from server in a real app
+
+// CSRF Token handling
+function getCSRFToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    return metaTag ? metaTag.getAttribute('content') : '';
+}
+
+// Enhanced admin request function with CSRF protection
+const adminRequest = (url, options = {}) => {
+    const defaultOptions = {
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        }
+    };
+    return fetch(url, {...defaultOptions, ...options});
+};
+
 function refreshPage() {
+    showLoading();
     window.location.reload();
 }
 
+function showLoading() {
+    document.getElementById('loadingSpinner').classList.remove('d-none');
+}
+
+function hideLoading() {
+    document.getElementById('loadingSpinner').classList.add('d-none');
+}
+
+// Enhanced search with multiple criteria
 function searchUsers() {
     const searchTerm = document.getElementById('searchInput').value.toLowerCase();
     const statusFilter = document.getElementById('statusFilter').value;
@@ -295,10 +467,17 @@ function searchUsers() {
 
     rows.forEach(row => {
         const referral = row.getAttribute('data-referral');
+        const username = row.getAttribute('data-username');
+        const email = row.getAttribute('data-email');
+        const phone = row.getAttribute('data-phone');
         const status = row.getAttribute('data-status');
 
-        // Check if row matches search term (ONLY referral codes now)
-        const matchesSearch = searchTerm === '' || referral.includes(searchTerm);
+        // Check if row matches search term (multiple fields)
+        const matchesSearch = searchTerm === '' || 
+            referral.includes(searchTerm) ||
+            username.includes(searchTerm) ||
+            email.includes(searchTerm) ||
+            phone.includes(searchTerm);
 
         // Check if row matches status filter
         const matchesStatus = statusFilter === '' || 
@@ -308,114 +487,286 @@ function searchUsers() {
             (statusFilter === 'inactive' && status.includes('inactive')) ||
             (statusFilter === 'admin' && status.includes('admin'));
 
-        if (matchesSearch && matchesStatus) {
+        // Apply advanced filters
+        const matchesAdvanced = applyAdvancedFiltersToRow(row);
+
+        if (matchesSearch && matchesStatus && matchesAdvanced) {
             row.style.display = '';
             visibleCount++;
             
-            // Highlight the matching referral code if search term is not empty
+            // Highlight matching text if search term is not empty
             if (searchTerm !== '') {
-                const referralElement = row.querySelector('.referral-code');
-                const originalCode = referralElement.textContent;
-                const lowerOriginal = originalCode.toLowerCase();
-                const lowerSearch = searchTerm.toLowerCase();
-                
-                if (lowerOriginal.includes(lowerSearch)) {
-                    const index = lowerOriginal.indexOf(lowerSearch);
-                    const highlightedCode = 
-                        originalCode.substring(0, index) +
-                        '<mark>' + originalCode.substring(index, index + searchTerm.length) + '</mark>' +
-                        originalCode.substring(index + searchTerm.length);
-                    referralElement.innerHTML = highlightedCode;
-                }
+                highlightMatchingText(row, searchTerm);
             }
         } else {
             row.style.display = 'none';
-            // Reset highlighting for hidden rows
-            const referralElement = row.querySelector('.referral-code');
-            if (referralElement) {
-                referralElement.innerHTML = referralElement.textContent;
-            }
+            removeHighlighting(row);
         }
     });
 
-    // Update user count
-    document.getElementById('userCount').textContent = visibleCount;
-
-    // Show/hide no results message
-    const noResults = document.getElementById('noResults');
-    const table = document.querySelector('.table-responsive');
+    // Update counts and pagination
+    updateUserCounts(visibleCount);
+    updatePagination(visibleCount);
     
-    if (visibleCount === 0 && rows.length > 0) {
-        noResults.style.display = 'block';
-        table.style.display = 'none';
-    } else {
-        noResults.style.display = 'none';
-        table.style.display = 'block';
-    }
+    // Show/hide no results message
+    toggleNoResultsMessage(visibleCount);
 }
 
-function filterUsers() {
-    searchUsers(); // Reuse the search function for filtering
+function highlightMatchingText(row, searchTerm) {
+    const elementsToHighlight = [
+        row.querySelector('.username'),
+        row.querySelector('.user-email'),
+        row.querySelector('.user-phone'),
+        row.querySelector('.referral-code')
+    ];
+    
+    elementsToHighlight.forEach(element => {
+        if (element) {
+            const originalText = element.textContent;
+            const lowerOriginal = originalText.toLowerCase();
+            const lowerSearch = searchTerm.toLowerCase();
+            
+            if (lowerOriginal.includes(lowerSearch)) {
+                const index = lowerOriginal.indexOf(lowerSearch);
+                const highlightedText = 
+                    originalText.substring(0, index) +
+                    '<mark>' + originalText.substring(index, index + searchTerm.length) + '</mark>' +
+                    originalText.substring(index + searchTerm.length);
+                element.innerHTML = highlightedText;
+            }
+        }
+    });
+}
+
+function removeHighlighting(row) {
+    const elements = row.querySelectorAll('mark');
+    elements.forEach(element => {
+        const parent = element.parentNode;
+        parent.replaceChild(document.createTextNode(element.textContent), element);
+        parent.normalize();
+    });
+}
+
+function applyAdvancedFilters() {
+    searchUsers(); // Re-run search to apply advanced filters
+}
+
+function applyAdvancedFiltersToRow(row) {
+    const dateFrom = document.getElementById('dateFrom').value;
+    const dateTo = document.getElementById('dateTo').value;
+    const minBalance = parseFloat(document.getElementById('minBalance').value) || 0;
+    const minReferrals = parseInt(document.getElementById('minReferrals').value) || 0;
+    const rankFilter = document.getElementById('rankFilter').value;
+    
+    const joinDate = row.getAttribute('data-joined');
+    const balance = parseFloat(row.getAttribute('data-balance'));
+    const referrals = parseInt(row.getAttribute('data-referrals'));
+    const rank = row.getAttribute('data-rank');
+    
+    // Date range filter
+    if (dateFrom && joinDate < dateFrom) return false;
+    if (dateTo && joinDate > dateTo) return false;
+    
+    // Balance filter
+    if (balance < minBalance) return false;
+    
+    // Referrals filter
+    if (referrals < minReferrals) return false;
+    
+    // Rank filter
+    if (rankFilter && rank !== rankFilter) return false;
+    
+    return true;
 }
 
 function clearSearch() {
     document.getElementById('searchInput').value = '';
-    document.getElementById('statusFilter').value = '';
-    
-    // Remove all highlighting
-    const referralElements = document.querySelectorAll('.referral-code');
-    referralElements.forEach(element => {
-        element.innerHTML = element.textContent;
-    });
-    
     searchUsers();
 }
 
-function exportUsers() {
-    // Simple CSV export functionality
-    const rows = document.querySelectorAll('#usersTableBody .user-row:not([style*="display: none"])');
-    let csv = 'Username,Email,Phone,Referral Code,Status,Rank,Balance,Referrals,Joined Date\n';
-    
-    rows.forEach(row => {
-        const cells = row.querySelectorAll('td');
-        const username = cells[0].querySelector('strong').textContent.trim();
-        const email = cells[1].querySelector('small').textContent.trim();
-        const phone = cells[1].querySelectorAll('small')[1].textContent.trim();
-        const referralCode = cells[0].querySelector('.referral-code').textContent.trim();
-        const status = cells[3].querySelectorAll('.badge')[0].textContent.trim();
-        const rank = cells[3].querySelectorAll('small')[0].textContent.trim();
-        const balance = cells[2].querySelector('.fw-bold').textContent.replace('Ksh ', '').trim();
-        const referrals = cells[2].querySelector('.badge').textContent.replace(' referrals', '').trim();
-        const joinedDate = cells[4].querySelector('small').textContent.trim();
-        
-        csv += `"${username}","${email}","${phone}","${referralCode}","${status}","${rank}","${balance}","${referrals}","${joinedDate}"\n`;
-    });
-    
-    // Create and download CSV file
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.setAttribute('hidden', '');
-    a.setAttribute('href', url);
-    a.setAttribute('download', 'users_export.csv');
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    
-    showNotification('success', 'Users exported successfully!');
+function clearAdvancedFilters() {
+    document.getElementById('dateFrom').value = '';
+    document.getElementById('dateTo').value = '';
+    document.getElementById('minBalance').value = '';
+    document.getElementById('minReferrals').value = '';
+    document.getElementById('rankFilter').value = '';
+    applyAdvancedFilters();
 }
 
-function toggleUserStatus(userId) {
-    const action = confirm('Are you sure you want to change this user\'s status?');
-    if (action) {
-        fetch(`/admin/toggle-user-status/${userId}`, {
+function clearAllFilters() {
+    clearSearch();
+    document.getElementById('statusFilter').value = '';
+    clearAdvancedFilters();
+}
+
+function filterUsers() {
+    searchUsers();
+}
+
+// Bulk Actions Functions
+function toggleSelectAll(checkbox) {
+    const checkboxes = document.querySelectorAll('.user-checkbox');
+    checkboxes.forEach(cb => {
+        if (!cb.disabled) {
+            cb.checked = checkbox.checked;
+        }
+    });
+    updateBulkActions();
+}
+
+function updateBulkActions() {
+    const checkedBoxes = document.querySelectorAll('.user-checkbox:checked');
+    const bulkActionsBtn = document.querySelector('.btn-group .dropdown-toggle');
+    
+    if (checkedBoxes.length > 0) {
+        bulkActionsBtn.disabled = false;
+        bulkActionsBtn.textContent = ` ${checkedBoxes.length} Selected`;
+    } else {
+        bulkActionsBtn.disabled = true;
+        bulkActionsBtn.innerHTML = '<i class="fas fa-cog"></i> Bulk Actions';
+    }
+}
+
+function getSelectedUserIds() {
+    const checkboxes = document.querySelectorAll('.user-checkbox:checked');
+    return Array.from(checkboxes).map(cb => cb.value);
+}
+
+function bulkVerify() {
+    const userIds = getSelectedUserIds();
+    if (userIds.length === 0) {
+        showNotification('warning', 'Please select at least one user');
+        return;
+    }
+    
+    if (confirm(`Are you sure you want to verify ${userIds.length} user(s)?`)) {
+        showLoading();
+        adminRequest('/admin/bulk-verify-users', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
+            body: JSON.stringify({ user_ids: userIds })
         })
         .then(response => response.json())
         .then(data => {
+            hideLoading();
+            if (data.success) {
+                showNotification('success', `${userIds.length} user(s) verified successfully!`);
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showNotification('error', data.message || 'Verification failed');
+            }
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('Error:', error);
+            showNotification('error', 'Network error during bulk verification');
+        });
+    }
+}
+
+function bulkActivate() {
+    const userIds = getSelectedUserIds();
+    if (userIds.length === 0) {
+        showNotification('warning', 'Please select at least one user');
+        return;
+    }
+    
+    if (confirm(`Are you sure you want to activate ${userIds.length} user(s)?`)) {
+        showLoading();
+        adminRequest('/admin/bulk-activate-users', {
+            method: 'POST',
+            body: JSON.stringify({ user_ids: userIds })
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
+            if (data.success) {
+                showNotification('success', `${userIds.length} user(s) activated successfully!`);
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showNotification('error', data.message || 'Activation failed');
+            }
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('Error:', error);
+            showNotification('error', 'Network error during bulk activation');
+        });
+    }
+}
+
+function bulkDeactivate() {
+    const userIds = getSelectedUserIds();
+    if (userIds.length === 0) {
+        showNotification('warning', 'Please select at least one user');
+        return;
+    }
+    
+    if (confirm(`Are you sure you want to deactivate ${userIds.length} user(s)?`)) {
+        showLoading();
+        adminRequest('/admin/bulk-deactivate-users', {
+            method: 'POST',
+            body: JSON.stringify({ user_ids: userIds })
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
+            if (data.success) {
+                showNotification('success', `${userIds.length} user(s) deactivated successfully!`);
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showNotification('error', data.message || 'Deactivation failed');
+            }
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('Error:', error);
+            showNotification('error', 'Network error during bulk deactivation');
+        });
+    }
+}
+
+function bulkDelete() {
+    const userIds = getSelectedUserIds();
+    if (userIds.length === 0) {
+        showNotification('warning', 'Please select at least one user');
+        return;
+    }
+    
+    if (confirm(`WARNING: This will permanently delete ${userIds.length} user(s). This action cannot be undone. Are you sure?`)) {
+        showLoading();
+        adminRequest('/admin/bulk-delete-users', {
+            method: 'POST',
+            body: JSON.stringify({ user_ids: userIds })
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
+            if (data.success) {
+                showNotification('success', `${userIds.length} user(s) deleted successfully!`);
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showNotification('error', data.message || 'Deletion failed');
+            }
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('Error:', error);
+            showNotification('error', 'Network error during bulk deletion');
+        });
+    }
+}
+
+// User Management Functions
+function toggleUserStatus(userId) {
+    const action = confirm('Are you sure you want to change this user\'s status?');
+    if (action) {
+        showLoading();
+        adminRequest(`/admin/toggle-user-status/${userId}`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
             if (data.success) {
                 showNotification('success', data.message);
                 setTimeout(() => location.reload(), 1500);
@@ -424,6 +775,7 @@ function toggleUserStatus(userId) {
             }
         })
         .catch(error => {
+            hideLoading();
             console.error('Error:', error);
             showNotification('error', 'An error occurred while updating user status');
         });
@@ -433,18 +785,276 @@ function toggleUserStatus(userId) {
 function verifyUser(userId) {
     const action = confirm('Are you sure you want to verify this user? This will activate their account.');
     if (action) {
-        // You'll need to implement this endpoint
-        showNotification('info', 'User verification feature coming soon!');
+        showLoading();
+        adminRequest(`/admin/verify-user/${userId}`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
+            if (data.success) {
+                showNotification('success', 'User verified successfully!');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showNotification('error', data.message || 'Verification failed');
+            }
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('Error:', error);
+            showNotification('error', 'Network error during verification');
+        });
     }
 }
 
+function showUserDetails(userId) {
+    showLoading();
+    adminRequest(`/admin/user-details/${userId}`)
+        .then(response => response.json())
+        .then(user => {
+            hideLoading();
+            // Populate modal with user details
+            const modalContent = document.getElementById('userDetailContent');
+            modalContent.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Basic Information</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td><strong>Username:</strong></td>
+                                <td>${user.username}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Email:</strong></td>
+                                <td>${user.email}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Phone:</strong></td>
+                                <td>${user.phone_number || 'N/A'}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Referral Code:</strong></td>
+                                <td><code>${user.referral_code}</code></td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Account Status</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td><strong>Verified:</strong></td>
+                                <td>
+                                    <span class="badge bg-${user.is_verified ? 'success' : 'warning'}">
+                                        ${user.is_verified ? 'Yes' : 'No'}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Active:</strong></td>
+                                <td>
+                                    <span class="badge bg-${user.is_active ? 'success' : 'danger'}">
+                                        ${user.is_active ? 'Yes' : 'No'}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Rank:</strong></td>
+                                <td>${user.user_rank}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Joined:</strong></td>
+                                <td>${new Date(user.created_at).toLocaleString()}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <h6>Financial Information</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td><strong>Balance:</strong></td>
+                                <td class="text-success fw-bold">Ksh ${parseFloat(user.balance).toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Total Referrals:</strong></td>
+                                <td><span class="badge bg-info">${user.referral_count}</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Referred By:</strong></td>
+                                <td>${user.referred_by || 'Direct Signup'}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                ${user.referral_count > 0 ? `
+                <div class="row mt-3">
+                    <div class="col-md-12">
+                        <h6>Referral Network</h6>
+                        <div class="alert alert-info small">
+                            <i class="fas fa-info-circle me-2"></i>
+                            This user has referred ${user.referral_count} user(s). 
+                            <a href="#" class="alert-link">View referral network</a>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+            `;
+            
+            // Show the modal
+            const modal = new bootstrap.Modal(document.getElementById('userDetailModal'));
+            modal.show();
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('Error:', error);
+            showNotification('error', 'Failed to load user details');
+        });
+}
+
+function editUser() {
+    // Implementation for editing user
+    showNotification('info', 'Edit user functionality coming soon!');
+}
+
+// Export Functionality
+function exportUsers() {
+    const visibleRows = document.querySelectorAll('#usersTableBody .user-row:not([style*="display: none"])');
+    let csv = 'Username,Email,Phone,Referral Code,Status,Rank,Balance,Referrals,Joined Date,Referred By\n';
+    
+    visibleRows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        const username = cells[1].querySelector('strong').textContent.trim();
+        const email = cells[2].querySelector('.user-email').textContent.trim();
+        const phone = cells[2].querySelectorAll('small')[1].textContent.trim();
+        const referralCode = cells[1].querySelector('.referral-code').textContent.trim();
+        const status = cells[4].querySelectorAll('.badge')[0].textContent.trim();
+        const rank = cells[4].querySelectorAll('small')[0].textContent.trim();
+        const balance = cells[3].querySelector('.user-balance').textContent.replace('Ksh ', '').trim();
+        const referrals = cells[3].querySelector('.user-referrals').textContent.replace(' referrals', '').trim();
+        const joinedDate = cells[5].querySelector('.join-date').textContent.trim();
+        const referredBy = cells[1].querySelector('.text-info') ? cells[1].querySelector('.text-info').textContent.replace('Referred by: ', '') : '';
+        
+        csv += `"${username}","${email}","${phone}","${referralCode}","${status}","${rank}","${balance}","${referrals}","${joinedDate}","${referredBy}"\n`;
+    });
+    
+    // Create and download CSV file
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.setAttribute('hidden', '');
+    a.setAttribute('href', url);
+    a.setAttribute('download', `users_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    
+    showNotification('success', 'Users exported successfully!');
+}
+
+// Pagination Functions
+function updatePagination(totalUsers) {
+    const totalPages = Math.ceil(totalUsers / usersPerPage);
+    const paginationContainer = document.getElementById('paginationControls');
+    
+    if (totalPages <= 1) {
+        paginationContainer.innerHTML = '';
+        return;
+    }
+    
+    let paginationHTML = '';
+    
+    // Previous button
+    paginationHTML += `
+        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="changePage(${currentPage - 1})">Previous</a>
+        </li>
+    `;
+    
+    // Page numbers
+    for (let i = 1; i <= totalPages; i++) {
+        if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+            paginationHTML += `
+                <li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
+                </li>
+            `;
+        } else if (i === currentPage - 2 || i === currentPage + 2) {
+            paginationHTML += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+    }
+    
+    // Next button
+    paginationHTML += `
+        <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="changePage(${currentPage + 1})">Next</a>
+        </li>
+    `;
+    
+    paginationContainer.innerHTML = paginationHTML;
+}
+
+function changePage(page) {
+    currentPage = page;
+    // In a real application, you would fetch the data for this page from the server
+    // For now, we'll just scroll to top
+    document.querySelector('.table-responsive').scrollTop = 0;
+    updateDisplayedUsers();
+}
+
+function updateDisplayedUsers() {
+    const rows = document.querySelectorAll('#usersTableBody .user-row:not([style*="display: none"])');
+    const startIndex = (currentPage - 1) * usersPerPage;
+    const endIndex = startIndex + usersPerPage;
+    
+    rows.forEach((row, index) => {
+        if (index >= startIndex && index < endIndex) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    updateUserCounts(rows.length);
+}
+
+function updateUserCounts(visibleCount) {
+    document.getElementById('userCount').textContent = visibleCount;
+    const startIndex = (currentPage - 1) * usersPerPage + 1;
+    const endIndex = Math.min(startIndex + usersPerPage - 1, visibleCount);
+    document.getElementById('showingCount').textContent = 
+        visibleCount > 0 ? `${startIndex}-${endIndex}` : '0';
+    document.getElementById('totalCount').textContent = visibleCount;
+}
+
+function toggleNoResultsMessage(visibleCount) {
+    const noResults = document.getElementById('noResults');
+    const table = document.querySelector('.table-responsive');
+    const pagination = document.querySelector('.d-flex.justify-content-between');
+    
+    if (visibleCount === 0 && document.querySelectorAll('.user-row').length > 0) {
+        noResults.style.display = 'block';
+        table.style.display = 'none';
+        pagination.style.display = 'none';
+    } else {
+        noResults.style.display = 'none';
+        table.style.display = 'block';
+        pagination.style.display = 'flex';
+    }
+}
+
+// Utility Functions
 function showNotification(type, message) {
+    // Remove existing notifications
+    const existingAlerts = document.querySelectorAll('.alert.position-fixed');
+    existingAlerts.forEach(alert => alert.remove());
+    
     // Create notification element
     const notification = document.createElement('div');
     notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
     notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
     notification.innerHTML = `
-        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+        <i class="fas fa-${getNotificationIcon(type)} me-2"></i>
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
@@ -459,7 +1069,17 @@ function showNotification(type, message) {
     }, 5000);
 }
 
-// Initialize search on page load
+function getNotificationIcon(type) {
+    const icons = {
+        'success': 'check-circle',
+        'error': 'exclamation-triangle',
+        'warning': 'exclamation-circle',
+        'info': 'info-circle'
+    };
+    return icons[type] || 'info-circle';
+}
+
+// Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     // Add event listener for Enter key in search
     document.getElementById('searchInput').addEventListener('keypress', function(e) {
@@ -467,10 +1087,17 @@ document.addEventListener('DOMContentLoaded', function() {
             searchUsers();
         }
     });
+    
+    // Initialize pagination
+    updatePagination({{ users|length }});
+    updateDisplayedUsers();
+    
+    // Initialize bulk actions
+    updateBulkActions();
 });
 
 // Auto-refresh every 30 seconds
-setTimeout(refreshPage, 30000);
+setInterval(refreshPage, 30000);
 </script>
 
 <style>
@@ -530,6 +1157,31 @@ mark {
 .sticky-top {
     position: -webkit-sticky;
     position: sticky;
+}
+
+/* Bulk actions styling */
+.user-checkbox {
+    transform: scale(1.1);
+}
+
+/* Pagination styling */
+.pagination {
+    margin-bottom: 0;
+}
+
+/* Advanced filters styling */
+.collapse.show {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Loading spinner */
+#loadingSpinner {
+    backdrop-filter: blur(2px);
 }
 </style>
 {% endblock %}
