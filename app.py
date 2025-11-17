@@ -115,6 +115,12 @@ app = Flask(__name__)
 
 # PRODUCTION CONFIGURATION
 class Config:
+    
+    # reCAPTCHA Configuration
+    RECAPTCHA_SITE_KEY = "6LfMMA8sAAAAADYEg4Vr-sWuFqcf-fIqVkjjQ_uZ"
+    RECAPTCHA_SECRET_KEY = "6LfMMA8sAAAAADqUlbSHUEGDFpABnsNbuLNer6Rc"
+    RECAPTCHA_VERIFY_URL = "https://www.google.com/recaptcha/api/siteverify"
+    
     # REQUIRED - No defaults for secrets
     SECRET_KEY = os.environ['SECRET_KEY']  # Will raise error if missing
     JWT_SECRET_KEY = os.environ['JWT_SECRET_KEY']
@@ -2877,6 +2883,37 @@ class HealthMonitor:
 # UTILITY FUNCTIONS
 # =============================================================================
 
+def verify_recaptcha(response_token: str, remote_ip: str = None) -> bool:
+    """
+    Verify reCAPTCHA response token with Google's API
+    """
+    try:
+        data = {
+            'secret': app.config['RECAPTCHA_SECRET_KEY'],
+            'response': response_token
+        }
+        
+        if remote_ip:
+            data['remoteip'] = remote_ip
+            
+        response = requests.post(
+            app.config['RECAPTCHA_VERIFY_URL'],
+            data=data,
+            timeout=10
+        )
+        response.raise_for_status()
+        
+        result = response.json()
+        
+        # Log reCAPTCHA result for debugging
+        logger.info(f"reCAPTCHA verification: {result.get('success')}, score: {result.get('score', 'N/A')}")
+        
+        return result.get('success', False)
+        
+    except Exception as e:
+        logger.error(f"reCAPTCHA verification failed: {e}")
+        return False
+
 # Admin required decorator
 def admin_required(f):
     @wraps(f)
@@ -3060,6 +3097,11 @@ def api_register():
         password = data.get("password")
         email = data.get("email", "").strip()
         username = data.get("username", "").strip()
+        recaptcha_token = data.get("recaptcha_token")
+        
+        # Verify reCAPTCHA for API
+        if not verify_recaptcha(recaptcha_token, request.remote_addr):
+            return jsonify({"error": "reCAPTCHA verification failed"}), 400
         
         # Get IP and device info
         ip_address = request.remote_addr
@@ -3898,6 +3940,18 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         remember_me = bool(request.form.get('remember_me'))
+        recaptcha_response = request.form.get('g-recaptcha-response')
+
+        # Verify reCAPTCHA for login after multiple failed attempts
+        failed_attempts_key = f"login_attempts:{request.remote_addr}"
+        failed_attempts = int(redis_client.get(failed_attempts_key) or 0)
+        
+        if failed_attempts >= 3 and not verify_recaptcha(recaptcha_response, request.remote_addr):
+            flash('Please complete the reCAPTCHA verification.', 'error')
+            return render_template('auth/login.html', 
+                                 recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'],
+                                 show_recaptcha=True)
+
 
         logger.info(f"Login attempt for username: {username}")
 
@@ -3996,6 +4050,14 @@ def register():
         password = request.form.get('password')
         referral_code = request.form.get('referral_code')
         terms = request.form.get('terms')
+        
+        # Get reCAPTCHA response
+        recaptcha_response = request.form.get('g-recaptcha-response')
+        
+        # Verify reCAPTCHA
+        if not verify_recaptcha(recaptcha_response, request.remote_addr):
+            flash('Please complete the reCAPTCHA verification.', 'error')
+            return render_template('auth/register.html', referral_code=referral_code)
         
         # Get IP and device info
         ip_address = request.remote_addr
@@ -4098,7 +4160,10 @@ def register():
         flash('Registration successful! Please complete KSH 200 payment to activate your account.', 'success')
         return redirect(url_for('account_activation'))
     
-    return render_template('auth/register.html', referral_code=referral_code)
+    return render_template('auth/register.html', 
+                           referral_code=referral_code 
+                           recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
+ 
 
 @app.route('/logout')
 @login_required
