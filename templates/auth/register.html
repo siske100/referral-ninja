@@ -100,7 +100,7 @@
                     </div>
                 </div>
                 
-                <div class="col-12 mb-4">
+                <div class="col-12 mb-3">
                     <label for="referral_code" class="form-label fw-semibold">
                         Referral Code 
                         {% if referral_code %}
@@ -135,6 +135,15 @@
                     </div>
                 </div>
             </div>
+
+            <!-- reCAPTCHA Section - Always Shown for Registration -->
+            <div class="mb-4">
+                <div class="form-label fw-semibold">Security Verification</div>
+                <div class="g-recaptcha" data-sitekey="{{ recaptcha_site_key }}"></div>
+                <div class="form-text text-muted">
+                    <i class="fas fa-shield-alt me-1"></i>Please verify you're not a robot
+                </div>
+            </div>
             
             <div class="mb-4">
                 <div class="form-check">
@@ -161,6 +170,9 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- reCAPTCHA Script -->
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Focus on username field
@@ -238,7 +250,7 @@
             document.getElementById('referral_code').value = urlReferralCode;
         }
 
-        // Simple form validation and loading state
+        // Enhanced form validation with reCAPTCHA
         const registerForm = document.getElementById('registerForm');
         if (registerForm) {
             registerForm.addEventListener('submit', function(e) {
@@ -251,20 +263,28 @@
                 const terms = document.getElementById('terms').checked;
 
                 if (!username || !phone || !email || !fullName || !password) {
-                    alert('Please fill in all required fields');
                     e.preventDefault();
+                    showError('Please fill in all required fields');
                     return;
                 }
 
                 if (!terms) {
-                    alert('You must agree to the Terms of Service and Privacy Policy');
                     e.preventDefault();
+                    showError('You must agree to the Terms of Service and Privacy Policy');
                     return;
                 }
 
                 if (password.length < 6) {
-                    alert('Password must be at least 6 characters long');
                     e.preventDefault();
+                    showError('Password must be at least 6 characters long');
+                    return;
+                }
+
+                // Validate reCAPTCHA
+                const recaptchaResponse = grecaptcha.getResponse();
+                if (!recaptchaResponse) {
+                    e.preventDefault();
+                    showError('Please complete the reCAPTCHA verification');
                     return;
                 }
 
@@ -276,6 +296,62 @@
                 // Form will submit normally to Flask, which will redirect to account_activation
             });
         }
+
+        // Show error message function
+        function showError(message) {
+            // Remove any existing error alerts
+            const existingAlerts = document.querySelectorAll('.alert-danger');
+            existingAlerts.forEach(alert => alert.remove());
+            
+            // Create new error alert
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+            alertDiv.innerHTML = `
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            // Insert at the top of the form
+            const form = document.querySelector('form');
+            if (form) {
+                form.insertBefore(alertDiv, form.firstChild);
+            }
+            
+            // Scroll to top to show error
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+
+        // Enhanced input validation with real-time feedback
+        const inputs = document.querySelectorAll('input[required]');
+        inputs.forEach(input => {
+            input.addEventListener('blur', function() {
+                if (!this.value.trim()) {
+                    this.style.borderColor = '#e74c3c';
+                    this.style.boxShadow = '0 0 0 3px rgba(231, 76, 60, 0.1)';
+                } else {
+                    this.style.borderColor = '#e2e8f0';
+                    this.style.boxShadow = 'none';
+                }
+            });
+            
+            input.addEventListener('input', function() {
+                if (this.value.trim()) {
+                    this.style.borderColor = '#48bb78';
+                    this.style.boxShadow = '0 0 0 3px rgba(72, 187, 120, 0.1)';
+                } else {
+                    this.style.borderColor = '#e2e8f0';
+                    this.style.boxShadow = 'none';
+                }
+            });
+        });
     });
 </script>
 {% endblock %}
