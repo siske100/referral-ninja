@@ -127,6 +127,30 @@
             position: relative;
         }
 
+        /* Sidebar Toggle Button - Positioned in main content */
+        .sidebar-toggle {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: var(--primary-red);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            z-index: 100;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: none; /* Hidden by default, shown on tablet+ */
+        }
+
+        .sidebar-toggle:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        }
+
         /* Main Content with Sidebar Spacing */
         .main-content {
             flex: 1;
@@ -143,6 +167,11 @@
                 margin-left: 250px; /* Sidebar width */
                 width: calc(100% - 250px);
             }
+            
+            .sidebar-collapsed .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
         }
 
         .content {
@@ -150,11 +179,13 @@
             min-height: 100vh;
             width: 100%;
             overflow-x: hidden;
+            position: relative;
         }
 
         /* Responsive Content Padding */
         .content-inner {
             padding: 1.5rem;
+            position: relative;
         }
 
         /* Support Button */
@@ -526,9 +557,20 @@
             .community-button {
                 display: none !important;
             }
+            
+            .sidebar-toggle {
+                display: none !important;
+            }
         }
 
         /* ========== RESPONSIVE BREAKPOINTS ========== */
+
+        /* Tablet and Larger Screens - Show Toggle Button */
+        @media (min-width: 768px) {
+            .sidebar-toggle {
+                display: block;
+            }
+        }
 
         /* Extra Small Devices (Phones, 576px and down) */
         @media (max-width: 576px) {
@@ -624,6 +666,11 @@
 
             .main-content {
                 margin-left: 0;
+            }
+            
+            .sidebar-toggle {
+                top: 15px;
+                left: 15px;
             }
         }
 
@@ -722,10 +769,15 @@
     <!-- Skip to main content for accessibility -->
     <a href="#mainContent" class="sr-only">Skip to main content</a>
 
-    <div class="app-container">
+    <div class="app-container" id="appContainer">
         {% include 'sidebar.html' %}
         
         <div class="main-content" id="mainContent">
+            <!-- Sidebar Toggle Button - Now inside main content -->
+            <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+                <i class="fas fa-bars"></i>
+            </button>
+            
             <main class="content">
                 <div class="content-inner">
                     <!-- Connection Status Indicator -->
@@ -781,6 +833,39 @@
             const mainContent = document.getElementById('mainContent');
             const connectionStatus = document.getElementById('connectionStatus');
             const errorState = document.getElementById('errorState');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const appContainer = document.getElementById('appContainer');
+
+            // Sidebar toggle functionality
+            let sidebarCollapsed = false;
+
+            function toggleSidebar() {
+                sidebarCollapsed = !sidebarCollapsed;
+                
+                if (sidebarCollapsed) {
+                    appContainer.classList.add('sidebar-collapsed');
+                    sidebarToggle.innerHTML = '<i class="fas fa-bars"></i>';
+                    localStorage.setItem('sidebarCollapsed', 'true');
+                } else {
+                    appContainer.classList.remove('sidebar-collapsed');
+                    sidebarToggle.innerHTML = '<i class="fas fa-times"></i>';
+                    localStorage.setItem('sidebarCollapsed', 'false');
+                }
+            }
+
+            // Initialize sidebar state
+            function initializeSidebarState() {
+                const savedState = localStorage.getItem('sidebarCollapsed');
+                if (savedState === 'true') {
+                    sidebarCollapsed = true;
+                    appContainer.classList.add('sidebar-collapsed');
+                    sidebarToggle.innerHTML = '<i class="fas fa-bars"></i>';
+                } else {
+                    sidebarCollapsed = false;
+                    appContainer.classList.remove('sidebar-collapsed');
+                    sidebarToggle.innerHTML = '<i class="fas fa-times"></i>';
+                }
+            }
 
             // Responsive initialization
             function initializeResponsiveBehavior() {
@@ -788,6 +873,7 @@
                 setupResponsiveButtons();
                 setupResponsiveTables();
                 setupViewportHandling();
+                initializeSidebarState();
             }
 
             // Handle sidebar behavior on different screen sizes
@@ -801,11 +887,20 @@
                         sidebar.classList.add('mobile-sidebar');
                         mainContent.style.marginLeft = '0';
                         mainContent.style.width = '100%';
+                        // Hide toggle button on mobile (though it's already hidden by CSS)
+                        sidebarToggle.style.display = 'none';
                     } else {
-                        // Desktop behavior - sidebar visible
+                        // Desktop behavior - sidebar visible, toggle button visible
                         sidebar.classList.remove('mobile-sidebar');
-                        mainContent.style.marginLeft = '250px';
-                        mainContent.style.width = 'calc(100% - 250px)';
+                        sidebarToggle.style.display = 'block';
+                        
+                        if (sidebarCollapsed) {
+                            mainContent.style.marginLeft = '0';
+                            mainContent.style.width = '100%';
+                        } else {
+                            mainContent.style.marginLeft = '250px';
+                            mainContent.style.width = 'calc(100% - 250px)';
+                        }
                     }
                 }
 
@@ -882,6 +977,11 @@
                     setupAccessibility();
                     setupFormValidation();
                     monitorPerformance();
+                    
+                    // Add event listener for sidebar toggle
+                    if (sidebarToggle) {
+                        sidebarToggle.addEventListener('click', toggleSidebar);
+                    }
                 } catch (error) {
                     console.error('Error initializing app:', error);
                     showErrorState();
