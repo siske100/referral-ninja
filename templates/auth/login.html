@@ -25,7 +25,9 @@
             {% endif %}
         {% endwith %}
         
-        <form method="POST" action="{{ url_for('login') }}">
+        <form method="POST" action="{{ url_for('login') }}" id="loginForm">
+            <input type="hidden" name="recaptcha_token" id="recaptchaToken">
+            
             <div class="mb-3">
                 <label for="username" class="form-label fw-semibold">Username</label>
                 <div class="input-group">
@@ -50,17 +52,13 @@
                     </button>
                 </div>
             </div>
-
-            <!-- reCAPTCHA Section - Conditionally Shown -->
-            {% if show_recaptcha %}
-            <div class="mb-4">
-                <div class="form-label fw-semibold">Security Verification</div>
-                <div class="g-recaptcha" data-sitekey="{{ recaptcha_site_key }}"></div>
-                <div class="form-text text-muted">
-                    <i class="fas fa-shield-alt me-1"></i>Please verify you're not a robot
+            
+            <!-- reCAPTCHA v3 Badge (automatically positioned by Google) -->
+            <div class="mb-3">
+                <div class="form-text text-muted small">
+                    <i class="fas fa-shield-alt me-1"></i>Protected by reCAPTCHA v3
                 </div>
             </div>
-            {% endif %}
             
             <div class="mb-4">
                 <div class="form-check">
@@ -93,13 +91,13 @@
 {% endblock %}
 
 {% block scripts %}
-<!-- reCAPTCHA Script - Only Load if Needed -->
-{% if show_recaptcha %}
-<script src="https://www.google.com/recaptcha/api.js" async defer></script>
-{% endif %}
+<!-- reCAPTCHA v3 Script -->
+<script src="https://www.google.com/recaptcha/api.js?render={{ recaptcha_site_key }}"></script>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        const recaptchaSiteKey = '{{ recaptcha_site_key }}';
+        
         // Focus on username field
         const usernameField = document.getElementById('username');
         if (usernameField) {
@@ -118,41 +116,51 @@
             });
         }
         
-        // Form validation
-        const form = document.querySelector('form');
+        // Form validation with reCAPTCHA v3
+        const form = document.getElementById('loginForm');
         if (form) {
             form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
                 const username = document.getElementById('username').value;
                 const password = document.getElementById('password').value;
                 
                 if (!username.trim()) {
-                    e.preventDefault();
                     showError('Please enter your username.');
                     return false;
                 }
                 
                 if (!password.trim()) {
-                    e.preventDefault();
                     showError('Please enter your password.');
                     return false;
                 }
-
-                // Check reCAPTCHA if it's shown
-                {% if show_recaptcha %}
-                const recaptchaResponse = grecaptcha.getResponse();
-                if (!recaptchaResponse) {
-                    e.preventDefault();
-                    showError('Please complete the reCAPTCHA verification.');
-                    return false;
-                }
-                {% endif %}
                 
                 // Add loading state to button
                 const submitBtn = this.querySelector('button[type="submit"]');
                 if (submitBtn) {
-                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Signing in...';
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Verifying...';
                     submitBtn.disabled = true;
                 }
+                
+                // Execute reCAPTCHA v3
+                grecaptcha.ready(function() {
+                    grecaptcha.execute(recaptchaSiteKey, {action: 'login'}).then(function(token) {
+                        // Set the token in the hidden input
+                        document.getElementById('recaptchaToken').value = token;
+                        
+                        // Submit the form
+                        form.submit();
+                    }).catch(function(error) {
+                        console.error('reCAPTCHA error:', error);
+                        showError('Security verification failed. Please try again.');
+                        
+                        // Reset button
+                        if (submitBtn) {
+                            submitBtn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>Sign In';
+                            submitBtn.disabled = false;
+                        }
+                    });
+                });
             });
         }
         
@@ -198,19 +206,6 @@
                 usernameField.value = urlParams.get('username');
             }
         }
-        
-        // Enter key submission
-        document.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                const form = document.querySelector('form');
-                if (form) {
-                    const submitBtn = form.querySelector('button[type="submit"]');
-                    if (submitBtn && !submitBtn.disabled) {
-                        submitBtn.click();
-                    }
-                }
-            }
-        });
         
         // Enhanced input validation with real-time feedback
         const inputs = document.querySelectorAll('input[required]');
