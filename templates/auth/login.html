@@ -26,8 +26,6 @@
         {% endwith %}
         
         <form method="POST" action="{{ url_for('login') }}" id="loginForm">
-            <input type="hidden" name="recaptcha_token" id="recaptchaToken">
-            
             <div class="mb-3">
                 <label for="username" class="form-label fw-semibold">Username</label>
                 <div class="input-group">
@@ -39,7 +37,7 @@
                 </div>
             </div>
             
-            <div class="mb-4">
+            <div class="mb-3">
                 <label for="password" class="form-label fw-semibold">Password</label>
                 <div class="input-group">
                     <span class="input-group-text bg-light border-end-0">
@@ -52,11 +50,13 @@
                     </button>
                 </div>
             </div>
-            
-            <!-- reCAPTCHA v3 Badge (automatically positioned by Google) -->
-            <div class="mb-3">
-                <div class="form-text text-muted small">
-                    <i class="fas fa-shield-alt me-1"></i>Protected by reCAPTCHA v3
+
+            <!-- reCAPTCHA v2 Checkbox - ADDED -->
+            <div class="mb-4">
+                <div class="form-label fw-semibold">Security Verification</div>
+                <div class="g-recaptcha" data-sitekey="{{ recaptcha_site_key }}"></div>
+                <div class="form-text text-muted">
+                    <i class="fas fa-shield-alt me-1"></i>Please verify you're not a robot
                 </div>
             </div>
             
@@ -91,13 +91,11 @@
 {% endblock %}
 
 {% block scripts %}
-<!-- reCAPTCHA v3 Script -->
-<script src="https://www.google.com/recaptcha/api.js?render={{ recaptcha_site_key }}"></script>
+<!-- reCAPTCHA v2 Script -->
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const recaptchaSiteKey = '{{ recaptcha_site_key }}';
-        
         // Focus on username field
         const usernameField = document.getElementById('username');
         if (usernameField) {
@@ -116,51 +114,40 @@
             });
         }
         
-        // Form validation with reCAPTCHA v3
+        // Form validation with reCAPTCHA v2
         const form = document.getElementById('loginForm');
         if (form) {
             form.addEventListener('submit', function(e) {
-                e.preventDefault();
-                
                 const username = document.getElementById('username').value;
                 const password = document.getElementById('password').value;
+                const recaptchaResponse = grecaptcha.getResponse();
                 
                 if (!username.trim()) {
+                    e.preventDefault();
                     showError('Please enter your username.');
                     return false;
                 }
                 
                 if (!password.trim()) {
+                    e.preventDefault();
                     showError('Please enter your password.');
+                    return false;
+                }
+                
+                if (!recaptchaResponse) {
+                    e.preventDefault();
+                    showError('Please complete the reCAPTCHA verification.');
                     return false;
                 }
                 
                 // Add loading state to button
                 const submitBtn = this.querySelector('button[type="submit"]');
                 if (submitBtn) {
-                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Verifying...';
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Signing In...';
                     submitBtn.disabled = true;
                 }
                 
-                // Execute reCAPTCHA v3
-                grecaptcha.ready(function() {
-                    grecaptcha.execute(recaptchaSiteKey, {action: 'login'}).then(function(token) {
-                        // Set the token in the hidden input
-                        document.getElementById('recaptchaToken').value = token;
-                        
-                        // Submit the form
-                        form.submit();
-                    }).catch(function(error) {
-                        console.error('reCAPTCHA error:', error);
-                        showError('Security verification failed. Please try again.');
-                        
-                        // Reset button
-                        if (submitBtn) {
-                            submitBtn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>Sign In';
-                            submitBtn.disabled = false;
-                        }
-                    });
-                });
+                // Form will submit normally
             });
         }
         
