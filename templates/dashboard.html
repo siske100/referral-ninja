@@ -44,7 +44,7 @@
                         Member since 
                         {% if current_user.created_at %}
                             {% if current_user.created_at is string %}
-                                {{ current_user.created_at[:7] }} {# Show just YYYY-MM if it's a string #}
+                                {{ current_user.created_at[:7] }}
                             {% else %}
                                 {{ current_user.created_at.strftime('%b %Y') }}
                             {% endif %}
@@ -124,6 +124,62 @@
                 </div>
             </div>
 
+            <!-- Referral Performance -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent border-0 py-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="card-title mb-0">
+                            <i class="fas fa-chart-line me-2 text-primary"></i>Your Referral Performance
+                        </h4>
+                        <div class="badge bg-primary rounded-pill">{{ referral_stats.total_referrals or 0 }} Referrals</div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3 mb-3">
+                            <div class="performance-card p-3 rounded-3 bg-light">
+                                <h3 class="text-primary mb-1">{{ referral_stats.active_referrals or 0 }}</h3>
+                                <small class="text-muted">Active Referrals</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="performance-card p-3 rounded-3 bg-light">
+                                <h3 class="text-success mb-1">KES {{ "%.2f"|format(referral_stats.earned_from_referrals or 0) }}</h3>
+                                <small class="text-muted">Earned from Referrals</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="performance-card p-3 rounded-3 bg-light">
+                                <h3 class="text-info mb-1">{{ referral_stats.this_month or 0 }}</h3>
+                                <small class="text-muted">This Month</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="performance-card p-3 rounded-3 bg-light">
+                                <h3 class="text-warning mb-1">{{ referral_stats.conversion_rate or '0%' }}</h3>
+                                <small class="text-muted">Conversion Rate</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Progress towards next milestone -->
+                    <div class="mt-4">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="fw-semibold">Next Milestone: {{ referral_stats.next_milestone or '10 Referrals' }}</span>
+                            <span class="text-muted">{{ referral_stats.current_progress or 0 }}/{{ referral_stats.milestone_target or 10 }}</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-success" role="progressbar" 
+                                 style="width: {{ (referral_stats.current_progress or 0) / (referral_stats.milestone_target or 10) * 100 }}%">
+                            </div>
+                        </div>
+                        <small class="text-muted mt-2 d-block">
+                            {{ referral_stats.referrals_needed or 10 - (referral_stats.current_progress or 0) }} more referrals to unlock bonus!
+                        </small>
+                    </div>
+                </div>
+            </div>
+
             <!-- Quick Actions -->
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-transparent border-0 py-4">
@@ -160,9 +216,198 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Boost Your Earnings -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent border-0 py-4">
+                    <h4 class="card-title mb-0">
+                        <i class="fas fa-bolt me-2 text-warning"></i>Boost Your Earnings
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <div class="boost-icon bg-primary text-white rounded-circle d-flex align-items-center justify-content-center">
+                                        <i class="fas fa-share-alt"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="fw-bold">Share on Social Media</h6>
+                                    <p class="text-muted mb-2">Post your referral link on Facebook, Twitter, and WhatsApp groups</p>
+                                    <button class="btn btn-sm btn-outline-primary">Get Sharing Tips</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <div class="boost-icon bg-success text-white rounded-circle d-flex align-items-center justify-content-center">
+                                        <i class="fas fa-envelope"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="fw-bold">Email Campaign</h6>
+                                    <p class="text-muted mb-2">Send personalized emails to your contacts with your referral link</p>
+                                    <button class="btn btn-sm btn-outline-success">Email Templates</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <div class="boost-icon bg-info text-white rounded-circle d-flex align-items-center justify-content-center">
+                                        <i class="fas fa-video"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="fw-bold">Create Video Content</h6>
+                                    <p class="text-muted mb-2">Make short videos showing how the platform works and share</p>
+                                    <button class="btn btn-sm btn-outline-info">Video Ideas</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <div class="boost-icon bg-warning text-white rounded-circle d-flex align-items-center justify-content-center">
+                                        <i class="fas fa-gift"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="fw-bold">Offer Incentives</h6>
+                                    <p class="text-muted mb-2">Share part of your earnings with friends who sign up through you</p>
+                                    <button class="btn btn-sm btn-outline-warning">Incentive Ideas</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         
         <div class="col-lg-4">
+            <!-- Top Referrers Leaderboard -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent border-0 py-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="card-title mb-0">
+                            <i class="fas fa-trophy me-2 text-warning"></i>Top Referrers
+                        </h4>
+                        <span class="badge bg-warning rounded-pill">This Month</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if top_referrers %}
+                        <div class="leaderboard-list">
+                            {% for referrer in top_referrers %}
+                                <div class="leaderboard-item d-flex align-items-center p-3 rounded-2 mb-2 {% if referrer.username == current_user.username %}bg-primary-light border-primary{% else %}bg-light-hover{% endif %}">
+                                    <div class="leaderboard-position me-3">
+                                        <div class="position-circle {% if loop.index <= 3 %}top-{{ loop.index }}{% endif %}">
+                                            {{ loop.index }}
+                                        </div>
+                                    </div>
+                                    <div class="leaderboard-avatar me-3">
+                                        <div class="avatar-circle-sm bg-secondary text-white">
+                                            {{ referrer.username[0]|upper if referrer.username else 'U' }}
+                                        </div>
+                                    </div>
+                                    <div class="leaderboard-details flex-grow-1">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <h6 class="mb-0 fw-semibold {% if referrer.username == current_user.username %}text-primary{% endif %}">
+                                                {{ referrer.username }}
+                                                {% if referrer.username == current_user.username %}
+                                                    <span class="badge bg-primary ms-1">You</span>
+                                                {% endif %}
+                                            </h6>
+                                            <span class="fw-bold text-success">KES {{ "%.2f"|format(referrer.earnings) }}</span>
+                                        </div>
+                                        <small class="text-muted">{{ referrer.referral_count }} referrals</small>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- Your position if not in top 5 -->
+                        {% if user_rank and user_rank > 5 %}
+                            <div class="leaderboard-item d-flex align-items-center p-3 rounded-2 mt-3 bg-primary-light border-primary">
+                                <div class="leaderboard-position me-3">
+                                    <div class="position-circle">
+                                        {{ user_rank }}
+                                    </div>
+                                </div>
+                                <div class="leaderboard-avatar me-3">
+                                    <div class="avatar-circle-sm bg-primary text-white">
+                                        {{ current_user.username[0]|upper if current_user.username else 'U' }}
+                                    </div>
+                                </div>
+                                <div class="leaderboard-details flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0 fw-semibold text-primary">
+                                            {{ current_user.username }}
+                                            <span class="badge bg-primary ms-1">You</span>
+                                        </h6>
+                                        <span class="fw-bold text-success">KES {{ "%.2f"|format(user_earnings) }}</span>
+                                    </div>
+                                    <small class="text-muted">{{ user_referrals }} referrals</small>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="text-center mt-3">
+                            <a href="#" class="btn btn-outline-primary btn-sm">View Full Leaderboard</a>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <div class="empty-state-icon mb-3">
+                                <i class="fas fa-trophy fa-3x text-muted opacity-50"></i>
+                            </div>
+                            <h5 class="text-muted mb-2">No Leaderboard Data</h5>
+                            <p class="text-muted mb-3">Start referring to appear on the leaderboard</p>
+                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#referralModal">
+                                Start Referring
+                            </button>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Referral Challenge -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent border-0 py-4">
+                    <h4 class="card-title mb-0">
+                        <i class="fas fa-flag me-2 text-danger"></i>Current Challenge
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="challenge-card bg-gradient-danger text-white p-4 rounded-3 mb-3">
+                        <h5 class="mb-2">Weekly Referral Race</h5>
+                        <p class="mb-3 opacity-75">Refer 10+ people this week to win KES 500 bonus!</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small>Ends in: 3 days</small>
+                            <span class="badge bg-white text-danger">Active</span>
+                        </div>
+                    </div>
+                    
+                    <div class="challenge-progress">
+                        <div class="d-flex justify-content-between mb-1">
+                            <small class="text-muted">Your Progress</small>
+                            <small class="text-muted">3/10 referrals</small>
+                        </div>
+                        <div class="progress mb-3" style="height: 6px;">
+                            <div class="progress-bar bg-danger" style="width: 30%"></div>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button class="btn btn-outline-danger btn-sm">
+                                <i class="fas fa-fire me-1"></i>Join Challenge
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Recent Activity -->
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-transparent border-0 py-4">
@@ -192,7 +437,7 @@
                                             <i class="far fa-clock me-1"></i>
                                             {% if transaction.created_at %}
                                                 {% if transaction.created_at is string %}
-                                                    {{ transaction.created_at[:16]|replace('T', ' ') }} {# Handle string dates #}
+                                                    {{ transaction.created_at[:16]|replace('T', ' ') }}
                                                 {% else %}
                                                     {{ transaction.created_at.strftime('%b %d, %Y at %H:%M') }}
                                                 {% endif %}
@@ -239,13 +484,21 @@
                         <i class="fas fa-copy"></i>
                     </button>
                 </div>
-                <div class="social-share d-flex gap-2">
+                <div class="social-share d-flex gap-2 mb-4">
                     <button class="btn btn-outline-primary flex-fill">
                         <i class="fab fa-whatsapp me-2"></i>WhatsApp
                     </button>
                     <button class="btn btn-outline-primary flex-fill">
                         <i class="fas fa-envelope me-2"></i>Email
                     </button>
+                </div>
+                
+                <!-- Referral Tips -->
+                <div class="bg-light p-3 rounded-2">
+                    <h6 class="mb-2"><i class="fas fa-lightbulb me-2 text-warning"></i>Pro Tip</h6>
+                    <p class="small text-muted mb-0">
+                        Personalize your message when sharing! Mention how much you've earned to increase conversions.
+                    </p>
                 </div>
             </div>
         </div>
@@ -302,6 +555,17 @@
     font-size: 2rem;
     font-weight: 700;
     box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+.avatar-circle-sm {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    font-weight: 600;
 }
 
 .stat-card {
@@ -393,6 +657,10 @@
     background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
 }
 
+.bg-gradient-danger {
+    background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+}
+
 .action-card {
     transition: all 0.3s ease;
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
@@ -411,6 +679,11 @@
 .bg-light-hover:hover {
     background-color: #f8f9fa !important;
     border-color: #e9ecef !important;
+}
+
+.bg-primary-light {
+    background-color: rgba(52, 152, 219, 0.1) !important;
+    border: 1px solid rgba(52, 152, 219, 0.2) !important;
 }
 
 .activity-icon {
@@ -480,6 +753,61 @@
     border-radius: 16px;
     border: none;
     box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+
+/* Leaderboard Styles */
+.leaderboard-item {
+    transition: all 0.2s ease;
+}
+
+.position-circle {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #e9ecef;
+    color: #6c757d;
+    font-weight: 700;
+    font-size: 0.8rem;
+}
+
+.position-circle.top-1 {
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    color: white;
+}
+
+.position-circle.top-2 {
+    background: linear-gradient(135deg, #C0C0C0, #A0A0A0);
+    color: white;
+}
+
+.position-circle.top-3 {
+    background: linear-gradient(135deg, #CD7F32, #A56A2B);
+    color: white;
+}
+
+/* Performance Cards */
+.performance-card {
+    transition: all 0.3s ease;
+}
+
+.performance-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+/* Boost Icons */
+.boost-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 1.2rem;
+}
+
+/* Challenge Card */
+.challenge-card {
+    box-shadow: 0 4px 15px rgba(255, 75, 43, 0.3);
 }
 
 @media (max-width: 768px) {
