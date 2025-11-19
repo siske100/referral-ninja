@@ -40,7 +40,18 @@
                     <i class="fas fa-user-check me-2"></i>Account Active
                 </div>
                 <div class="mt-2">
-                    <small class="text-white-70">Member since {{ current_user.created_at.strftime('%b %Y') if current_user.created_at else 'Recently' }}</small>
+                    <small class="text-white-70">
+                        Member since 
+                        {% if current_user.created_at %}
+                            {% if current_user.created_at is string %}
+                                {{ current_user.created_at[:7] }} {# Show just YYYY-MM if it's a string #}
+                            {% else %}
+                                {{ current_user.created_at.strftime('%b %Y') }}
+                            {% endif %}
+                        {% else %}
+                            Recently
+                        {% endif %}
+                    </small>
                 </div>
             </div>
         </div>
@@ -178,7 +189,16 @@
                                             </span>
                                         </div>
                                         <small class="text-muted">
-                                            <i class="far fa-clock me-1"></i>{{ transaction.created_at.strftime('%b %d, %Y at %H:%M') }}
+                                            <i class="far fa-clock me-1"></i>
+                                            {% if transaction.created_at %}
+                                                {% if transaction.created_at is string %}
+                                                    {{ transaction.created_at[:16]|replace('T', ' ') }} {# Handle string dates #}
+                                                {% else %}
+                                                    {{ transaction.created_at.strftime('%b %d, %Y at %H:%M') }}
+                                                {% endif %}
+                                            {% else %}
+                                                Unknown date
+                                            {% endif %}
                                         </small>
                                     </div>
                                 </div>
