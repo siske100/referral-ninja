@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Referral Ninja - Professional Referral Platform{% endblock %}</title>
+    <title>Referral Ninja - Professional Referral Platform</title>
 
     <!-- Comprehensive Favicon Setup -->
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon-96x96.png') }}" sizes="96x96" />
@@ -595,6 +595,196 @@
             }
         }
 
+        /* ========== DASHBOARD SPECIFIC STYLES ========== */
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Header Styles */
+        .dashboard-header {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .page-title {
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+            font-size: 2rem;
+        }
+
+        .page-subtitle {
+            color: var(--text-light);
+            font-size: 1.1rem;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s ease;
+            border-left: 4px solid var(--primary-dark);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: var(--primary-gradient);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-label {
+            color: var(--text-light);
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .stat-icon {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            font-size: 2rem;
+            opacity: 0.2;
+            color: var(--primary-dark);
+        }
+
+        /* Export Section */
+        .export-section {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 2rem;
+        }
+
+        .export-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .export-option {
+            background: rgba(0,0,0,0.02);
+            border-radius: var(--radius-md);
+            padding: 1rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: 1px solid var(--border-light);
+            cursor: pointer;
+        }
+
+        .export-option:hover {
+            background: rgba(102, 126, 234, 0.05);
+            border-color: var(--primary-dark);
+        }
+
+        .export-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            color: var(--primary-dark);
+        }
+
+        /* Live Updates Indicator */
+        .live-indicator {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(56, 161, 105, 0.1);
+            color: var(--success);
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 1rem;
+        }
+
+        .live-indicator::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: var(--success);
+            border-radius: 50%;
+            margin-right: 0.5rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(56, 161, 105, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(56, 161, 105, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(56, 161, 105, 0);
+            }
+        }
+
+        /* Status Badges */
+        .badge {
+            padding: 0.5rem 0.75rem;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            font-size: 0.75rem;
+        }
+
+        .badge-success {
+            background: rgba(56, 161, 105, 0.1);
+            color: var(--success);
+        }
+
+        .badge-warning {
+            background: rgba(214, 158, 46, 0.1);
+            color: var(--warning);
+        }
+
+        .badge-danger {
+            background: rgba(229, 62, 62, 0.1);
+            color: var(--danger);
+        }
+
+        .badge-info {
+            background: rgba(49, 130, 206, 0.1);
+            color: var(--info);
+        }
+
+        /* Charts */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
         /* ========== RESPONSIVE BREAKPOINTS ========== */
 
         /* Extra Small Devices (Phones, 576px and down) */
@@ -662,6 +852,18 @@
                 bottom: 15px;
                 padding: 0.5rem 1rem;
                 font-size: 0.875rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .page-title {
+                font-size: 1.5rem;
+            }
+            
+            .export-options {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -789,53 +991,6 @@
             max-width: 100%;
             height: auto;
         }
-        
-        /* Professional Header */
-        .page-header {
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid var(--border-light);
-        }
-        
-        .page-title {
-            font-weight: 700;
-            color: var(--text-dark);
-            margin-bottom: 0.5rem;
-        }
-        
-        .page-subtitle {
-            color: var(--text-light);
-            font-size: 1.1rem;
-        }
-        
-        /* Stats Cards */
-        .stat-card {
-            text-align: center;
-            padding: 1.5rem;
-            border-radius: var(--radius-lg);
-            background: var(--card-bg);
-            box-shadow: var(--shadow-md);
-            transition: all 0.3s ease;
-        }
-        
-        .stat-card:hover {
-            transform: translateY(-3px);
-            box-shadow: var(--shadow-lg);
-        }
-        
-        .stat-value {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            background: var(--primary-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
-        .stat-label {
-            color: var(--text-light);
-            font-weight: 500;
-        }
     </style>
     {% block styles %}{% endblock %}
 </head>
@@ -877,7 +1032,152 @@
                         </button>
                     </div>
 
-                    {% block content %}{% endblock %}
+                    <!-- DASHBOARD CONTENT -->
+                    <div class="dashboard-container">
+                        <!-- Dashboard Header -->
+                        <div class="dashboard-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h1 class="page-title">Earnings Dashboard</h1>
+                                    <p class="page-subtitle">Track your referral earnings and manage KRA records</p>
+                                </div>
+                                <div>
+                                    <span class="live-indicator">Live Updates</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stats Overview -->
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-value" id="total-earnings">KES 12,450</div>
+                                <div class="stat-label">Total Earnings</div>
+                                <i class="fas fa-wallet stat-icon"></i>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="pending-earnings">KES 2,150</div>
+                                <div class="stat-label">Pending Earnings</div>
+                                <i class="fas fa-clock stat-icon"></i>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="total-referrals">48</div>
+                                <div class="stat-label">Total Referrals</div>
+                                <i class="fas fa-users stat-icon"></i>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="success-rate">92%</div>
+                                <div class="stat-label">Success Rate</div>
+                                <i class="fas fa-chart-line stat-icon"></i>
+                            </div>
+                        </div>
+
+                        <!-- Export Section -->
+                        <div class="export-section">
+                            <h3>Export Records for KRA</h3>
+                            <p class="text-muted">Download your earnings data in formats compatible with KRA requirements</p>
+                            
+                            <div class="export-options">
+                                <div class="export-option" onclick="exportToPDF()">
+                                    <i class="fas fa-file-pdf export-icon"></i>
+                                    <h5>PDF Report</h5>
+                                    <p class="text-muted">Formatted for printing</p>
+                                </div>
+                                <div class="export-option" onclick="exportToExcel()">
+                                    <i class="fas fa-file-excel export-icon"></i>
+                                    <h5>Excel Spreadsheet</h5>
+                                    <p class="text-muted">For further analysis</p>
+                                </div>
+                                <div class="export-option" onclick="exportToCSV()">
+                                    <i class="fas fa-file-csv export-icon"></i>
+                                    <h5>CSV Format</h5>
+                                    <p class="text-muted">KRA compatible format</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Earnings Chart and Transactions -->
+                        <div class="row">
+                            <div class="col-lg-8">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <span>Earnings Overview</span>
+                                        <div>
+                                            <select class="form-select form-select-sm" style="width: auto; display: inline-block;" id="timeRange">
+                                                <option value="7d">Last 7 Days</option>
+                                                <option value="30d" selected>Last 30 Days</option>
+                                                <option value="90d">Last 90 Days</option>
+                                                <option value="1y">Last Year</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="chart-container">
+                                            <canvas id="earningsChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <span>Recent Transactions</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Date</th>
+                                                        <th>Amount</th>
+                                                        <th>Status</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="recent-transactions">
+                                                    <!-- Transactions will be populated here -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Referral History -->
+                        <div class="card">
+                            <div class="card-header">
+                                <span>Referral History</span>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-secondary me-2" onclick="refreshData()">
+                                        <i class="fas fa-sync-alt"></i> Refresh
+                                    </button>
+                                    <button class="btn btn-sm btn-primary" onclick="exportToKRA()">
+                                        <i class="fas fa-download"></i> Export for KRA
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Referral Name</th>
+                                                <th>Service</th>
+                                                <th>Status</th>
+                                                <th>Earnings</th>
+                                                <th>KRA Ready</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="referral-history">
+                                            <!-- Referral history will be populated here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- END DASHBOARD CONTENT -->
+
                 </div>
 
                 <!-- Join Community Button -->
@@ -895,10 +1195,244 @@
         </div>
     </div>
 
+    <!-- Bootstrap & Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    
     <script>
-        // Enhanced JavaScript with responsive behavior
+        // Initialize Supabase client
+        const supabaseUrl = 'YOUR_SUPABASE_URL';
+        const supabaseKey = 'YOUR_SUPABASE_ANON_KEY';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        // DOM Elements
+        const totalEarningsEl = document.getElementById('total-earnings');
+        const pendingEarningsEl = document.getElementById('pending-earnings');
+        const totalReferralsEl = document.getElementById('total-referrals');
+        const successRateEl = document.getElementById('success-rate');
+        const recentTransactionsEl = document.getElementById('recent-transactions');
+        const referralHistoryEl = document.getElementById('referral-history');
+        const timeRangeEl = document.getElementById('timeRange');
+
+        // Chart initialization
+        let earningsChart;
+        function initializeChart() {
+            const ctx = document.getElementById('earningsChart').getContext('2d');
+            earningsChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+                    datasets: [{
+                        label: 'Earnings (KES)',
+                        data: [1200, 1900, 1500, 2500, 2200, 3000, 2800],
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                drawBorder: false
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return 'KES ' + value;
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Sample data for demonstration
+        const sampleTransactions = [
+            { date: '2023-06-15', amount: 'KES 1,200', status: 'Completed' },
+            { date: '2023-06-12', amount: 'KES 800', status: 'Completed' },
+            { date: '2023-06-10', amount: 'KES 1,500', status: 'Pending' },
+            { date: '2023-06-05', amount: 'KES 2,000', status: 'Completed' },
+            { date: '2023-06-01', amount: 'KES 950', status: 'Completed' }
+        ];
+
+        const sampleReferrals = [
+            { date: '2023-06-15', name: 'John Mwangi', service: 'Student Loan', status: 'Approved', earnings: 'KES 1,200', kraReady: true },
+            { date: '2023-06-12', name: 'Sarah Otieno', service: 'Job Placement', status: 'Pending', earnings: 'KES 800', kraReady: false },
+            { date: '2023-06-10', name: 'David Kimani', service: 'Student Loan', status: 'Approved', earnings: 'KES 1,500', kraReady: true },
+            { date: '2023-06-05', name: 'Grace Wambui', service: 'Business Loan', status: 'Rejected', earnings: 'KES 0', kraReady: false },
+            { date: '2023-06-01', name: 'Peter Omondi', service: 'Job Placement', status: 'Approved', earnings: 'KES 950', kraReady: true },
+            { date: '2023-05-28', name: 'Mary Achieng', service: 'Student Loan', status: 'Approved', earnings: 'KES 1,800', kraReady: true },
+            { date: '2023-05-25', name: 'James Kariuki', service: 'Business Loan', status: 'Approved', earnings: 'KES 2,000', kraReady: true }
+        ];
+
+        // Populate tables with sample data
+        function populateTables() {
+            // Recent transactions
+            recentTransactionsEl.innerHTML = '';
+            sampleTransactions.forEach(transaction => {
+                const statusClass = transaction.status === 'Completed' ? 'badge-success' : 'badge-warning';
+                recentTransactionsEl.innerHTML += `
+                    <tr>
+                        <td>${transaction.date}</td>
+                        <td>${transaction.amount}</td>
+                        <td><span class="badge ${statusClass}">${transaction.status}</span></td>
+                    </tr>
+                `;
+            });
+
+            // Referral history
+            referralHistoryEl.innerHTML = '';
+            sampleReferrals.forEach(referral => {
+                let statusClass;
+                if (referral.status === 'Approved') statusClass = 'badge-success';
+                else if (referral.status === 'Pending') statusClass = 'badge-warning';
+                else statusClass = 'badge-danger';
+
+                const kraBadge = referral.kraReady ? 
+                    '<span class="badge badge-success"><i class="fas fa-check"></i> Ready</span>' : 
+                    '<span class="badge badge-warning"><i class="fas fa-clock"></i> Processing</span>';
+
+                referralHistoryEl.innerHTML += `
+                    <tr>
+                        <td>${referral.date}</td>
+                        <td>${referral.name}</td>
+                        <td>${referral.service}</td>
+                        <td><span class="badge ${statusClass}">${referral.status}</span></td>
+                        <td>${referral.earnings}</td>
+                        <td>${kraBadge}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // Simulate live updates from Supabase
+        function simulateLiveUpdates() {
+            // In a real application, this would be replaced with actual Supabase subscriptions
+            setInterval(() => {
+                // Randomly update stats to simulate live data
+                const currentTotal = parseInt(totalEarningsEl.textContent.replace(/[^\d]/g, ''));
+                const randomIncrement = Math.floor(Math.random() * 100);
+                totalEarningsEl.textContent = `KES ${(currentTotal + randomIncrement).toLocaleString()}`;
+                
+                // Add a new transaction occasionally
+                if (Math.random() > 0.7) {
+                    const newTransaction = {
+                        date: new Date().toISOString().split('T')[0],
+                        amount: `KES ${(Math.floor(Math.random() * 2000) + 500).toLocaleString()}`,
+                        status: Math.random() > 0.3 ? 'Completed' : 'Pending'
+                    };
+                    
+                    // Add to beginning of table
+                    const statusClass = newTransaction.status === 'Completed' ? 'badge-success' : 'badge-warning';
+                    recentTransactionsEl.innerHTML = `
+                        <tr>
+                            <td>${newTransaction.date}</td>
+                            <td>${newTransaction.amount}</td>
+                            <td><span class="badge ${statusClass}">${newTransaction.status}</span></td>
+                        </tr>
+                    ` + recentTransactionsEl.innerHTML;
+                    
+                    // Keep only 5 most recent transactions
+                    if (recentTransactionsEl.children.length > 5) {
+                        recentTransactionsEl.removeChild(recentTransactionsEl.lastChild);
+                    }
+                }
+            }, 5000); // Update every 5 seconds
+        }
+
+        // Export functions
+        function exportToPDF() {
+            alert('PDF export functionality would be implemented here. This would generate a KRA-compliant PDF report.');
+            // In a real implementation, this would call a server endpoint to generate a PDF
+        }
+
+        function exportToExcel() {
+            alert('Excel export functionality would be implemented here. This would generate an Excel spreadsheet with all earnings data.');
+            // In a real implementation, this would call a server endpoint to generate an Excel file
+        }
+
+        function exportToCSV() {
+            alert('CSV export functionality would be implemented here. This would generate a CSV file formatted for KRA submission.');
+            // In a real implementation, this would call a server endpoint to generate a CSV file
+        }
+
+        function exportToKRA() {
+            alert('Preparing KRA-compliant export of all your referral earnings data...');
+            // This would gather all data and format it according to KRA requirements
+        }
+
+        function refreshData() {
+            // Show loading state
+            const refreshBtn = document.querySelector('.btn-outline-secondary');
+            const originalHTML = refreshBtn.innerHTML;
+            refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+            refreshBtn.disabled = true;
+            
+            // Simulate API call
+            setTimeout(() => {
+                // Update with "new" data
+                totalEarningsEl.textContent = `KES ${(12450 + Math.floor(Math.random() * 500)).toLocaleString()}`;
+                pendingEarningsEl.textContent = `KES ${(2150 + Math.floor(Math.random() * 200)).toLocaleString()}`;
+                totalReferralsEl.textContent = `${48 + Math.floor(Math.random() * 3)}`;
+                
+                // Restore button
+                refreshBtn.innerHTML = originalHTML;
+                refreshBtn.disabled = false;
+                
+                // Show success message
+                showToast('Data refreshed successfully!', 'success');
+            }, 1500);
+        }
+
+        function showToast(message, type) {
+            // Create a simple toast notification
+            const toast = document.createElement('div');
+            toast.className = `alert alert-${type} position-fixed`;
+            toast.style.top = '20px';
+            toast.style.right = '20px';
+            toast.style.zIndex = '9999';
+            toast.style.minWidth = '300px';
+            toast.innerHTML = message;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // Initialize dashboard
         document.addEventListener('DOMContentLoaded', function() {
+            initializeChart();
+            populateTables();
+            simulateLiveUpdates();
+            
+            // Add event listeners
+            timeRangeEl.addEventListener('change', function() {
+                // In a real app, this would fetch data for the selected time range
+                showToast(`Loading data for ${this.options[this.selectedIndex].text}...`, 'info');
+            });
+
+            // ORIGINAL JAVASCRIPT FUNCTIONALITY
             const mainContent = document.getElementById('mainContent');
             const connectionStatus = document.getElementById('connectionStatus');
             const errorState = document.getElementById('errorState');
