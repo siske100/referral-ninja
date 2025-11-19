@@ -8,11 +8,7 @@
     'active_referrals': 0,
     'earned_from_referrals': 0,
     'this_month': 0,
-    'conversion_rate': '0%',
-    'next_milestone': '10 Referrals',
-    'current_progress': 0,
-    'milestone_target': 10,
-    'referrals_needed': 10
+    'conversion_rate': '0%'
 } %}
 
 {% set top_referrers = top_referrers or [] %}
@@ -178,22 +174,6 @@
                                 <small class="text-muted">Conversion Rate</small>
                             </div>
                         </div>
-                    </div>
-                    
-                    <!-- Progress towards next milestone -->
-                    <div class="mt-4">
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="fw-semibold">Next Milestone: {{ referral_stats.next_milestone }}</span>
-                            <span class="text-muted">{{ referral_stats.current_progress }}/{{ referral_stats.milestone_target }}</span>
-                        </div>
-                        <div class="progress" style="height: 8px;">
-                            <div class="progress-bar bg-success" role="progressbar" 
-                                 style="width: {{ (referral_stats.current_progress / referral_stats.milestone_target * 100) if referral_stats.milestone_target > 0 else 0 }}%">
-                            </div>
-                        </div>
-                        <small class="text-muted mt-2 d-block">
-                            {{ referral_stats.referrals_needed }} more referrals to unlock bonus!
-                        </small>
                     </div>
                 </div>
             </div>
@@ -420,9 +400,9 @@
                         </div>
                         
                         <div class="d-grid">
-                            <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#challengeModal">
+                            <a href="{{ url_for('referrals') if 'referrals' in url_for.__globals__ else '#' }}" class="btn btn-outline-danger btn-sm">
                                 <i class="fas fa-fire me-1"></i>Join Challenge
-                            </button>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -545,17 +525,17 @@
                     <h6 class="fw-semibold mb-3">Share on:</h6>
                     <div class="row g-2">
                         <div class="col-6">
-                            <button class="btn btn-outline-primary w-100" onclick="shareOnTikTok()">
+                            <button class="btn btn-outline-primary w-100" onclick="redirectToTikTok()">
                                 <i class="fab fa-tiktok me-2"></i>TikTok
                             </button>
                         </div>
                         <div class="col-6">
-                            <button class="btn btn-outline-danger w-100" onclick="shareOnInstagram()">
+                            <button class="btn btn-outline-danger w-100" onclick="redirectToInstagram()">
                                 <i class="fab fa-instagram me-2"></i>Instagram
                             </button>
                         </div>
                         <div class="col-6">
-                            <button class="btn btn-outline-primary w-100" onclick="shareOnFacebook()">
+                            <button class="btn btn-outline-primary w-100" onclick="redirectToFacebook()">
                                 <i class="fab fa-facebook me-2"></i>Facebook
                             </button>
                         </div>
@@ -623,7 +603,7 @@
                     <small><i class="fas fa-exclamation-triangle me-2"></i>Challenge valid till 20th December</small>
                 </div>
                 <div class="d-grid">
-                    <button class="btn btn-danger">Join Challenge Now</button>
+                    <a href="{{ url_for('referrals') if 'referrals' in url_for.__globals__ else '#' }}" class="btn btn-danger">Join Challenge Now</a>
                 </div>
             </div>
         </div>
@@ -1001,26 +981,17 @@ function shareViaEmail() {
     window.location.href = mailtoUrl;
 }
 
-// New functions for video content sharing
-function shareOnTikTok() {
-    // Redirect to TikTok with a message about creating video content
-    alert("Redirecting to TikTok. Create a short video about your ReferralNinja experience!");
-    // In a real implementation, you would redirect to TikTok's upload page
-    // window.open('https://www.tiktok.com/upload', '_blank');
+// New functions for video content sharing - direct redirects
+function redirectToTikTok() {
+    window.open('https://www.tiktok.com/', '_blank');
 }
 
-function shareOnInstagram() {
-    // Redirect to Instagram with a message about creating video content
-    alert("Redirecting to Instagram. Create a Reel about your ReferralNinja experience!");
-    // In a real implementation, you would redirect to Instagram's upload page
-    // window.open('https://www.instagram.com/', '_blank');
+function redirectToInstagram() {
+    window.open('https://www.instagram.com/', '_blank');
 }
 
-function shareOnFacebook() {
-    // Redirect to Facebook with a message about creating video content
-    alert("Redirecting to Facebook. Create a video post about your ReferralNinja experience!");
-    // In a real implementation, you would redirect to Facebook's upload page
-    // window.open('https://www.facebook.com/', '_blank');
+function redirectToFacebook() {
+    window.open('https://www.facebook.com/', '_blank');
 }
 
 function shareExperienceOnWhatsApp() {
