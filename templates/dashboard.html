@@ -79,62 +79,63 @@
             <!-- Stats Cards -->
             <div class="row mb-5">
                 <div class="col-md-4 mb-4">
-                    <div class="card stat-card balance-card border-0 shadow-hover">
-                        <div class="card-body p-4">
-                            <div class="d-flex align-items-center">
+                    <div class="card stat-card balance-card border-0 shadow-hover h-100">
+                        <div class="card-body p-4 d-flex flex-column">
+                            <div class="d-flex align-items-center mb-3">
                                 <div class="stat-icon me-3">
                                     <i class="fas fa-wallet"></i>
                                 </div>
                                 <div class="stat-content flex-grow-1">
                                     <span class="stat-label">Available Balance</span>
                                     <h2 class="stat-amount mb-0">KES {{ "%.2f"|format(current_user.balance) }}</h2>
-                                    <small class="text-success">
-                                        <i class="fas fa-arrow-up me-1"></i>Ready to withdraw
-                                    </small>
                                 </div>
                             </div>
-                        </div>
-                        <div class="card-footer bg-transparent border-0 pt-0">
-                            <a href="{{ url_for('withdraw') }}" class="btn btn-sm btn-primary w-100">
-                                Withdraw Now <i class="fas fa-arrow-right ms-1"></i>
-                            </a>
+                            <div class="mt-auto">
+                                <small class="text-success">
+                                    <i class="fas fa-arrow-up me-1"></i>Ready to withdraw
+                                </small>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
                 <div class="col-md-4 mb-4">
-                    <div class="card stat-card earned-card border-0 shadow-hover">
-                        <div class="card-body p-4">
-                            <div class="d-flex align-items-center">
+                    <div class="card stat-card earned-card border-0 shadow-hover h-100">
+                        <div class="card-body p-4 d-flex flex-column">
+                            <div class="d-flex align-items-center mb-3">
                                 <div class="stat-icon me-3">
                                     <i class="fas fa-money-bill-trend-up"></i>
                                 </div>
                                 <div class="stat-content flex-grow-1">
                                     <span class="stat-label">Total Withdrawn</span>
                                     <h2 class="stat-amount mb-0">KES {{ "%.2f"|format(total_withdrawn) }}</h2>
-                                    <small class="text-muted">
-                                        <i class="fas fa-history me-1"></i>All time earnings
-                                    </small>
                                 </div>
+                            </div>
+                            <div class="mt-auto">
+                                <small class="text-muted">
+                                    <i class="fas fa-history me-1"></i>All time earnings
+                                </small>
                             </div>
                         </div>
                     </div>
                 </div>
                 
                 <div class="col-md-4 mb-4">
-                    <div class="card stat-card pending-card border-0 shadow-hover">
-                        <div class="card-body p-4">
-                            <div class="d-flex align-items-center">
+                    <div class="card stat-card pending-card border-0 shadow-hover h-100">
+                        <div class="card-body p-4 d-flex flex-column">
+                            <div class="d-flex align-items-center mb-3">
                                 <div class="stat-icon me-3">
                                     <i class="fas fa-clock-rotate-left"></i>
                                 </div>
                                 <div class="stat-content flex-grow-1">
                                     <span class="stat-label">Pending Withdrawals</span>
                                     <h2 class="stat-amount mb-0">{{ pending_withdrawals }}</h2>
-                                    <small class="text-warning">
-                                        <i class="fas fa-sync-alt me-1"></i>Being processed
-                                    </small>
                                 </div>
+                            </div>
+                            <div class="mt-auto">
+                                <small class="text-warning">
+                                    <i class="fas fa-sync-alt me-1"></i>Being processed
+                                </small>
                             </div>
                         </div>
                     </div>
@@ -272,7 +273,7 @@
                             </div>
                         </div>
                         <div class="col-md-6 mb-4">
-                            <div class="d-flex">
+                            <div class="d-flex h-100">
                                 <div class="flex-shrink-0">
                                     <div class="boost-icon bg-info text-white rounded-circle d-flex align-items-center justify-content-center">
                                         <i class="fas fa-video"></i>
@@ -281,12 +282,14 @@
                                 <div class="flex-grow-1 ms-3">
                                     <h6 class="fw-bold">Create Video Content</h6>
                                     <p class="text-muted mb-2">Make short videos showing how the platform works and share</p>
-                                    <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#videoTipsModal">Video Ideas</button>
+                                    <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#videoModal">
+                                        <i class="fas fa-share me-1"></i>Share Video
+                                    </button>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-6 mb-4">
-                            <div class="d-flex">
+                            <div class="d-flex h-100">
                                 <div class="flex-shrink-0">
                                     <div class="boost-icon bg-warning text-white rounded-circle d-flex align-items-center justify-content-center">
                                         <i class="fas fa-gift"></i>
@@ -399,10 +402,10 @@
                 </div>
                 <div class="card-body">
                     <div class="challenge-card bg-gradient-danger text-white p-4 rounded-3 mb-3">
-                        <h5 class="mb-2">Weekly Referral Race</h5>
-                        <p class="mb-3 opacity-75">Refer 10+ people this week to win KES 500 bonus!</p>
+                        <h5 class="mb-2">Refer & Win Diani Trip!</h5>
+                        <p class="mb-3 opacity-75">Refer up to 3000 people and stand a chance to win a 3 days 2 nights trip to Diani fully catered for by Bonfire Ventures!</p>
                         <div class="d-flex justify-content-between align-items-center">
-                            <small>Ends in: 3 days</small>
+                            <small>Valid till: 20th December</small>
                             <span class="badge bg-white text-danger">Active</span>
                         </div>
                     </div>
@@ -410,10 +413,10 @@
                     <div class="challenge-progress">
                         <div class="d-flex justify-content-between mb-1">
                             <small class="text-muted">Your Progress</small>
-                            <small class="text-muted">{{ referral_stats.this_month }}/10 referrals</small>
+                            <small class="text-muted">{{ referral_stats.total_referrals }}/3000 referrals</small>
                         </div>
                         <div class="progress mb-3" style="height: 6px;">
-                            <div class="progress-bar bg-danger" style="width: {{ (referral_stats.this_month / 10 * 100) if 10 > 0 else 0 }}%"></div>
+                            <div class="progress-bar bg-danger" style="width: {{ (referral_stats.total_referrals / 3000 * 100) if 3000 > 0 else 0 }}%"></div>
                         </div>
                         
                         <div class="d-grid">
@@ -425,8 +428,8 @@
                 </div>
             </div>
 
-            <!-- Recent Activity -->
-            <div class="card border-0 shadow-sm h-100">
+            <!-- Recent Activity - Adjusted width -->
+            <div class="card border-0 shadow-sm" style="max-width: 100%;">
                 <div class="card-header bg-transparent border-0 py-4">
                     <div class="d-flex justify-content-between align-items-center">
                         <h4 class="card-title mb-0">
@@ -522,6 +525,62 @@
     </div>
 </div>
 
+<!-- Video Content Modal -->
+<div class="modal fade" id="videoModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">Create & Share Video Content</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3">Make short videos showing how the platform works and share on social media to boost your earnings:</p>
+                
+                <div class="mb-4">
+                    <h6 class="fw-semibold mb-2">Share Your Experience</h6>
+                    <textarea class="form-control" id="userExperience" rows="3" placeholder="Share your experience with ReferralNinja..."></textarea>
+                </div>
+                
+                <div class="social-share-buttons mb-4">
+                    <h6 class="fw-semibold mb-3">Share on:</h6>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <button class="btn btn-outline-primary w-100" onclick="shareOnTikTok()">
+                                <i class="fab fa-tiktok me-2"></i>TikTok
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button class="btn btn-outline-danger w-100" onclick="shareOnInstagram()">
+                                <i class="fab fa-instagram me-2"></i>Instagram
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button class="btn btn-outline-primary w-100" onclick="shareOnFacebook()">
+                                <i class="fab fa-facebook me-2"></i>Facebook
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button class="btn btn-outline-success w-100" onclick="shareExperienceOnWhatsApp()">
+                                <i class="fab fa-whatsapp me-2"></i>WhatsApp
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-light p-3 rounded-2">
+                    <h6 class="mb-2"><i class="fas fa-lightbulb me-2 text-warning"></i>Video Ideas</h6>
+                    <ul class="small text-muted mb-0">
+                        <li>Show how you withdraw earnings</li>
+                        <li>Demonstrate the referral process</li>
+                        <li>Share your success story</li>
+                        <li>Create a tutorial for new users</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Additional Modals for Tips -->
 <div class="modal fade" id="socialTipsModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -550,16 +609,19 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header border-0">
-                <h5 class="modal-title">Join Weekly Challenge</h5>
+                <h5 class="modal-title">Join Diani Trip Challenge</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p>Refer 10+ people this week to win:</p>
+                <p>Refer up to 3000 people to win:</p>
                 <ul class="mb-3">
-                    <li><strong>KES 500</strong> bonus cash</li>
+                    <li><strong>3 days 2 nights trip to Diani</strong> fully catered for by Bonfire Ventures</li>
                     <li>Featured spot on leaderboard</li>
                     <li>Premium referral badge</li>
                 </ul>
+                <div class="alert alert-warning">
+                    <small><i class="fas fa-exclamation-triangle me-2"></i>Challenge valid till 20th December</small>
+                </div>
                 <div class="d-grid">
                     <button class="btn btn-danger">Join Challenge Now</button>
                 </div>
@@ -889,6 +951,18 @@
         font-size: 1.5rem;
     }
 }
+
+/* Equal height for stat cards */
+.h-100 {
+    height: 100% !important;
+}
+
+/* Adjust Recent Activity width */
+@media (min-width: 992px) {
+    .col-lg-4 .card {
+        max-width: 100% !important;
+    }
+}
 </style>
 
 <script>
@@ -926,5 +1000,59 @@ function shareViaEmail() {
     const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     window.location.href = mailtoUrl;
 }
+
+// New functions for video content sharing
+function shareOnTikTok() {
+    // Redirect to TikTok with a message about creating video content
+    alert("Redirecting to TikTok. Create a short video about your ReferralNinja experience!");
+    // In a real implementation, you would redirect to TikTok's upload page
+    // window.open('https://www.tiktok.com/upload', '_blank');
+}
+
+function shareOnInstagram() {
+    // Redirect to Instagram with a message about creating video content
+    alert("Redirecting to Instagram. Create a Reel about your ReferralNinja experience!");
+    // In a real implementation, you would redirect to Instagram's upload page
+    // window.open('https://www.instagram.com/', '_blank');
+}
+
+function shareOnFacebook() {
+    // Redirect to Facebook with a message about creating video content
+    alert("Redirecting to Facebook. Create a video post about your ReferralNinja experience!");
+    // In a real implementation, you would redirect to Facebook's upload page
+    // window.open('https://www.facebook.com/', '_blank');
+}
+
+function shareExperienceOnWhatsApp() {
+    const userExperience = document.getElementById('userExperience').value || "I'm having a great experience with ReferralNinja!";
+    const referralLink = document.getElementById('referralLink').value;
+    const message = `${userExperience}\n\nJoin me on ReferralNinja and start earning! Use my referral link: ${referralLink}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+}
+
+// Live data updating (example implementation)
+// This would be implemented with WebSockets or AJAX polling in a real application
+function updateLiveData() {
+    // In a real implementation, this would fetch data from your backend API
+    // For demonstration purposes, we'll just log to console
+    console.log("Updating live data...");
+    
+    // Example AJAX call:
+    /*
+    fetch('/api/user-stats')
+        .then(response => response.json())
+        .then(data => {
+            // Update the DOM with new data
+            document.querySelector('.balance-card .stat-amount').textContent = `KES ${data.balance.toFixed(2)}`;
+            document.querySelector('.earned-card .stat-amount').textContent = `KES ${data.total_withdrawn.toFixed(2)}`;
+            document.querySelector('.pending-card .stat-amount').textContent = data.pending_withdrawals;
+        })
+        .catch(error => console.error('Error updating data:', error));
+    */
+}
+
+// Update data every 30 seconds
+setInterval(updateLiveData, 30000);
 </script>
 {% endblock %}
