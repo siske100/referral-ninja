@@ -3,6 +3,23 @@
 {% block title %}Dashboard - ReferralNinja{% endblock %}
 
 {% block content %}
+{% set referral_stats = referral_stats or {
+    'total_referrals': 0,
+    'active_referrals': 0,
+    'earned_from_referrals': 0,
+    'this_month': 0,
+    'conversion_rate': '0%',
+    'next_milestone': '10 Referrals',
+    'current_progress': 0,
+    'milestone_target': 10,
+    'referrals_needed': 10
+} %}
+
+{% set top_referrers = top_referrers or [] %}
+{% set user_rank = user_rank or 0 %}
+{% set user_earnings = user_earnings or 0 %}
+{% set user_referrals = user_referrals or 0 %}
+
 <div class="dashboard-container">
     <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -131,32 +148,32 @@
                         <h4 class="card-title mb-0">
                             <i class="fas fa-chart-line me-2 text-primary"></i>Your Referral Performance
                         </h4>
-                        <div class="badge bg-primary rounded-pill">{{ referral_stats.total_referrals or 0 }} Referrals</div>
+                        <div class="badge bg-primary rounded-pill">{{ referral_stats.total_referrals }} Referrals</div>
                     </div>
                 </div>
                 <div class="card-body">
                     <div class="row text-center">
                         <div class="col-md-3 mb-3">
                             <div class="performance-card p-3 rounded-3 bg-light">
-                                <h3 class="text-primary mb-1">{{ referral_stats.active_referrals or 0 }}</h3>
+                                <h3 class="text-primary mb-1">{{ referral_stats.active_referrals }}</h3>
                                 <small class="text-muted">Active Referrals</small>
                             </div>
                         </div>
                         <div class="col-md-3 mb-3">
                             <div class="performance-card p-3 rounded-3 bg-light">
-                                <h3 class="text-success mb-1">KES {{ "%.2f"|format(referral_stats.earned_from_referrals or 0) }}</h3>
+                                <h3 class="text-success mb-1">KES {{ "%.2f"|format(referral_stats.earned_from_referrals) }}</h3>
                                 <small class="text-muted">Earned from Referrals</small>
                             </div>
                         </div>
                         <div class="col-md-3 mb-3">
                             <div class="performance-card p-3 rounded-3 bg-light">
-                                <h3 class="text-info mb-1">{{ referral_stats.this_month or 0 }}</h3>
+                                <h3 class="text-info mb-1">{{ referral_stats.this_month }}</h3>
                                 <small class="text-muted">This Month</small>
                             </div>
                         </div>
                         <div class="col-md-3 mb-3">
                             <div class="performance-card p-3 rounded-3 bg-light">
-                                <h3 class="text-warning mb-1">{{ referral_stats.conversion_rate or '0%' }}</h3>
+                                <h3 class="text-warning mb-1">{{ referral_stats.conversion_rate }}</h3>
                                 <small class="text-muted">Conversion Rate</small>
                             </div>
                         </div>
@@ -165,16 +182,16 @@
                     <!-- Progress towards next milestone -->
                     <div class="mt-4">
                         <div class="d-flex justify-content-between mb-2">
-                            <span class="fw-semibold">Next Milestone: {{ referral_stats.next_milestone or '10 Referrals' }}</span>
-                            <span class="text-muted">{{ referral_stats.current_progress or 0 }}/{{ referral_stats.milestone_target or 10 }}</span>
+                            <span class="fw-semibold">Next Milestone: {{ referral_stats.next_milestone }}</span>
+                            <span class="text-muted">{{ referral_stats.current_progress }}/{{ referral_stats.milestone_target }}</span>
                         </div>
                         <div class="progress" style="height: 8px;">
                             <div class="progress-bar bg-success" role="progressbar" 
-                                 style="width: {{ (referral_stats.current_progress or 0) / (referral_stats.milestone_target or 10) * 100 }}%">
+                                 style="width: {{ (referral_stats.current_progress / referral_stats.milestone_target * 100) if referral_stats.milestone_target > 0 else 0 }}%">
                             </div>
                         </div>
                         <small class="text-muted mt-2 d-block">
-                            {{ referral_stats.referrals_needed or 10 - (referral_stats.current_progress or 0) }} more referrals to unlock bonus!
+                            {{ referral_stats.referrals_needed }} more referrals to unlock bonus!
                         </small>
                     </div>
                 </div>
@@ -236,7 +253,7 @@
                                 <div class="flex-grow-1 ms-3">
                                     <h6 class="fw-bold">Share on Social Media</h6>
                                     <p class="text-muted mb-2">Post your referral link on Facebook, Twitter, and WhatsApp groups</p>
-                                    <button class="btn btn-sm btn-outline-primary">Get Sharing Tips</button>
+                                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#socialTipsModal">Get Sharing Tips</button>
                                 </div>
                             </div>
                         </div>
@@ -250,7 +267,7 @@
                                 <div class="flex-grow-1 ms-3">
                                     <h6 class="fw-bold">Email Campaign</h6>
                                     <p class="text-muted mb-2">Send personalized emails to your contacts with your referral link</p>
-                                    <button class="btn btn-sm btn-outline-success">Email Templates</button>
+                                    <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#emailTipsModal">Email Templates</button>
                                 </div>
                             </div>
                         </div>
@@ -264,7 +281,7 @@
                                 <div class="flex-grow-1 ms-3">
                                     <h6 class="fw-bold">Create Video Content</h6>
                                     <p class="text-muted mb-2">Make short videos showing how the platform works and share</p>
-                                    <button class="btn btn-sm btn-outline-info">Video Ideas</button>
+                                    <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#videoTipsModal">Video Ideas</button>
                                 </div>
                             </div>
                         </div>
@@ -278,7 +295,7 @@
                                 <div class="flex-grow-1 ms-3">
                                     <h6 class="fw-bold">Offer Incentives</h6>
                                     <p class="text-muted mb-2">Share part of your earnings with friends who sign up through you</p>
-                                    <button class="btn btn-sm btn-outline-warning">Incentive Ideas</button>
+                                    <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#incentiveTipsModal">Incentive Ideas</button>
                                 </div>
                             </div>
                         </div>
@@ -299,7 +316,7 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    {% if top_referrers %}
+                    {% if top_referrers and top_referrers|length > 0 %}
                         <div class="leaderboard-list">
                             {% for referrer in top_referrers %}
                                 <div class="leaderboard-item d-flex align-items-center p-3 rounded-2 mb-2 {% if referrer.username == current_user.username %}bg-primary-light border-primary{% else %}bg-light-hover{% endif %}">
@@ -310,20 +327,20 @@
                                     </div>
                                     <div class="leaderboard-avatar me-3">
                                         <div class="avatar-circle-sm bg-secondary text-white">
-                                            {{ referrer.username[0]|upper if referrer.username else 'U' }}
+                                            {{ (referrer.username or 'U')[0]|upper }}
                                         </div>
                                     </div>
                                     <div class="leaderboard-details flex-grow-1">
                                         <div class="d-flex justify-content-between align-items-center">
                                             <h6 class="mb-0 fw-semibold {% if referrer.username == current_user.username %}text-primary{% endif %}">
-                                                {{ referrer.username }}
+                                                {{ referrer.username or 'User' }}
                                                 {% if referrer.username == current_user.username %}
                                                     <span class="badge bg-primary ms-1">You</span>
                                                 {% endif %}
                                             </h6>
-                                            <span class="fw-bold text-success">KES {{ "%.2f"|format(referrer.earnings) }}</span>
+                                            <span class="fw-bold text-success">KES {{ "%.2f"|format(referrer.earnings or 0) }}</span>
                                         </div>
-                                        <small class="text-muted">{{ referrer.referral_count }} referrals</small>
+                                        <small class="text-muted">{{ referrer.referral_count or 0 }} referrals</small>
                                     </div>
                                 </div>
                             {% endfor %}
@@ -339,13 +356,13 @@
                                 </div>
                                 <div class="leaderboard-avatar me-3">
                                     <div class="avatar-circle-sm bg-primary text-white">
-                                        {{ current_user.username[0]|upper if current_user.username else 'U' }}
+                                        {{ (current_user.username or 'U')[0]|upper }}
                                     </div>
                                 </div>
                                 <div class="leaderboard-details flex-grow-1">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <h6 class="mb-0 fw-semibold text-primary">
-                                            {{ current_user.username }}
+                                            {{ current_user.username or 'You' }}
                                             <span class="badge bg-primary ms-1">You</span>
                                         </h6>
                                         <span class="fw-bold text-success">KES {{ "%.2f"|format(user_earnings) }}</span>
@@ -356,7 +373,7 @@
                         {% endif %}
                         
                         <div class="text-center mt-3">
-                            <a href="#" class="btn btn-outline-primary btn-sm">View Full Leaderboard</a>
+                            <a href="{{ url_for('leaderboard') if 'leaderboard' in url_for.__globals__ else '#' }}" class="btn btn-outline-primary btn-sm">View Full Leaderboard</a>
                         </div>
                     {% else %}
                         <div class="text-center py-4">
@@ -393,14 +410,14 @@
                     <div class="challenge-progress">
                         <div class="d-flex justify-content-between mb-1">
                             <small class="text-muted">Your Progress</small>
-                            <small class="text-muted">3/10 referrals</small>
+                            <small class="text-muted">{{ referral_stats.this_month }}/10 referrals</small>
                         </div>
                         <div class="progress mb-3" style="height: 6px;">
-                            <div class="progress-bar bg-danger" style="width: 30%"></div>
+                            <div class="progress-bar bg-danger" style="width: {{ (referral_stats.this_month / 10 * 100) if 10 > 0 else 0 }}%"></div>
                         </div>
                         
                         <div class="d-grid">
-                            <button class="btn btn-outline-danger btn-sm">
+                            <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#challengeModal">
                                 <i class="fas fa-fire me-1"></i>Join Challenge
                             </button>
                         </div>
@@ -415,11 +432,11 @@
                         <h4 class="card-title mb-0">
                             <i class="fas fa-receipt me-2 text-primary"></i>Recent Activity
                         </h4>
-                        <span class="badge bg-primary rounded-pill">{{ withdrawals|length }}</span>
+                        <span class="badge bg-primary rounded-pill">{{ withdrawals|length if withdrawals else 0 }}</span>
                     </div>
                 </div>
                 <div class="card-body">
-                    {% if withdrawals %}
+                    {% if withdrawals and withdrawals|length > 0 %}
                         <div class="activity-list">
                             {% for transaction in withdrawals %}
                                 <div class="activity-item d-flex align-items-center p-3 rounded-2 mb-2 bg-light-hover">
@@ -450,7 +467,7 @@
                             {% endfor %}
                         </div>
                         <div class="text-center mt-3">
-                            <a href="#" class="btn btn-outline-primary btn-sm">View All Activity</a>
+                            <a href="{{ url_for('activity') if 'activity' in url_for.__globals__ else '#' }}" class="btn btn-outline-primary btn-sm">View All Activity</a>
                         </div>
                     {% else %}
                         <div class="text-center py-5">
@@ -479,16 +496,16 @@
             <div class="modal-body">
                 <p class="text-muted mb-3">Share this link with friends and start earning commissions:</p>
                 <div class="input-group mb-3">
-                    <input type="text" class="form-control" value="{{ referral_link }}" id="referralLink" readonly>
+                    <input type="text" class="form-control" value="{{ referral_link or 'https://referralninja.co.ke/ref/' ~ current_user.username }}" id="referralLink" readonly>
                     <button class="btn btn-primary" type="button" onclick="copyReferralLink()">
                         <i class="fas fa-copy"></i>
                     </button>
                 </div>
                 <div class="social-share d-flex gap-2 mb-4">
-                    <button class="btn btn-outline-primary flex-fill">
+                    <button class="btn btn-outline-primary flex-fill" onclick="shareOnWhatsApp()">
                         <i class="fab fa-whatsapp me-2"></i>WhatsApp
                     </button>
-                    <button class="btn btn-outline-primary flex-fill">
+                    <button class="btn btn-outline-primary flex-fill" onclick="shareViaEmail()">
                         <i class="fas fa-envelope me-2"></i>Email
                     </button>
                 </div>
@@ -505,7 +522,54 @@
     </div>
 </div>
 
+<!-- Additional Modals for Tips -->
+<div class="modal fade" id="socialTipsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">Social Media Sharing Tips</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6>Best Practices:</h6>
+                <ul class="mb-3">
+                    <li>Share during peak hours (7-9 AM, 5-7 PM)</li>
+                    <li>Use eye-catching visuals</li>
+                    <li>Include your earnings screenshot</li>
+                    <li>Post in relevant groups and communities</li>
+                </ul>
+                <div class="alert alert-info">
+                    <small><i class="fas fa-info-circle me-2"></i>Posts with personal stories get 3x more conversions!</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="challengeModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">Join Weekly Challenge</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Refer 10+ people this week to win:</p>
+                <ul class="mb-3">
+                    <li><strong>KES 500</strong> bonus cash</li>
+                    <li>Featured spot on leaderboard</li>
+                    <li>Premium referral badge</li>
+                </ul>
+                <div class="d-grid">
+                    <button class="btn btn-danger">Join Challenge Now</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
+/* All the previous CSS styles remain the same */
 .dashboard-container {
     max-width: 1400px;
     margin: 0 auto;
@@ -846,6 +910,21 @@ function copyReferralLink() {
         btn.classList.remove('btn-success');
         btn.classList.add('btn-primary');
     }, 2000);
+}
+
+function shareOnWhatsApp() {
+    const referralLink = document.getElementById('referralLink').value;
+    const message = `Join me on ReferralNinja and start earning! Use my referral link: ${referralLink}`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
+}
+
+function shareViaEmail() {
+    const referralLink = document.getElementById('referralLink').value;
+    const subject = 'Join me on ReferralNinja';
+    const body = `Hi! I've been earning with ReferralNinja and thought you might be interested. Use my referral link to sign up: ${referralLink}`;
+    const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoUrl;
 }
 </script>
 {% endblock %}
