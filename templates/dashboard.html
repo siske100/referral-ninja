@@ -479,7 +479,7 @@
             <div class="modal-body">
                 <p class="text-muted mb-3">Share this link with friends and start earning commissions:</p>
                 <div class="input-group mb-3">
-                    <input type="text" class="form-control" value="{{ referral_link or 'https://referralninja.co.ke/ref/' ~ current_user.username }}" id="referralLink" readonly>
+                    <input type="text" class="form-control" value="https://www.referralninja.co.ke/register?ref={{ current_user.referral_code }}" id="referralLink" readonly>
                     <button class="btn btn-primary" type="button" onclick="copyReferralLink()">
                         <i class="fas fa-copy"></i>
                     </button>
