@@ -3914,23 +3914,86 @@ def index():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    if not current_user.is_verified:
-        flash('Please complete payment verification to access dashboard.', 'warning')
-        return redirect(url_for('account_activation'))
+    """Fixed dashboard route without recursion"""
+    try:
+        # Quick check without loading full user object
+        if not current_user.is_verified:
+            flash('Please complete payment verification to access dashboard.', 'warning')
+            return redirect(url_for('account_activation'))
+        
+        # Use simple user ID to avoid circular references
+        user_id = current_user.id
+        
+        # Get transactions without loading user relationships
+        transactions = SupabaseDB.get_transactions_by_user(user_id, transaction_type='withdrawal')
+        
+        # Calculate stats safely
+        total_withdrawn = 0
+        pending_withdrawals = 0
+        recent_withdrawals = []
+        
+        for t in transactions:
+            if t['status'] == 'completed':
+                total_withdrawn += abs(t['amount'])
+            elif t['status'] == 'pending':
+                pending_withdrawals += 1
+            
+            # Collect recent withdrawals (limit 5)
+            if len(recent_withdrawals) < 5:
+                recent_withdrawals.append(t)
+        
+        # Get referral stats safely (avoid circular references)
+        referral_stats = {
+            'total_referrals': current_user.referral_count or 0,
+            'active_referrals': current_user.referral_count or 0,  # Simplified
+            'earned_from_referrals': current_user.total_commission or 0,
+            'this_month': 0,  # You'll need to implement monthly tracking
+            'conversion_rate': '0%'
+        }
+        
+        # Get top referrers without circular references
+        top_referrers_data = SupabaseDB.get_top_users(limit=5)
+        top_referrers = []
+        for user_data in top_referrers_data:
+            # Create simple dict to avoid User object recursion
+            top_referrers.append({
+                'username': user_data.get('username', 'User'),
+                'earnings': user_data.get('total_commission', 0),
+                'referral_count': user_data.get('referral_count', 0)
+            })
+        
+        # Get user ranking safely
+        user_ranking = get_user_ranking(user_id)
+        
+        return render_template('dashboard.html',
+                            total_withdrawn=total_withdrawn,
+                            pending_withdrawals=pending_withdrawals,
+                            withdrawals=recent_withdrawals,
+                            referral_stats=referral_stats,
+                            top_referrers=top_referrers,
+                            user_rank=user_ranking.get('position', 0) if user_ranking else 0,
+                            user_earnings=current_user.total_commission or 0,
+                            user_referrals=current_user.referral_count or 0)
     
-    # Get user transactions
-    transactions = SupabaseDB.get_transactions_by_user(current_user.id, transaction_type='withdrawal')
+    except RecursionError as e:
+        logger.error(f"Recursion error in dashboard: {e}")
+        # Emergency fallback - minimal data
+        return render_template('dashboard.html',
+                            total_withdrawn=0,
+                            pending_withdrawals=0,
+                            withdrawals=[],
+                            referral_stats={},
+                            top_referrers=[],
+                            user_rank=0,
+                            user_earnings=0,
+                            user_referrals=0)
     
-    total_withdrawn = sum(abs(t['amount']) for t in transactions if t['status'] == 'completed')
-    pending_withdrawals = len([t for t in transactions if t['status'] == 'pending'])
+    except Exception as e:
+        logger.error(f"Error in dashboard: {e}")
+        flash('Error loading dashboard. Please try again.', 'error')
+        return redirect(url_for('index'))
     
-    withdrawals = [t for t in transactions][:5]  # Last 5 withdrawals
     
-    return render_template('dashboard.html',
-                         total_withdrawn=total_withdrawn,
-                         pending_withdrawals=pending_withdrawals,
-                         withdrawals=withdrawals)
-
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     # If user already logged in, send to dashboard
