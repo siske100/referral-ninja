@@ -3914,85 +3914,138 @@ def index():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    """Fixed dashboard route without recursion"""
+    """Dashboard route with re-entrancy guard and safer, non-recursive data loading."""
+    global _dashboard_in_progress
+
+    # Prevent recursive re-entry (helps when something triggers the endpoint again during processing)
+    if _dashboard_in_progress:
+        logger.warning("Re-entrant call to dashboard detected; returning minimal view to avoid recursion.")
+        return render_template('dashboard.html',
+                               total_withdrawn=0,
+                               pending_withdrawals=0,
+                               withdrawals=[],
+                               referral_stats={},
+                               top_referrers=[],
+                               user_rank=0,
+                               user_earnings=0,
+                               user_referrals=0)
+
+    _dashboard_in_progress = True
     try:
-        # Quick check without loading full user object
-        if not current_user.is_verified:
+        # Try to fetch a lightweight, up-to-date user record from Supabase.
+        try:
+            user = SupabaseDB.get_user_by_id(current_user.id)
+            if not user:
+                # fallback to current_user proxy
+                user = current_user
+        except Exception as e:
+            logger.error(f"Failed to load user for dashboard: {e}")
+            user = current_user
+
+        # Quick verification check
+        try:
+            if not getattr(user, 'is_verified', False):
+                flash('Please complete payment verification to access dashboard.', 'warning')
+                return redirect(url_for('account_activation'))
+        except Exception:
+            # If user object shape is unexpected, fallback to safe redirect
             flash('Please complete payment verification to access dashboard.', 'warning')
             return redirect(url_for('account_activation'))
-        
-        # Use simple user ID to avoid circular references
-        user_id = current_user.id
-        
-        # Get transactions without loading user relationships
-        transactions = SupabaseDB.get_transactions_by_user(user_id, transaction_type='withdrawal')
-        
-        # Calculate stats safely
+
+        user_id = getattr(user, 'id', None)
+        if not user_id:
+            logger.error("Dashboard: missing user id")
+            flash('Error loading dashboard. Please try again.', 'error')
+            return redirect(url_for('index'))
+
+        # Load transactions (safe call)
+        try:
+            transactions = SupabaseDB.get_transactions_by_user(user_id, transaction_type='withdrawal') or []
+        except Exception as e:
+            logger.error(f"Error fetching transactions for dashboard: {e}")
+            transactions = []
+
+        # Compute simple stats without calling helpers that may trigger extra DB work
         total_withdrawn = 0
         pending_withdrawals = 0
         recent_withdrawals = []
-        
+
         for t in transactions:
-            if t['status'] == 'completed':
-                total_withdrawn += abs(t['amount'])
-            elif t['status'] == 'pending':
+            try:
+                status = t.get('status', '').lower()
+                amt = abs(float(t.get('amount', 0) or 0))
+            except Exception:
+                status = t.get('status', '')
+                amt = 0
+
+            if status == 'completed':
+                total_withdrawn += amt
+            elif status == 'pending':
                 pending_withdrawals += 1
-            
-            # Collect recent withdrawals (limit 5)
+
             if len(recent_withdrawals) < 5:
                 recent_withdrawals.append(t)
-        
-        # Get referral stats safely (avoid circular references)
+
+        # Build lightweight referral stats from user fields only (avoid heavy queries)
         referral_stats = {
-            'total_referrals': current_user.referral_count or 0,
-            'active_referrals': current_user.referral_count or 0,  # Simplified
-            'earned_from_referrals': current_user.total_commission or 0,
-            'this_month': 0,  # You'll need to implement monthly tracking
+            'total_referrals': getattr(user, 'referral_count', 0) or 0,
+            'active_referrals': getattr(user, 'referral_count', 0) or 0,
+            'earned_from_referrals': getattr(user, 'total_commission', 0) or 0,
+            'this_month': 0,
             'conversion_rate': '0%'
         }
-        
-        # Get top referrers without circular references
-        top_referrers_data = SupabaseDB.get_top_users(limit=5)
-        top_referrers = []
-        for user_data in top_referrers_data:
-            # Create simple dict to avoid User object recursion
-            top_referrers.append({
-                'username': user_data.get('username', 'User'),
-                'earnings': user_data.get('total_commission', 0),
-                'referral_count': user_data.get('referral_count', 0)
-            })
-        
-        # Get user ranking safely
-        user_ranking = get_user_ranking(user_id)
-        
+
+        # Get top referrers - small query with safe fallback
+        try:
+            top_referrers_data = SupabaseDB.get_top_users(limit=5) or []
+            top_referrers = [{
+                'username': u.get('username', 'User'),
+                'earnings': u.get('total_commission', 0),
+                'referral_count': u.get('referral_count', 0)
+            } for u in top_referrers_data]
+        except Exception as e:
+            logger.error(f"Error loading top referrers: {e}")
+            top_referrers = []
+
+        # Lightweight ranking (avoid calling get_user_ranking which may re-query heavily)
+        try:
+            user_rank_position = 0
+            top_all = SupabaseDB.get_top_users(limit=1000) or []
+            for idx, u in enumerate(top_all):
+                if u.get('id') == user_id:
+                    user_rank_position = idx + 1
+                    break
+        except Exception:
+            user_rank_position = 0
+
         return render_template('dashboard.html',
-                            total_withdrawn=total_withdrawn,
-                            pending_withdrawals=pending_withdrawals,
-                            withdrawals=recent_withdrawals,
-                            referral_stats=referral_stats,
-                            top_referrers=top_referrers,
-                            user_rank=user_ranking.get('position', 0) if user_ranking else 0,
-                            user_earnings=current_user.total_commission or 0,
-                            user_referrals=current_user.referral_count or 0)
-    
+                               total_withdrawn=total_withdrawn,
+                               pending_withdrawals=pending_withdrawals,
+                               withdrawals=recent_withdrawals,
+                               referral_stats=referral_stats,
+                               top_referrers=top_referrers,
+                               user_rank=user_rank_position,
+                               user_earnings=getattr(user, 'total_commission', 0) or 0,
+                               user_referrals=getattr(user, 'referral_count', 0) or 0)
+
     except RecursionError as e:
         logger.error(f"Recursion error in dashboard: {e}")
         # Emergency fallback - minimal data
         return render_template('dashboard.html',
-                            total_withdrawn=0,
-                            pending_withdrawals=0,
-                            withdrawals=[],
-                            referral_stats={},
-                            top_referrers=[],
-                            user_rank=0,
-                            user_earnings=0,
-                            user_referrals=0)
-    
+                               total_withdrawn=0,
+                               pending_withdrawals=0,
+                               withdrawals=[],
+                               referral_stats={},
+                               top_referrers=[],
+                               user_rank=0,
+                               user_earnings=0,
+                               user_referrals=0)
     except Exception as e:
         logger.error(f"Error in dashboard: {e}")
         flash('Error loading dashboard. Please try again.', 'error')
         return redirect(url_for('index'))
-    
+    finally:
+        _dashboard_in_progress = False   
     
 @app.route('/login', methods=['GET', 'POST'])
 def login():
