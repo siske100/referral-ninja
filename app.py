@@ -3911,6 +3911,8 @@ def index():
         return redirect(url_for('dashboard'))
     return render_template('landing.html')
 
+logger = setup_safe_logging()
+
 # Thread-safe re-entrancy lock for dashboard rendering
 _dashboard_lock = threading.Lock()
 
@@ -4051,7 +4053,7 @@ def dashboard():
                 _dashboard_lock.release()
         except RuntimeError:
             # Ignore if release fails (not owned)
-            pass   
+            pass
     
 @app.route('/login', methods=['GET', 'POST'])
 def login():
