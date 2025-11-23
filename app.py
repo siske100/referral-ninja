@@ -3911,149 +3911,62 @@ def index():
         return redirect(url_for('dashboard'))
     return render_template('landing.html')
 
-logger = setup_safe_logging()
-
 # Thread-safe re-entrancy lock for dashboard rendering
 _dashboard_lock = threading.Lock()
 
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    """Dashboard route with re-entrancy guard and safer, non-recursive data loading."""
-    # Try to acquire the dashboard lock without blocking; if already held return a minimal safe view
+    """Dashboard route with safe user loading"""
     acquired = _dashboard_lock.acquire(blocking=False)
     if not acquired:
-        logger.warning("Re-entrant call to dashboard detected; returning minimal view to avoid recursion.")
-        return render_template('dashboard.html',
-                               total_withdrawn=0,
-                               pending_withdrawals=0,
-                               withdrawals=[],
-                               referral_stats={},
-                               top_referrers=[],
-                               user_rank=0,
-                               user_earnings=0,
-                               user_referrals=0)
+        logger.warning("Re-entrant call to dashboard detected")
+        return render_template('dashboard.html', minimal_view=True)
 
     try:
-        # Try to fetch a lightweight, up-to-date user record from Supabase.
-        try:
-            user = SupabaseDB.get_user_by_id(current_user.id)
-            if not user:
-                # fallback to current_user proxy
-                user = current_user
-        except Exception as e:
-            logger.error(f"Failed to load user for dashboard: {e}")
-            user = current_user
-
-        # Quick verification check
-        try:
-            if not getattr(user, 'is_verified', False):
-                flash('Please complete payment verification to access dashboard.', 'warning')
-                return redirect(url_for('account_activation'))
-        except Exception:
+        # SAFE: Use current_user directly instead of re-fetching from database
+        # This avoids triggering any security checks that might cause recursion
+        user = current_user._get_current_object()
+        
+        if not getattr(user, 'is_verified', False):
             flash('Please complete payment verification to access dashboard.', 'warning')
             return redirect(url_for('account_activation'))
 
-        user_id = getattr(user, 'id', None)
-        if not user_id:
-            logger.error("Dashboard: missing user id")
-            flash('Error loading dashboard. Please try again.', 'error')
-            return redirect(url_for('index'))
-
-        # Load transactions (safe call)
+        # Use existing user data instead of database calls
+        total_withdrawn = getattr(user, 'total_withdrawn', 0) or 0
+        balance = getattr(user, 'balance', 0) or 0
+        
+        # Safe database calls with error handling
         try:
-            transactions = SupabaseDB.get_transactions_by_user(user_id, transaction_type='withdrawal') or []
+            transactions = SupabaseDB.get_transactions_by_user(user.id, transaction_type='withdrawal') or []
         except Exception as e:
-            logger.error(f"Error fetching transactions for dashboard: {e}")
+            logger.error(f"Error fetching transactions: {e}")
             transactions = []
 
-        # Compute simple stats without calling helpers that may trigger extra DB work
-        total_withdrawn = 0
-        pending_withdrawals = 0
-        recent_withdrawals = []
-
-        for t in transactions:
-            try:
-                status = t.get('status', '').lower()
-                amt = abs(float(t.get('amount', 0) or 0))
-            except Exception:
-                status = t.get('status', '')
-                amt = 0
-
-            if status == 'completed':
-                total_withdrawn += amt
-            elif status == 'pending':
-                pending_withdrawals += 1
-
-            if len(recent_withdrawals) < 5:
-                recent_withdrawals.append(t)
-
-        # Build lightweight referral stats from user fields only (avoid heavy queries)
-        referral_stats = {
-            'total_referrals': getattr(user, 'referral_count', 0) or 0,
-            'active_referrals': getattr(user, 'referral_count', 0) or 0,
-            'earned_from_referrals': getattr(user, 'total_commission', 0) or 0,
-            'this_month': 0,
-            'conversion_rate': '0%'
-        }
-
-        # Get top referrers - small query with safe fallback
-        try:
-            top_referrers_data = SupabaseDB.get_top_users(limit=5) or []
-            top_referrers = [{
-                'username': u.get('username', 'User'),
-                'earnings': u.get('total_commission', 0),
-                'referral_count': u.get('referral_count', 0)
-            } for u in top_referrers_data]
-        except Exception as e:
-            logger.error(f"Error loading top referrers: {e}")
-            top_referrers = []
-
-        # Lightweight ranking (avoid calling get_user_ranking which may re-query heavily)
-        try:
-            user_rank_position = 0
-            top_all = SupabaseDB.get_top_users(limit=1000) or []
-            for idx, u in enumerate(top_all):
-                if u.get('id') == user_id:
-                    user_rank_position = idx + 1
-                    break
-        except Exception:
-            user_rank_position = 0
+        # Calculate stats safely
+        pending_withdrawals = len([t for t in transactions if t.get('status') == 'pending'])
+        recent_withdrawals = transactions[:5]  # Just take first 5
 
         return render_template('dashboard.html',
-                               total_withdrawn=total_withdrawn,
-                               pending_withdrawals=pending_withdrawals,
-                               withdrawals=recent_withdrawals,
-                               referral_stats=referral_stats,
-                               top_referrers=top_referrers,
-                               user_rank=user_rank_position,
-                               user_earnings=getattr(user, 'total_commission', 0) or 0,
-                               user_referrals=getattr(user, 'referral_count', 0) or 0)
+                           total_withdrawn=total_withdrawn,
+                           pending_withdrawn=pending_withdrawals,
+                           withdrawals=recent_withdrawals,
+                           referral_stats={'total_referrals': getattr(user, 'referral_count', 0)},
+                           top_referrers=[],  # Skip this to avoid more DB calls
+                           user_rank=getattr(user, 'user_rank', 'Bronze'),
+                           user_earnings=getattr(user, 'total_commission', 0),
+                           user_referrals=getattr(user, 'referral_count', 0))
 
     except RecursionError as e:
-        logger.error(f"Recursion error in dashboard: {e}")
-        # Emergency fallback - minimal data
-        return render_template('dashboard.html',
-                               total_withdrawn=0,
-                               pending_withdrawals=0,
-                               withdrawals=[],
-                               referral_stats={},
-                               top_referrers=[],
-                               user_rank=0,
-                               user_earnings=0,
-                               user_referrals=0)
+        logger.error(f"Recursion in dashboard: {e}")
+        return render_template('dashboard.html', minimal_view=True)
     except Exception as e:
-        logger.error(f"Error in dashboard: {e}")
-        flash('Error loading dashboard. Please try again.', 'error')
+        logger.error(f"Dashboard error: {e}")
+        flash('Error loading dashboard.', 'error')
         return redirect(url_for('index'))
     finally:
-        # Release lock only if we acquired it
-        try:
-            if _dashboard_lock.locked():
-                _dashboard_lock.release()
-        except RuntimeError:
-            # Ignore if release fails (not owned)
-            pass
+        if _dashboard_lock.locked():
+            _dashboard_lock.release()
     
 @app.route('/login', methods=['GET', 'POST'])
 def login():
