@@ -17,11 +17,9 @@
 {% set user_referrals = user_referrals or 0 %}
 
 {% set referrals_url = '#' %}
-{% try %}
+{% if 'referrals' in url_for.__globals__ %}
     {% set referrals_url = url_for('referrals') %}
-{% except %}
-    {% set referrals_url = '#' %}
-{% endtry %}
+{% endif %}
 
 <div class="dashboard-container">
     <!-- Flash Messages -->
@@ -885,7 +883,7 @@
     height: 30px;
     border-radius: 50%;
     display: flex;
-    align-items-center;
+    align-items: center;
     justify-content: center;
     background: #e9ecef;
     color: #6c757d;
