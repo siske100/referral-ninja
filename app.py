@@ -44,6 +44,7 @@ sys.setrecursionlimit(5000)
 # Load environment variables from .env file
 load_dotenv()
 
+
 # =============================================================================
 # SAFE LOGGING SETUP (NO RECURSION)
 # =============================================================================
@@ -169,7 +170,7 @@ class Config:
         '196.201.212.129', '196.201.212.136', '196.201.212.74',
         '196.201.212.69'
     ]
-    
+   
     # Session Security
     SESSION_COOKIE_SAMESITE = 'Lax'
     SESSION_COOKIE_SECURE = True  # Always True in production
@@ -3924,23 +3925,53 @@ def sitemap():
 @app.route('/health')
 @rate_limiter.exempt
 def health_check():
-    """Basic health check for load balancers"""
+    """Health check with cached DB check, memory, CPU info"""
+    now = time.time()
+    
+    # Simple in-memory cache
+    health_cache = {
+    'last_check': 0,
+    'data': None
+    }
+
+    CACHE_TTL = 5  # seconds
+    # Use cached result if still valid
+    if health_cache['data'] and (now - health_cache['last_check'] < CACHE_TTL):
+        cached = health_cache['data']
+        cached['cached'] = True
+        cached['timestamp'] = datetime.now(timezone.utc).isoformat()
+        return jsonify(cached)
+
     try:
+        # Perform DB check
         response = supabase_check('users', limit=1)
-        return jsonify({
+
+        data = {
             'status': 'healthy',
-            'timestamp': datetime.now(timezone.utc).isoformat(),
             'database': 'connected',
-            'version': '1.0.0'
-        })
+            'version': '1.0.0',
+            'memory_used_mb': psutil.Process().memory_info().rss / 1024 / 1024,
+            'cpu_percent': psutil.cpu_percent(interval=0.1),
+            'cached': False
+        }
+
+        # Update cache
+        health_cache['data'] = data
+        health_cache['last_check'] = now
+
+        data['timestamp'] = datetime.now(timezone.utc).isoformat()
+        return jsonify(data)
+
     except Exception as e:
         return jsonify({
             'status': 'unhealthy',
-            'timestamp': datetime.now(timezone.utc).isoformat(),
             'database': 'error',
-            'error': str(e)
+            'error': str(e),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'memory_used_mb': psutil.Process().memory_info().rss / 1024 / 1024,
+            'cpu_percent': psutil.cpu_percent(interval=0.1)
         }), 503
-
+        
 @app.route('/health/detailed')
 @rate_limiter.exempt
 @login_required
@@ -4108,13 +4139,21 @@ def dashboard():
     
     total_withdrawn = sum(abs(t['amount']) for t in transactions if t['status'] == 'completed')
     pending_withdrawals = len([t for t in transactions if t['status'] == 'pending'])
-    
-    withdrawals = [t for t in transactions][:5]  # Last 5 withdrawals
-    
-    return render_template('dashboard.html',
-                         total_withdrawn=total_withdrawn,
-                         pending_withdrawals=pending_withdrawals,
-                         withdrawals=withdrawals)
+    withdrawals = transactions[:5]  # Last 5 withdrawals
+
+    # Safe referrals URL
+    try:
+        referrals_url = url_for('referrals')
+    except Exception:
+        referrals_url = '#'  # Fallback if route doesn't exist
+
+    return render_template(
+        'dashboard.html',
+        total_withdrawn=total_withdrawn,
+        pending_withdrawals=pending_withdrawals,
+        withdrawals=withdrawals,
+        referrals_url=referrals_url
+    )
 
 @app.route('/login', methods=['GET', 'POST'])
 @rate_limiter.limit("10 per hour", endpoint_type='auth')
