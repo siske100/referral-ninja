@@ -16,10 +16,11 @@
 {% set user_earnings = user_earnings or 0 %}
 {% set user_referrals = user_referrals or 0 %}
 
-{% set referrals_url = '#' %}
-{% if 'referrals' in url_for.__globals__ %}
-    {% set referrals_url = url_for('referrals') %}
-{% endif %}
+<!-- Use direct URLs instead of url_for to avoid recursion -->
+{% set referrals_url = '/referrals' %}
+{% set leaderboard_url = '/leaderboard' %}
+{% set activity_url = '/activity' %}
+{% set withdraw_url = '/withdraw' %}
 
 <div class="dashboard-container">
     <!-- Flash Messages -->
@@ -201,7 +202,7 @@
                                     <h5 class="mb-0">Withdraw Earnings</h5>
                                 </div>
                                 <p class="mb-3 opacity-75">Transfer your earnings to your mobile money account instantly</p>
-                                <a href="{{ url_for('withdraw') }}" class="btn btn-light btn-sm">
+                                <a href="{{ withdraw_url }}" class="btn btn-light btn-sm">
                                     Withdraw Now <i class="fas fa-arrow-right ms-1"></i>
                                 </a>
                             </div>
@@ -364,7 +365,7 @@
                         {% endif %}
                         
                         <div class="text-center mt-3">
-                            <a href="{{ url_for('leaderboard') if 'leaderboard' in url_for.__globals__ else '#' }}" class="btn btn-outline-primary btn-sm">View Full Leaderboard</a>
+                            <a href="{{ leaderboard_url }}" class="btn btn-outline-primary btn-sm">View Full Leaderboard</a>
                         </div>
                     {% else %}
                         <div class="text-center py-4">
@@ -460,7 +461,7 @@
                             {% endfor %}
                         </div>
                         <div class="text-center mt-3">
-                            <a href="{{ url_for('activity') if 'activity' in url_for.__globals__ else '#' }}" class="btn btn-outline-primary btn-sm">View All Activity</a>
+                            <a href="{{ activity_url }}" class="btn btn-outline-primary btn-sm">View All Activity</a>
                         </div>
                     {% else %}
                         <div class="text-center py-5">
@@ -469,7 +470,7 @@
                             </div>
                             <h5 class="text-muted mb-2">No activity yet</h5>
                             <p class="text-muted mb-3">Your withdrawal history will appear here</p>
-                            <a href="{{ url_for('withdraw') }}" class="btn btn-primary">Make Your First Withdrawal</a>
+                            <a href="{{ withdraw_url }}" class="btn btn-primary">Make Your First Withdrawal</a>
                         </div>
                     {% endif %}
                 </div>
@@ -616,6 +617,54 @@
                 </ul>
                 <div class="alert alert-info">
                     <small><i class="fas fa-info-circle me-2"></i>Posts with personal stories get 3x more conversions!</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="emailTipsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">Email Templates</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6>Sample Email Template:</h6>
+                <div class="bg-light p-3 rounded-2 mb-3">
+                    <small class="text-muted">
+                        "Hey [Friend's Name],<br><br>
+                        I wanted to share this amazing platform I've been using called ReferralNinja. I've already earned KES {{ "%.2f"|format(referral_stats.earned_from_referrals) }} just by referring people!<br><br>
+                        You can sign up using my link: https://www.referralninja.co.ke/register?ref={{ current_user.referral_code }}<br><br>
+                        Let me know if you have any questions!"
+                    </small>
+                </div>
+                <div class="alert alert-info">
+                    <small><i class="fas fa-lightbulb me-2"></i>Personalize each email for better results!</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="incentiveTipsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">Incentive Ideas</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6>Effective Incentives:</h6>
+                <ul class="mb-3">
+                    <li>Offer 20% of your referral bonus to friends who sign up</li>
+                    <li>Create a group challenge with small prizes</li>
+                    <li>Share success stories of previous referrals</li>
+                    <li>Offer to guide them through the process</li>
+                </ul>
+                <div class="alert alert-warning">
+                    <small><i class="fas fa-exclamation-triangle me-2"></i>Always be transparent about the incentives!</small>
                 </div>
             </div>
         </div>
@@ -1038,5 +1087,13 @@ function updateLiveData() {
 
 // Update data every 30 seconds
 setInterval(updateLiveData, 30000);
+
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
 </script>
 {% endblock %}
