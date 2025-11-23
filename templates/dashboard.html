@@ -16,6 +16,13 @@
 {% set user_earnings = user_earnings or 0 %}
 {% set user_referrals = user_referrals or 0 %}
 
+{% set referrals_url = '#' %}
+{% try %}
+    {% set referrals_url = url_for('referrals') %}
+{% except %}
+    {% set referrals_url = '#' %}
+{% endtry %}
+
 <div class="dashboard-container">
     <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -70,7 +77,9 @@
         </div>
     </div>
 
+    <!-- Main Content Grid -->
     <div class="row">
+        <!-- Left Column - Main Content -->
         <div class="col-lg-8">
             <!-- Stats Cards -->
             <div class="row mb-5">
@@ -287,6 +296,7 @@
             </div>
         </div>
         
+        <!-- Right Column - Sidebar -->
         <div class="col-lg-4">
             <!-- Top Referrers Leaderboard -->
             <div class="card border-0 shadow-sm mb-4">
@@ -396,11 +406,13 @@
                             <small class="text-muted">{{ referral_stats.total_referrals }}/3000 referrals</small>
                         </div>
                         <div class="progress mb-3" style="height: 6px;">
-                            <div class="progress-bar bg-danger" style="width: {{ (referral_stats.total_referrals / 3000 * 100) if 3000 > 0 else 0 }}%"></div>
+                            <div class="progress-bar bg-danger" 
+                                 style="width: {{ (referral_stats.total_referrals / 3000 * 100) if 3000 > 0 else 0 }}%;">
+                            </div>
                         </div>
-                        
+
                         <div class="d-grid">
-                            <a href="{{ url_for('referrals') if 'referrals' in url_for.__globals__ else '#' }}" class="btn btn-outline-danger btn-sm">
+                            <a href="{{ referrals_url }}" class="btn btn-outline-danger btn-sm">
                                 <i class="fas fa-fire me-1"></i>Join Challenge
                             </a>
                         </div>
@@ -408,8 +420,8 @@
                 </div>
             </div>
 
-            <!-- Recent Activity - Adjusted width -->
-            <div class="card border-0 shadow-sm" style="max-width: 100%;">
+            <!-- Recent Activity -->
+            <div class="card border-0 shadow-sm">
                 <div class="card-header bg-transparent border-0 py-4">
                     <div class="d-flex justify-content-between align-items-center">
                         <h4 class="card-title mb-0">
@@ -468,6 +480,7 @@
     </div>
 </div>
 
+<!-- Modals Section -->
 <!-- Referral Modal -->
 <div class="modal fade" id="referralModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -561,6 +574,32 @@
     </div>
 </div>
 
+<!-- Challenge Modal -->
+<div class="modal fade" id="challengeModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">Join Diani Trip Challenge</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Refer up to 3000 people to win:</p>
+                <ul class="mb-3">
+                    <li><strong>3 days 2 nights trip to Diani</strong> fully catered for by Bonfire Ventures</li>
+                    <li>Featured spot on leaderboard</li>
+                    <li>Premium referral badge</li>
+                </ul>
+                <div class="alert alert-warning">
+                    <small><i class="fas fa-exclamation-triangle me-2"></i>Challenge valid till 20th December</small>
+                </div>
+                <div class="d-grid">
+                    <a href="{{ referrals_url }}" class="btn btn-danger">Join Challenge Now</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Additional Modals for Tips -->
 <div class="modal fade" id="socialTipsModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -585,33 +624,8 @@
     </div>
 </div>
 
-<div class="modal fade" id="challengeModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <h5 class="modal-title">Join Diani Trip Challenge</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Refer up to 3000 people to win:</p>
-                <ul class="mb-3">
-                    <li><strong>3 days 2 nights trip to Diani</strong> fully catered for by Bonfire Ventures</li>
-                    <li>Featured spot on leaderboard</li>
-                    <li>Premium referral badge</li>
-                </ul>
-                <div class="alert alert-warning">
-                    <small><i class="fas fa-exclamation-triangle me-2"></i>Challenge valid till 20th December</small>
-                </div>
-                <div class="d-grid">
-                    <a href="{{ url_for('referrals') if 'referrals' in url_for.__globals__ else '#' }}" class="btn btn-danger">Join Challenge Now</a>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
+<!-- Styles -->
 <style>
-/* All the previous CSS styles remain the same */
 .dashboard-container {
     max-width: 1400px;
     margin: 0 auto;
@@ -871,7 +885,7 @@
     height: 30px;
     border-radius: 50%;
     display: flex;
-    align-items: center;
+    align-items-center;
     justify-content: center;
     background: #e9ecef;
     color: #6c757d;
@@ -945,6 +959,7 @@
 }
 </style>
 
+<!-- JavaScript -->
 <script>
 function copyReferralLink() {
     const referralLink = document.getElementById('referralLink');
