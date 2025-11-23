@@ -3911,63 +3911,26 @@ def index():
         return redirect(url_for('dashboard'))
     return render_template('landing.html')
 
-# Thread-safe re-entrancy lock for dashboard rendering
-_dashboard_lock = threading.Lock()
-
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    """Dashboard route with safe user loading"""
-    acquired = _dashboard_lock.acquire(blocking=False)
-    if not acquired:
-        logger.warning("Re-entrant call to dashboard detected")
-        return render_template('dashboard.html', minimal_view=True)
-
-    try:
-        # SAFE: Use current_user directly instead of re-fetching from database
-        # This avoids triggering any security checks that might cause recursion
-        user = current_user._get_current_object()
-        
-        if not getattr(user, 'is_verified', False):
-            flash('Please complete payment verification to access dashboard.', 'warning')
-            return redirect(url_for('account_activation'))
-
-        # Use existing user data instead of database calls
-        total_withdrawn = getattr(user, 'total_withdrawn', 0) or 0
-        balance = getattr(user, 'balance', 0) or 0
-        
-        # Safe database calls with error handling
-        try:
-            transactions = SupabaseDB.get_transactions_by_user(user.id, transaction_type='withdrawal') or []
-        except Exception as e:
-            logger.error(f"Error fetching transactions: {e}")
-            transactions = []
-
-        # Calculate stats safely
-        pending_withdrawals = len([t for t in transactions if t.get('status') == 'pending'])
-        recent_withdrawals = transactions[:5]  # Just take first 5
-
-        return render_template('dashboard.html',
-                           total_withdrawn=total_withdrawn,
-                           pending_withdrawn=pending_withdrawals,
-                           withdrawals=recent_withdrawals,
-                           referral_stats={'total_referrals': getattr(user, 'referral_count', 0)},
-                           top_referrers=[],  # Skip this to avoid more DB calls
-                           user_rank=getattr(user, 'user_rank', 'Bronze'),
-                           user_earnings=getattr(user, 'total_commission', 0),
-                           user_referrals=getattr(user, 'referral_count', 0))
-
-    except RecursionError as e:
-        logger.error(f"Recursion in dashboard: {e}")
-        return render_template('dashboard.html', minimal_view=True)
-    except Exception as e:
-        logger.error(f"Dashboard error: {e}")
-        flash('Error loading dashboard.', 'error')
-        return redirect(url_for('index'))
-    finally:
-        if _dashboard_lock.locked():
-            _dashboard_lock.release()
+    if not current_user.is_verified:
+        flash('Please complete payment verification to access dashboard.', 'warning')
+        return redirect(url_for('account_activation'))
     
+    # Get user transactions
+    transactions = SupabaseDB.get_transactions_by_user(current_user.id, transaction_type='withdrawal')
+    
+    total_withdrawn = sum(abs(t['amount']) for t in transactions if t['status'] == 'completed')
+    pending_withdrawals = len([t for t in transactions if t['status'] == 'pending'])
+    
+    withdrawals = [t for t in transactions][:5]  # Last 5 withdrawals
+    
+    return render_template('dashboard.html',
+                         total_withdrawn=total_withdrawn,
+                         pending_withdrawals=pending_withdrawals,
+                         withdrawals=withdrawals)
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     # If user already logged in, send to dashboard
@@ -4237,20 +4200,15 @@ def account_activation():
     user_id = session.get('pending_verification_user')
     temp_user_data = session.get('temp_user_data')
     
-    # Access not allowed unless user is pending verification
     if not user_id or not temp_user_data:
         flash('Invalid access. Please register first.', 'error')
         return redirect(url_for('register'))
     
-    # Only redirect if user is both authenticated AND verified
-    if current_user.is_authenticated and current_user.is_verified:
-        flash('Your account is already verified.', 'info')
+    if current_user.is_authenticated:
+        flash('You are already logged in.', 'info')
         return redirect(url_for('dashboard'))
     
-    # Still allow authenticated but unverified users to proceed here
-    # because this is where they complete verification
-    
-    # Pass temporary data for display
+    # Pass temporary user data to the template
     user_data = {
         'username': temp_user_data['username'],
         'phone': temp_user_data['phone'],
