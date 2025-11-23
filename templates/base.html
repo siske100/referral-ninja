@@ -1,1029 +1,1109 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Referral Ninja{% endblock %}</title>
 
-{% block title %}Dashboard - ReferralNinja{% endblock %}
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
 
-{% block content %}
-{% set referral_stats = referral_stats or {
-    'total_referrals': 0,
-    'active_referrals': 0,
-    'earned_from_referrals': 0,
-    'this_month': 0,
-    'conversion_rate': '0%'
-} %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-red: #dc3545;
+            --primary-dark: #c82333;
+            --primary-light: #e74c3c;
+            --secondary-dark: #34495e;
+            --accent-orange: #fd7e14;
+            --light-bg: #f5f7fa;
+            --card-bg: #ffffff;
+            --text-dark: #2d3748;
+            --text-light: #718096;
+            --border-light: #e2e8f0;
+            --success: #28a745;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --bronze: #cd7f32;
+            --silver: #c0c0c0;
+            --gold: #ffd700;
+            --platinum: #e5e4e2;
+            --diamond: #b9f2ff;
+            --info: #17a2b8;
+            --sidebar-width: 280px;
+            --sidebar-collapsed-width: 70px;
+            --sidebar-accent: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --glass-blur: blur(20px);
+            --glass-border: 1px solid rgba(255,255,255,0.2);
+        }
 
-{% set top_referrers = top_referrers or [] %}
-{% set user_rank = user_rank or 0 %}
-{% set user_earnings = user_earnings or 0 %}
-{% set user_referrals = user_referrals or 0 %}
+        * {
+            font-family: 'Inter', sans-serif;
+        }
 
-<div class="dashboard-container">
-    <!-- Flash Messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
-                    <div class="d-flex align-items-center">
-                        <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'error' %}exclamation-triangle{% elif category == 'warning' %}exclamation-circle{% else %}info-circle{% endif %} me-2"></i>
-                        <span>{{ message }}</span>
-                    </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
+        body {
+            background: var(--light-bg);
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+            color: var(--text-dark);
+        }
 
-    <!-- Welcome Header -->
-    <div class="dashboard-header mb-5">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <div class="d-flex align-items-center">
-                    <div class="avatar-container me-4">
-                        <div class="avatar-circle bg-primary text-white">
-                            {{ (current_user.username or 'N')[0]|upper }}
-                        </div>
-                    </div>
-                    <div>
-                        <h1 class="display-6 fw-bold text-white mb-2">Welcome back, {{ current_user.username or 'Ninja' }}! 👋</h1>
-                        <p class="text-white-70 mb-0">Here's your earnings overview and quick actions to get started.</p>
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+            background: var(--light-bg);
+            position: relative;
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            min-height: 100vh;
+        }
+
+        .main-content.expanded {
+            margin-left: var(--sidebar-collapsed-width);
+        }
+
+        .content {
+            padding: 2rem;
+            background: var(--light-bg);
+            min-height: calc(100vh - 80px);
+        }
+
+        /* Sidebar Logo */
+        .sidebar-logo {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+            margin-right: 10px;
+            border-radius: 10px;
+            box-shadow: 
+                0 4px 15px rgba(102, 126, 234, 0.4),
+                0 0 0 1px rgba(255,255,255,0.1);
+        }
+
+        /* Desktop Toggle Button */
+        .sidebar-toggle {
+            position: fixed;
+            top: 20px;
+            left: calc(var(--sidebar-width) - 16px);
+            background: var(--sidebar-accent);
+            border: var(--glass-border);
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            box-shadow: 
+                0 2px 10px rgba(0,0,0,0.3),
+                0 0 0 1px rgba(255,255,255,0.1);
+            z-index: 1001;
+        }
+
+        .main-content.expanded .sidebar-toggle {
+            left: calc(var(--sidebar-collapsed-width) - 16px);
+        }
+
+        .sidebar-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: 
+                0 4px 15px rgba(102, 126, 234, 0.5),
+                0 0 0 1px rgba(255,255,255,0.2);
+        }
+
+        .toggle-icon {
+            width: 16px;
+            height: 16px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .toggle-icon span {
+            display: block;
+            height: 2px;
+            width: 100%;
+            background: white;
+            border-radius: 1px;
+            position: absolute;
+            left: 0;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-icon span:nth-child(1) {
+            transform: rotate(45deg);
+            top: 7px;
+            width: 60%;
+        }
+
+        .toggle-icon span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .toggle-icon span:nth-child(3) {
+            transform: rotate(-45deg);
+            top: 7px;
+            width: 60%;
+        }
+
+        .main-content.expanded .sidebar-toggle .toggle-icon span:nth-child(1) {
+            transform: none;
+            top: 0;
+            width: 100%;
+        }
+
+        .main-content.expanded .sidebar-toggle .toggle-icon span:nth-child(2) {
+            opacity: 1;
+            top: 7px;
+        }
+
+        .main-content.expanded .sidebar-toggle .toggle-icon span:nth-child(3) {
+            transform: none;
+            top: 14px;
+            width: 100%;
+        }
+
+        /* Support Button */
+        .support-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #25D366, #128C7E);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 20px;
+            font-weight: 600;
+            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .support-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 211, 102, 0.6);
+            color: white;
+        }
+
+        /* Community Button */
+        .community-button {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 20px;
+            font-weight: 600;
+            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .community-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+            color: white;
+        }
+
+        /* Enhanced Flash Messages */
+        .flash-message {
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.5rem;
+            border-radius: 12px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .flash-message:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+        }
+
+        .flash-message.success {
+            background: linear-gradient(135deg, #e8f5e8, #d4edda);
+            color: #155724;
+            border-left: 4px solid var(--success);
+        }
+
+        .flash-message.error {
+            background: linear-gradient(135deg, #fde8e8, #f8d7da);
+            color: #721c24;
+            border-left: 4px solid var(--danger);
+        }
+
+        .flash-message.warning {
+            background: linear-gradient(135deg, #fff9e6, #fff3cd);
+            color: #856404;
+            border-left: 4px solid var(--warning);
+        }
+
+        .flash-message.info {
+            background: linear-gradient(135deg, #e8f4f8, #d1ecf1);
+            color: #0c5460;
+            border-left: 4px solid var(--info);
+        }
+
+        .flash-icon {
+            font-size: 1.2rem;
+            margin-right: 0.75rem;
+        }
+
+        /* Card Enhancements */
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            border-left: 4px solid var(--primary-red);
+            background: var(--card-bg);
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+        }
+
+        .card-header {
+            background: rgba(0,0,0,0.02);
+            border-bottom: 1px solid var(--border-light);
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        /* Button Enhancements */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-red), var(--primary-dark));
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+        }
+
+        .btn-outline-secondary {
+            border: 1px solid var(--border-light);
+            color: var(--text-light);
+            background: transparent;
+        }
+
+        .btn-outline-secondary:hover {
+            background: rgba(0,0,0,0.05);
+            border-color: var(--border-light);
+            color: var(--text-dark);
+        }
+
+        /* Form Controls */
+        .form-control {
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            background: var(--card-bg);
+            color: var(--text-dark);
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-red);
+            box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.1);
+            background: var(--card-bg);
+        }
+
+        .form-label {
+            color: var(--text-dark);
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Table Styling */
+        .table {
+            color: var(--text-dark);
+            background: var(--card-bg);
+        }
+
+        .table th {
+            border-color: var(--border-light);
+            background: rgba(0,0,0,0.02);
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .table td {
+            border-color: var(--border-light);
+        }
+
+        .table-hover tbody tr:hover {
+            background: rgba(0,0,0,0.03);
+        }
+
+        /* Error State Styles */
+        .error-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            background: var(--card-bg);
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            margin: 2rem 0;
+        }
+
+        .error-state i {
+            font-size: 4rem;
+            color: var(--danger);
+            margin-bottom: 1.5rem;
+        }
+
+        .error-state h3 {
+            color: var(--text-dark);
+            margin-bottom: 1rem;
+        }
+
+        .error-state p {
+            color: var(--text-light);
+            margin-bottom: 2rem;
+        }
+
+        /* Connection Status */
+        .connection-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            font-weight: 600;
+            z-index: 1000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+        }
+
+        .connection-status.online {
+            background: var(--success);
+            color: white;
+        }
+
+        .connection-status.offline {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0 !important;
+            }
+
+            .main-content.expanded {
+                margin-left: 0 !important;
+            }
+
+            .content {
+                padding: 1rem;
+            }
+
+            .support-button {
+                bottom: 15px;
+                right: 15px;
+                padding: 10px 16px;
+                font-size: 0.875rem;
+            }
+
+            .community-button {
+                bottom: 75px;
+                right: 15px;
+                padding: 10px 16px;
+                font-size: 0.875rem;
+            }
+
+            .sidebar-toggle {
+                display: none;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .main-content {
+                margin-left: var(--sidebar-width);
+            }
+        }
+
+        /* Enhanced Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, var(--primary-red), var(--primary-dark));
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, var(--primary-dark), #a2352a);
+        }
+
+        /* Loading Animation */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary-red);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Maintenance Mode */
+        .maintenance-mode {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            border-radius: 10px;
+            margin: 1rem 0;
+        }
+
+        /* Accessibility Improvements */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        /* Focus styles for better accessibility */
+        button:focus,
+        a:focus,
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: 2px solid var(--primary-red);
+            outline-offset: 2px;
+        }
+
+        /* Print Styles */
+        @media print {
+            .rank-badge {
+                display: none !important;
+            }
+            
+            .main-content {
+                margin-left: 0 !important;
+            }
+            
+            .content {
+                padding: 0;
+            }
+
+            .support-button {
+                display: none !important;
+            }
+
+            .community-button {
+                display: none !important;
+            }
+
+            .sidebar-toggle {
+                display: none !important;
+            }
+        }
+    </style>
+    {% block styles %}{% endblock %}
+</head>
+<body>
+    <div class="app-container">
+        <!-- Updated Sidebar with Logo -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <a href="{{ url_for('profile') }}">
+                        <img src="{{ url_for('static', filename='images/logo.png') }}" 
+                             alt="Referral Ninja Logo" 
+                             class="sidebar-logo">
+                    </a>
+                    <div class="logo-text">
+                        <h2>Referral Ninja</h2>
+                        <span class="logo-subtitle">Earn & Grow</span>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 text-md-end">
-                <div class="badge bg-white-20 text-white fs-6 p-3 border-0">
-                    <i class="fas fa-user-check me-2"></i>Account Active
-                </div>
-                <div class="mt-2">
-                    <small class="text-white-70">
-                        Member since 
-                        {% if current_user.created_at %}
-                            {% if current_user.created_at is string %}
-                                {{ current_user.created_at[:7] }}
-                            {% else %}
-                                {{ current_user.created_at.strftime('%b %Y') }}
-                            {% endif %}
-                        {% else %}
-                            Recently
-                        {% endif %}
-                    </small>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-lg-8">
-            <!-- Stats Cards -->
-            <div class="row mb-5">
-                <div class="col-md-4 mb-4">
-                    <div class="card stat-card balance-card border-0 shadow-hover h-100">
-                        <div class="card-body p-4 d-flex flex-column">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="stat-icon me-3">
-                                    <i class="fas fa-wallet"></i>
-                                </div>
-                                <div class="stat-content flex-grow-1">
-                                    <span class="stat-label">Available Balance</span>
-                                    <h2 class="stat-amount mb-0">KES {{ "%.2f"|format(current_user.balance) }}</h2>
-                                </div>
-                            </div>
-                            <div class="mt-auto">
-                                <small class="text-success">
-                                    <i class="fas fa-arrow-up me-1"></i>Ready to withdraw
-                                </small>
-                            </div>
-                        </div>
+            
+            {% if current_user.is_authenticated %}
+            <div class="sidebar-user">
+                <div class="user-avatar">
+                    <div class="avatar-gradient">
+                        <i class="fas fa-user"></i>
                     </div>
+                    <div class="user-status"></div>
                 </div>
-                
-                <div class="col-md-4 mb-4">
-                    <div class="card stat-card earned-card border-0 shadow-hover h-100">
-                        <div class="card-body p-4 d-flex flex-column">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="stat-icon me-3">
-                                    <i class="fas fa-money-bill-trend-up"></i>
-                                </div>
-                                <div class="stat-content flex-grow-1">
-                                    <span class="stat-label">Total Withdrawn</span>
-                                    <h2 class="stat-amount mb-0">KES {{ "%.2f"|format(total_withdrawn) }}</h2>
-                                </div>
-                            </div>
-                            <div class="mt-auto">
-                                <small class="text-muted">
-                                    <i class="fas fa-history me-1"></i>All time earnings
-                                </small>
-                            </div>
-                        </div>
+                <div class="user-info">
+                    <div class="user-name">{{ current_user.username }}</div>
+                    <div class="user-balance-mini">
+                        <i class="fas fa-coins"></i>
+                        Ksh {{ "%.2f"|format(current_user.balance) }}
                     </div>
-                </div>
-                
-                <div class="col-md-4 mb-4">
-                    <div class="card stat-card pending-card border-0 shadow-hover h-100">
-                        <div class="card-body p-4 d-flex flex-column">
-                            <div class="d-flex align-items-center mb-3">
-                                <div class="stat-icon me-3">
-                                    <i class="fas fa-clock-rotate-left"></i>
-                                </div>
-                                <div class="stat-content flex-grow-1">
-                                    <span class="stat-label">Pending Withdrawals</span>
-                                    <h2 class="stat-amount mb-0">{{ pending_withdrawals }}</h2>
-                                </div>
-                            </div>
-                            <div class="mt-auto">
-                                <small class="text-warning">
-                                    <i class="fas fa-sync-alt me-1"></i>Being processed
-                                </small>
-                            </div>
-                        </div>
+                    <div class="user-referrals">
+                        <i class="fas fa-users"></i>
+                        {{ current_user.referral_count }} Referrals
                     </div>
                 </div>
             </div>
-
-            <!-- Referral Performance -->
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-transparent border-0 py-4">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h4 class="card-title mb-0">
-                            <i class="fas fa-chart-line me-2 text-primary"></i>Your Referral Performance
-                        </h4>
-                        <div class="badge bg-primary rounded-pill">{{ referral_stats.total_referrals }} Referrals</div>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="row text-center">
-                        <div class="col-md-3 mb-3">
-                            <div class="performance-card p-3 rounded-3 bg-light">
-                                <h3 class="text-primary mb-1">{{ referral_stats.active_referrals }}</h3>
-                                <small class="text-muted">Active Referrals</small>
+            {% endif %}
+            
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <span class="nav-section-label">Main Menu</span>
+                    <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                        <span class="nav-icon">
+                            <div class="nav-icon-bg">
+                                <i class="fas fa-home"></i>
                             </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="performance-card p-3 rounded-3 bg-light">
-                                <h3 class="text-success mb-1">KES {{ "%.2f"|format(referral_stats.earned_from_referrals) }}</h3>
-                                <small class="text-muted">Earned from Referrals</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="performance-card p-3 rounded-3 bg-light">
-                                <h3 class="text-info mb-1">{{ referral_stats.this_month }}</h3>
-                                <small class="text-muted">This Month</small>
-                            </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="performance-card p-3 rounded-3 bg-light">
-                                <h3 class="text-warning mb-1">{{ referral_stats.conversion_rate }}</h3>
-                                <small class="text-muted">Conversion Rate</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Quick Actions -->
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-transparent border-0 py-4">
-                    <h4 class="card-title mb-0">
-                        <i class="fas fa-rocket me-2 text-primary"></i>Quick Actions
-                    </h4>
-                </div>
-                <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <div class="action-card bg-gradient-primary text-white p-4 rounded-3 h-100">
-                                <div class="d-flex align-items-center mb-3">
-                                    <i class="fas fa-money-bill-wave fa-2x me-3"></i>
-                                    <h5 class="mb-0">Withdraw Earnings</h5>
-                                </div>
-                                <p class="mb-3 opacity-75">Transfer your earnings to your mobile money account instantly</p>
-                                <a href="{{ url_for('withdraw') }}" class="btn btn-light btn-sm">
-                                    Withdraw Now <i class="fas fa-arrow-right ms-1"></i>
-                                </a>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="action-card bg-gradient-success text-white p-4 rounded-3 h-100">
-                                <div class="d-flex align-items-center mb-3">
-                                    <i class="fas fa-users fa-2x me-3"></i>
-                                    <h5 class="mb-0">Refer & Earn</h5>
-                                </div>
-                                <p class="mb-3 opacity-75">Invite friends and earn commissions on their activity</p>
-                                <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#referralModal">
-                                    Share Link <i class="fas fa-share-alt ms-1"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Boost Your Earnings -->
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-transparent border-0 py-4">
-                    <h4 class="card-title mb-0">
-                        <i class="fas fa-bolt me-2 text-warning"></i>Boost Your Earnings
-                    </h4>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-4">
-                            <div class="d-flex">
-                                <div class="flex-shrink-0">
-                                    <div class="boost-icon bg-primary text-white rounded-circle d-flex align-items-center justify-content-center">
-                                        <i class="fas fa-share-alt"></i>
-                                    </div>
-                                </div>
-                                <div class="flex-grow-1 ms-3">
-                                    <h6 class="fw-bold">Share on Social Media</h6>
-                                    <p class="text-muted mb-2">Post your referral link on Facebook, Twitter, and WhatsApp groups</p>
-                                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#socialTipsModal">Get Sharing Tips</button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6 mb-4">
-                            <div class="d-flex">
-                                <div class="flex-shrink-0">
-                                    <div class="boost-icon bg-success text-white rounded-circle d-flex align-items-center justify-content-center">
-                                        <i class="fas fa-envelope"></i>
-                                    </div>
-                                </div>
-                                <div class="flex-grow-1 ms-3">
-                                    <h6 class="fw-bold">Email Campaign</h6>
-                                    <p class="text-muted mb-2">Send personalized emails to your contacts with your referral link</p>
-                                    <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#emailTipsModal">Email Templates</button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6 mb-4">
-                            <div class="d-flex h-100">
-                                <div class="flex-shrink-0">
-                                    <div class="boost-icon bg-info text-white rounded-circle d-flex align-items-center justify-content-center">
-                                        <i class="fas fa-video"></i>
-                                    </div>
-                                </div>
-                                <div class="flex-grow-1 ms-3">
-                                    <h6 class="fw-bold">Create Video Content</h6>
-                                    <p class="text-muted mb-2">Make short videos showing how the platform works and share</p>
-                                    <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#videoModal">
-                                        <i class="fas fa-share me-1"></i>Share Video
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6 mb-4">
-                            <div class="d-flex h-100">
-                                <div class="flex-shrink-0">
-                                    <div class="boost-icon bg-warning text-white rounded-circle d-flex align-items-center justify-content-center">
-                                        <i class="fas fa-gift"></i>
-                                    </div>
-                                </div>
-                                <div class="flex-grow-1 ms-3">
-                                    <h6 class="fw-bold">Offer Incentives</h6>
-                                    <p class="text-muted mb-2">Share part of your earnings with friends who sign up through you</p>
-                                    <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#incentiveTipsModal">Incentive Ideas</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-lg-4">
-            <!-- Top Referrers Leaderboard -->
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-transparent border-0 py-4">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h4 class="card-title mb-0">
-                            <i class="fas fa-trophy me-2 text-warning"></i>Top Referrers
-                        </h4>
-                        <span class="badge bg-warning rounded-pill">This Month</span>
-                    </div>
-                </div>
-                <div class="card-body">
-                    {% if top_referrers and top_referrers|length > 0 %}
-                        <div class="leaderboard-list">
-                            {% for referrer in top_referrers %}
-                                <div class="leaderboard-item d-flex align-items-center p-3 rounded-2 mb-2 {% if referrer.username == current_user.username %}bg-primary-light border-primary{% else %}bg-light-hover{% endif %}">
-                                    <div class="leaderboard-position me-3">
-                                        <div class="position-circle {% if loop.index <= 3 %}top-{{ loop.index }}{% endif %}">
-                                            {{ loop.index }}
-                                        </div>
-                                    </div>
-                                    <div class="leaderboard-avatar me-3">
-                                        <div class="avatar-circle-sm bg-secondary text-white">
-                                            {{ (referrer.username or 'U')[0]|upper }}
-                                        </div>
-                                    </div>
-                                    <div class="leaderboard-details flex-grow-1">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <h6 class="mb-0 fw-semibold {% if referrer.username == current_user.username %}text-primary{% endif %}">
-                                                {{ referrer.username or 'User' }}
-                                                {% if referrer.username == current_user.username %}
-                                                    <span class="badge bg-primary ms-1">You</span>
-                                                {% endif %}
-                                            </h6>
-                                            <span class="fw-bold text-success">KES {{ "%.2f"|format(referrer.earnings or 0) }}</span>
-                                        </div>
-                                        <small class="text-muted">{{ referrer.referral_count or 0 }} referrals</small>
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        </div>
-                        
-                        <!-- Your position if not in top 5 -->
-                        {% if user_rank and user_rank > 5 %}
-                            <div class="leaderboard-item d-flex align-items-center p-3 rounded-2 mt-3 bg-primary-light border-primary">
-                                <div class="leaderboard-position me-3">
-                                    <div class="position-circle">
-                                        {{ user_rank }}
-                                    </div>
-                                </div>
-                                <div class="leaderboard-avatar me-3">
-                                    <div class="avatar-circle-sm bg-primary text-white">
-                                        {{ (current_user.username or 'U')[0]|upper }}
-                                    </div>
-                                </div>
-                                <div class="leaderboard-details flex-grow-1">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <h6 class="mb-0 fw-semibold text-primary">
-                                            {{ current_user.username or 'You' }}
-                                            <span class="badge bg-primary ms-1">You</span>
-                                        </h6>
-                                        <span class="fw-bold text-success">KES {{ "%.2f"|format(user_earnings) }}</span>
-                                    </div>
-                                    <small class="text-muted">{{ user_referrals }} referrals</small>
-                                </div>
-                            </div>
-                        {% endif %}
-                        
-                        <div class="text-center mt-3">
-                            <a href="{{ url_for('leaderboard') if 'leaderboard' in url_for.__globals__ else '#' }}" class="btn btn-outline-primary btn-sm">View Full Leaderboard</a>
-                        </div>
-                    {% else %}
-                        <div class="text-center py-4">
-                            <div class="empty-state-icon mb-3">
-                                <i class="fas fa-trophy fa-3x text-muted opacity-50"></i>
-                            </div>
-                            <h5 class="text-muted mb-2">No Leaderboard Data</h5>
-                            <p class="text-muted mb-3">Start referring to appear on the leaderboard</p>
-                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#referralModal">
-                                Start Referring
-                            </button>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Referral Challenge -->
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-header bg-transparent border-0 py-4">
-                    <h4 class="card-title mb-0">
-                        <i class="fas fa-flag me-2 text-danger"></i>Current Challenge
-                    </h4>
-                </div>
-                <div class="card-body">
-                    <div class="challenge-card bg-gradient-danger text-white p-4 rounded-3 mb-3">
-                        <h5 class="mb-2">Refer & Win Diani Trip!</h5>
-                        <p class="mb-3 opacity-75">Refer up to 3000 people and stand a chance to win a 3 days 2 nights trip to Diani fully catered for by Bonfire Ventures!</p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <small>Valid till: 20th December</small>
-                            <span class="badge bg-white text-danger">Active</span>
-                        </div>
-                    </div>
+                        </span>
+                        <span class="nav-text">Dashboard</span>
+                    </a>
                     
-                    <div class="challenge-progress">
-                        <div class="d-flex justify-content-between mb-1">
-                            <small class="text-muted">Your Progress</small>
-                            <small class="text-muted">{{ referral_stats.total_referrals }}/3000 referrals</small>
-                        </div>
-                        <div class="progress mb-3" style="height: 6px;">
-                            <div class="progress-bar bg-danger" style="width: {{ (referral_stats.total_referrals / 3000 * 100) if 3000 > 0 else 0 }}%"></div>
-                        </div>
-                        
-                        <div class="d-grid">
-                            <a href="{{ url_for('referrals') if 'referrals' in url_for.__globals__ else '#' }}" class="btn btn-outline-danger btn-sm">
-                                <i class="fas fa-fire me-1"></i>Join Challenge
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Recent Activity - Adjusted width -->
-            <div class="card border-0 shadow-sm" style="max-width: 100%;">
-                <div class="card-header bg-transparent border-0 py-4">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h4 class="card-title mb-0">
-                            <i class="fas fa-receipt me-2 text-primary"></i>Recent Activity
-                        </h4>
-                        <span class="badge bg-primary rounded-pill">{{ withdrawals|length if withdrawals else 0 }}</span>
-                    </div>
-                </div>
-                <div class="card-body">
-                    {% if withdrawals and withdrawals|length > 0 %}
-                        <div class="activity-list">
-                            {% for transaction in withdrawals %}
-                                <div class="activity-item d-flex align-items-center p-3 rounded-2 mb-2 bg-light-hover">
-                                    <div class="activity-icon me-3">
-                                        <i class="fas fa-{% if transaction.status == 'approved' %}check-circle text-success{% elif transaction.status == 'rejected' %}times-circle text-danger{% else %}clock text-warning{% endif %} fa-lg"></i>
-                                    </div>
-                                    <div class="activity-details flex-grow-1">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <h6 class="mb-1 fw-semibold">KES {{ "%.2f"|format(transaction.amount) }}</h6>
-                                            <span class="badge status-{{ transaction.status }} fs-7">
-                                                {{ transaction.status|title }}
-                                            </span>
-                                        </div>
-                                        <small class="text-muted">
-                                            <i class="far fa-clock me-1"></i>
-                                            {% if transaction.created_at %}
-                                                {% if transaction.created_at is string %}
-                                                    {{ transaction.created_at[:16]|replace('T', ' ') }}
-                                                {% else %}
-                                                    {{ transaction.created_at.strftime('%b %d, %Y at %H:%M') }}
-                                                {% endif %}
-                                            {% else %}
-                                                Unknown date
-                                            {% endif %}
-                                        </small>
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        </div>
-                        <div class="text-center mt-3">
-                            <a href="{{ url_for('activity') if 'activity' in url_for.__globals__ else '#' }}" class="btn btn-outline-primary btn-sm">View All Activity</a>
-                        </div>
-                    {% else %}
-                        <div class="text-center py-5">
-                            <div class="empty-state-icon mb-3">
-                                <i class="fas fa-inbox fa-3x text-muted opacity-50"></i>
+                    <a href="{{ url_for('profile') }}" class="nav-item {% if request.endpoint == 'profile' %}active{% endif %}">
+                        <span class="nav-icon">
+                            <div class="nav-icon-bg">
+                                <i class="fas fa-user-circle"></i>
                             </div>
-                            <h5 class="text-muted mb-2">No activity yet</h5>
-                            <p class="text-muted mb-3">Your withdrawal history will appear here</p>
-                            <a href="{{ url_for('withdraw') }}" class="btn btn-primary">Make Your First Withdrawal</a>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Referral Modal -->
-<div class="modal fade" id="referralModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <h5 class="modal-title">Share Your Referral Link</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p class="text-muted mb-3">Share this link with friends and start earning commissions:</p>
-                <div class="input-group mb-3">
-                    <input type="text" class="form-control" value="{{ referral_link or 'https://referralninja.co.ke/ref/' ~ current_user.username }}" id="referralLink" readonly>
-                    <button class="btn btn-primary" type="button" onclick="copyReferralLink()">
-                        <i class="fas fa-copy"></i>
-                    </button>
-                </div>
-                <div class="social-share d-flex gap-2 mb-4">
-                    <button class="btn btn-outline-primary flex-fill" onclick="shareOnWhatsApp()">
-                        <i class="fab fa-whatsapp me-2"></i>WhatsApp
-                    </button>
-                    <button class="btn btn-outline-primary flex-fill" onclick="shareViaEmail()">
-                        <i class="fas fa-envelope me-2"></i>Email
-                    </button>
+                        </span>
+                        <span class="nav-text">Profile</span>
+                    </a>
+                    
+                    <a href="{{ url_for('referral_system') }}" class="nav-item {% if request.endpoint in ['referral_system', 'referrals'] %}active{% endif %}">
+                        <span class="nav-icon">
+                            <div class="nav-icon-bg">
+                                <i class="fas fa-users"></i>
+                            </div>
+                        </span>
+                        <span class="nav-text">Referrals</span>
+                        {% if current_user.referral_count > 0 %}
+                        <span class="nav-badge">{{ current_user.referral_count }}</span>
+                        {% endif %}
+                    </a>
                 </div>
                 
-                <!-- Referral Tips -->
-                <div class="bg-light p-3 rounded-2">
-                    <h6 class="mb-2"><i class="fas fa-lightbulb me-2 text-warning"></i>Pro Tip</h6>
-                    <p class="small text-muted mb-0">
-                        Personalize your message when sharing! Mention how much you've earned to increase conversions.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Video Content Modal -->
-<div class="modal fade" id="videoModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <h5 class="modal-title">Create & Share Video Content</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p class="text-muted mb-3">Make short videos showing how the platform works and share on social media to boost your earnings:</p>
-                
-                <div class="mb-4">
-                    <h6 class="fw-semibold mb-2">Share Your Experience</h6>
-                    <textarea class="form-control" id="userExperience" rows="3" placeholder="Share your experience with ReferralNinja..."></textarea>
+                <div class="nav-section">
+                    <span class="nav-section-label">Earnings</span>
+                    <a href="{{ url_for('withdraw') }}" class="nav-item {% if request.endpoint == 'withdraw' %}active{% endif %}">
+                        <span class="nav-icon">
+                            <div class="nav-icon-bg">
+                                <i class="fas fa-wallet"></i>
+                            </div>
+                        </span>
+                        <span class="nav-text">Withdraw</span>
+                    </a>
+                    
+                    <a href="{{ url_for('statistics') }}" class="nav-item {% if request.endpoint == 'statistics' %}active{% endif %}">
+                        <span class="nav-icon">
+                            <div class="nav-icon-bg">
+                                <i class="fas fa-chart-bar"></i>
+                            </div>
+                        </span>
+                        <span class="nav-text">Statistics</span>
+                    </a>
                 </div>
                 
-                <div class="social-share-buttons mb-4">
-                    <h6 class="fw-semibold mb-3">Share on:</h6>
-                    <div class="row g-2">
-                        <div class="col-6">
-                            <button class="btn btn-outline-primary w-100" onclick="redirectToTikTok()">
-                                <i class="fab fa-tiktok me-2"></i>TikTok
-                            </button>
-                        </div>
-                        <div class="col-6">
-                            <button class="btn btn-outline-danger w-100" onclick="redirectToInstagram()">
-                                <i class="fab fa-instagram me-2"></i>Instagram
-                            </button>
-                        </div>
-                        <div class="col-6">
-                            <button class="btn btn-outline-primary w-100" onclick="redirectToFacebook()">
-                                <i class="fab fa-facebook me-2"></i>Facebook
-                            </button>
-                        </div>
-                        <div class="col-6">
-                            <button class="btn btn-outline-success w-100" onclick="shareExperienceOnWhatsApp()">
-                                <i class="fab fa-whatsapp me-2"></i>WhatsApp
-                            </button>
-                        </div>
+                <div class="nav-section">
+                    <span class="nav-section-label">Community</span>
+                    <a href="{{ url_for('jobs') }}" class="nav-item {% if request.endpoint == 'jobs' %}active{% endif %}">
+                        <span class="nav-icon">
+                            <div class="nav-icon-bg">
+                                <i class="fas fa-briefcase"></i>
+                            </div>
+                        </span>
+                        <span class="nav-text">Job Opportunities</span>
+                    </a>
+                    
+                    <a href="{{ url_for('leaderboard') }}" class="nav-item {% if request.endpoint == 'leaderboard' %}active{% endif %}">
+                        <span class="nav-icon">
+                            <div class="nav-icon-bg">
+                                <i class="fas fa-trophy"></i>
+                            </div>
+                        </span>
+                        <span class="nav-text">Leaderboard</span>
+                    </a>
+                    
+                    <a href="{{ url_for('settings') }}" class="nav-item {% if request.endpoint == 'settings' %}active{% endif %}">
+                        <span class="nav-icon">
+                            <div class="nav-icon-bg">
+                                <i class="fas fa-cog"></i>
+                            </div>
+                        </span>
+                        <span class="nav-text">Settings</span>
+                    </a>
+                </div>
+                
+                <!-- ADMIN SECTION - ONLY VISIBLE TO ADMIN USERS -->
+                {% if current_user.is_authenticated and current_user.is_admin %}
+                <div class="nav-section admin-section">
+                    <span class="nav-section-label">Administration</span>
+                    <a href="{{ url_for('admin_dashboard') }}" class="nav-item admin-item {% if request.endpoint == 'admin_dashboard' %}active{% endif %}">
+                        <span class="nav-icon">
+                            <div class="nav-icon-bg">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                        </span>
+                        <span class="nav-text">Admin Panel</span>
+                        <span class="nav-badge admin-badge">ADMIN</span>
+                    </a>
+                    
+                    <a href="{{ url_for('admin_jobs') }}" class="nav-item admin-item {% if request.endpoint == 'admin_jobs' %}active{% endif %}">
+                        <span class="nav-icon">
+                            <div class="nav-icon-bg">
+                                <i class="fas fa-briefcase"></i>
+                            </div>
+                        </span>
+                        <span class="nav-text">Manage Jobs</span>
+                    </a>
+                    
+                    <a href="{{ url_for('admin_withdrawals') }}" class="nav-item admin-item {% if request.endpoint == 'admin_withdrawals' %}active{% endif %}">
+                        <span class="nav-icon">
+                            <div class="nav-icon-bg">
+                                <i class="fas fa-money-bill-wave"></i>
+                            </div>
+                        </span>
+                        <span class="nav-text">Withdrawals</span>
+                    </a>
+                    
+                    <a href="{{ url_for('admin_users') }}" class="nav-item admin-item {% if request.endpoint == 'admin_users' %}active{% endif %}">
+                        <span class="nav-icon">
+                            <div class="nav-icon-bg">
+                                <i class="fas fa-users-cog"></i>
+                            </div>
+                        </span>
+                        <span class="nav-text">User Management</span>
+                    </a>
+                </div>
+                {% endif %}
+            </nav>
+            
+            {% if current_user.is_authenticated %}
+            <div class="sidebar-footer">
+                <div class="balance-card">
+                    <div class="balance-header">
+                        <i class="fas fa-wallet"></i>
+                        <span>Available Balance</span>
+                    </div>
+                    <div class="balance-amount">Ksh {{ "%.2f"|format(current_user.balance) }}</div>
+                    <div class="balance-actions">
+                        <a href="{{ url_for('withdraw') }}" class="balance-btn">
+                            <i class="fas fa-arrow-up"></i>
+                            Withdraw
+                        </a>
                     </div>
                 </div>
                 
-                <div class="bg-light p-3 rounded-2">
-                    <h6 class="mb-2"><i class="fas fa-lightbulb me-2 text-warning"></i>Video Ideas</h6>
-                    <ul class="small text-muted mb-0">
-                        <li>Show how you withdraw earnings</li>
-                        <li>Demonstrate the referral process</li>
-                        <li>Share your success story</li>
-                        <li>Create a tutorial for new users</li>
-                    </ul>
-                </div>
+                <a href="{{ url_for('logout') }}" class="logout-btn">
+                    <div class="logout-icon">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </div>
+                    <span class="logout-text">Logout</span>
+                </a>
             </div>
+            {% endif %}
+        </div>
+
+        <!-- Mobile Menu Toggle Button -->
+        <button class="mobile-menu-toggle" id="mobileMenuToggle">
+            <div class="toggle-icon">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </button>
+
+        <!-- Mobile Overlay -->
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+        
+        <div class="main-content" id="mainContent">
+            <!-- Desktop Toggle Button -->
+            <button class="sidebar-toggle" id="sidebarToggle">
+                <div class="toggle-icon">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </button>
+
+            <main class="content">
+                <!-- Connection Status Indicator -->
+                <div class="connection-status online" id="connectionStatus" style="display: none;">
+                    <i class="fas fa-wifi me-2"></i>
+                    <span>Connected</span>
+                </div>
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="flash-message {{ category }}" role="alert">
+                                <i class="flash-icon fas fa-{% if category == 'success' %}check-circle{% elif category == 'error' %}exclamation-triangle{% elif category == 'warning' %}exclamation-circle{% else %}info-circle{% endif %}"></i>
+                                <span>{{ message }}</span>
+                                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Error State Fallback -->
+                <div class="error-state" id="errorState" style="display: none;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>We're experiencing an issue</h3>
+                    <p>Please try again later. If the problem persists, contact support.</p>
+                    <button class="btn btn-primary" onclick="location.reload()">
+                        <i class="fas fa-redo me-2"></i>Reload Page
+                    </button>
+                </div>
+
+                {% block content %}{% endblock %}
+
+                <!-- Join Community Button -->
+                <a href="https://chat.whatsapp.com/I1iZi0WjYjF0EDV0Byq7IW" class="community-button" target="_blank" title="Join our WhatsApp Community">
+                    <i class="fab fa-whatsapp"></i>
+                    <span>Join Community</span>
+                </a>
+
+                <!-- WhatsApp Support Button -->
+                <a href="https://wa.me/254799326074" class="support-button" target="_blank" title="Contact Support on WhatsApp">
+                    <i class="fab fa-whatsapp"></i>
+                    <span>Contact Support</span>
+                </a>
+            </main>
         </div>
     </div>
-</div>
 
-<!-- Additional Modals for Tips -->
-<div class="modal fade" id="socialTipsModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <h5 class="modal-title">Social Media Sharing Tips</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <h6>Best Practices:</h6>
-                <ul class="mb-3">
-                    <li>Share during peak hours (7-9 AM, 5-7 PM)</li>
-                    <li>Use eye-catching visuals</li>
-                    <li>Include your earnings screenshot</li>
-                    <li>Post in relevant groups and communities</li>
-                </ul>
-                <div class="alert alert-info">
-                    <small><i class="fas fa-info-circle me-2"></i>Posts with personal stories get 3x more conversions!</small>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Enhanced JavaScript with better error handling
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
+            const connectionStatus = document.getElementById('connectionStatus');
+            const errorState = document.getElementById('errorState');
 
-<div class="modal fade" id="challengeModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header border-0">
-                <h5 class="modal-title">Join Diani Trip Challenge</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Refer up to 3000 people to win:</p>
-                <ul class="mb-3">
-                    <li><strong>3 days 2 nights trip to Diani</strong> fully catered for by Bonfire Ventures</li>
-                    <li>Featured spot on leaderboard</li>
-                    <li>Premium referral badge</li>
-                </ul>
-                <div class="alert alert-warning">
-                    <small><i class="fas fa-exclamation-triangle me-2"></i>Challenge valid till 20th December</small>
-                </div>
-                <div class="d-grid">
-                    <a href="{{ url_for('referrals') if 'referrals' in url_for.__globals__ else '#' }}" class="btn btn-danger">Join Challenge Now</a>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+            // Initialize components safely
+            function initializeApp() {
+                try {
+                    setupSidebarToggle();
+                    setupMobileMenu();
+                    setupFlashMessages();
+                    setupConnectionMonitor();
+                    setupErrorHandling();
+                    setupAccessibility();
+                } catch (error) {
+                    console.error('Error initializing app:', error);
+                    showErrorState();
+                }
+            }
 
-<style>
-/* All the previous CSS styles remain the same */
-.dashboard-container {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 0 15px;
-}
+            function setupSidebarToggle() {
+                // Check if sidebar state is stored
+                const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+                const isMobile = window.innerWidth <= 768;
 
-.dashboard-header {
-    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-    padding: 2.5rem;
-    border-radius: 20px;
-    color: white;
-    margin-top: 1rem;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    position: relative;
-    overflow: hidden;
-}
+                // Initialize sidebar state
+                if (isCollapsed && !isMobile) {
+                    sidebar.classList.add('collapsed');
+                    if (mainContent) mainContent.classList.add('expanded');
+                }
 
-.dashboard-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-}
+                // Toggle sidebar collapse (desktop)
+                if (sidebarToggle) {
+                    sidebarToggle.addEventListener('click', function() {
+                        if (window.innerWidth > 768) {
+                            sidebar.classList.toggle('collapsed');
+                            if (mainContent) mainContent.classList.toggle('expanded');
+                            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+                        }
+                    });
+                }
+            }
 
-.text-white-70 {
-    color: rgba(255, 255, 255, 0.7);
-}
+            function setupMobileMenu() {
+                // Toggle mobile menu
+                if (mobileMenuToggle) {
+                    mobileMenuToggle.addEventListener('click', function() {
+                        sidebar.classList.toggle('active');
+                        sidebarOverlay.classList.toggle('active');
+                        mobileMenuToggle.classList.toggle('active');
+                        document.body.style.overflow = sidebar.classList.contains('active') ? 'hidden' : '';
+                    });
+                }
 
-.bg-white-20 {
-    background-color: rgba(255, 255, 255, 0.2);
-}
+                // Close sidebar when clicking overlay
+                if (sidebarOverlay) {
+                    sidebarOverlay.addEventListener('click', function() {
+                        sidebar.classList.remove('active');
+                        sidebarOverlay.classList.remove('active');
+                        mobileMenuToggle.classList.remove('active');
+                        document.body.style.overflow = '';
+                    });
+                }
 
-.avatar-container {
-    position: relative;
-}
+                // Close mobile sidebar when clicking nav items
+                if (window.innerWidth <= 768) {
+                    const navItems = document.querySelectorAll('.nav-item');
+                    navItems.forEach(item => {
+                        item.addEventListener('click', function() {
+                            sidebar.classList.remove('active');
+                            sidebarOverlay.classList.remove('active');
+                            mobileMenuToggle.classList.remove('active');
+                            document.body.style.overflow = '';
+                        });
+                    });
+                }
+            }
 
-.avatar-circle {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2rem;
-    font-weight: 700;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-}
+            function setupFlashMessages() {
+                const flashMessages = document.querySelectorAll('.flash-message');
+                flashMessages.forEach(message => {
+                    setTimeout(() => {
+                        const closeButton = message.querySelector('.btn-close');
+                        if (closeButton) {
+                            closeButton.click();
+                        }
+                    }, 5000);
+                });
+            }
 
-.avatar-circle-sm {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;
-    font-weight: 600;
-}
+            function setupConnectionMonitor() {
+                // Monitor online/offline status
+                window.addEventListener('online', () => {
+                    if (connectionStatus) {
+                        connectionStatus.classList.remove('offline');
+                        connectionStatus.classList.add('online');
+                        connectionStatus.innerHTML = '<i class="fas fa-wifi me-2"></i><span>Connected</span>';
+                        connectionStatus.style.display = 'block';
+                        setTimeout(() => {
+                            connectionStatus.style.display = 'none';
+                        }, 3000);
+                    }
+                });
 
-.stat-card {
-    border-radius: 16px;
-    transition: all 0.3s ease;
-    overflow: hidden;
-    position: relative;
-    border: 1px solid rgba(0,0,0,0.05);
-}
+                window.addEventListener('offline', () => {
+                    if (connectionStatus) {
+                        connectionStatus.classList.remove('online');
+                        connectionStatus.classList.add('offline');
+                        connectionStatus.innerHTML = '<i class="fas fa-wifi-slash me-2"></i><span>Offline</span>';
+                        connectionStatus.style.display = 'block';
+                    }
+                });
+            }
 
-.stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, var(--gradient-start), var(--gradient-end));
-}
+            function setupErrorHandling() {
+                // Global error handler
+                window.addEventListener('error', function(e) {
+                    console.error('Global error:', e.error);
+                    // Don't show error state for minor errors
+                });
 
-.balance-card {
-    --gradient-start: #3498db;
-    --gradient-end: #2ecc71;
-}
+                // Network request error handling
+                const originalFetch = window.fetch;
+                window.fetch = function(...args) {
+                    return originalFetch.apply(this, args)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response;
+                        })
+                        .catch(error => {
+                            console.error('Fetch error:', error);
+                            throw error;
+                        });
+                };
+            }
 
-.earned-card {
-    --gradient-start: #9b59b6;
-    --gradient-end: #e74c3c;
-}
+            function setupAccessibility() {
+                // Add skip to main content link
+                const skipLink = document.createElement('a');
+                skipLink.href = '#mainContent';
+                skipLink.className = 'sr-only';
+                skipLink.innerHTML = 'Skip to main content';
+                document.body.insertBefore(skipLink, document.body.firstChild);
 
-.pending-card {
-    --gradient-start: #f39c12;
-    --gradient-end: #e67e22;
-}
+                // Handle focus for modal dialogs
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') {
+                        const openModal = document.querySelector('.modal.show');
+                        if (openModal) {
+                            const closeBtn = openModal.querySelector('[data-bs-dismiss="modal"]');
+                            if (closeBtn) closeBtn.click();
+                        }
+                    }
+                });
+            }
 
-.shadow-hover {
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-}
+            function showErrorState() {
+                if (errorState) {
+                    errorState.style.display = 'block';
+                }
+            }
 
-.shadow-hover:hover {
-    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
-    transform: translateY(-5px);
-}
+            function hideErrorState() {
+                if (errorState) {
+                    errorState.style.display = 'none';
+                }
+            }
 
-.stat-icon {
-    width: 70px;
-    height: 70px;
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.8rem;
-}
+            // Handle window resize
+            window.addEventListener('resize', function() {
+                const isMobileNow = window.innerWidth <= 768;
+                
+                if (isMobileNow) {
+                    sidebar.classList.remove('collapsed');
+                    if (mainContent) mainContent.classList.remove('expanded');
+                    sidebar.classList.remove('active');
+                    if (sidebarOverlay) sidebarOverlay.classList.remove('active');
+                    const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+                    if (mobileMenuToggle) mobileMenuToggle.classList.remove('active');
+                } else {
+                    const wasCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+                    if (wasCollapsed) {
+                        sidebar.classList.add('collapsed');
+                        if (mainContent) mainContent.classList.add('expanded');
+                    }
+                    if (sidebarOverlay) sidebarOverlay.classList.remove('active');
+                    const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+                    if (mobileMenuToggle) mobileMenuToggle.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+            });
 
-.balance-card .stat-icon {
-    background: linear-gradient(135deg, #3498db, #2ecc71);
-    color: white;
-}
+            // Close sidebar when pressing Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    sidebar.classList.remove('active');
+                    sidebarOverlay.classList.remove('active');
+                    mobileMenuToggle.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+            });
 
-.earned-card .stat-icon {
-    background: linear-gradient(135deg, #9b59b6, #e74c3c);
-    color: white;
-}
+            // Initialize the application
+            initializeApp();
 
-.pending-card .stat-icon {
-    background: linear-gradient(135deg, #f39c12, #e67e22);
-    color: white;
-}
+            // Add loading state to buttons
+            document.addEventListener('click', function(e) {
+                const button = e.target.closest('.btn-loading');
+                if (button) {
+                    const originalText = button.innerHTML;
+                    button.innerHTML = '<span class="loading-spinner"></span> Loading...';
+                    button.disabled = true;
+                    
+                    // Revert after 10 seconds if still loading
+                    setTimeout(() => {
+                        if (button.disabled) {
+                            button.innerHTML = originalText;
+                            button.disabled = false;
+                            showToast('Request timed out. Please try again.', 'warning');
+                        }
+                    }, 10000);
+                }
+            });
 
-.stat-label {
-    color: #6c757d;
-    font-size: 0.9rem;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
+            // Smooth scrolling for anchor links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    const href = this.getAttribute('href');
+                    if (href !== '#') {
+                        e.preventDefault();
+                        const target = document.querySelector(href);
+                        if (target) {
+                            target.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'start'
+                            });
+                        }
+                    }
+                });
+            });
 
-.stat-amount {
-    font-weight: 800;
-    color: #2c3e50;
-    font-size: 1.8rem;
-}
+            // Handle form submissions with loading states
+            document.addEventListener('submit', function(e) {
+                const form = e.target;
+                const submitButton = form.querySelector('button[type="submit"], input[type="submit"]');
+                
+                if (submitButton && !form.classList.contains('no-loading')) {
+                    const originalText = submitButton.innerHTML;
+                    submitButton.innerHTML = '<span class="loading-spinner"></span> Processing...';
+                    submitButton.disabled = true;
 
-.bg-gradient-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
+                    // Revert if form submission fails
+                    form.addEventListener('ajax:error', function() {
+                        submitButton.innerHTML = originalText;
+                        submitButton.disabled = false;
+                    });
 
-.bg-gradient-success {
-    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-}
+                    // Note: For actual form submission, the page will reload so we don't need to revert
+                }
+            });
+        });
 
-.bg-gradient-danger {
-    background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
-}
+        // Global error handler for uncaught errors
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('Unhandled promise rejection:', event.reason);
+        });
 
-.action-card {
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-}
-
-.action-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-}
-
-.activity-item {
-    transition: all 0.2s ease;
-    border: 1px solid transparent;
-}
-
-.bg-light-hover:hover {
-    background-color: #f8f9fa !important;
-    border-color: #e9ecef !important;
-}
-
-.bg-primary-light {
-    background-color: rgba(52, 152, 219, 0.1) !important;
-    border: 1px solid rgba(52, 152, 219, 0.2) !important;
-}
-
-.activity-icon {
-    width: 50px;
-    height: 50px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(52, 152, 219, 0.1);
-}
-
-.empty-state-icon {
-    opacity: 0.7;
-}
-
-.badge {
-    font-weight: 600;
-    padding: 0.5rem 1rem;
-}
-
-.status-pending {
-    background: rgba(243, 156, 18, 0.1);
-    color: #f39c12;
-    border: 1px solid rgba(243, 156, 18, 0.2);
-}
-
-.status-approved {
-    background: rgba(39, 174, 96, 0.1);
-    color: #27ae60;
-    border: 1px solid rgba(39, 174, 96, 0.2);
-}
-
-.status-rejected {
-    background: rgba(231, 76, 60, 0.1);
-    color: #e74c3c;
-    border: 1px solid rgba(231, 76, 60, 0.2);
-}
-
-.status-processing {
-    background: rgba(52, 152, 219, 0.1);
-    color: #3498db;
-    border: 1px solid rgba(52, 152, 219, 0.2);
-}
-
-.btn {
-    border-radius: 10px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-    padding: 0.5rem 1.5rem;
-}
-
-.card-title {
-    font-weight: 700;
-    color: #2c3e50;
-}
-
-.fs-7 {
-    font-size: 0.8rem !important;
-}
-
-.card {
-    border-radius: 16px;
-}
-
-.modal-content {
-    border-radius: 16px;
-    border: none;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-}
-
-/* Leaderboard Styles */
-.leaderboard-item {
-    transition: all 0.2s ease;
-}
-
-.position-circle {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #e9ecef;
-    color: #6c757d;
-    font-weight: 700;
-    font-size: 0.8rem;
-}
-
-.position-circle.top-1 {
-    background: linear-gradient(135deg, #FFD700, #FFA500);
-    color: white;
-}
-
-.position-circle.top-2 {
-    background: linear-gradient(135deg, #C0C0C0, #A0A0A0);
-    color: white;
-}
-
-.position-circle.top-3 {
-    background: linear-gradient(135deg, #CD7F32, #A56A2B);
-    color: white;
-}
-
-/* Performance Cards */
-.performance-card {
-    transition: all 0.3s ease;
-}
-
-.performance-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-}
-
-/* Boost Icons */
-.boost-icon {
-    width: 50px;
-    height: 50px;
-    font-size: 1.2rem;
-}
-
-/* Challenge Card */
-.challenge-card {
-    box-shadow: 0 4px 15px rgba(255, 75, 43, 0.3);
-}
-
-@media (max-width: 768px) {
-    .dashboard-header {
-        padding: 1.5rem;
-    }
+        // Page visibility API for better resource management
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                // Page is hidden - could pause animations or heavy operations
+            } else {
+                // Page is visible
+            }
+        });
+    </script>
     
-    .avatar-circle {
-        width: 60px;
-        height: 60px;
-        font-size: 1.5rem;
-    }
-    
-    .stat-amount {
-        font-size: 1.5rem;
-    }
-}
-
-/* Equal height for stat cards */
-.h-100 {
-    height: 100% !important;
-}
-
-/* Adjust Recent Activity width */
-@media (min-width: 992px) {
-    .col-lg-4 .card {
-        max-width: 100% !important;
-    }
-}
-</style>
-
-<script>
-function copyReferralLink() {
-    const referralLink = document.getElementById('referralLink');
-    referralLink.select();
-    referralLink.setSelectionRange(0, 99999);
-    document.execCommand('copy');
-    
-    // Show toast or alert
-    const btn = event.target.closest('button');
-    const originalHtml = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-check"></i> Copied!';
-    btn.classList.remove('btn-primary');
-    btn.classList.add('btn-success');
-    
-    setTimeout(() => {
-        btn.innerHTML = originalHtml;
-        btn.classList.remove('btn-success');
-        btn.classList.add('btn-primary');
-    }, 2000);
-}
-
-function shareOnWhatsApp() {
-    const referralLink = document.getElementById('referralLink').value;
-    const message = `Join me on ReferralNinja and start earning! Use my referral link: ${referralLink}`;
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
-}
-
-function shareViaEmail() {
-    const referralLink = document.getElementById('referralLink').value;
-    const subject = 'Join me on ReferralNinja';
-    const body = `Hi! I've been earning with ReferralNinja and thought you might be interested. Use my referral link to sign up: ${referralLink}`;
-    const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.location.href = mailtoUrl;
-}
-
-// New functions for video content sharing - direct redirects
-function redirectToTikTok() {
-    window.open('https://www.tiktok.com/', '_blank');
-}
-
-function redirectToInstagram() {
-    window.open('https://www.instagram.com/', '_blank');
-}
-
-function redirectToFacebook() {
-    window.open('https://www.facebook.com/', '_blank');
-}
-
-function shareExperienceOnWhatsApp() {
-    const userExperience = document.getElementById('userExperience').value || "I'm having a great experience with ReferralNinja!";
-    const referralLink = document.getElementById('referralLink').value;
-    const message = `${userExperience}\n\nJoin me on ReferralNinja and start earning! Use my referral link: ${referralLink}`;
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
-}
-
-// Live data updating (example implementation)
-// This would be implemented with WebSockets or AJAX polling in a real application
-function updateLiveData() {
-    // In a real implementation, this would fetch data from your backend API
-    // For demonstration purposes, we'll just log to console
-    console.log("Updating live data...");
-    
-    // Example AJAX call:
-    /*
-    fetch('/api/user-stats')
-        .then(response => response.json())
-        .then(data => {
-            // Update the DOM with new data
-            document.querySelector('.balance-card .stat-amount').textContent = `KES ${data.balance.toFixed(2)}`;
-            document.querySelector('.earned-card .stat-amount').textContent = `KES ${data.total_withdrawn.toFixed(2)}`;
-            document.querySelector('.pending-card .stat-amount').textContent = data.pending_withdrawals;
-        })
-        .catch(error => console.error('Error updating data:', error));
-    */
-}
-
-// Update data every 30 seconds
-setInterval(updateLiveData, 30000);
-</script>
-{% endblock %}
+    {% block scripts %}{% endblock %}
+</body>
+</html>
