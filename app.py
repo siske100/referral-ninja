@@ -944,11 +944,14 @@ class SupabaseDB:
     @staticmethod
     def get_all_users():
         try:
-            response = supabase.table('users').select('*').execute()
-            return response.data
+           response = supabase.table('users')\
+              .select('id, username, total_commission, user_rank, referral_count')\
+              .execute()
+           return response.data if response.data else []
         except Exception as e:
-            return SupabaseDB.handle_db_error("get_all_users", e, False)
-
+           logger.error(f"Error getting all users: {e}")
+           return []
+        
     @staticmethod
     def get_pending_withdrawals():
         try:
@@ -983,11 +986,16 @@ class SupabaseDB:
 
     @staticmethod
     def get_top_users(limit=50):
-        try:
-            response = supabase.table('users').select('*').order('total_commission', desc=True).limit(limit).execute()
-            return response.data
-        except Exception as e:
-            return SupabaseDB.handle_db_error("get_top_users", e, False)
+       try:
+          response = supabase.table('users')\
+            .select('*')\
+            .order('total_commission', desc=True)\
+            .limit(limit)\
+            .execute()
+          return response.data if response.data else []
+       except Exception as e:
+          logger.error(f"Error getting top users: {e}")
+          return []
 
     @staticmethod
     def get_users_count():
@@ -2949,21 +2957,46 @@ def extract_mpesa_code(message):
     return 'PENDING'
 
 def get_user_ranking(user_id):
-    user = SupabaseDB.get_user_by_id(user_id)
-    if not user:
+    """Get user's position in leaderboard and statistics"""
+    try:
+        user = SupabaseDB.get_user_by_id(user_id)
+        if not user:
+            return None
+        
+        # Get all users for ranking calculation
+        all_users_data = SupabaseDB.get_all_users()
+        if not all_users_data:
+            return None
+        
+        # Sort by total_commission descending
+        sorted_users = sorted(all_users_data, key=lambda x: x.get('total_commission', 0) or 0, reverse=True)
+        
+        # Find user's position
+        position = None
+        for index, user_data in enumerate(sorted_users):
+            if user_data['id'] == user_id:
+                position = index + 1
+                break
+        
+        if position is None:
+            return None
+        
+        # Calculate percentile
+        total_users = len(sorted_users)
+        percentile = ((total_users - position) / total_users * 100) if total_users > 0 else 0
+        
+        return {
+            'position': position,
+            'total_users': total_users,
+            'user_rank': getattr(user, 'user_rank', 'Bronze'),
+            'total_commission': getattr(user, 'total_commission', 0),
+            'referral_count': getattr(user, 'referral_count', 0),
+            'percentile': round(percentile)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting user ranking: {e}")
         return None
-    
-    ranked_users = SupabaseDB.get_top_users(limit=1000)  # Get all users for ranking
-    
-    for index, ranked_user_data in enumerate(ranked_users):
-        ranked_user = User(ranked_user_data)
-        if ranked_user.id == user_id:
-            return {
-                'position': index + 1,
-                'total_users': len(ranked_users),
-                'user_rank': user.user_rank
-            }
-    return None
 
 # Updated send_sms function to use Celcom SMS
 def send_sms(phone, message):
@@ -4546,14 +4579,17 @@ def leaderboard():
         flash('Please complete payment verification to view leaderboard.', 'warning')
         return redirect(url_for('account_activation'))
     
+    # Get top 50 users for the leaderboard
     top_users_data = SupabaseDB.get_top_users(limit=5)
-    top_users = [User(user_data) for user_data in top_users_data]
+    top_users = [User(user_data) for user_data in top_users_data] if top_users_data else []
     
+    # Get current user's ranking with proper data
     user_ranking = get_user_ranking(current_user.id)
     
     return render_template('leaderboard.html',
                          top_users=top_users,
-                         user_ranking=user_ranking)
+                         user_ranking=user_ranking,
+                         current_user=current_user)
 
 @app.route('/statistics')
 @login_required
