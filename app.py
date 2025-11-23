@@ -3128,22 +3128,35 @@ def extract_mpesa_code(message):
     return 'PENDING'
 
 def get_user_ranking(user_id):
-    user = SupabaseDB.get_user_by_id(user_id)
-    if not user:
+    """Safe user ranking without recursion"""
+    try:
+        # Use a direct database query to avoid circular dependencies
+        response = supabase.table('users').select('id, username, total_commission').order('total_commission', desc=True).execute()
+        
+        if not response.data:
+            return None
+        
+        # Find user position in the sorted list
+        sorted_users = sorted(response.data, key=lambda x: x.get('total_commission', 0), reverse=True)
+        
+        for index, user_data in enumerate(sorted_users):
+            if user_data['id'] == user_id:
+                user = SupabaseDB.get_user_by_id(user_id)
+                if not user:
+                    return None
+                    
+                return {
+                    'position': index + 1,
+                    'total_users': len(sorted_users),
+                    'user_rank': user.user_rank
+                }
+        
+        return None
+        
+    except Exception as e:
+        logger.error(f"Error in get_user_ranking: {e}")
         return None
     
-    ranked_users = SupabaseDB.get_top_users(limit=1000)  # Get all users for ranking
-    
-    for index, ranked_user_data in enumerate(ranked_users):
-        ranked_user = User(ranked_user_data)
-        if ranked_user.id == user_id:
-            return {
-                'position': index + 1,
-                'total_users': len(ranked_users),
-                'user_rank': user.user_rank
-            }
-    return None
-
 # Updated send_sms function to use Celcom SMS
 def send_sms(phone, message):
     """
@@ -4749,23 +4762,29 @@ def referral_system():
         flash('Please complete payment verification to access referral system.', 'warning')
         return redirect(url_for('account_activation'))
     
-    referrals = SupabaseDB.get_referrals_by_referrer(current_user.id)
+    try:
+        referrals = SupabaseDB.get_referrals_by_referrer(current_user.id)
+        
+        base_url = request.host_url.rstrip('/')
+        referral_url = f"{base_url}/register?ref={current_user.referral_code}"
+        
+        share_links = {
+            'whatsapp': f"https://wa.me/?text=Join Referral Ninja and earn money! Use my code: {current_user.referral_code} - {referral_url}",
+            'facebook': f"https://www.facebook.com/sharer/sharer.php?u={referral_url}",
+            'twitter': f"https://twitter.com/intent/tweet?text=Join Referral Ninja! Use my code: {current_user.referral_code}&url={referral_url}",
+            'telegram': f"https://t.me/share/url?url={referral_url}&text=Join Referral Ninja! Use my code: {current_user.referral_code}"
+        }
+        
+        return render_template('referral_system.html',
+                             referrals=referrals,
+                             share_links=share_links,
+                             referral_url=referral_url)
+                             
+    except Exception as e:
+        logger.error(f"Error in referral-system endpoint: {e}")
+        flash('Error loading referral system. Please try again.', 'error')
+        return redirect(url_for('dashboard'))
     
-    base_url = request.host_url.rstrip('/')
-    referral_url = f"{base_url}/register?ref={current_user.referral_code}"
-    
-    share_links = {
-        'whatsapp': f"https://wa.me/?text=Join Referral Ninja and earn money! Use my code: {current_user.referral_code} - {referral_url}",
-        'facebook': f"https://www.facebook.com/sharer/sharer.php?u={referral_url}",
-        'twitter': f"https://twitter.com/intent/tweet?text=Join Referral Ninja! Use my code: {current_user.referral_code}&url={referral_url}",
-        'telegram': f"https://t.me/share/url?url={referral_url}&text=Join Referral Ninja! Use my code: {current_user.referral_code}"
-    }
-    
-    return render_template('referral_system.html',
-                         referrals=referrals,
-                         share_links=share_links,
-                         referral_url=referral_url)
-
 @app.route('/referrals')
 @login_required
 def referrals():
@@ -4778,15 +4797,22 @@ def leaderboard():
         flash('Please complete payment verification to view leaderboard.', 'warning')
         return redirect(url_for('account_activation'))
     
-    top_users_data = SupabaseDB.get_top_users(limit=5)
-    top_users = [User(user_data) for user_data in top_users_data]
+    try:
+        # Use direct query instead of User objects to prevent recursion
+        response = supabase.table('users').select('id, username, total_commission, user_rank').order('total_commission', desc=True).limit(5).execute()
+        top_users_data = response.data if response.data else []
+        
+        user_ranking = get_user_ranking(current_user.id)
+        
+        return render_template('leaderboard.html',
+                             top_users=top_users_data,  # Pass raw data, not User objects
+                             user_ranking=user_ranking)
+                             
+    except Exception as e:
+        logger.error(f"Error loading leaderboard: {e}")
+        flash('Error loading leaderboard. Please try again.', 'error')
+        return redirect(url_for('dashboard'))
     
-    user_ranking = get_user_ranking(current_user.id)
-    
-    return render_template('leaderboard.html',
-                         top_users=top_users,
-                         user_ranking=user_ranking)
-
 @app.route('/statistics')
 @login_required
 def statistics():
@@ -6059,8 +6085,19 @@ def favicon():
 def not_found_error(error):
     return render_template('404.html'), 404
 
+@app.errorhandler(RecursionError)
+def handle_recursion_error(error):
+    """Emergency handler for recursion errors"""
+    logger.critical(f"Recursion error caught: {error}")
+    return render_template('500.html'), 500
+
 @app.errorhandler(500)
 def internal_error(error):
+    """Handle 500 errors with recursion detection"""
+    if isinstance(error, RecursionError) or "recursion" in str(error).lower():
+        logger.critical(f"Recursion error in 500 handler: {error}")
+        return render_template('500.html', 
+                             message="System error detected. Please try again later."), 500
     logger.error(f"Internal Server Error: {error}")
     return render_template('500.html'), 500
 
