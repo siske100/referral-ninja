@@ -3911,14 +3911,16 @@ def index():
         return redirect(url_for('dashboard'))
     return render_template('landing.html')
 
+# Thread-safe re-entrancy lock for dashboard rendering
+_dashboard_lock = threading.Lock()
+
 @app.route('/dashboard')
 @login_required
 def dashboard():
     """Dashboard route with re-entrancy guard and safer, non-recursive data loading."""
-    global _dashboard_in_progress
-
-    # Prevent recursive re-entry (helps when something triggers the endpoint again during processing)
-    if _dashboard_in_progress:
+    # Try to acquire the dashboard lock without blocking; if already held return a minimal safe view
+    acquired = _dashboard_lock.acquire(blocking=False)
+    if not acquired:
         logger.warning("Re-entrant call to dashboard detected; returning minimal view to avoid recursion.")
         return render_template('dashboard.html',
                                total_withdrawn=0,
@@ -3930,7 +3932,6 @@ def dashboard():
                                user_earnings=0,
                                user_referrals=0)
 
-    _dashboard_in_progress = True
     try:
         # Try to fetch a lightweight, up-to-date user record from Supabase.
         try:
@@ -3948,7 +3949,6 @@ def dashboard():
                 flash('Please complete payment verification to access dashboard.', 'warning')
                 return redirect(url_for('account_activation'))
         except Exception:
-            # If user object shape is unexpected, fallback to safe redirect
             flash('Please complete payment verification to access dashboard.', 'warning')
             return redirect(url_for('account_activation'))
 
@@ -4045,7 +4045,13 @@ def dashboard():
         flash('Error loading dashboard. Please try again.', 'error')
         return redirect(url_for('index'))
     finally:
-        _dashboard_in_progress = False   
+        # Release lock only if we acquired it
+        try:
+            if _dashboard_lock.locked():
+                _dashboard_lock.release()
+        except RuntimeError:
+            # Ignore if release fails (not owned)
+            pass   
     
 @app.route('/login', methods=['GET', 'POST'])
 def login():
