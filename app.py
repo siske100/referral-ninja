@@ -4200,15 +4200,20 @@ def account_activation():
     user_id = session.get('pending_verification_user')
     temp_user_data = session.get('temp_user_data')
     
+    # Access not allowed unless user is pending verification
     if not user_id or not temp_user_data:
         flash('Invalid access. Please register first.', 'error')
         return redirect(url_for('register'))
     
-    if current_user.is_authenticated:
-        flash('You are already logged in.', 'info')
+    # Only redirect if user is both authenticated AND verified
+    if current_user.is_authenticated and current_user.is_verified:
+        flash('Your account is already verified.', 'info')
         return redirect(url_for('dashboard'))
     
-    # Pass temporary user data to the template
+    # Still allow authenticated but unverified users to proceed here
+    # because this is where they complete verification
+    
+    # Pass temporary data for display
     user_data = {
         'username': temp_user_data['username'],
         'phone': temp_user_data['phone'],
