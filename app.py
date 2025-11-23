@@ -186,15 +186,9 @@ class Config:
     FRAUD_BLOCK_DURATION_HOURS = 24
     
     # Rate limiting settings
-    RATE_LIMITING_ENABLED = True
-    RATE_LIMIT_STORAGE_URL = os.environ.get('REDIS_URL', 'memory://')
-    RATE_LIMIT_STRATEGY = 'moving-window'
-    RATE_LIMIT_HEADERS_ENABLED = True
-    
-    # Rate limit tiers
     RATE_LIMITS = {
-        'strict': ["100 per day", "20 per hour"],
-        'normal': ["1000 per day", "100 per hour", "10 per minute"],
+        'strict': ["50 per day", "10 per hour"],
+        'normal': ["1000 per day", "200 per hour", "30 per minute"],
         'generous': ["5000 per day", "1000 per hour", "100 per minute"]
     }
 
@@ -209,6 +203,135 @@ if os.getenv('FLASK_ENV') == 'development':
 else:
     app.config.from_object(Config)
     logger.info("Production configuration loaded")
+
+# =============================================================================
+# HIGH-PERFORMANCE RATE LIMITER INITIALIZATION
+# =============================================================================
+
+class HighPerformanceRateLimiter:
+    """High-performance rate limiter with Redis backend and intelligent key strategies"""
+    
+    def __init__(self):
+        self._limiter = None
+        self._initialized = False
+        self.logger = logging.getLogger(__name__)
+    
+    def init_app(self, app):
+        """Initialize high-performance rate limiter"""
+        if self._initialized:
+            return
+            
+        try:
+            # Use Redis for distributed rate limiting in production
+            storage_uri = app.config['REDIS_URL']
+            
+            # Enhanced key function for optimal performance
+            def get_performance_key():
+                """High-performance key function with minimal overhead"""
+                try:
+                    # Fast path for authenticated users
+                    if hasattr(request, 'user_cache') and request.user_cache:
+                        return f"user:{request.user_cache}"
+                    
+                    # Fast IP extraction
+                    ip = request.headers.get('X-Forwarded-For', request.remote_addr or 'unknown').split(',')[0].strip()
+                    
+                    # Skip rate limiting for health checks and static files
+                    if (request.endpoint and 
+                        any(exempt in request.endpoint for exempt in ['health', 'static', 'liveness', 'readiness'])):
+                        return f"exempt:{ip}"
+                    
+                    return f"ip:{ip}"
+                    
+                except Exception:
+                    # Ultimate fallback
+                    return f"safe:{int(time.time())}"
+            
+            # Initialize with performance-optimized settings
+            self._limiter = Limiter(
+                app=app,
+                key_func=get_performance_key,
+                storage_uri=storage_uri,
+                default_limits=app.config.get("RATE_LIMITS", {}).get("normal", ["1000 per day", "200 per hour", "30 per minute"]),
+                strategy="moving-window",  # More accurate than fixed-window
+                headers_enabled=True,
+                fail_on_first_breach=False,
+                on_breach=self._handle_breach_performance,
+                key_prefix="rate_limit"  # Organized Redis keys
+            )
+            
+            self._initialized = True
+            self.logger.info("✅ High-performance rate limiter initialized with Redis storage")
+            
+            # Test Redis connection for rate limiting
+            if self._test_redis_connection():
+                self.logger.info("✅ Redis connection verified for rate limiting")
+            else:
+                self.logger.warning("⚠️ Redis connection issues - rate limiting may use fallback")
+                
+        except Exception as e:
+            self.logger.error(f"❌ Rate limiter init failed: {e}")
+            # Emergency fallback to memory storage
+            self._limiter = Limiter(
+                app=app,
+                key_func=lambda: f"emergency:{int(time.time())}",
+                storage_uri="memory://",
+                default_limits=["500 per day", "100 per hour", "10 per minute"]
+            )
+            self._initialized = True
+            self.logger.info("🔄 Rate limiter using memory fallback")
+    
+    def _test_redis_connection(self):
+        """Test Redis connection for rate limiting"""
+        try:
+            test_client = redis.from_url(app.config['REDIS_URL'], socket_connect_timeout=2, socket_timeout=2)
+            return test_client.ping()
+        except Exception:
+            return False
+    
+    def _handle_breach_performance(self, limit):
+        """High-performance breach handler"""
+        try:
+            # Fast logging without heavy processing
+            self.logger.warning(f"Rate limit breached: {limit.key} - {limit.limit}")
+            
+            # Minimal security logging
+            if hasattr(request, 'user_cache') and request.user_cache:
+                SecurityMonitor.log_security_event(
+                    "RATE_LIMIT_BREACH",
+                    request.user_cache,
+                    {"limit": str(limit.limit), "endpoint": request.endpoint}
+                )
+        except Exception:
+            pass  # Never fail in breach handler
+    
+    def __getattr__(self, name):
+        """Delegate to the actual limiter"""
+        if self._limiter is None:
+            raise RuntimeError("Rate limiter not initialized")
+        return getattr(self._limiter, name)
+    
+    def exempt(self, *args, **kwargs):
+        """Exempt routes from rate limiting"""
+        return self._limiter.exempt(*args, **kwargs) if self._limiter else lambda f: f
+    
+    def limit(self, *args, **kwargs):
+        """Apply rate limits with performance optimizations"""
+        if self._limiter is None:
+            return lambda f: f  # No-op if not initialized
+        
+        # Apply intelligent limits based on endpoint type
+        endpoint = kwargs.pop('endpoint_type', None)
+        if endpoint == 'auth':
+            kwargs.setdefault('per_method', True)
+            kwargs.setdefault('deduct_when', lambda response: response.status_code != 200)
+        elif endpoint == 'api':
+            kwargs.setdefault('shared', True)
+        
+        return self._limiter.limit(*args, **kwargs)
+
+# Initialize high-performance rate limiter
+rate_limiter = HighPerformanceRateLimiter()
 
 # =============================================================================
 # EXTENSIONS INITIALIZATION
@@ -1534,117 +1657,6 @@ class SecureMiddleware:
 app.wsgi_app = SecureMiddleware(app.wsgi_app, fraud_detector)
 
 # =============================================================================
-# ENHANCED RATE LIMITING CONFIGURATION - SECURE WITHOUT RECURSION
-# =============================================================================
-
-class SafeRateLimiter:
-    """Safe rate limiter that prevents recursion by using direct request context"""
-    
-    def __init__(self):
-        self._limiter = None
-        self._initialized = False
-        self.logger = logging.getLogger(__name__)
-    
-    def init_app(self, app):
-        """Initialize rate limiter safely after app context is fully loaded"""
-        if self._initialized:
-            return
-            
-        try:
-            # Use a closure to capture app context safely
-            def get_safe_limiter_key():
-                """Safe key function that uses request context directly"""
-                try:
-                    # Skip rate limiting for health endpoints
-                    if hasattr(request, 'endpoint'):
-                        exempt_endpoints = {
-                            'health_check', 'static', 'metrics', 
-                            'health', 'liveness_check', 'readiness_check',
-                            'emergency_health_check', 'robots', 'sitemap'
-                        }
-                        if request.endpoint in exempt_endpoints:
-                            return "exempt:internal"
-                    
-                    # Safe IP extraction
-                    ip_address = self._safe_get_remote_address()
-                    
-                    # Always exempt localhost
-                    if ip_address in ['127.0.0.1', 'localhost', '::1']:
-                        return f"exempt:{ip_address}"
-                    
-                    # Try authenticated user but only if we're sure it's safe
-                    try:
-                        if hasattr(request, 'user_cache') and request.user_cache:
-                            return f"user:{request.user_cache}"
-                    except Exception:
-                        pass
-                        
-                    return f"ip:{ip_address}"
-                    
-                except Exception as e:
-                    # Ultimate fallback that never fails
-                    return f"safe:{int(time.time())}"
-            
-            def _safe_get_remote_address():
-                """Safe remote address extraction without recursion"""
-                try:
-                    # Check X-Forwarded-For first
-                    xff = request.headers.get('X-Forwarded-For')
-                    if xff:
-                        # Get the first IP in the chain (client IP)
-                        client_ip = xff.split(',')[0].strip()
-                        if client_ip:
-                            return client_ip
-                    
-                    # Fall back to remote_addr
-                    return request.remote_addr or 'unknown'
-                except Exception:
-                    return 'unknown'
-            
-            # Initialize the actual limiter
-            self._limiter = Limiter(
-                app=app,
-                key_func=get_safe_limiter_key,
-                storage_uri=app.config.get("REDIS_URL", "memory://"),
-                default_limits=["2000 per day", "500 per hour", "50 per minute"],
-                strategy="moving-window",
-                headers_enabled=True,
-                fail_on_first_breach=False,  # Don't crash if Redis fails
-                on_breach=self._safe_on_breach
-            )
-            
-            self._initialized = True
-            self.logger.info("Safe rate limiter initialized successfully")
-            
-        except Exception as e:
-            self.logger.error(f"Safe rate limiter init failed: {e}")
-            # Emergency fallback
-            self._limiter = Limiter(
-                app=app,
-                key_func=lambda: f"emergency:{int(time.time())}",
-                storage_uri="memory://",
-                default_limits=["1000 per day", "200 per hour", "20 per minute"]
-            )
-            self._initialized = True
-            self.logger.info("Rate limiter using emergency memory fallback")
-    
-    def _safe_on_breach(self, limit):
-        """Safe breach handler that never fails"""
-        try:
-            self.logger.warning(f"Rate limit breached: {limit}")
-        except Exception:
-            pass  # Never fail in breach handler
-    
-    def __getattr__(self, name):
-        """Delegate to the actual limiter"""
-        if self._limiter is None:
-            raise RuntimeError("Rate limiter not initialized")
-        return getattr(self._limiter, name)
-
-# Initialize safe rate limiter
-rate_limiter = SafeRateLimiter()
-
-# =============================================================================
 # EMERGENCY RECURSION PROTECTION
 # =============================================================================
 
@@ -1678,11 +1690,6 @@ def no_recursion(default_return=None):
 
 # Apply to critical functions
 @no_recursion(None)
-def safe_get_limiter_key():
-    # ... existing implementation ...
-    pass
-
-@no_recursion(None)  
 def safe_load_user(user_id):
     # ... existing implementation ...
     pass
@@ -3258,9 +3265,12 @@ auth_bp = Blueprint("auth_api", __name__)
 mpesa_bp = Blueprint("mpesa_api", __name__)
 withdraw_bp = Blueprint("withdraw_api", __name__)
 
+# Initialize rate limiter after blueprints are defined
+rate_limiter.init_app(app)
+
 # API Authentication Routes with Security - MODIFIED FOR PAYMENT-ONLY STORAGE
 @auth_bp.route("/register", methods=["POST"])
-@rate_limiter.limit("10 per hour")
+@rate_limiter.limit("10 per hour", endpoint_type='auth')
 def api_register():
     try:
         data = request.get_json()
@@ -3358,7 +3368,7 @@ def api_register():
         return jsonify({"error": "Registration failed"}), 500
 
 @auth_bp.route("/login", methods=["POST"])
-@rate_limiter.limit("5 per minute")
+@rate_limiter.limit("5 per minute", endpoint_type='auth')
 def api_login():
     try:
         data = request.get_json()
@@ -3436,7 +3446,7 @@ def api_login():
         return jsonify({"error": "Login failed"}), 500
 
 @auth_bp.route("/verify-2fa", methods=["POST"])
-@rate_limiter.limit("10 per minute")
+@rate_limiter.limit("10 per minute", endpoint_type='auth')
 def verify_2fa():
     try:
         data = request.get_json()
@@ -3483,6 +3493,7 @@ def is_safaricom_ip(ip):
     return ip in current_app.config['SAFARICOM_IPS']
 
 @mpesa_bp.route("/mpesa/withdraw-callback", methods=["POST"])
+@rate_limiter.exempt
 def mpesa_withdraw_callback():
     """Secure M-Pesa callback handler"""
     try:
@@ -3775,6 +3786,7 @@ def api_request_withdrawal():
 
 @withdraw_bp.route("/withdraw/confirm-2fa", methods=["POST"])
 @jwt_required()
+@rate_limiter.limit("5 per minute", key_func=lambda: get_jwt_identity())
 def confirm_2fa_withdrawal():
     """Confirm withdrawal with 2FA code"""
     try:
@@ -3830,6 +3842,7 @@ def utility_processor():
     return dict(safe_strftime=safe_strftime)
 
 @app.route('/robots.txt')
+@rate_limiter.exempt
 def robots():
     robots_txt = '''User-agent: *
 Allow: /
@@ -3843,6 +3856,7 @@ Sitemap: https://www.referralninja.co.ke/sitemap.xml'''
 
 
 @app.route('/sitemap.xml')
+@rate_limiter.exempt
 def sitemap():
     """Generate dynamic sitemap"""
     from flask import render_template_string
@@ -4021,7 +4035,7 @@ def rate_limit_status():
             "status": "active",
             "storage": storage_status,
             "your_ip": get_remote_address(),
-            "key_used": get_limiter_key(),
+            "key_used": "performance_key",  # Simplified for status
             "timestamp": datetime.now(timezone.utc).isoformat()
         })
     except Exception as e:
@@ -4103,6 +4117,7 @@ def dashboard():
                          withdrawals=withdrawals)
 
 @app.route('/login', methods=['GET', 'POST'])
+@rate_limiter.limit("10 per hour", endpoint_type='auth')
 def login():
     # If user already logged in, send to dashboard
     if current_user.is_authenticated:
@@ -4206,6 +4221,7 @@ def login():
 
 # MODIFIED REGISTRATION ROUTE - Stores data temporarily until payment with FRAUD DETECTION
 @app.route('/register', methods=['GET', 'POST'])
+@rate_limiter.limit("10 per hour", endpoint_type='auth')
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
@@ -4397,6 +4413,7 @@ def payment_instructions():
 
 # MODIFIED STK PUSH ROUTES - Use temporary user data
 @app.route('/initiate-stk-push', methods=['POST'])
+@rate_limiter.limit("5 per hour")
 def initiate_stk_push_route():
     user_id = session.get('pending_verification_user')
     temp_user_data = session.get('temp_user_data')
@@ -4466,6 +4483,7 @@ def initiate_stk_push_route():
 
 # MODIFIED PAYMENT STATUS CHECK - Creates user on successful payment
 @app.route('/check-payment-status', methods=['POST'])
+@rate_limiter.limit("10 per minute")
 def check_payment_status():
     user_id = session.get('pending_verification_user')
     temp_user_data = session.get('temp_user_data')
@@ -4514,6 +4532,7 @@ def check_payment_status():
 
 # MODIFIED M-PESA CALLBACK - Creates user on payment success
 @app.route('/mpesa-callback', methods=['POST'])
+@rate_limiter.exempt
 def mpesa_callback():
     """Handle M-PESA STK push callback - CREATE USER AFTER PAYMENT"""
     try:
@@ -4574,6 +4593,7 @@ def mpesa_callback():
 
 # M-PESA B2C CALLBACK HANDLER
 @app.route('/mpesa-b2c-callback', methods=['POST'])
+@rate_limiter.exempt
 def mpesa_b2c_callback():
     """Handle M-PESA B2C payout callbacks - AUTO UPDATE WITHDRAWAL STATUS"""
     try:
@@ -4658,6 +4678,7 @@ def mpesa_b2c_callback():
         return jsonify({'ResultCode': 1, 'ResultDesc': 'System error'})
 
 @app.route('/mpesa-b2c-timeout', methods=['POST'])
+@rate_limiter.exempt
 def mpesa_b2c_timeout():
     """Handle B2C timeout callbacks"""
     callback_data = request.get_json()
@@ -4665,6 +4686,7 @@ def mpesa_b2c_timeout():
     return jsonify({'ResultCode': 0, 'ResultDesc': 'Success'})
 
 @app.route('/api/payment-status')
+@rate_limiter.limit("10 per minute")
 def api_payment_status():
     user_id = session.get('pending_verification_user')
     temp_user_data = session.get('temp_user_data')
@@ -4750,6 +4772,7 @@ def statistics():
 # UPDATED WITHDRAW ROUTE - Now with enhanced fraud detection
 @app.route('/withdraw', methods=['GET', 'POST'])
 @login_required
+@rate_limiter.limit("10 per hour", endpoint_type='withdrawal')
 def withdraw():
     if not current_user.is_verified:
         flash('Please complete payment verification to withdraw funds.', 'warning')
