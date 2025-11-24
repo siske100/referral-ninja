@@ -1,4 +1,3 @@
-
 import os
 import sys
 import time
@@ -408,10 +407,6 @@ except Exception as e:
 
 # Initialize Supabase client
 supabase = create_client(app.config.get('SUPABASE_URL'), app.config.get('SUPABASE_KEY'))
-
-# =============================================================================
-# ENHANCED RATE LIMITING CONFIGURATION - FIXED
-# =============================================================================
 
 # =============================================================================
 # ENHANCED RATE LIMITING CONFIGURATION - FIXED
@@ -5141,38 +5136,263 @@ def forgot_password():
     
     return render_template('auth/forgot_password.html')
 
+# =============================================================================
+# ADDED ROUTES: CHANGE PASSWORD WITH OTP AND DELETE ACCOUNT
+# =============================================================================
 
-@app.route('/change-password', methods=['POST'])
+def send_password_otp_email(email, otp_code):
+    """Send OTP code to user's email for password change"""
+    try:
+        # This is a placeholder - you'll need to implement your email service
+        # You can use SendGrid, SMTP, or any other email service
+        
+        subject = "ReferralNinja - Password Change OTP"
+        message = f"""
+        Hello,
+
+        You have requested to change your password. 
+        Please use the following OTP code to complete the process:
+
+        OTP Code: {otp_code}
+
+        This code will expire in 10 minutes.
+
+        If you did not request this change, please ignore this email.
+
+        Best regards,
+        ReferralNinja Team
+        """
+        
+        # For now, we'll log the OTP since email service isn't implemented
+        logger.info(f"Password change OTP for {email}: {otp_code}")
+        
+        # TODO: Implement actual email sending
+        # Example with SMTP:
+        # send_email(email, subject, message)
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error sending OTP email: {str(e)}")
+        return False
+
+def send_password_change_confirmation(email):
+    """Send confirmation email after password change"""
+    try:
+        subject = "ReferralNinja - Password Changed Successfully"
+        message = """
+        Hello,
+
+        Your password has been successfully changed.
+
+        If you did not make this change, please contact support immediately.
+
+        Best regards,
+        ReferralNinja Team
+        """
+        
+        logger.info(f"Password change confirmation for: {email}")
+        
+        # TODO: Implement actual email sending
+        # send_email(email, subject, message)
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error sending confirmation email: {str(e)}")
+        return False
+
+@app.route('/change-password', methods=['GET', 'POST'])
 @login_required
 def change_password():
-    from flask import request, redirect, flash, url_for
-    from werkzeug.security import check_password_hash, generate_password_hash
+    """Enhanced password change with OTP verification via email"""
+    
+    if request.method == 'GET':
+        # Show the password change form
+        return render_template('change_password.html')
+    
+    # Handle POST request
+    try:
+        data = request.get_json() if request.is_json else request.form
+        current_password = data.get('current_password')
+        new_password = data.get('new_password')
+        confirm_password = data.get('confirm_password')
+        otp_code = data.get('otp_code')
+        step = data.get('step', 'request')  # 'request' or 'verify'
+        
+        if step == 'request':
+            # Step 1: Request OTP
+            if not current_password or not new_password or not confirm_password:
+                return jsonify({'success': False, 'message': 'All fields are required'})
+            
+            # Verify current password
+            if not check_password_hash(current_user.password_hash, current_password):
+                return jsonify({'success': False, 'message': 'Current password is incorrect'})
+            
+            if new_password != confirm_password:
+                return jsonify({'success': False, 'message': 'New passwords do not match'})
+            
+            if len(new_password) < 6:
+                return jsonify({'success': False, 'message': 'Password must be at least 6 characters long'})
+            
+            # Generate OTP
+            otp = ''.join(secrets.choice(string.digits) for _ in range(6))
+            expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+            
+            # Store OTP in database
+            otp_data = {
+                'user_id': current_user.id,
+                'code': otp,
+                'purpose': 'PASSWORD_RESET',
+                'expires_at': expires_at.isoformat(),
+                'is_used': False,
+                'created_at': datetime.now(timezone.utc).isoformat(),
+                'metadata': {'new_password_hash': generate_password_hash(new_password)}
+            }
+            
+            # Save OTP to database
+            SupabaseDB.create_two_factor_code(otp_data)
+            
+            # Send OTP via email (you'll need to implement this)
+            email_sent = send_password_otp_email(current_user.email, otp)
+            
+            if email_sent:
+                # Log OTP generation
+                SecurityMonitor.log_security_event(
+                    "PASSWORD_CHANGE_OTP_SENT",
+                    current_user.id,
+                    {"ip": request.remote_addr, "email": current_user.email}
+                )
+                
+                return jsonify({
+                    'success': True, 
+                    'message': 'OTP sent to your email. Please check your inbox.',
+                    'step': 'verify',
+                    'otp_required': True
+                })
+            else:
+                return jsonify({'success': False, 'message': 'Failed to send OTP. Please try again.'})
+        
+        elif step == 'verify':
+            # Step 2: Verify OTP and change password
+            if not otp_code:
+                return jsonify({'success': False, 'message': 'OTP code is required'})
+            
+            # Verify OTP
+            otp_record = SupabaseDB.get_two_factor_code(current_user.id, otp_code, 'PASSWORD_RESET', False)
+            
+            if not otp_record:
+                return jsonify({'success': False, 'message': 'Invalid OTP code'})
+            
+            # Check if OTP is expired
+            expires_at = datetime.fromisoformat(otp_record['expires_at'].replace('Z', '+00:00'))
+            if expires_at < datetime.now(timezone.utc):
+                return jsonify({'success': False, 'message': 'OTP has expired. Please request a new one.'})
+            
+            # Check if OTP is already used
+            if otp_record.get('is_used', False):
+                return jsonify({'success': False, 'message': 'OTP has already been used'})
+            
+            # Get the new password hash from OTP metadata
+            new_password_hash = otp_record.get('metadata', {}).get('new_password_hash')
+            if not new_password_hash:
+                return jsonify({'success': False, 'message': 'Invalid OTP data'})
+            
+            # Update password in database
+            update_result = SupabaseDB.update_user(current_user.id, {'password_hash': new_password_hash})
+            
+            if update_result:
+                # Mark OTP as used
+                SupabaseDB.update_two_factor_code(otp_record['id'], {'is_used': True})
+                
+                # Log successful password change
+                SecurityMonitor.log_security_event(
+                    "PASSWORD_CHANGE_COMPLETED",
+                    current_user.id,
+                    {"ip": request.remote_addr, "method": "OTP_VERIFICATION"}
+                )
+                
+                # Send confirmation email
+                send_password_change_confirmation(current_user.email)
+                
+                return jsonify({
+                    'success': True, 
+                    'message': 'Password changed successfully!'
+                })
+            else:
+                return jsonify({'success': False, 'message': 'Failed to update password'})
+        
+        else:
+            return jsonify({'success': False, 'message': 'Invalid step'})
+            
+    except Exception as e:
+        logger.error(f"Error changing password: {str(e)}")
+        return jsonify({'success': False, 'message': 'System error occurred'})
 
-    current_pw = request.form.get('current_password')
-    new_pw = request.form.get('new_password')
-    confirm_pw = request.form.get('confirm_password')
-
-    user = current_user  # Flask-Login user
-
-    # Verify old password
-    if not check_password_hash(user.password, current_pw):
-        flash("Current password is incorrect.", "danger")
+@app.route('/delete-account', methods=['POST'])
+@login_required
+def delete_account():
+    """Permanently delete user account and all associated data"""
+    try:
+        user_id = current_user.id
+        username = current_user.username
+        user_email = current_user.email
+        
+        # Log the deletion action first
+        SecurityMonitor.log_security_event(
+            "ACCOUNT_DELETION_REQUESTED",
+            user_id,
+            {"ip": request.remote_addr, "username": username, "email": user_email}
+        )
+        
+        # Delete all user data in proper order to respect foreign key constraints
+        try:
+            # 1. Delete user's two_factor_codes
+            supabase.table('two_factor_codes').delete().eq('user_id', user_id).execute()
+            
+            # 2. Delete user's security_logs
+            supabase.table('security_logs').delete().eq('user_id', user_id).execute()
+            
+            # 3. Delete user's referrals (both as referrer and referred)
+            supabase.table('referrals').delete().eq('referrer_id', user_id).execute()
+            supabase.table('referrals').delete().eq('referred_id', user_id).execute()
+            
+            # 4. Delete user's transactions
+            supabase.table('transactions').delete().eq('user_id', user_id).execute()
+            
+            # 5. Finally delete the user
+            delete_response = supabase.table('users').delete().eq('id', user_id).execute()
+            
+            if delete_response.data:
+                # Log successful deletion
+                SecurityMonitor.log_security_event(
+                    "ACCOUNT_DELETION_COMPLETED",
+                    None,  # No user ID since user is deleted
+                    {"ip": request.remote_addr, "username": username, "email": user_email}
+                )
+                
+                # Logout the user
+                logout_user()
+                
+                # Clear session
+                session.clear()
+                
+                flash('Your account and all associated data have been permanently deleted.', 'success')
+                logger.info(f"User account deleted: {username} ({user_email})")
+                return redirect(url_for('index'))
+            else:
+                flash('Failed to delete account. Please contact support.', 'error')
+                return redirect(url_for('settings'))
+                
+        except Exception as delete_error:
+            logger.error(f"Error during account deletion process: {str(delete_error)}")
+            flash('Error during account deletion. Please contact support.', 'error')
+            return redirect(url_for('settings'))
+            
+    except Exception as e:
+        logger.error(f"Error in account deletion: {str(e)}")
+        flash('Error deleting account. Please try again or contact support.', 'error')
         return redirect(url_for('settings'))
-
-    # Confirm both new passwords match
-    if new_pw != confirm_pw:
-        flash("New passwords do not match.", "warning")
-        return redirect(url_for('settings'))
-
-    # Hash and update in Supabase
-    new_hashed_pw = generate_password_hash(new_pw)
-
-    supabase.table("users").update({
-        "password": new_hashed_pw
-    }).eq("id", user.id).execute()
-
-    flash("Password updated successfully!", "success")
-    return redirect(url_for('settings'))
 
 @app.route('/debug-settings')
 @login_required
