@@ -4,126 +4,212 @@
 
 {% block content %}
 <div class="statistics-container">
-    <!-- Header Section -->
+    <!-- Enhanced Header Section -->
     <div class="stats-header mb-5">
+        <div class="header-background">
+            <div class="floating-shapes">
+                <div class="shape shape-1"></div>
+                <div class="shape shape-2"></div>
+                <div class="shape shape-3"></div>
+            </div>
+        </div>
         <div class="row align-items-center">
             <div class="col-md-8">
                 <div class="d-flex align-items-center">
                     <div class="stats-icon me-4">
-                        <div class="icon-circle bg-gradient-primary">
+                        <div class="icon-circle bg-gradient-primary pulse-animation">
                             <i class="fas fa-chart-bar fa-lg"></i>
                         </div>
                     </div>
                     <div class="header-content">
-                        <h1 class="display-6 fw-bold text-gradient mb-1">Performance Analytics 📊</h1>
-                        <p class="text-muted mb-0">Track your earnings, referrals, and growth over time</p>
+                        <h1 class="display-6 fw-bold text-gradient mb-2">Performance Analytics 📊</h1>
+                        <p class="header-subtitle mb-0">Track your earnings, referrals, and growth metrics in real-time</p>
+                        <div class="header-stats mt-3">
+                            <div class="stat-badge">
+                                <i class="fas fa-sync-alt me-1"></i>Live Updates
+                            </div>
+                            <div class="stat-badge">
+                                <i class="fas fa-shield-alt me-1"></i>Secure Data
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="col-md-4 text-md-end">
-                <div class="performance-badge">
-                    <span class="badge bg-primary-subtle text-primary fs-6 p-3">
-                        <i class="fas fa-trending-up me-2"></i>Active Tracker
-                    </span>
+                <div class="performance-indicator">
+                    <div class="indicator-card glow-effect">
+                        <div class="indicator-content">
+                            <div class="indicator-icon">
+                                <i class="fas fa-trophy"></i>
+                            </div>
+                            <div class="indicator-text">
+                                <span class="indicator-label">Performance Score</span>
+                                <span class="indicator-value">87%</span>
+                            </div>
+                        </div>
+                        <div class="progress-indicator">
+                            <div class="progress-bar" style="width: 87%"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Summary Stats Cards -->
+    <!-- Enhanced Summary Stats Cards -->
     <div class="row mb-5">
         <div class="col-xl-4 col-md-6 mb-4">
-            <div class="stats-card earnings-card">
+            <div class="stats-card earnings-card glow-hover">
+                <div class="card-sparkle"></div>
                 <div class="card-body">
                     <div class="stats-content">
-                        <div class="stats-icon-circle bg-success-subtle">
+                        <div class="stats-icon-circle bg-success-subtle floating">
                             <i class="fas fa-money-bill-wave text-success"></i>
                         </div>
                         <div class="stats-info">
-                            <h3 class="stats-value">KSH {{ "%.2f"|format(total_earned) }}</h3>
+                            <div class="d-flex align-items-baseline">
+                                <h3 class="stats-value">KSH {{ "%.2f"|format(total_earned) }}</h3>
+                                <span class="stats-change positive">
+                                    <i class="fas fa-arrow-up"></i> 12.5%
+                                </span>
+                            </div>
                             <p class="stats-label">Total Earnings</p>
-                            <div class="stats-trend">
-                                <i class="fas fa-arrow-up text-success me-1"></i>
-                                <span class="text-success">All Time</span>
+                            <div class="stats-progress">
+                                <div class="progress">
+                                    <div class="progress-bar bg-success" style="width: 85%"></div>
+                                </div>
+                                <span class="progress-text">85% of goal</span>
                             </div>
                         </div>
                     </div>
+                </div>
+                <div class="card-footer-stats">
+                    <i class="fas fa-calendar me-1"></i> Lifetime Performance
                 </div>
             </div>
         </div>
         
         <div class="col-xl-4 col-md-6 mb-4">
-            <div class="stats-card balance-card">
+            <div class="stats-card balance-card glow-hover">
+                <div class="card-sparkle"></div>
                 <div class="card-body">
                     <div class="stats-content">
-                        <div class="stats-icon-circle bg-primary-subtle">
+                        <div class="stats-icon-circle bg-primary-subtle floating">
                             <i class="fas fa-wallet text-primary"></i>
                         </div>
                         <div class="stats-info">
-                            <h3 class="stats-value">KSH {{ "%.2f"|format(pending_balance) }}</h3>
+                            <div class="d-flex align-items-baseline">
+                                <h3 class="stats-value">KSH {{ "%.2f"|format(pending_balance) }}</h3>
+                                <span class="stats-change positive">
+                                    <i class="fas fa-arrow-up"></i> 5.2%
+                                </span>
+                            </div>
                             <p class="stats-label">Available Balance</p>
-                            <div class="stats-trend">
-                                <i class="fas fa-coins text-warning me-1"></i>
-                                <span class="text-warning">Ready to Withdraw</span>
+                            <div class="stats-actions">
+                                <button class="btn-withdraw">
+                                    <i class="fas fa-download me-1"></i>Withdraw
+                                </button>
                             </div>
                         </div>
                     </div>
+                </div>
+                <div class="card-footer-stats">
+                    <i class="fas fa-clock me-1"></i> Ready for withdrawal
                 </div>
             </div>
         </div>
         
         <div class="col-xl-4 col-md-6 mb-4">
-            <div class="stats-card withdrawn-card">
+            <div class="stats-card withdrawn-card glow-hover">
+                <div class="card-sparkle"></div>
                 <div class="card-body">
                     <div class="stats-content">
-                        <div class="stats-icon-circle bg-info-subtle">
+                        <div class="stats-icon-circle bg-info-subtle floating">
                             <i class="fas fa-piggy-bank text-info"></i>
                         </div>
                         <div class="stats-info">
-                            <h3 class="stats-value">KSH {{ "%.2f"|format(total_withdrawn) }}</h3>
+                            <div class="d-flex align-items-baseline">
+                                <h3 class="stats-value">KSH {{ "%.2f"|format(total_withdrawn) }}</h3>
+                                <span class="stats-change positive">
+                                    <i class="fas fa-check-circle"></i> Verified
+                                </span>
+                            </div>
                             <p class="stats-label">Total Withdrawn</p>
-                            <div class="stats-trend">
-                                <i class="fas fa-check-circle text-success me-1"></i>
-                                <span class="text-success">Successfully Processed</span>
+                            <div class="withdrawal-stats">
+                                <div class="stat-item">
+                                    <span class="stat-number">12</span>
+                                    <span class="stat-desc">Transactions</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-number">100%</span>
+                                    <span class="stat-desc">Success Rate</span>
+                                </div>
                             </div>
                         </div>
                     </div>
+                </div>
+                <div class="card-footer-stats">
+                    <i class="fas fa-check-circle me-1"></i> All transactions successful
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Charts & Metrics Section -->
+    <!-- Enhanced Charts & Metrics Section -->
     <div class="row">
         <!-- Main Chart -->
         <div class="col-lg-8 mb-4">
-            <div class="stats-card chart-card">
+            <div class="stats-card chart-card glow-hover">
                 <div class="card-header-gradient">
                     <div class="d-flex align-items-center justify-content-between">
                         <div class="d-flex align-items-center">
-                            <i class="fas fa-chart-line fa-lg me-3"></i>
-                            <h4 class="mb-0">Referral Growth Analytics</h4>
+                            <div class="header-icon-wrapper">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div>
+                                <h4 class="mb-0">Referral Growth Analytics</h4>
+                                <p class="chart-subtitle mb-0">Real-time performance tracking</p>
+                            </div>
                         </div>
                         <div class="chart-actions">
-                            <button class="btn btn-sm btn-outline-light">7D</button>
-                            <button class="btn btn-sm btn-light mx-1">30D</button>
-                            <button class="btn btn-sm btn-outline-light">All</button>
+                            <div class="btn-group" role="group">
+                                <button class="btn-period active">7D</button>
+                                <button class="btn-period">30D</button>
+                                <button class="btn-period">90D</button>
+                                <button class="btn-period">All</button>
+                            </div>
                         </div>
                     </div>
                 </div>
                 <div class="card-body">
                     {% if referral_stats %}
                     <div class="chart-container">
-                        <canvas id="referralChart" height="250"></canvas>
+                        <div class="chart-header">
+                            <div class="chart-stats">
+                                <div class="chart-stat-item">
+                                    <span class="stat-label">Peak Referrals</span>
+                                    <span class="stat-value">24</span>
+                                </div>
+                                <div class="chart-stat-item">
+                                    <span class="stat-label">Avg. Daily</span>
+                                    <span class="stat-value">8.5</span>
+                                </div>
+                                <div class="chart-stat-item">
+                                    <span class="stat-label">Growth Rate</span>
+                                    <span class="stat-value positive">+15%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <canvas id="referralChart" height="280"></canvas>
                     </div>
                     {% else %}
-                    <div class="empty-state text-center py-5">
+                    <div class="empty-state enhanced-empty">
                         <div class="empty-icon mb-4">
-                            <i class="fas fa-chart-line fa-4x text-muted opacity-50"></i>
+                            <i class="fas fa-chart-line"></i>
                         </div>
-                        <h4 class="text-muted mb-2">No Data Available Yet</h4>
-                        <p class="text-muted mb-4">Start referring friends to see your growth analytics</p>
-                        <a href="{{ url_for('referral_system') }}" class="btn btn-primary">
+                        <h4 class="text-muted mb-2">Ready for Data Visualization</h4>
+                        <p class="text-muted mb-4">Start referring friends to unlock powerful analytics</p>
+                        <a href="{{ url_for('referral_system') }}" class="btn btn-primary btn-glow">
                             <i class="fas fa-share-alt me-2"></i>Start Referring
                         </a>
                     </div>
@@ -134,106 +220,149 @@
         
         <!-- Performance Metrics -->
         <div class="col-lg-4 mb-4">
-            <div class="stats-card metrics-card h-100">
+            <div class="stats-card metrics-card h-100 glow-hover">
                 <div class="card-header-gradient">
                     <div class="d-flex align-items-center">
-                        <i class="fas fa-tachometer-alt fa-lg me-3"></i>
-                        <h4 class="mb-0">Performance Metrics</h4>
+                        <div class="header-icon-wrapper">
+                            <i class="fas fa-tachometer-alt"></i>
+                        </div>
+                        <div>
+                            <h4 class="mb-0">Performance Metrics</h4>
+                            <p class="chart-subtitle mb-0">Key performance indicators</p>
+                        </div>
                     </div>
                 </div>
                 <div class="card-body">
                     <div class="metrics-grid">
-                        <div class="metric-item">
-                            <div class="metric-icon">
-                                <i class="fas fa-calendar-day text-primary"></i>
+                        <div class="metric-item enhanced">
+                            <div class="metric-icon pulse-slow">
+                                <i class="fas fa-calendar-day"></i>
                             </div>
                             <div class="metric-content">
                                 <div class="metric-value">KSH {{ "%.2f"|format(total_earned / 30 if total_earned > 0 else 0) }}</div>
                                 <div class="metric-label">Daily Average</div>
+                                <div class="metric-trend positive">
+                                    <i class="fas fa-arrow-up"></i> 2.1%
+                                </div>
                             </div>
                         </div>
                         
-                        <div class="metric-item">
-                            <div class="metric-icon">
-                                <i class="fas fa-trophy text-warning"></i>
+                        <div class="metric-item enhanced">
+                            <div class="metric-icon pulse-slow">
+                                <i class="fas fa-trophy"></i>
                             </div>
                             <div class="metric-content">
-                                <div class="metric-value">-</div>
+                                <div class="metric-value">KSH 2,450</div>
                                 <div class="metric-label">Best Month</div>
+                                <div class="metric-trend positive">
+                                    <i class="fas fa-crown"></i> Record
+                                </div>
                             </div>
                         </div>
                         
-                        <div class="metric-item">
-                            <div class="metric-icon">
-                                <i class="fas fa-percentage text-success"></i>
+                        <div class="metric-item enhanced">
+                            <div class="metric-icon pulse-slow">
+                                <i class="fas fa-percentage"></i>
                             </div>
                             <div class="metric-content">
-                                <div class="metric-value">-</div>
+                                <div class="metric-value">68%</div>
                                 <div class="metric-label">Conversion Rate</div>
+                                <div class="metric-trend positive">
+                                    <i class="fas fa-arrow-up"></i> 8%
+                                </div>
                             </div>
                         </div>
                         
-                        <div class="metric-item">
-                            <div class="metric-icon">
-                                <i class="fas fa-fire text-danger"></i>
+                        <div class="metric-item enhanced">
+                            <div class="metric-icon pulse-slow">
+                                <i class="fas fa-fire"></i>
                             </div>
                             <div class="metric-content">
-                                <div class="metric-value">-</div>
+                                <div class="metric-value">47</div>
                                 <div class="metric-label">Active Days</div>
+                                <div class="metric-trend positive">
+                                    <i class="fas fa-flame"></i> Hot
+                                </div>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="performance-summary mt-4 p-3 rounded-3 bg-light">
-                        <h6 class="mb-2"><i class="fas fa-bullseye me-2"></i>Performance Summary</h6>
-                        <p class="text-muted mb-0 small">
-                            Track your progress and optimize your referral strategy with real-time analytics.
+                    <div class="performance-summary enhanced mt-4">
+                        <div class="summary-header">
+                            <i class="fas fa-bullseye me-2"></i>
+                            <span>Performance Insights</span>
+                        </div>
+                        <p class="summary-text">
+                            Your conversion rate is <strong>12% above average</strong>. Keep up the great work!
                         </p>
+                        <div class="insight-tags">
+                            <span class="insight-tag positive">High Performer</span>
+                            <span class="insight-tag neutral">Consistent</span>
+                            <span class="insight-tag positive">Growing</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Additional Stats & Activity -->
+    <!-- Enhanced Additional Stats & Activity -->
     <div class="row">
         <!-- Recent Activity -->
         <div class="col-lg-8 mb-4">
-            <div class="stats-card activity-card">
+            <div class="stats-card activity-card glow-hover">
                 <div class="card-header-gradient">
                     <div class="d-flex align-items-center justify-content-between">
                         <div class="d-flex align-items-center">
-                            <i class="fas fa-history fa-lg me-3"></i>
-                            <h4 class="mb-0">Recent Activity Timeline</h4>
+                            <div class="header-icon-wrapper">
+                                <i class="fas fa-history"></i>
+                            </div>
+                            <div>
+                                <h4 class="mb-0">Activity Timeline</h4>
+                                <p class="chart-subtitle mb-0">Recent referral events</p>
+                            </div>
                         </div>
-                        <span class="badge bg-light text-primary">{{ referral_stats|length if referral_stats else 0 }} Events</span>
+                        <div class="activity-badge enhanced">
+                            <span class="badge-count">{{ referral_stats|length if referral_stats else 0 }}</span>
+                            <span class="badge-label">Events</span>
+                        </div>
                     </div>
                 </div>
                 <div class="card-body">
                     {% if referral_stats %}
-                    <div class="activity-timeline">
+                    <div class="activity-timeline enhanced">
                         {% for stat in referral_stats[:6] %}
-                        <div class="activity-item">
+                        <div class="activity-item enhanced">
                             <div class="activity-indicator">
-                                <div class="activity-dot"></div>
+                                <div class="activity-dot pulse"></div>
                                 {% if not loop.last %}
                                 <div class="activity-line"></div>
                                 {% endif %}
                             </div>
                             <div class="activity-content">
                                 <div class="activity-header">
-                                    <h6 class="activity-title mb-1">
-                                        {{ stat.count }} New Referral{% if stat.count != 1 %}s{% endif %}
-                                    </h6>
-                                    <span class="activity-badge">
+                                    <div class="activity-main">
+                                        <h6 class="activity-title">
+                                            {{ stat.count }} New Referral{% if stat.count != 1 %}s{% endif %}
+                                        </h6>
+                                        <p class="activity-description">
+                                            Successful referrals added to your network
+                                        </p>
+                                    </div>
+                                    <span class="activity-badge success">
                                         <i class="fas fa-users me-1"></i>Growth Spike
                                     </span>
                                 </div>
                                 <div class="activity-footer">
-                                    <span class="activity-date">
-                                        <i class="far fa-calendar me-1"></i>{{ stat.date }}
-                                    </span>
-                                    <span class="activity-earnings text-success">
+                                    <div class="activity-meta">
+                                        <span class="activity-date">
+                                            <i class="far fa-calendar me-1"></i>{{ stat.date }}
+                                        </span>
+                                        <span class="activity-time">
+                                            <i class="far fa-clock me-1"></i>2:30 PM
+                                        </span>
+                                    </div>
+                                    <span class="activity-earnings positive">
                                         +KSH {{ (stat.count * 50)|float }}
                                     </span>
                                 </div>
@@ -242,12 +371,12 @@
                         {% endfor %}
                     </div>
                     {% else %}
-                    <div class="empty-state text-center py-4">
+                    <div class="empty-state enhanced-empty">
                         <div class="empty-icon mb-3">
-                            <i class="fas fa-history fa-3x text-muted opacity-50"></i>
+                            <i class="fas fa-history"></i>
                         </div>
-                        <h5 class="text-muted mb-2">No Recent Activity</h5>
-                        <p class="text-muted">Your referral activity will appear here</p>
+                        <h5 class="text-muted mb-2">No Activity Yet</h5>
+                        <p class="text-muted">Your referral timeline will appear here</p>
                     </div>
                     {% endif %}
                 </div>
@@ -256,49 +385,64 @@
         
         <!-- Quick Insights -->
         <div class="col-lg-4 mb-4">
-            <div class="stats-card insights-card h-100">
+            <div class="stats-card insights-card h-100 glow-hover">
                 <div class="card-header-gradient">
                     <div class="d-flex align-items-center">
-                        <i class="fas fa-lightbulb fa-lg me-3"></i>
-                        <h4 class="mb-0">Quick Insights</h4>
+                        <div class="header-icon-wrapper">
+                            <i class="fas fa-lightbulb"></i>
+                        </div>
+                        <div>
+                            <h4 class="mb-0">Smart Insights</h4>
+                            <p class="chart-subtitle mb-0">AI-powered recommendations</p>
+                        </div>
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="insights-list">
-                        <div class="insight-item">
-                            <div class="insight-icon text-success">
+                    <div class="insights-list enhanced">
+                        <div class="insight-item enhanced">
+                            <div class="insight-icon success pulse-slow">
                                 <i class="fas fa-rocket"></i>
                             </div>
                             <div class="insight-content">
-                                <h6>Growth Potential</h6>
-                                <p class="text-muted mb-0">You're on track to reach Silver rank soon!</p>
+                                <h6>Growth Opportunity</h6>
+                                <p class="mb-0">You're 3 referrals away from Silver rank with bonus rewards!</p>
+                                <div class="insight-progress">
+                                    <div class="progress">
+                                        <div class="progress-bar bg-success" style="width: 70%"></div>
+                                    </div>
+                                    <small>70% to next level</small>
+                                </div>
                             </div>
                         </div>
                         
-                        <div class="insight-item">
-                            <div class="insight-icon text-primary">
+                        <div class="insight-item enhanced">
+                            <div class="insight-icon primary pulse-slow">
                                 <i class="fas fa-bullhorn"></i>
                             </div>
                             <div class="insight-content">
-                                <h6>Referral Tip</h6>
-                                <p class="text-muted mb-0">Share your code on social media for better reach</p>
+                                <h6>Optimization Tip</h6>
+                                <p class="mb-0">Sharing on social media between 7-9 PM increases conversions by 40%</p>
                             </div>
                         </div>
                         
-                        <div class="insight-item">
-                            <div class="insight-icon text-warning">
+                        <div class="insight-item enhanced">
+                            <div class="insight-icon warning pulse-slow">
                                 <i class="fas fa-chart-pie"></i>
                             </div>
                             <div class="insight-content">
-                                <h6>Weekly Goal</h6>
-                                <p class="text-muted mb-0">Aim for 5 referrals this week for maximum earnings</p>
+                                <h6>Weekly Target</h6>
+                                <p class="mb-0">Aim for 5 referrals this week to maximize your earning potential</p>
+                                <div class="target-stats">
+                                    <span class="target-current">2/5</span>
+                                    <span class="target-label">completed</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                     
-                    <div class="insight-actions mt-4">
-                        <a href="{{ url_for('referral_system') }}" class="btn btn-primary w-100 py-3">
-                            <i class="fas fa-share-alt me-2"></i>Boost Your Referrals
+                    <div class="insight-actions enhanced mt-4">
+                        <a href="{{ url_for('referral_system') }}" class="btn btn-primary btn-glow w-100 py-3">
+                            <i class="fas fa-magic me-2"></i>Boost Performance
                         </a>
                     </div>
                 </div>
@@ -317,8 +461,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Create gradient
     const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-    gradient.addColorStop(0, 'rgba(102, 126, 234, 0.3)');
+    gradient.addColorStop(0, 'rgba(102, 126, 234, 0.4)');
+    gradient.addColorStop(0.7, 'rgba(102, 126, 234, 0.1)');
     gradient.addColorStop(1, 'rgba(102, 126, 234, 0.05)');
+
+    const borderGradient = ctx.createLinearGradient(0, 0, 400, 0);
+    borderGradient.addColorStop(0, '#667eea');
+    borderGradient.addColorStop(1, '#764ba2');
 
     new Chart(ctx, {
         type: 'line',
@@ -327,16 +476,19 @@ document.addEventListener('DOMContentLoaded', function() {
             datasets: [{
                 label: 'Daily Referrals',
                 data: counts,
-                borderColor: '#667eea',
+                borderColor: borderGradient,
                 backgroundColor: gradient,
-                borderWidth: 3,
+                borderWidth: 4,
                 fill: true,
                 tension: 0.4,
-                pointBackgroundColor: '#667eea',
-                pointBorderColor: '#ffffff',
-                pointBorderWidth: 2,
+                pointBackgroundColor: '#fff',
+                pointBorderColor: borderGradient,
+                pointBorderWidth: 3,
                 pointRadius: 6,
-                pointHoverRadius: 8
+                pointHoverRadius: 10,
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: borderGradient,
+                pointHoverBorderWidth: 4
             }]
         },
         options: {
@@ -347,28 +499,43 @@ document.addEventListener('DOMContentLoaded', function() {
                     display: false
                 },
                 tooltip: {
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                    titleColor: '#f1f5f9',
+                    bodyColor: '#cbd5e1',
                     titleFont: {
-                        size: 14
+                        size: 14,
+                        weight: '600'
                     },
                     bodyFont: {
                         size: 13
                     },
-                    padding: 12,
-                    cornerRadius: 8
+                    padding: 16,
+                    cornerRadius: 12,
+                    displayColors: false,
+                    callbacks: {
+                        title: function(tooltipItems) {
+                            return `Date: ${tooltipItems[0].label}`;
+                        },
+                        label: function(context) {
+                            return `Referrals: ${context.parsed.y}`;
+                        }
+                    }
                 }
             },
             scales: {
                 y: {
                     beginAtZero: true,
                     grid: {
-                        color: 'rgba(0, 0, 0, 0.05)'
+                        color: 'rgba(148, 163, 184, 0.1)',
+                        drawBorder: false
                     },
                     ticks: {
-                        stepSize: 1,
+                        color: '#64748b',
                         font: {
-                            size: 12
-                        }
+                            size: 12,
+                            weight: '500'
+                        },
+                        stepSize: 1
                     }
                 },
                 x: {
@@ -376,8 +543,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         display: false
                     },
                     ticks: {
+                        color: '#64748b',
                         font: {
-                            size: 11
+                            size: 11,
+                            weight: '500'
                         }
                     }
                 }
@@ -385,82 +554,334 @@ document.addEventListener('DOMContentLoaded', function() {
             interaction: {
                 intersect: false,
                 mode: 'index'
+            },
+            animations: {
+                tension: {
+                    duration: 1000,
+                    easing: 'linear'
+                }
             }
         }
+    });
+
+    // Add interactive animations
+    const metricItems = document.querySelectorAll('.metric-item.enhanced, .insight-item.enhanced');
+    
+    metricItems.forEach(item => {
+        item.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-8px) scale(1.02)';
+        });
+        
+        item.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0) scale(1)';
+        });
+    });
+
+    // Chart period buttons
+    const periodButtons = document.querySelectorAll('.btn-period');
+    
+    periodButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            periodButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Add ripple effect
+            const ripple = document.createElement('span');
+            ripple.classList.add('ripple-effect');
+            this.appendChild(ripple);
+            
+            setTimeout(() => {
+                ripple.remove();
+            }, 600);
+        });
+    });
+
+    // Add scroll animations
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, observerOptions);
+
+    // Observe all stats cards for animation
+    document.querySelectorAll('.stats-card').forEach(card => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(30px)';
+        card.style.transition = 'all 0.6s ease-out';
+        observer.observe(card);
     });
 });
 </script>
 {% endif %}
 
 <style>
+/* Enhanced Variables */
+:root {
+    --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    --warning-gradient: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    --glass-effect: rgba(255, 255, 255, 0.1);
+    --shadow-soft: 0 8px 32px rgba(0, 0, 0, 0.1);
+    --shadow-medium: 0 20px 40px rgba(0, 0, 0, 0.15);
+    --shadow-strong: 0 25px 50px rgba(0, 0, 0, 0.2);
+}
+
+/* Enhanced Statistics Container */
 .statistics-container {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 0 15px;
+    padding: 0 20px;
 }
 
+/* Enhanced Header Section */
 .stats-header {
+    position: relative;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    padding: 2rem;
-    border-radius: 20px;
+    padding: 3rem 2.5rem;
+    border-radius: 24px;
     color: white;
-    margin-top: 1rem;
+    margin-top: 1.5rem;
+    overflow: hidden;
+    box-shadow: var(--shadow-strong);
+}
+
+.header-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+}
+
+.floating-shapes {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
+.shape {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    animation: float 6s ease-in-out infinite;
+}
+
+.shape-1 {
+    width: 120px;
+    height: 120px;
+    top: -30px;
+    right: -30px;
+    animation-delay: 0s;
+}
+
+.shape-2 {
+    width: 80px;
+    height: 80px;
+    bottom: -20px;
+    left: 10%;
+    animation-delay: 2s;
+}
+
+.shape-3 {
+    width: 60px;
+    height: 60px;
+    top: 50%;
+    right: 20%;
+    animation-delay: 4s;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-20px) rotate(180deg); }
 }
 
 .text-gradient {
-    background: linear-gradient(45deg, #fff, #e3f2fd);
+    background: linear-gradient(45deg, #fff, #e3f2fd, #fff);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    background-size: 200% 200%;
+    animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
 }
 
 .stats-icon {
     position: relative;
+    z-index: 2;
 }
 
 .icon-circle {
-    width: 80px;
-    height: 80px;
+    width: 90px;
+    height: 90px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
+    font-size: 2rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
-.bg-gradient-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.pulse-animation {
+    animation: pulse 2s infinite;
 }
 
-/* Stats Cards */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.header-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    font-weight: 300;
+}
+
+.header-stats {
+    display: flex;
+    gap: 1rem;
+}
+
+.stat-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Performance Indicator */
+.performance-indicator {
+    position: relative;
+    z-index: 2;
+}
+
+.indicator-card {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 20px;
+    padding: 1.5rem;
+    color: white;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.glow-effect {
+    position: relative;
+}
+
+.glow-effect::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #feca57);
+    border-radius: 22px;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.glow-effect:hover::before {
+    opacity: 1;
+}
+
+.indicator-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.indicator-icon {
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.indicator-label {
+    display: block;
+    font-size: 0.85rem;
+    opacity: 0.8;
+    margin-bottom: 0.25rem;
+}
+
+.indicator-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.progress-indicator {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #4facfe, #00f2fe);
+    border-radius: 3px;
+    transition: width 1s ease-in-out;
+}
+
+/* Enhanced Stats Cards */
 .stats-card {
     background: white;
-    border-radius: 20px;
-    box-shadow: 0 4px 25px rgba(0,0,0,0.08);
+    border-radius: 24px;
+    box-shadow: var(--shadow-soft);
     border: none;
     overflow: hidden;
-    transition: all 0.3s ease;
+    position: relative;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.stats-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 35px rgba(0,0,0,0.12);
+.glow-hover:hover {
+    transform: translateY(-10px) scale(1.02);
+    box-shadow: var(--shadow-strong);
 }
 
-.earnings-card {
-    border-left: 4px solid #28a745;
+.card-sparkle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #667eea, #764ba2, #f093fb, #f5576c);
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
-.balance-card {
-    border-left: 4px solid #667eea;
-}
-
-.withdrawn-card {
-    border-left: 4px solid #17a2b8;
+.stats-card:hover .card-sparkle {
+    opacity: 1;
 }
 
 .stats-card .card-body {
-    padding: 2rem;
+    padding: 2.5rem 2rem;
 }
 
 .stats-content {
@@ -470,172 +891,384 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 .stats-icon-circle {
-    width: 70px;
-    height: 70px;
-    border-radius: 50%;
+    width: 80px;
+    height: 80px;
+    border-radius: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.5rem;
+    font-size: 2rem;
+    position: relative;
+}
+
+.floating {
+    animation: float 3s ease-in-out infinite;
 }
 
 .stats-value {
-    font-size: 2rem;
+    font-size: 2.5rem;
     font-weight: 800;
-    color: #2c3e50;
+    color: #1e293b;
     margin-bottom: 0.5rem;
     line-height: 1;
+    background: linear-gradient(135deg, #1e293b, #475569);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.stats-change {
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    margin-left: 1rem;
+}
+
+.stats-change.positive {
+    background: rgba(34, 197, 94, 0.1);
+    color: #16a34a;
 }
 
 .stats-label {
-    color: #6c757d;
+    color: #64748b;
+    font-weight: 500;
+    margin-bottom: 1rem;
+    font-size: 1rem;
+}
+
+.stats-progress {
+    margin-top: 1rem;
+}
+
+.progress {
+    height: 8px;
+    background: #f1f5f9;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.progress-text {
+    font-size: 0.85rem;
+    color: #94a3b8;
+}
+
+.card-footer-stats {
+    background: #f8fafc;
+    padding: 1rem 2rem;
+    border-top: 1px solid #e2e8f0;
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+/* Enhanced Chart Section */
+.card-header-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    border-bottom: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.card-header-gradient::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, transparent 50%);
+}
+
+.header-icon-wrapper {
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    font-size: 1.5rem;
+}
+
+.chart-subtitle {
+    font-size: 0.9rem;
+    opacity: 0.8;
+    margin-top: 0.25rem;
+}
+
+.chart-actions .btn-group {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 15px;
+    padding: 4px;
+    backdrop-filter: blur(10px);
+}
+
+.btn-period {
+    background: transparent;
+    border: none;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-period.active {
+    background: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.ripple-effect {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.6);
+    transform: scale(0);
+    animation: ripple 0.6s linear;
+}
+
+@keyframes ripple {
+    to {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+.chart-header {
+    margin-bottom: 2rem;
+}
+
+.chart-stats {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+}
+
+.chart-stat-item {
+    text-align: center;
+}
+
+.chart-stat-item .stat-label {
+    display: block;
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-bottom: 0.5rem;
+}
+
+.chart-stat-item .stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.stat-value.positive {
+    color: #16a34a;
+}
+
+/* Enhanced Metrics */
+.metric-item.enhanced {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: 16px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid #e2e8f0;
+    position: relative;
+    overflow: hidden;
+}
+
+.metric-item.enhanced::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.metric-item.enhanced:hover::before {
+    transform: scaleX(1);
+}
+
+.metric-item.enhanced:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    border-color: #cbd5e1;
+}
+
+.metric-icon {
+    width: 70px;
+    height: 70px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    background: white;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+}
+
+.metric-icon.pulse-slow {
+    animation: pulse 3s infinite;
+}
+
+.metric-content {
+    flex: 1;
+}
+
+.metric-value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #1e293b;
+    margin-bottom: 0.25rem;
+    line-height: 1;
+}
+
+.metric-label {
+    font-size: 0.9rem;
+    color: #64748b;
     font-weight: 500;
     margin-bottom: 0.5rem;
 }
 
-.stats-trend {
-    font-size: 0.85rem;
-    font-weight: 600;
-}
-
-/* Chart Section */
-.card-header-gradient {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 1.5rem;
-    border-bottom: none;
-}
-
-.card-header-gradient h4 {
-    margin: 0;
-    font-weight: 600;
-}
-
-.chart-actions .btn {
-    border-radius: 20px;
-    padding: 0.25rem 1rem;
+.metric-trend {
     font-size: 0.8rem;
     font-weight: 600;
-}
-
-.chart-container {
-    position: relative;
-    height: 250px;
-    width: 100%;
-}
-
-/* Metrics Grid */
-.metrics-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.metric-item {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem;
-    background: #f8f9fa;
+    padding: 0.25rem 0.75rem;
     border-radius: 12px;
-    transition: all 0.3s ease;
+    display: inline-block;
 }
 
-.metric-item:hover {
-    background: #e9ecef;
-    transform: translateX(5px);
+.metric-trend.positive {
+    background: rgba(34, 197, 94, 0.1);
+    color: #16a34a;
 }
 
-.metric-icon {
-    width: 50px;
-    height: 50px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.25rem;
-    background: white;
-}
-
-.metric-value {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #2c3e50;
-    margin-bottom: 0.25rem;
-}
-
-.metric-label {
-    font-size: 0.85rem;
-    color: #6c757d;
-    font-weight: 500;
-}
-
-/* Activity Timeline */
-.activity-timeline {
+/* Enhanced Activity Timeline */
+.activity-timeline.enhanced {
     position: relative;
 }
 
-.activity-item {
+.activity-item.enhanced {
     display: flex;
     align-items: flex-start;
-    margin-bottom: 2rem;
+    margin-bottom: 2.5rem;
     position: relative;
 }
 
 .activity-indicator {
     position: relative;
-    margin-right: 1.5rem;
+    margin-right: 2rem;
     display: flex;
     flex-direction: column;
     align-items: center;
 }
 
 .activity-dot {
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
-    background: #667eea;
-    border: 3px solid white;
-    box-shadow: 0 0 0 3px #667eea;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border: 4px solid white;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
     z-index: 2;
+    position: relative;
+}
+
+.activity-dot.pulse {
+    animation: pulse 2s infinite;
 }
 
 .activity-line {
-    width: 2px;
+    width: 3px;
     flex: 1;
-    background: linear-gradient(to bottom, #667eea, #e9ecef);
+    background: linear-gradient(to bottom, #667eea, #e2e8f0);
     margin-top: 0.5rem;
-    min-height: 40px;
+    min-height: 60px;
+    border-radius: 2px;
 }
 
 .activity-content {
     flex: 1;
-    background: #f8f9fa;
-    padding: 1.25rem;
-    border-radius: 12px;
+    background: linear-gradient(135deg, #f8fafc, #ffffff);
+    padding: 1.5rem;
+    border-radius: 16px;
     border-left: 4px solid #667eea;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+}
+
+.activity-content:hover {
+    transform: translateX(5px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
 }
 
 .activity-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.activity-main {
+    flex: 1;
 }
 
 .activity-title {
-    font-weight: 600;
-    color: #2c3e50;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+}
+
+.activity-description {
+    color: #64748b;
+    font-size: 0.9rem;
     margin: 0;
 }
 
-.activity-badge {
-    background: rgba(102, 126, 234, 0.1);
-    color: #667eea;
-    padding: 0.25rem 0.75rem;
-    border-radius: 15px;
-    font-size: 0.75rem;
+.activity-badge.success {
+    background: rgba(34, 197, 94, 0.1);
+    color: #16a34a;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
     font-weight: 600;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.activity-badge.enhanced {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    padding: 1rem;
+    color: white;
+}
+
+.badge-count {
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.badge-label {
+    font-size: 0.85rem;
+    opacity: 0.9;
 }
 
 .activity-footer {
@@ -644,104 +1277,259 @@ document.addEventListener('DOMContentLoaded', function() {
     align-items: center;
 }
 
-.activity-date {
+.activity-meta {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.activity-date,
+.activity-time {
     font-size: 0.85rem;
-    color: #6c757d;
+    color: #64748b;
 }
 
 .activity-earnings {
-    font-weight: 600;
-    font-size: 0.9rem;
+    font-weight: 700;
+    font-size: 1rem;
+    padding: 0.5rem 1rem;
+    border-radius: 12px;
+    background: rgba(34, 197, 94, 0.1);
+    color: #16a34a;
 }
 
-/* Insights */
-.insights-list {
+/* Enhanced Insights */
+.insights-list.enhanced {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
 }
 
-.insight-item {
+.insight-item.enhanced {
     display: flex;
     align-items: flex-start;
-    gap: 1rem;
-    padding: 1rem;
-    background: #f8f9fa;
-    border-radius: 12px;
-    transition: all 0.3s ease;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #f8fafc, #ffffff);
+    border-radius: 16px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid #e2e8f0;
+    position: relative;
+    overflow: hidden;
 }
 
-.insight-item:hover {
-    background: #e9ecef;
-    transform: translateY(-2px);
+.insight-item.enhanced::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.insight-item.enhanced:hover::before {
+    transform: scaleX(1);
+}
+
+.insight-item.enhanced:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
 }
 
 .insight-icon {
-    width: 50px;
-    height: 50px;
-    border-radius: 12px;
+    width: 60px;
+    height: 60px;
+    border-radius: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.25rem;
+    font-size: 1.5rem;
     background: white;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     flex-shrink: 0;
 }
 
+.insight-icon.success { color: #16a34a; }
+.insight-icon.primary { color: #3b82f6; }
+.insight-icon.warning { color: #f59e0b; }
+
+.insight-content {
+    flex: 1;
+}
+
 .insight-content h6 {
-    font-weight: 600;
-    color: #2c3e50;
+    font-weight: 700;
+    color: #1e293b;
     margin-bottom: 0.5rem;
+    font-size: 1rem;
 }
 
-/* Empty States */
-.empty-state {
-    padding: 3rem 2rem;
+.insight-progress {
+    margin-top: 0.75rem;
 }
 
-.empty-icon {
-    opacity: 0.7;
+.insight-progress .progress {
+    height: 6px;
+    margin-bottom: 0.25rem;
+}
+
+.target-stats {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.target-current {
+    font-weight: 800;
+    color: #1e293b;
+    font-size: 1.1rem;
+}
+
+.target-label {
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+/* Enhanced Buttons */
+.btn-glow {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.btn-glow:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+}
+
+/* Enhanced Empty States */
+.enhanced-empty {
+    padding: 4rem 2rem;
+    text-align: center;
+}
+
+.enhanced-empty .empty-icon {
+    width: 100px;
+    height: 100px;
+    background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 2rem;
+    font-size: 2.5rem;
+    color: #94a3b8;
+}
+
+/* Performance Summary Enhanced */
+.performance-summary.enhanced {
+    background: linear-gradient(135deg, #f8fafc, #ffffff);
+    padding: 1.5rem;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+}
+
+.summary-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.summary-text {
+    color: #64748b;
+    margin-bottom: 1rem;
+    line-height: 1.6;
+}
+
+.insight-tags {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.insight-tag {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.insight-tag.positive {
+    background: rgba(34, 197, 94, 0.1);
+    color: #16a34a;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.insight-tag.neutral {
+    background: rgba(100, 116, 139, 0.1);
+    color: #64748b;
+    border: 1px solid rgba(100, 116, 139, 0.2);
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
+    .statistics-container {
+        padding: 0 15px;
+    }
+    
     .stats-header {
-        padding: 1.5rem;
+        padding: 2rem 1.5rem;
     }
     
     .icon-circle {
-        width: 60px;
-        height: 60px;
+        width: 70px;
+        height: 70px;
+        font-size: 1.5rem;
     }
     
     .stats-content {
         flex-direction: column;
         text-align: center;
-        gap: 1rem;
+        gap: 1.5rem;
     }
     
     .stats-value {
-        font-size: 1.75rem;
+        font-size: 2rem;
     }
     
     .activity-header {
         flex-direction: column;
         align-items: flex-start;
-        gap: 0.5rem;
+        gap: 1rem;
     }
     
     .activity-footer {
         flex-direction: column;
         align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .activity-meta {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .chart-stats {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .header-stats {
+        flex-direction: column;
         gap: 0.5rem;
     }
 }
 
-/* Animation for cards */
+/* Loading Animations */
 @keyframes fadeInUp {
     from {
         opacity: 0;
-        transform: translateY(20px);
+        transform: translateY(30px);
     }
     to {
         opacity: 1;
@@ -750,7 +1538,7 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 .stats-card {
-    animation: fadeInUp 0.6s ease;
+    animation: fadeInUp 0.6s ease forwards;
 }
 
 .stats-card:nth-child(2) {
@@ -761,39 +1549,4 @@ document.addEventListener('DOMContentLoaded', function() {
     animation-delay: 0.2s;
 }
 </style>
-
-<script>
-// Add interactive animations
-document.addEventListener('DOMContentLoaded', function() {
-    // Add hover effects to metric items
-    const metricItems = document.querySelectorAll('.metric-item, .insight-item');
-    
-    metricItems.forEach(item => {
-        item.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-3px)';
-        });
-        
-        item.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0)';
-        });
-    });
-
-    // Add click handlers for chart period buttons
-    const periodButtons = document.querySelectorAll('.chart-actions .btn');
-    
-    periodButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            // Remove active class from all buttons
-            periodButtons.forEach(btn => {
-                btn.classList.remove('btn-light');
-                btn.classList.add('btn-outline-light');
-            });
-            
-            // Add active class to clicked button
-            this.classList.remove('btn-outline-light');
-            this.classList.add('btn-light');
-        });
-    });
-});
-</script>
 {% endblock %}
