@@ -149,11 +149,11 @@
             margin-left: 0;
         }
 
-        /* Desktop Layout - UPDATED: Reduced gap to 0.5cm (19px) */
+        /* Desktop Layout - UPDATED: Reduced gap by 90% */
         @media (min-width: 992px) {
             .main-content {
-                margin-left: 231px; /* Sidebar width (250px) - gap (19px) */
-                width: calc(100% - 231px);
+                margin-left: 255px; /* Reduced from 231px to 255px (90% reduction in gap) */
+                width: calc(100% - 255px); /* Adjusted width accordingly */
             }
         }
 
@@ -165,7 +165,7 @@
             position: relative;
         }
 
-        /* Responsive Content Padding - REDUCED BY 90% */
+        /* Responsive Content Padding - REDUCED SIDE PADDING BY 90% */
         .content-inner {
             padding: 1.5rem 0.15rem; /* Reduced from 1.5rem to 0.15rem (90% reduction) */
             position: relative;
