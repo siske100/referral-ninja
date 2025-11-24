@@ -139,7 +139,7 @@
             position: relative;
         }
 
-        /* Main Content - UPDATED: Full width from sidebar to end */
+        /* Main Content */
         .main-content {
             flex: 1;
             transition: all 0.3s ease;
@@ -149,11 +149,11 @@
             margin-left: 0;
         }
 
-        /* Desktop Layout - UPDATED: Full width from sidebar */
+        /* Desktop Layout - UPDATED: Reduced gap to 0.5cm (19px) */
         @media (min-width: 992px) {
             .main-content {
-                margin-left: 250px; /* Sidebar width */
-                width: calc(100% - 250px);
+                margin-left: 231px; /* Sidebar width (250px) - gap (19px) */
+                width: calc(100% - 231px);
             }
         }
 
@@ -165,67 +165,10 @@
             position: relative;
         }
 
-        /* UPDATED: Professional Content Area */
+        /* Responsive Content Padding */
         .content-inner {
-            padding: 2rem;
+            padding: 1.5rem;
             position: relative;
-            width: 100%;
-            max-width: none;
-            margin: 0;
-        }
-
-        /* Professional Main Content Layout */
-        .main-content-wrapper {
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
-
-        .content-header {
-            background: white;
-            padding: 2rem;
-            border-bottom: 1px solid var(--border-light);
-            box-shadow: var(--shadow-sm);
-            margin-bottom: 2rem;
-        }
-
-        .content-body {
-            flex: 1;
-            padding: 0 2rem 2rem;
-        }
-
-        /* Professional Grid System */
-        .professional-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .professional-card {
-            background: white;
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-md);
-            border: 1px solid var(--border-light);
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
-
-        .professional-card:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .card-header {
-            background: white;
-            border-bottom: 1px solid var(--border-light);
-            padding: 1.5rem;
-            font-weight: 600;
-            color: var(--text-dark);
-        }
-
-        .card-body {
-            padding: 1.5rem;
         }
 
         /* Enhanced Support Button */
@@ -338,9 +281,9 @@
 
         /* Card Enhancements */
         .card {
-            border: 1px solid var(--border-light);
+            border: none;
             border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-sm);
+            box-shadow: var(--shadow-md);
             transition: all 0.3s ease;
             background: var(--card-bg);
             width: 100%;
@@ -348,9 +291,28 @@
             position: relative;
         }
 
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--primary-gradient);
+        }
+
         .card:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .card-header {
+            background: rgba(0,0,0,0.02);
+            border-bottom: 1px solid var(--border-light);
+            font-weight: 600;
+            color: var(--text-dark);
+            padding: 1rem 1.5rem;
+            font-size: 1.1rem;
         }
 
         /* Button Enhancements */
@@ -627,6 +589,10 @@
             .community-button {
                 display: none !important;
             }
+            
+            .card::before {
+                display: none;
+            }
         }
 
         /* ========== RESPONSIVE BREAKPOINTS ========== */
@@ -635,14 +601,6 @@
         @media (max-width: 576px) {
             .content-inner {
                 padding: 1rem;
-            }
-
-            .content-body {
-                padding: 0 1rem 1rem;
-            }
-
-            .content-header {
-                padding: 1.5rem 1rem;
             }
 
             .support-button,
@@ -713,14 +671,6 @@
                 padding: 1.5rem;
             }
 
-            .content-body {
-                padding: 0 1.5rem 1.5rem;
-            }
-
-            .content-header {
-                padding: 1.5rem;
-            }
-
             .support-button,
             .community-button {
                 padding: 10px 16px;
@@ -746,10 +696,6 @@
                 padding: 1.75rem;
             }
 
-            .content-body {
-                padding: 0 1.75rem 1.75rem;
-            }
-
             .main-content {
                 margin-left: 0;
             }
@@ -760,22 +706,14 @@
             .content-inner {
                 padding: 2rem;
             }
-
-            .content-body {
-                padding: 0 2rem 2rem;
-            }
         }
 
         /* Extra Large Devices (1200px and up) */
         @media (min-width: 1200px) {
             .content-inner {
-                padding: 2.5rem;
-            max-width: none;
-                margin: 0;
-            }
-
-            .content-body {
-                padding: 0 2.5rem 2.5rem;
+                padding: 2rem;
+                max-width: 1200px;
+                margin: 0 auto;
             }
         }
 
@@ -898,43 +836,6 @@
             color: var(--text-light);
             font-weight: 500;
         }
-
-        /* Professional Layout Utilities */
-        .full-width-container {
-            width: 100%;
-            max-width: none;
-            margin: 0;
-            padding: 0;
-        }
-
-        .content-section {
-            background: white;
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-sm);
-            padding: 2rem;
-            margin-bottom: 2rem;
-            border: 1px solid var(--border-light);
-        }
-
-        .section-header {
-            display: flex;
-            justify-content: between;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid var(--border-light);
-        }
-
-        .section-title {
-            font-weight: 600;
-            color: var(--text-dark);
-            margin: 0;
-        }
-
-        .section-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
     </style>
     {% block styles %}{% endblock %}
 </head>
@@ -947,38 +848,36 @@
         
         <div class="main-content" id="mainContent">
             <main class="content">
-                <div class="main-content-wrapper">
+                <div class="content-inner">
                     <!-- Connection Status Indicator -->
                     <div class="connection-status online" id="connectionStatus" style="display: none;">
                         <i class="fas fa-wifi"></i>
                         <span>Connected</span>
                     </div>
 
-                    <div class="content-inner">
-                        {% with messages = get_flashed_messages(with_categories=true) %}
-                            {% if messages %}
-                                {% for category, message in messages %}
-                                    <div class="flash-message {{ category }}" role="alert">
-                                        <i class="flash-icon fas fa-{% if category == 'success' %}check-circle{% elif category == 'error' %}exclamation-triangle{% elif category == 'warning' %}exclamation-circle{% else %}info-circle{% endif %}"></i>
-                                        <span>{{ message }}</span>
-                                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
-                                    </div>
-                                {% endfor %}
-                            {% endif %}
-                        {% endwith %}
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="flash-message {{ category }}" role="alert">
+                                    <i class="flash-icon fas fa-{% if category == 'success' %}check-circle{% elif category == 'error' %}exclamation-triangle{% elif category == 'warning' %}exclamation-circle{% else %}info-circle{% endif %}"></i>
+                                    <span>{{ message }}</span>
+                                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
 
-                        <!-- Error State Fallback -->
-                        <div class="error-state" id="errorState" style="display: none;">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            <h3>We're experiencing an issue</h3>
-                            <p>Please try again later. If the problem persists, contact support.</p>
-                            <button class="btn btn-primary" onclick="location.reload()">
-                                <i class="fas fa-redo me-2"></i>Reload Page
-                            </button>
-                        </div>
-
-                        {% block content %}{% endblock %}
+                    <!-- Error State Fallback -->
+                    <div class="error-state" id="errorState" style="display: none;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>We're experiencing an issue</h3>
+                        <p>Please try again later. If the problem persists, contact support.</p>
+                        <button class="btn btn-primary" onclick="location.reload()">
+                            <i class="fas fa-redo me-2"></i>Reload Page
+                        </button>
                     </div>
+
+                    {% block content %}{% endblock %}
                 </div>
 
                 <!-- Join Community Button -->
