@@ -253,6 +253,19 @@
                             </div>
                         </div>
 
+                        <!-- OTP Verification Section (initially hidden) -->
+                        <div id="otpSection" style="display: none;" class="mt-4 p-3 border rounded bg-light">
+                            <h5 class="mb-3"><i class="fas fa-shield-alt me-2"></i>OTP Verification</h5>
+                            <div class="form-floating">
+                                <input type="text" class="form-control" id="otp_code" name="otp_code" 
+                                       placeholder="Enter OTP" maxlength="6" pattern="[0-9]{6}">
+                                <label for="otp_code"><i class="fas fa-key me-2"></i>Enter OTP Code</label>
+                                <div class="form-text">
+                                    <i class="fas fa-info-circle me-1"></i>Check your email for the 6-digit OTP code
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="mt-4">
                             <button type="submit" class="btn btn-success btn-lg px-4" id="quickPasswordBtn" disabled>
                                 <i class="fas fa-key me-2"></i>Change Password
@@ -423,15 +436,19 @@
                         <div class="danger-icon mb-3">
                             <i class="fas fa-skull-crossbones fa-2x text-danger"></i>
                         </div>
-                        <h5 class="text-danger mb-3">Proceed with Caution</h5>
+                        <h5 class="text-danger mb-3">Permanent Account Deletion</h5>
                         <p class="text-muted mb-4">
-                            Once you delete your account, there is no going back. All your data will be permanently removed.
+                            This action cannot be undone. All your data, including earnings, referrals, and transaction history will be permanently deleted.
                         </p>
-                        <button class="btn btn-danger btn-lg w-100 py-3" onclick="showDeleteConfirmation()" disabled>
-                            <i class="fas fa-trash-alt me-2"></i>Delete Account
-                        </button>
+                        
+                        <form method="POST" action="{{ url_for('delete_account') }}" id="deleteAccountForm" onsubmit="return confirmAccountDeletion()">
+                            <button type="submit" class="btn btn-danger btn-lg w-100 py-3">
+                                <i class="fas fa-trash-alt me-2"></i>Permanently Delete Account
+                            </button>
+                        </form>
+                        
                         <small class="form-text text-muted mt-2 d-block">
-                            <i class="fas fa-info-circle me-1"></i>Account deletion is temporarily disabled for security
+                            <i class="fas fa-exclamation-triangle me-1"></i>This action is irreversible
                         </small>
                     </div>
                 </div>
@@ -834,6 +851,17 @@
 .toast {
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+/* OTP Section Styles */
+#otpSection {
+    border: 2px solid #e3f2fd;
+    background: linear-gradient(135deg, #f8fbff 0%, #f0f4ff 100%);
+}
+
+#otpSection h5 {
+    color: #1976d2;
+    font-weight: 600;
 }
 
 /* Responsive Design */
@@ -1283,7 +1311,7 @@ async function testSettings() {
     }
 }
 
-// Quick password change with AJAX
+// Enhanced password change handler for OTP flow
 async function handleQuickPasswordChange(event) {
     event.preventDefault();
     
@@ -1292,40 +1320,63 @@ async function handleQuickPasswordChange(event) {
     const originalText = submitBtn.innerHTML;
     
     const formData = new FormData(form);
+    const currentPassword = formData.get('current_password');
+    const newPassword = formData.get('new_password');
+    const confirmPassword = formData.get('confirm_password');
+    const otpCode = formData.get('otp_code');
+    
+    // Determine current step
+    const isVerificationStep = document.getElementById('otpSection')?.style.display !== 'none';
+    const step = isVerificationStep ? 'verify' : 'request';
+    
     const passwordData = {
-        new_password: formData.get('new_password'),
-        confirm_password: formData.get('confirm_password')
+        current_password: currentPassword,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
+        otp_code: otpCode,
+        step: step
     };
 
     // Validation
-    if (passwordData.new_password !== passwordData.confirm_password) {
-        showToast('Passwords do not match!', 'error');
-        return;
+    if (step === 'request') {
+        if (newPassword !== confirmPassword) {
+            showToast('Passwords do not match!', 'error');
+            return;
+        }
+
+        if (newPassword.length < 6) {
+            showToast('Password must be at least 6 characters long!', 'error');
+            return;
+        }
     }
 
-    if (passwordData.new_password.length < 6) {
-        showToast('Password must be at least 6 characters long!', 'error');
-        return;
-    }
-
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Changing...';
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
     submitBtn.disabled = true;
 
     try {
         const response = await fetch('/change-password', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
+                'Content-Type': 'application/json',
             },
-            body: new URLSearchParams(passwordData)
+            body: JSON.stringify(passwordData)
         });
 
         const result = await response.json();
 
         if (result.success) {
-            showToast('Password changed successfully!', 'success');
-            form.reset();
-            updatePasswordStrength(); // Reset strength indicator
+            if (result.step === 'verify') {
+                // Show OTP input section
+                document.getElementById('otpSection').style.display = 'block';
+                showToast('OTP sent to your email!', 'success');
+            } else {
+                showToast('Password changed successfully!', 'success');
+                form.reset();
+                updatePasswordStrength(); // Reset strength indicator
+                // Hide OTP section if visible
+                const otpSection = document.getElementById('otpSection');
+                if (otpSection) otpSection.style.display = 'none';
+            }
         } else {
             showToast('Password change failed: ' + result.message, 'error');
         }
@@ -1338,8 +1389,33 @@ async function handleQuickPasswordChange(event) {
 }
 
 // Account deletion confirmation
-function showDeleteConfirmation() {
-    showToast('Account deletion is currently disabled for security reasons.', 'warning');
+function confirmAccountDeletion() {
+    const confirmation = confirm(
+        "🚨 PERMANENT ACCOUNT DELETION 🚨\n\n" +
+        "This will permanently:\n" +
+        "• Delete your account\n" +
+        "• Remove all your personal data\n" +
+        "• Delete your transaction history\n" +
+        "• Remove your referral earnings\n" +
+        "• Delete all associated records\n\n" +
+        "This action CANNOT be undone!\n\n" +
+        "Are you absolutely sure you want to proceed?"
+    );
+    
+    if (confirmation) {
+        const finalConfirmation = confirm(
+            "FINAL WARNING:\n\n" +
+            "You are about to permanently delete your account and all associated data.\n\n" +
+            "Type 'DELETE' to confirm:"
+        );
+        
+        if (finalConfirmation) {
+            const userInput = prompt("Please type 'DELETE' to confirm permanent account deletion:");
+            return userInput === 'DELETE';
+        }
+    }
+    
+    return false;
 }
 
 // Toast notification function
