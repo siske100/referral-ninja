@@ -4,25 +4,25 @@
 
 {% block content %}
 <div class="settings-container">
-    <!-- Header Section -->
+    <!-- Enhanced Header Section -->
     <div class="settings-header mb-5">
         <div class="row align-items-center">
             <div class="col-md-8">
                 <div class="d-flex align-items-center">
                     <div class="settings-icon me-4">
                         <div class="icon-circle bg-gradient-primary">
-                            <i class="fas fa-cog fa-lg"></i>
+                            <i class="fas fa-user-cog fa-lg"></i>
                         </div>
                     </div>
                     <div class="header-content">
-                        <h1 class="display-6 fw-bold text-gradient mb-1">Account Settings ⚙️</h1>
-                        <p class="text-muted mb-0">Manage your profile, security, and account preferences</p>
+                        <h1 class="h3 fw-bold text-dark mb-2">Account Settings</h1>
+                        <p class="text-muted mb-0">Manage your profile, security preferences, and account details</p>
                     </div>
                 </div>
             </div>
             <div class="col-md-4 text-md-end">
                 <div class="status-indicator">
-                    <span class="badge bg-success-subtle text-success fs-6 p-3">
+                    <span class="badge bg-success-subtle text-success fs-6 p-2 border border-success">
                         <i class="fas fa-shield-check me-2"></i>Account Active
                     </span>
                 </div>
@@ -31,33 +31,33 @@
     </div>
 
     <!-- Financial Statistics Section -->
-    <div class="row mb-4">
+    <div class="row mb-5">
         <div class="col-12">
-            <div class="settings-card">
-                <div class="card-header-gradient">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3">
                     <div class="d-flex align-items-center">
-                        <i class="fas fa-chart-bar fa-lg me-3"></i>
-                        <h4 class="mb-0">Financial Overview</h4>
+                        <i class="fas fa-chart-line text-primary me-3"></i>
+                        <h5 class="mb-0 text-dark">Financial Overview</h5>
                     </div>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-4">
                     <div class="row">
-                        <div class="col-md-4">
-                            <div class="stat-card">
-                                <h3>Total Earned</h3>
-                                <p class="stat-value">KSH {{ "%.2f"|format(total_earned) }}</p>
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <div class="stat-card border-start border-primary">
+                                <h6 class="text-uppercase text-muted small fw-bold">Total Earned</h6>
+                                <p class="stat-value text-dark mb-0">KSH {{ "%.2f"|format(total_earned) }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <div class="stat-card border-start border-info">
+                                <h6 class="text-uppercase text-muted small fw-bold">Total Withdrawn</h6>
+                                <p class="stat-value text-dark mb-0">KSH {{ "%.2f"|format(total_withdrawn) }}</p>
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="stat-card">
-                                <h3>Total Withdrawn</h3>
-                                <p class="stat-value">KSH {{ "%.2f"|format(total_withdrawn) }}</p>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="stat-card">
-                                <h3>Current Balance</h3>
-                                <p class="stat-value">KSH {{ "%.2f"|format(balance) }}</p>
+                            <div class="stat-card border-start border-success">
+                                <h6 class="text-uppercase text-muted small fw-bold">Current Balance</h6>
+                                <p class="stat-value text-dark mb-0">KSH {{ "%.2f"|format(balance) }}</p>
                             </div>
                         </div>
                     </div>
@@ -67,17 +67,17 @@
     </div>
 
     <!-- Emergency Access Links -->
-    <div class="alert alert-info mb-4" id="emergencyLinks" style="display: none;">
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <i class="fas fa-info-circle me-2"></i>
-                <strong>Having issues?</strong> Try our alternative settings pages:
+    <div class="alert alert-light mb-4 border" id="emergencyLinks" style="display: none;">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
+            <div class="mb-2 mb-md-0">
+                <i class="fas fa-life-ring text-primary me-2"></i>
+                <strong>Need assistance?</strong> Access alternative options:
             </div>
-            <div>
-                <a href="{{ url_for('settings') }}" class="btn btn-sm btn-outline-primary me-2">
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{{ url_for('settings') }}" class="btn btn-sm btn-outline-primary">
                     <i class="fas fa-cog me-1"></i>Simple Settings
                 </a>
-                <a href="{{ url_for('settings') }}" class="btn btn-sm btn-outline-secondary me-2">
+                <a href="{{ url_for('settings') }}" class="btn btn-sm btn-outline-secondary">
                     <i class="fas fa-bug me-1"></i>Debug Info
                 </a>
                 <a href="{{ url_for('health_check') }}" class="btn btn-sm btn-outline-success">
@@ -91,7 +91,7 @@
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
-                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show mb-4">
+                <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show mb-4 border-0 shadow-sm">
                     <div class="d-flex align-items-center">
                         <i class="fas fa-{% if category == 'error' %}exclamation-triangle{% elif category == 'success' %}check-circle{% else %}info-circle{% endif %} me-2 fa-lg"></i>
                         <div class="flex-grow-1">
@@ -111,55 +111,63 @@
         <!-- Left Column - Forms -->
         <div class="col-lg-8">
             <!-- Profile Settings Card -->
-            <div class="settings-card mb-4">
-                <div class="card-header-gradient">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3">
                     <div class="d-flex align-items-center">
-                        <i class="fas fa-user-edit fa-lg me-3"></i>
-                        <h4 class="mb-0">Profile Information</h4>
+                        <i class="fas fa-user-edit text-primary me-3"></i>
+                        <h5 class="mb-0 text-dark">Profile Information</h5>
                     </div>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-4">
                     <form method="POST" action="{{ url_for('settings') }}" id="profileForm">
-                        <div class="row g-4">
+                        <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <div class="form-floating">
-                                    <input type="email" class="form-control" id="email" name="email" 
+                                <label for="email" class="form-label text-dark fw-medium">Email Address</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="fas fa-envelope text-muted"></i></span>
+                                    <input type="email" class="form-control border-start-0" id="email" name="email" 
                                            value="{{ current_user.email }}" required>
-                                    <label for="email"><i class="fas fa-envelope me-2"></i>Email Address</label>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="form-floating">
-                                    <input type="tel" class="form-control" id="phone_number" name="phone_number" 
+                                <label for="phone_number" class="form-label text-dark fw-medium">Phone Number</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="fas fa-phone text-muted"></i></span>
+                                    <input type="tel" class="form-control border-start-0" id="phone_number" name="phone_number" 
                                            value="{{ current_user.phone }}" required pattern="^(254|07)\d{9}$"
                                            placeholder="254712345678 or 0712345678">
-                                    <label for="phone_number"><i class="fas fa-phone me-2"></i>Phone Number</label>
-                                    <div class="form-text">
-                                        <i class="fas fa-info-circle me-1"></i>Format: 254712345678 or 0712345678
-                                    </div>
+                                </div>
+                                <div class="form-text">
+                                    <i class="fas fa-info-circle me-1"></i>Format: 254712345678 or 0712345678
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="form-floating mt-3">
-                            <input type="text" class="form-control" id="full_name" name="full_name"
-                                   value="{{ current_user.name }}">
-                            <label for="full_name"><i class="fas fa-user me-2"></i>Full Name (Optional)</label>
+                        <div class="mb-3">
+                            <label for="full_name" class="form-label text-dark fw-medium">Full Name (Optional)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="fas fa-user text-muted"></i></span>
+                                <input type="text" class="form-control border-start-0" id="full_name" name="full_name"
+                                       value="{{ current_user.name }}">
+                            </div>
                         </div>
 
-                        <div class="form-floating mt-3">
-                            <input type="text" class="form-control" value="{{ current_user.username }}" readonly>
-                            <label><i class="fas fa-user me-2"></i>Username</label>
+                        <div class="mb-4">
+                            <label class="form-label text-dark fw-medium">Username</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-end-0"><i class="fas fa-at text-muted"></i></span>
+                                <input type="text" class="form-control border-start-0" value="{{ current_user.username }}" readonly>
+                            </div>
                             <div class="form-text">
                                 <i class="fas fa-info-circle me-1"></i>Username cannot be changed
                             </div>
                         </div>
 
-                        <div class="mt-4">
-                            <button type="submit" class="btn btn-primary btn-lg px-4" id="profileSubmitBtn">
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="submit" class="btn btn-primary px-4" id="profileSubmitBtn">
                                 <i class="fas fa-save me-2"></i>Update Profile
                             </button>
-                            <button type="button" class="btn btn-outline-secondary btn-lg px-4 ms-2" onclick="testSettings()">
+                            <button type="button" class="btn btn-outline-secondary px-4" onclick="testSettings()">
                                 <i class="fas fa-bug me-2"></i>Test Connection
                             </button>
                         </div>
@@ -168,85 +176,85 @@
             </div>
 
             <!-- Quick Password Change Card -->
-            <div class="settings-card mb-4">
-                <div class="card-header-gradient">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3">
                     <div class="d-flex align-items-center">
-                        <i class="fas fa-key fa-lg me-3"></i>
-                        <h4 class="mb-0">Quick Password Change</h4>
+                        <i class="fas fa-key text-primary me-3"></i>
+                        <h5 class="mb-0 text-dark">Quick Password Change</h5>
                     </div>
                 </div>
-                <div class="card-body">
-                    <div class="alert alert-info d-flex align-items-center">
-                        <i class="fas fa-info-circle me-3 fa-lg"></i>
-                        <div>
-                            <strong>Quick & Easy:</strong> Change your login password instantly without email verification. 
-                            Simply enter your new password below.
+                <div class="card-body p-4">
+                    <div class="alert alert-info border-0 mb-4">
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-info-circle text-primary me-3 mt-1"></i>
+                            <div>
+                                <strong>Quick & Easy:</strong> Change your login password instantly without email verification. 
+                                Simply enter your new password below.
+                            </div>
                         </div>
                     </div>
 
                     <!-- Updated form action -->
                     <form method="POST" id="quickPasswordForm" action="{{ url_for('change_password') }}">
-                        <div class="row g-3">
+                        <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <div class="form-floating">
-                                    <input type="password" class="form-control" id="new_password_quick" 
+                                <label for="new_password_quick" class="form-label text-dark fw-medium">New Password</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="fas fa-lock text-muted"></i></span>
+                                    <input type="password" class="form-control border-start-0" id="new_password_quick" 
                                            name="new_password" required minlength="6" placeholder="New password">
-                                    <label for="new_password_quick">
-                                        <i class="fas fa-lock me-2"></i>New Password
-                                    </label>
-                                    <span class="password-toggle" onclick="togglePasswordVisibility('new_password_quick')">
+                                    <span class="input-group-text bg-light password-toggle" onclick="togglePasswordVisibility('new_password_quick')">
                                         <i class="fas fa-eye"></i>
                                     </span>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="form-floating">
-                                    <input type="password" class="form-control" id="confirm_password_quick" 
+                                <label for="confirm_password_quick" class="form-label text-dark fw-medium">Confirm New Password</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="fas fa-redo text-muted"></i></span>
+                                    <input type="password" class="form-control border-start-0" id="confirm_password_quick" 
                                            name="confirm_password" required minlength="6" placeholder="Confirm new password">
-                                    <label for="confirm_password_quick">
-                                        <i class="fas fa-redo me-2"></i>Confirm New Password
-                                    </label>
-                                    <span class="password-toggle" onclick="togglePasswordVisibility('confirm_password_quick')">
+                                    <span class="input-group-text bg-light password-toggle" onclick="togglePasswordVisibility('confirm_password_quick')">
                                         <i class="fas fa-eye"></i>
                                     </span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Password strength and requirements (unchanged) -->
-                        <div class="password-strength mt-3">
-                            <div class="progress mb-2" style="height: 8px;">
+                        <!-- Password strength and requirements -->
+                        <div class="password-strength mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <small class="text-muted">Password strength:</small>
+                                <small class="text-muted" id="passwordStrengthText">Very Weak</small>
+                            </div>
+                            <div class="progress mb-3" style="height: 6px;">
                                 <div class="progress-bar" id="passwordStrengthBar" role="progressbar" 
                                      style="width: 0%; background-color: #dc3545;"></div>
                             </div>
-                            <small class="text-muted" id="passwordStrengthText">
-                                Password strength: Very Weak
-                            </small>
                         </div>
 
-                        <div class="password-requirements mt-3">
-                            <small class="text-muted d-block mb-2">
-                                <i class="fas fa-info-circle me-1"></i>
-                                <strong>Password Requirements:</strong>
+                        <div class="password-requirements mb-4">
+                            <small class="text-muted d-block mb-2 fw-medium">
+                                Password Requirements:
                             </small>
                             <div class="row">
                                 <div class="col-md-6">
-                                    <small class="text-muted d-block">
-                                        <i class="fas fa-check-circle text-success me-1" id="reqLength"></i>
+                                    <small class="text-muted d-block mb-1">
+                                        <i class="fas fa-check-circle text-muted me-1" id="reqLength"></i>
                                         At least 6 characters
                                     </small>
-                                    <small class="text-muted d-block">
-                                        <i class="fas fa-check-circle text-success me-1" id="reqUppercase"></i>
+                                    <small class="text-muted d-block mb-1">
+                                        <i class="fas fa-check-circle text-muted me-1" id="reqUppercase"></i>
                                         One uppercase letter
                                     </small>
                                 </div>
                                 <div class="col-md-6">
-                                    <small class="text-muted d-block">
-                                        <i class="fas fa-check-circle text-success me-1" id="reqLowercase"></i>
+                                    <small class="text-muted d-block mb-1">
+                                        <i class="fas fa-check-circle text-muted me-1" id="reqLowercase"></i>
                                         One lowercase letter
                                     </small>
-                                    <small class="text-muted d-block">
-                                        <i class="fas fa-check-circle text-success me-1" id="reqNumber"></i>
+                                    <small class="text-muted d-block mb-1">
+                                        <i class="fas fa-check-circle text-muted me-1" id="reqNumber"></i>
                                         One number
                                     </small>
                                 </div>
@@ -254,23 +262,26 @@
                         </div>
 
                         <!-- OTP Verification Section (initially hidden) -->
-                        <div id="otpSection" style="display: none;" class="mt-4 p-3 border rounded bg-light">
-                            <h5 class="mb-3"><i class="fas fa-shield-alt me-2"></i>OTP Verification</h5>
-                            <div class="form-floating">
-                                <input type="text" class="form-control" id="otp_code" name="otp_code" 
-                                       placeholder="Enter OTP" maxlength="6" pattern="[0-9]{6}">
-                                <label for="otp_code"><i class="fas fa-key me-2"></i>Enter OTP Code</label>
+                        <div id="otpSection" style="display: none;" class="p-3 border rounded bg-light mb-4">
+                            <h6 class="mb-3 text-dark"><i class="fas fa-shield-alt me-2"></i>OTP Verification</h6>
+                            <div class="mb-3">
+                                <label for="otp_code" class="form-label text-dark fw-medium">Enter OTP Code</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="fas fa-key text-muted"></i></span>
+                                    <input type="text" class="form-control border-start-0" id="otp_code" name="otp_code" 
+                                           placeholder="Enter OTP" maxlength="6" pattern="[0-9]{6}">
+                                </div>
                                 <div class="form-text">
                                     <i class="fas fa-info-circle me-1"></i>Check your email for the 6-digit OTP code
                                 </div>
                             </div>
                         </div>
 
-                        <div class="mt-4">
-                            <button type="submit" class="btn btn-success btn-lg px-4" id="quickPasswordBtn" disabled>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="submit" class="btn btn-success px-4" id="quickPasswordBtn" disabled>
                                 <i class="fas fa-key me-2"></i>Change Password
                             </button>
-                            <button type="button" class="btn btn-outline-secondary btn-lg px-4 ms-2" 
+                            <button type="button" class="btn btn-outline-secondary px-4" 
                                     onclick="toggleAllPasswords()">
                                 <i class="fas fa-eye me-2"></i>Show/Hide All
                             </button>
@@ -280,42 +291,42 @@
             </div>
 
             <!-- Database Health Card -->
-            <div class="settings-card mb-4">
-                <div class="card-header-gradient">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3">
                     <div class="d-flex align-items-center">
-                        <i class="fas fa-database fa-lg me-3"></i>
-                        <h4 class="mb-0">System Status</h4>
+                        <i class="fas fa-database text-primary me-3"></i>
+                        <h5 class="mb-0 text-dark">System Status</h5>
                     </div>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-4">
                     <div class="row text-center">
-                        <div class="col-md-4">
-                            <div class="system-status-item">
-                                <i class="fas fa-database fa-2x text-primary mb-2"></i>
-                                <h5 id="dbStatus">Checking...</h5>
-                                <p class="text-muted">Database</p>
+                        <div class="col-md-4 mb-3">
+                            <div class="system-status-item p-3 border rounded">
+                                <i class="fas fa-database fa-lg text-primary mb-2"></i>
+                                <h6 id="dbStatus" class="mb-1">Checking...</h6>
+                                <p class="text-muted small mb-0">Database</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="system-status-item p-3 border rounded">
+                                <i class="fas fa-server fa-lg text-success mb-2"></i>
+                                <h6 id="appStatus" class="mb-1">Checking...</h6>
+                                <p class="text-muted small mb-0">Application</p>
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <div class="system-status-item">
-                                <i class="fas fa-server fa-2x text-success mb-2"></i>
-                                <h5 id="appStatus">Checking...</h5>
-                                <p class="text-muted">Application</p>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="system-status-item">
-                                <i class="fas fa-user-check fa-2x text-info mb-2"></i>
-                                <h5 id="userStatus">Checking...</h5>
-                                <p class="text-muted">User Session</p>
+                            <div class="system-status-item p-3 border rounded">
+                                <i class="fas fa-user-check fa-lg text-info mb-2"></i>
+                                <h6 id="userStatus" class="mb-1">Checking...</h6>
+                                <p class="text-muted small mb-0">User Session</p>
                             </div>
                         </div>
                     </div>
-                    <div class="mt-3 text-center">
+                    <div class="mt-4 text-center">
                         <button class="btn btn-outline-primary me-2" onclick="checkSystemStatus()">
                             <i class="fas fa-sync-alt me-2"></i>Refresh Status
                         </button>
-                        <button class="btn btn-outline-info" onclick="showDetailedStatus()">
+                        <button class="btn btn-outline-secondary" onclick="showDetailedStatus()">
                             <i class="fas fa-chart-bar me-2"></i>Detailed Report
                         </button>
                     </div>
@@ -326,18 +337,18 @@
         <!-- Right Column - Info & Danger Zone -->
         <div class="col-lg-4">
             <!-- Account Overview Card -->
-            <div class="settings-card mb-4">
-                <div class="card-header-gradient">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3">
                     <div class="d-flex align-items-center">
-                        <i class="fas fa-chart-pie fa-lg me-3"></i>
-                        <h4 class="mb-0">Account Overview</h4>
+                        <i class="fas fa-user-circle text-primary me-3"></i>
+                        <h5 class="mb-0 text-dark">Account Overview</h5>
                     </div>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-3">
                     <div class="account-stats">
                         <div class="stat-item d-flex justify-content-between align-items-center py-2 border-bottom">
-                            <span class="stat-label">
-                                <i class="fas fa-user-check me-2 text-success"></i>Status
+                            <span class="stat-label text-muted">
+                                <i class="fas fa-user-check me-2"></i>Status
                             </span>
                             <span class="stat-value">
                                 {% if current_user.is_verified %}
@@ -349,15 +360,15 @@
                         </div>
                         
                         <div class="stat-item d-flex justify-content-between align-items-center py-2 border-bottom">
-                            <span class="stat-label">
-                                <i class="fas fa-calendar me-2 text-primary"></i>Member Since
+                            <span class="stat-label text-muted">
+                                <i class="fas fa-calendar me-2"></i>Member Since
                             </span>
                             <span class="stat-value">{{ safe_strftime(current_user.created_at, '%Y-%m-%d') }}</span>
                         </div>
                         
                         <div class="stat-item d-flex justify-content-between align-items-center py-2 border-bottom">
-                            <span class="stat-label">
-                                <i class="fas fa-trophy me-2 text-warning"></i>User Rank
+                            <span class="stat-label text-muted">
+                                <i class="fas fa-trophy me-2"></i>User Rank
                             </span>
                             <span class="stat-value">
                                 <span class="rank-badge rank-{{ current_user.user_rank|lower if current_user.user_rank else 'bronze' }}">
@@ -367,27 +378,27 @@
                         </div>
                         
                         <div class="stat-item d-flex justify-content-between align-items-center py-2 border-bottom">
-                            <span class="stat-label">
-                                <i class="fas fa-users me-2 text-info"></i>Total Referrals
+                            <span class="stat-label text-muted">
+                                <i class="fas fa-users me-2"></i>Total Referrals
                             </span>
-                            <span class="stat-value fw-bold">{{ referred_count }}</span>
+                            <span class="stat-value fw-medium">{{ referred_count }}</span>
                         </div>
                         
                         <div class="stat-item d-flex justify-content-between align-items-center py-2 border-bottom">
-                            <span class="stat-label">
-                                <i class="fas fa-money-bill-wave me-2 text-success"></i>Total Commission
+                            <span class="stat-label text-muted">
+                                <i class="fas fa-money-bill-wave me-2"></i>Total Commission
                             </span>
-                            <span class="stat-value fw-bold text-success">
+                            <span class="stat-value fw-medium text-success">
                                 KSH {{ "%.2f"|format(total_earned) }}
                             </span>
                         </div>
                         
                         <div class="stat-item d-flex justify-content-between align-items-center py-2">
-                            <span class="stat-label">
-                                <i class="fas fa-code me-2 text-secondary"></i>Referral Code
+                            <span class="stat-label text-muted">
+                                <i class="fas fa-code me-2"></i>Referral Code
                             </span>
                             <span class="stat-value">
-                                <code class="referral-code">{{ current_user.referral_code if current_user.referral_code else 'N/A' }}</code>
+                                <code class="referral-code bg-light p-1 rounded">{{ current_user.referral_code if current_user.referral_code else 'N/A' }}</code>
                             </span>
                         </div>
                     </div>
@@ -395,26 +406,26 @@
             </div>
 
             <!-- Quick Actions Card -->
-            <div class="settings-card mb-4">
-                <div class="card-header-gradient">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3">
                     <div class="d-flex align-items-center">
-                        <i class="fas fa-bolt fa-lg me-3"></i>
-                        <h4 class="mb-0">Quick Actions</h4>
+                        <i class="fas fa-bolt text-primary me-3"></i>
+                        <h5 class="mb-0 text-dark">Quick Actions</h5>
                     </div>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-3">
                     <div class="quick-actions">
-                        <a href="{{ url_for('referral_system') }}" class="btn btn-outline-primary w-100 mb-3 py-3">
+                        <a href="{{ url_for('referral_system') }}" class="btn btn-outline-primary w-100 mb-2 py-2 text-start">
                             <i class="fas fa-share-alt me-2"></i>Referral System
                         </a>
-                        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-success w-100 mb-3 py-3">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary w-100 mb-2 py-2 text-start">
                             <i class="fas fa-tachometer-alt me-2"></i>Dashboard
                         </a>
-                        <a href="{{ url_for('withdraw') }}" class="btn btn-outline-info w-100 mb-3 py-3">
+                        <a href="{{ url_for('withdraw') }}" class="btn btn-outline-secondary w-100 mb-2 py-2 text-start">
                             <i class="fas fa-money-bill-wave me-2"></i>Withdraw Funds
                         </a>
                         <a href="{{ url_for('account_activation') if not current_user.is_verified else '#' }}" 
-                           class="btn btn-{{ 'warning' if not current_user.is_verified else 'outline-secondary' }} w-100 py-3"
+                           class="btn btn-{{ 'warning' if not current_user.is_verified else 'outline-secondary' }} w-100 py-2 text-start"
                            {% if current_user.is_verified %}disabled{% endif %}>
                             <i class="fas fa-{{ 'exclamation-triangle' if not current_user.is_verified else 'check' }} me-2"></i>
                             {{ 'Complete Verification' if not current_user.is_verified else 'Verified' }}
@@ -424,25 +435,25 @@
             </div>
 
             <!-- Danger Zone Card -->
-            <div class="settings-card danger-zone">
-                <div class="card-header-danger">
+            <div class="card shadow-sm border-danger">
+                <div class="card-header bg-white py-3 border-danger">
                     <div class="d-flex align-items-center">
-                        <i class="fas fa-exclamation-triangle fa-lg me-3"></i>
-                        <h4 class="mb-0">Danger Zone</h4>
+                        <i class="fas fa-exclamation-triangle text-danger me-3"></i>
+                        <h5 class="mb-0 text-dark">Danger Zone</h5>
                     </div>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-4">
                     <div class="danger-content text-center">
                         <div class="danger-icon mb-3">
-                            <i class="fas fa-skull-crossbones fa-2x text-danger"></i>
+                            <i class="fas fa-exclamation-circle fa-2x text-danger"></i>
                         </div>
-                        <h5 class="text-danger mb-3">Permanent Account Deletion</h5>
-                        <p class="text-muted mb-4">
+                        <h6 class="text-danger mb-3">Permanent Account Deletion</h6>
+                        <p class="text-muted small mb-4">
                             This action cannot be undone. All your data, including earnings, referrals, and transaction history will be permanently deleted.
                         </p>
                         
                         <form method="POST" action="{{ url_for('delete_account') }}" id="deleteAccountForm" onsubmit="return confirmAccountDeletion()">
-                            <button type="submit" class="btn btn-danger btn-lg w-100 py-3">
+                            <button type="submit" class="btn btn-outline-danger w-100 py-2">
                                 <i class="fas fa-trash-alt me-2"></i>Permanently Delete Account
                             </button>
                         </form>
@@ -468,18 +479,12 @@
 }
 
 .settings-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: white;
     padding: 2rem;
-    border-radius: 20px;
-    color: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     margin-top: 1rem;
-}
-
-.text-gradient {
-    background: linear-gradient(45deg, #fff, #e3f2fd);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    border: 1px solid rgba(0,0,0,0.05);
 }
 
 .settings-icon {
@@ -487,205 +492,127 @@
 }
 
 .icon-circle {
-    width: 80px;
-    height: 80px;
+    width: 70px;
+    height: 70px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
+    background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
 }
 
-.bg-gradient-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.settings-card {
-    background: white;
-    border-radius: 20px;
-    box-shadow: 0 4px 25px rgba(0,0,0,0.08);
-    border: none;
-    overflow: hidden;
+.card {
+    border-radius: 12px;
     transition: all 0.3s ease;
 }
 
-.settings-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 35px rgba(0,0,0,0.12);
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08) !important;
 }
 
-.card-header-gradient {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 1.5rem;
-    border-bottom: none;
-}
-
-.card-header-danger {
-    background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
-    color: white;
-    padding: 1.5rem;
-    border-bottom: none;
-}
-
-.card-header-gradient h4,
-.card-header-danger h4 {
-    margin: 0;
-    font-weight: 600;
-}
-
-.card-body {
-    padding: 2rem;
+.card-header {
+    border-bottom: 1px solid rgba(0,0,0,0.05);
 }
 
 /* Stat Card Styles */
 .stat-card {
-    background: #f8f9fa;
-    padding: 1.5rem;
-    border-radius: 12px;
-    border-left: 4px solid #667eea;
+    padding: 1rem 0;
     transition: all 0.3s ease;
-    text-align: center;
     height: 100%;
 }
 
-.stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-}
-
-.stat-card h3 {
-    font-size: 0.9rem;
-    color: #6c757d;
+.stat-card h6 {
+    font-size: 0.8rem;
     margin-bottom: 0.5rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
 }
 
 .stat-card .stat-value {
-    font-size: 1.5rem;
-    font-weight: 800;
-    color: #2c3e50;
+    font-size: 1.25rem;
+    font-weight: 700;
     line-height: 1;
     margin: 0;
 }
 
-.form-floating {
-    position: relative;
-}
-
 .form-control {
-    border-radius: 12px;
-    border: 2px solid #e9ecef;
-    padding: 1rem 1.5rem;
-    font-size: 1rem;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
     transition: all 0.3s ease;
 }
 
 .form-control:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-    transform: translateY(-2px);
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
 }
 
 .form-label {
     font-weight: 500;
+    margin-bottom: 0.5rem;
 }
 
 .btn {
-    border-radius: 12px;
-    font-weight: 600;
+    border-radius: 8px;
+    font-weight: 500;
     transition: all 0.3s ease;
-    border: none;
+    border: 1px solid transparent;
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: #3498db;
+    border-color: #3498db;
 }
 
 .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-}
-
-.btn-warning {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    color: white;
-}
-
-.btn-warning:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 20px rgba(245, 87, 108, 0.4);
+    background: #2980b9;
+    border-color: #2980b9;
+    transform: translateY(-1px);
 }
 
 .btn-success {
-    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-    color: white;
+    background: #27ae60;
+    border-color: #27ae60;
 }
 
 .btn-success:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 20px rgba(40, 167, 69, 0.4);
-}
-
-.btn-danger {
-    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
-    color: white;
-}
-
-.btn-danger:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 20px rgba(255, 107, 107, 0.4);
+    background: #219653;
+    border-color: #219653;
+    transform: translateY(-1px);
 }
 
 .btn-outline-primary {
-    border: 2px solid #667eea;
-    color: #667eea;
-    background: transparent;
+    color: #3498db;
+    border-color: #3498db;
 }
 
 .btn-outline-primary:hover {
-    background: #667eea;
+    background: #3498db;
     color: white;
-    transform: translateY(-2px);
-}
-
-.btn-outline-success {
-    border: 2px solid #28a745;
-    color: #28a745;
-    background: transparent;
-}
-
-.btn-outline-success:hover {
-    background: #28a745;
-    color: white;
-    transform: translateY(-2px);
-}
-
-.btn-outline-info {
-    border: 2px solid #17a2b8;
-    color: #17a2b8;
-    background: transparent;
-}
-
-.btn-outline-info:hover {
-    background: #17a2b8;
-    color: white;
-    transform: translateY(-2px);
+    transform: translateY(-1px);
 }
 
 .btn-outline-secondary {
-    border: 2px solid #6c757d;
     color: #6c757d;
-    background: transparent;
+    border-color: #e0e0e0;
 }
 
 .btn-outline-secondary:hover {
-    background: #6c757d;
+    background: #f8f9fa;
+    color: #495057;
+    transform: translateY(-1px);
+}
+
+.btn-outline-danger {
+    color: #e74c3c;
+    border-color: #e74c3c;
+}
+
+.btn-outline-danger:hover {
+    background: #e74c3c;
     color: white;
-    transform: translateY(-2px);
+    transform: translateY(-1px);
 }
 
 /* Account Stats */
@@ -699,27 +626,25 @@
 
 .stat-item:hover {
     background-color: #f8f9fa;
-    border-radius: 8px;
-    padding-left: 10px !important;
-    padding-right: 10px !important;
+    border-radius: 6px;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
 }
 
 .stat-label {
-    font-weight: 500;
-    color: #495057;
+    font-weight: 400;
 }
 
 .stat-value {
-    font-weight: 600;
-    color: #2c3e50;
+    font-weight: 500;
 }
 
 /* Rank Badges */
 .rank-badge {
-    padding: 0.4rem 0.8rem;
-    border-radius: 20px;
-    font-weight: 700;
-    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.7rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -751,35 +676,9 @@
 
 /* Referral Code */
 .referral-code {
-    background: #f8f9fa;
-    padding: 0.25rem 0.5rem;
-    border-radius: 6px;
     font-family: 'Courier New', monospace;
     font-weight: 600;
-    color: #667eea;
-}
-
-/* Danger Zone */
-.danger-zone {
-    border: 2px solid transparent;
-    background: linear-gradient(white, white), 
-                linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
-    background-origin: border-box;
-    background-clip: content-box, border-box;
-}
-
-.danger-content {
-    padding: 1rem 0;
-}
-
-.danger-icon {
-    opacity: 0.8;
-}
-
-/* Quick Actions */
-.quick-actions .btn {
-    transition: all 0.3s ease;
-    border-radius: 12px;
+    color: #3498db;
 }
 
 /* Password Requirements */
@@ -787,43 +686,35 @@
     background: #f8f9fa;
     padding: 1rem;
     border-radius: 8px;
-    border-left: 4px solid #667eea;
 }
 
 .password-strength .progress {
-    border-radius: 10px;
+    border-radius: 6px;
 }
 
 /* Password requirement icons */
-.fa-check-circle.text-success {
-    opacity: 0.3;
+.fa-check-circle.text-muted {
+    opacity: 0.5;
 }
 
 .requirement-met {
+    color: #27ae60 !important;
     opacity: 1 !important;
 }
 
 /* System Status */
 .system-status-item {
-    padding: 1rem;
-    border-radius: 10px;
     transition: all 0.3s ease;
 }
 
 .system-status-item:hover {
     background-color: #f8f9fa;
-    transform: translateY(-2px);
 }
 
 /* Password Toggle */
 .password-toggle {
-    position: absolute;
-    right: 15px;
-    top: 50%;
-    transform: translateY(-50%);
     cursor: pointer;
     color: #6c757d;
-    z-index: 10;
 }
 
 .password-toggle:hover {
@@ -832,15 +723,15 @@
 
 /* Status indicators */
 .status-good {
-    color: #28a745;
+    color: #27ae60;
 }
 
 .status-warning {
-    color: #ffc107;
+    color: #f39c12;
 }
 
 .status-error {
-    color: #dc3545;
+    color: #e74c3c;
 }
 
 .status-checking {
@@ -849,19 +740,22 @@
 
 /* Toast customization */
 .toast {
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border: none;
 }
 
 /* OTP Section Styles */
 #otpSection {
-    border: 2px solid #e3f2fd;
-    background: linear-gradient(135deg, #f8fbff 0%, #f0f4ff 100%);
+    border: 1px solid #e3f2fd;
+    background: #f8fbff;
 }
 
-#otpSection h5 {
-    color: #1976d2;
-    font-weight: 600;
+/* Input Group Styles */
+.input-group-text {
+    background-color: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    color: #6c757d;
 }
 
 /* Responsive Design */
@@ -878,11 +772,6 @@
     .card-body {
         padding: 1.5rem;
     }
-    
-    .btn-lg {
-        padding: 0.75rem 1.5rem;
-        font-size: 1rem;
-    }
 
     .system-status-item {
         margin-bottom: 1rem;
@@ -892,22 +781,24 @@
         margin-bottom: 1rem;
     }
     
-    .emergency-links .btn {
-        margin-bottom: 0.5rem;
+    .btn {
         width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    .d-flex.flex-wrap.gap-2 .btn {
+        width: auto;
     }
 }
 
 /* Animation for interactive elements */
-@keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-.settings-card:hover .card-header-gradient,
-.settings-card:hover .card-header-danger {
-    animation: pulse 2s infinite;
+.settings-card {
+    animation: fadeIn 0.5s ease-out;
 }
 
 /* Loading animations */
@@ -918,6 +809,25 @@
 
 .fa-spinner {
     animation: spin 1s linear infinite;
+}
+
+/* Custom scrollbar for webkit browsers */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
 }
 </style>
 
@@ -1007,7 +917,7 @@ function initializeSystemStatus() {
 
 function initializeInteractiveElements() {
     // Add hover effects to interactive elements
-    const interactiveElements = document.querySelectorAll('.stat-card, .settings-card, .btn');
+    const interactiveElements = document.querySelectorAll('.stat-card, .card, .btn');
     
     interactiveElements.forEach(element => {
         element.addEventListener('mouseenter', function() {
@@ -1086,43 +996,43 @@ function updatePasswordStrength() {
     
     // Update progress bar color
     if (strength < 25) {
-        strengthBar.style.backgroundColor = '#dc3545';
-        strengthText.textContent = 'Password strength: Very Weak';
+        strengthBar.style.backgroundColor = '#e74c3c';
+        strengthText.textContent = 'Very Weak';
         strengthText.className = 'text-danger';
     } else if (strength < 50) {
-        strengthBar.style.backgroundColor = '#fd7e14';
-        strengthText.textContent = 'Password strength: Weak';
+        strengthBar.style.backgroundColor = '#e67e22';
+        strengthText.textContent = 'Weak';
         strengthText.className = 'text-warning';
     } else if (strength < 75) {
-        strengthBar.style.backgroundColor = '#ffc107';
-        strengthText.textContent = 'Password strength: Fair';
+        strengthBar.style.backgroundColor = '#f39c12';
+        strengthText.textContent = 'Fair';
         strengthText.className = 'text-warning';
     } else if (strength < 100) {
-        strengthBar.style.backgroundColor = '#20c997';
-        strengthText.textContent = 'Password strength: Good';
+        strengthBar.style.backgroundColor = '#2ecc71';
+        strengthText.textContent = 'Good';
         strengthText.className = 'text-success';
     } else {
-        strengthBar.style.backgroundColor = '#198754';
-        strengthText.textContent = 'Password strength: Strong';
+        strengthBar.style.backgroundColor = '#27ae60';
+        strengthText.textContent = 'Strong';
         strengthText.className = 'text-success';
     }
 
     // Update requirement icons
     document.getElementById('reqLength').className = requirements.length ? 
         'fas fa-check-circle text-success requirement-met me-1' : 
-        'fas fa-check-circle text-success me-1';
+        'fas fa-check-circle text-muted me-1';
     
     document.getElementById('reqUppercase').className = requirements.uppercase ? 
         'fas fa-check-circle text-success requirement-met me-1' : 
-        'fas fa-check-circle text-success me-1';
+        'fas fa-check-circle text-muted me-1';
     
     document.getElementById('reqLowercase').className = requirements.lowercase ? 
         'fas fa-check-circle text-success requirement-met me-1' : 
-        'fas fa-check-circle text-success me-1';
+        'fas fa-check-circle text-muted me-1';
     
     document.getElementById('reqNumber').className = requirements.number ? 
         'fas fa-check-circle text-success requirement-met me-1' : 
-        'fas fa-check-circle text-success me-1';
+        'fas fa-check-circle text-muted me-1';
 
     // Enable/disable submit button based on password match and strength
     const passwordsMatch = password === confirmPassword && password.length > 0;
