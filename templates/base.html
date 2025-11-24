@@ -165,9 +165,9 @@
             position: relative;
         }
 
-        /* Responsive Content Padding */
+        /* Responsive Content Padding - REDUCED BY 90% */
         .content-inner {
-            padding: 1.5rem;
+            padding: 1.5rem 0.15rem; /* Reduced from 1.5rem to 0.15rem (90% reduction) */
             position: relative;
         }
 
@@ -600,7 +600,7 @@
         /* Extra Small Devices (Phones, 576px and down) */
         @media (max-width: 576px) {
             .content-inner {
-                padding: 1rem;
+                padding: 1rem 0.1rem; /* Reduced from 1rem to 0.1rem */
             }
 
             .support-button,
@@ -668,7 +668,7 @@
         /* Small Devices (576px to 768px) */
         @media (min-width: 576px) and (max-width: 768px) {
             .content-inner {
-                padding: 1.5rem;
+                padding: 1.5rem 0.15rem; /* Reduced from 1.5rem to 0.15rem */
             }
 
             .support-button,
@@ -693,7 +693,7 @@
         /* Medium Devices (768px to 992px) */
         @media (min-width: 768px) and (max-width: 992px) {
             .content-inner {
-                padding: 1.75rem;
+                padding: 1.75rem 0.175rem; /* Reduced from 1.75rem to 0.175rem */
             }
 
             .main-content {
@@ -704,14 +704,14 @@
         /* Large Devices (992px to 1200px) */
         @media (min-width: 992px) and (max-width: 1200px) {
             .content-inner {
-                padding: 2rem;
+                padding: 2rem 0.2rem; /* Reduced from 2rem to 0.2rem */
             }
         }
 
         /* Extra Large Devices (1200px and up) */
         @media (min-width: 1200px) {
             .content-inner {
-                padding: 2rem;
+                padding: 2rem 0.2rem; /* Reduced from 2rem to 0.2rem */
                 max-width: 1200px;
                 margin: 0 auto;
             }
@@ -736,13 +736,13 @@
         /* Orientation Specific */
         @media (orientation: portrait) {
             .content-inner {
-                padding: 1.5rem;
+                padding: 1.5rem 0.15rem; /* Reduced side padding */
             }
         }
 
         @media (orientation: landscape) and (max-height: 500px) {
             .content-inner {
-                padding: 1rem;
+                padding: 1rem 0.1rem; /* Reduced side padding */
             }
             
             .support-button,
