@@ -1,879 +1,499 @@
-
-{% extends "base.html" %}
-
-{% block title %}Performance Analytics - ReferralNinja{% endblock %}
-
-{% block content %}
-<div class="analytics-container">
-    <!-- Enhanced Header Section -->
-    <div class="analytics-header">
-        <div class="header-background">
-            <div class="container-fluid">
-                <div class="row align-items-center py-4">
-                    <div class="col-md-8">
-                        <div class="d-flex align-items-center">
-                            <div class="header-icon-container me-4">
-                                <div class="icon-wrapper bg-white shadow">
-                                    <i class="fas fa-chart-pie text-primary"></i>
-                                </div>
-                            </div>
-                            <div class="header-text">
-                                <h1 class="display-6 fw-bold text-white mb-2">Performance Dashboard</h1>
-                                <p class="text-white-50 mb-0">Comprehensive analytics for your referral performance and earnings</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4 text-md-end">
-                        <div class="status-indicator">
-                            <span class="status-badge bg-white text-primary">
-                                <i class="fas fa-circle text-success me-2"></i>
-                                Live Analytics • Updated Real-time
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Financial Summary Cards -->
-    <div class="container-fluid mt-4">
-        <div class="row g-4 mb-5">
-            <div class="col-xl-3 col-md-6">
-                <div class="metric-card earnings-gradient">
-                    <div class="card-body">
-                        <div class="metric-content">
-                            <div class="metric-icon">
-                                <i class="fas fa-money-bill-trend-up"></i>
-                            </div>
-                            <div class="metric-data">
-                                <h3 class="metric-value">KSH {{ "%.2f"|format(total_earned) }}</h3>
-                                <p class="metric-label">Total Earnings</p>
-                                <div class="metric-trend positive">
-                                    <i class="fas fa-chart-line me-1"></i>
-                                    <span>Lifetime Performance</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-xl-3 col-md-6">
-                <div class="metric-card balance-gradient">
-                    <div class="card-body">
-                        <div class="metric-content">
-                            <div class="metric-icon">
-                                <i class="fas fa-wallet"></i>
-                            </div>
-                            <div class="metric-data">
-                                <h3 class="metric-value">KSH {{ "%.2f"|format(pending_balance) }}</h3>
-                                <p class="metric-label">Available Balance</p>
-                                <div class="metric-trend neutral">
-                                    <i class="fas fa-clock me-1"></i>
-                                    <span>Ready for Withdrawal</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-xl-3 col-md-6">
-                <div class="metric-card withdrawn-gradient">
-                    <div class="card-body">
-                        <div class="metric-content">
-                            <div class="metric-icon">
-                                <i class="fas fa-piggy-bank"></i>
-                            </div>
-                            <div class="metric-data">
-                                <h3 class="metric-value">KSH {{ "%.2f"|format(total_withdrawn) }}</h3>
-                                <p class="metric-label">Total Withdrawn</p>
-                                <div class="metric-trend positive">
-                                    <i class="fas fa-check-circle me-1"></i>
-                                    <span>Successfully Processed</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-xl-3 col-md-6">
-                <div class="metric-card performance-gradient">
-                    <div class="card-body">
-                        <div class="metric-content">
-                            <div class="metric-icon">
-                                <i class="fas fa-trophy"></i>
-                            </div>
-                            <div class="metric-data">
-                                <h3 class="metric-value">{{ referral_stats|length if referral_stats else 0 }}</h3>
-                                <p class="metric-label">Active Campaigns</p>
-                                <div class="metric-trend positive">
-                                    <i class="fas fa-users me-1"></i>
-                                    <span>Referral Network</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Analytics Dashboard -->
-        <div class="row g-4">
-            <!-- Growth Chart -->
-            <div class="col-lg-8">
-                <div class="dashboard-card">
-                    <div class="card-header border-0 bg-transparent">
-                        <div class="d-flex align-items-center justify-content-between mb-3">
-                            <div class="section-title">
-                                <h4 class="fw-bold mb-1">
-                                    <i class="fas fa-chart-line text-primary me-2"></i>
-                                    Referral Growth Analytics
-                                </h4>
-                                <p class="text-muted mb-0">Track your referral performance over time</p>
-                            </div>
-                            <div class="time-filters">
-                                <div class="btn-group" role="group">
-                                    <input type="radio" class="btn-check" name="timeFilter" id="week" autocomplete="off" checked>
-                                    <label class="btn btn-outline-primary btn-sm" for="week">7D</label>
-                                    
-                                    <input type="radio" class="btn-check" name="timeFilter" id="month" autocomplete="off">
-                                    <label class="btn btn-outline-primary btn-sm" for="month">30D</label>
-                                    
-                                    <input type="radio" class="btn-check" name="timeFilter" id="all" autocomplete="off">
-                                    <label class="btn btn-outline-primary btn-sm" for="all">ALL</label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-body pt-0">
-                        {% if referral_stats %}
-                        <div class="chart-wrapper">
-                            <canvas id="referralChart" height="280"></canvas>
-                        </div>
-                        {% else %}
-                        <div class="empty-state text-center py-5">
-                            <div class="empty-chart-icon mb-4">
-                                <i class="fas fa-chart-bar fa-4x text-light"></i>
-                            </div>
-                            <h4 class="text-muted mb-3">No Data Available</h4>
-                            <p class="text-muted mb-4">Start referring friends to unlock your growth analytics dashboard</p>
-                            <a href="{{ url_for('referral_system') }}" class="btn btn-primary btn-lg">
-                                <i class="fas fa-rocket me-2"></i>Launch Referral Campaign
-                            </a>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Performance Metrics -->
-            <div class="col-lg-4">
-                <div class="dashboard-card h-100">
-                    <div class="card-header border-0 bg-transparent">
-                        <h4 class="fw-bold mb-1">
-                            <i class="fas fa-tachometer-alt text-primary me-2"></i>
-                            Key Performance Indicators
-                        </h4>
-                        <p class="text-muted mb-0">Essential metrics at a glance</p>
-                    </div>
-                    <div class="card-body">
-                        <div class="kpi-grid">
-                            <div class="kpi-item">
-                                <div class="kpi-icon-wrapper bg-primary-subtle">
-                                    <i class="fas fa-calendar-day text-primary"></i>
-                                </div>
-                                <div class="kpi-content">
-                                    <div class="kpi-value">KSH {{ "%.2f"|format(total_earned / 30 if total_earned > 0 else 0) }}</div>
-                                    <div class="kpi-label">Daily Average</div>
-                                </div>
-                            </div>
-                            
-                            <div class="kpi-item">
-                                <div class="kpi-icon-wrapper bg-warning-subtle">
-                                    <i class="fas fa-trophy text-warning"></i>
-                                </div>
-                                <div class="kpi-content">
-                                    <div class="kpi-value">-</div>
-                                    <div class="kpi-label">Best Month</div>
-                                </div>
-                            </div>
-                            
-                            <div class="kpi-item">
-                                <div class="kpi-icon-wrapper bg-success-subtle">
-                                    <i class="fas fa-percentage text-success"></i>
-                                </div>
-                                <div class="kpi-content">
-                                    <div class="kpi-value">-</div>
-                                    <div class="kpi-label">Conversion Rate</div>
-                                </div>
-                            </div>
-                            
-                            <div class="kpi-item">
-                                <div class="kpi-icon-wrapper bg-info-subtle">
-                                    <i class="fas fa-fire text-info"></i>
-                                </div>
-                                <div class="kpi-content">
-                                    <div class="kpi-value">-</div>
-                                    <div class="kpi-label">Active Streak</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="performance-insight mt-4 p-3 bg-light rounded-3">
-                            <h6 class="fw-semibold mb-2">
-                                <i class="fas fa-bullseye text-primary me-2"></i>
-                                Performance Insight
-                            </h6>
-                            <p class="text-muted mb-0 small">
-                                Monitor these metrics to optimize your referral strategy and maximize earnings potential.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Activity & Insights Section -->
-        <div class="row g-4 mt-2">
-            <!-- Recent Activity -->
-            <div class="col-lg-8">
-                <div class="dashboard-card">
-                    <div class="card-header border-0 bg-transparent">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div class="section-title">
-                                <h4 class="fw-bold mb-1">
-                                    <i class="fas fa-list-alt text-primary me-2"></i>
-                                    Recent Activity Timeline
-                                </h4>
-                                <p class="text-muted mb-0">Track your referral milestones and achievements</p>
-                            </div>
-                            <span class="badge bg-primary rounded-pill">{{ referral_stats|length if referral_stats else 0 }} events</span>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        {% if referral_stats %}
-                        <div class="timeline-container">
-                            {% for stat in referral_stats[:6] %}
-                            <div class="timeline-item">
-                                <div class="timeline-marker">
-                                    <div class="timeline-dot bg-primary"></div>
-                                    {% if not loop.last %}
-                                    <div class="timeline-line"></div>
-                                    {% endif %}
-                                </div>
-                                <div class="timeline-content">
-                                    <div class="timeline-header">
-                                        <h6 class="timeline-title mb-1">{{ stat.count }} New Referral{% if stat.count != 1 %}s{% endif %}</h6>
-                                        <span class="timeline-badge bg-success-subtle text-success">
-                                            <i class="fas fa-arrow-up me-1"></i>Growth
-                                        </span>
-                                    </div>
-                                    <div class="timeline-footer">
-                                        <span class="timeline-date text-muted">
-                                            <i class="far fa-clock me-1"></i>{{ stat.date }}
-                                        </span>
-                                        <span class="timeline-amount text-success fw-semibold">
-                                            +KSH {{ (stat.count * 50)|float }}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                        {% else %}
-                        <div class="empty-state text-center py-4">
-                            <div class="empty-activity-icon mb-3">
-                                <i class="fas fa-history fa-3x text-light"></i>
-                            </div>
-                            <h5 class="text-muted mb-2">No Recent Activity</h5>
-                            <p class="text-muted">Your referral activity timeline will appear here</p>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Strategy Insights -->
-            <div class="col-lg-4">
-                <div class="dashboard-card h-100">
-                    <div class="card-header border-0 bg-transparent">
-                        <h4 class="fw-bold mb-1">
-                            <i class="fas fa-lightbulb text-primary me-2"></i>
-                            Strategy Insights
-                        </h4>
-                        <p class="text-muted mb-0">Tips to enhance your performance</p>
-                    </div>
-                    <div class="card-body">
-                        <div class="insights-container">
-                            <div class="insight-card">
-                                <div class="insight-header">
-                                    <div class="insight-icon bg-success-subtle">
-                                        <i class="fas fa-rocket text-success"></i>
-                                    </div>
-                                    <h6 class="insight-title">Growth Opportunity</h6>
-                                </div>
-                                <p class="insight-text text-muted">
-                                    You're approaching Silver tier. Focus on consistent referrals to unlock higher rewards.
-                                </p>
-                            </div>
-                            
-                            <div class="insight-card">
-                                <div class="insight-header">
-                                    <div class="insight-icon bg-primary-subtle">
-                                        <i class="fas fa-share-alt text-primary"></i>
-                                    </div>
-                                    <h6 class="insight-title">Optimization Tip</h6>
-                                </div>
-                                <p class="insight-text text-muted">
-                                    Share your referral code across multiple platforms to increase visibility and conversions.
-                                </p>
-                            </div>
-                            
-                            <div class="insight-card">
-                                <div class="insight-header">
-                                    <div class="insight-icon bg-warning-subtle">
-                                        <i class="fas fa-target text-warning"></i>
-                                    </div>
-                                    <h6 class="insight-title">Weekly Target</h6>
-                                </div>
-                                <p class="insight-text text-muted">
-                                    Aim for 5-7 referrals this week to maximize your earning potential and rank progression.
-                                </p>
-                            </div>
-                        </div>
-                        
-                        <div class="cta-section mt-4">
-                            <a href="{{ url_for('referral_system') }}" class="btn btn-primary w-100 py-3 fw-semibold">
-                                <i class="fas fa-chart-network me-2"></i>Optimize Referral Strategy
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-{% if referral_stats %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const ctx = document.getElementById('referralChart').getContext('2d');
-    const dates = [{% for stat in referral_stats %}'{{ stat.date }}'{% if not loop.last %},{% endif %}{% endfor %}].reverse();
-    const counts = [{% for stat in referral_stats %}{{ stat.count }}{% if not loop.last %},{% endif %}{% endfor %}].reverse();
-
-    // Create gradient
-    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-    gradient.addColorStop(0, 'rgba(102, 126, 234, 0.4)');
-    gradient.addColorStop(1, 'rgba(102, 126, 234, 0.05)');
-
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: dates,
-            datasets: [{
-                label: 'Daily Referrals',
-                data: counts,
-                borderColor: '#667eea',
-                backgroundColor: gradient,
-                borderWidth: 3,
-                fill: true,
-                tension: 0.3,
-                pointBackgroundColor: '#667eea',
-                pointBorderColor: '#ffffff',
-                pointBorderWidth: 2,
-                pointRadius: 5,
-                pointHoverRadius: 7
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(33, 37, 41, 0.95)',
-                    titleFont: {
-                        size: 13,
-                        weight: '600'
-                    },
-                    bodyFont: {
-                        size: 13
-                    },
-                    padding: 12,
-                    cornerRadius: 8,
-                    displayColors: false
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.04)'
-                    },
-                    ticks: {
-                        stepSize: 1,
-                        font: {
-                            size: 12
-                        }
-                    }
-                },
-                x: {
-                    grid: {
-                        display: false
-                    },
-                    ticks: {
-                        font: {
-                            size: 11
-                        }
-                    }
-                }
-            },
-            interaction: {
-                intersect: false,
-                mode: 'index'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Authentication - Referral Ninja{% endblock %}</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-red: #e74c3c;
+            --dark-red: #c0392b;
+            --darker-red: #a93226;
+            --bg-dark: #1a1a2e;
+            --bg-darker: #16213e;
+            --text-light: #ffffff;
+            --text-muted: #6c757d;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-darker) 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(231, 76, 60, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(52, 152, 219, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(46, 204, 113, 0.05) 0%, transparent 50%);
+            animation: backgroundShift 10s ease-in-out infinite alternate;
+        }
+        
+        @keyframes backgroundShift {
+            0% {
+                transform: translateX(0px) translateY(0px);
+            }
+            100% {
+                transform: translateX(-20px) translateY(20px);
             }
         }
-    });
-});
-</script>
-{% endif %}
-
-<style>
-.analytics-container {
-    background: #f8fafc;
-    min-height: 100vh;
-}
-
-.analytics-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 0 0 20px 20px;
-    overflow: hidden;
-}
-
-.header-background {
-    background: rgba(0, 0, 0, 0.1);
-}
-
-.header-icon-container {
-    position: relative;
-}
-
-.icon-wrapper {
-    width: 80px;
-    height: 80px;
-    border-radius: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2rem;
-}
-
-.status-badge {
-    padding: 0.75rem 1.5rem;
-    border-radius: 50px;
-    font-weight: 600;
-    font-size: 0.9rem;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-}
-
-/* Metric Cards */
-.metric-card {
-    border: none;
-    border-radius: 16px;
-    color: white;
-    overflow: hidden;
-    position: relative;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
-.metric-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
-}
-
-.metric-card .card-body {
-    padding: 2rem;
-    position: relative;
-    z-index: 2;
-}
-
-.earnings-gradient {
-    background: linear-gradient(135deg, #28a745, #20c997);
-}
-
-.balance-gradient {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-}
-
-.withdrawn-gradient {
-    background: linear-gradient(135deg, #17a2b8, #6f42c1);
-}
-
-.performance-gradient {
-    background: linear-gradient(135deg, #fd7e14, #e83e8c);
-}
-
-.metric-content {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-}
-
-.metric-icon {
-    font-size: 2.5rem;
-    opacity: 0.9;
-}
-
-.metric-value {
-    font-size: 2rem;
-    font-weight: 800;
-    margin-bottom: 0.5rem;
-    line-height: 1;
-}
-
-.metric-label {
-    font-size: 0.9rem;
-    opacity: 0.9;
-    margin-bottom: 0.75rem;
-}
-
-.metric-trend {
-    font-size: 0.8rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-}
-
-.metric-trend.positive {
-    opacity: 0.95;
-}
-
-.metric-trend.neutral {
-    opacity: 0.8;
-}
-
-/* Dashboard Cards */
-.dashboard-card {
-    background: white;
-    border: none;
-    border-radius: 16px;
-    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
-    transition: all 0.3s ease;
-}
-
-.dashboard-card:hover {
-    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.12);
-}
-
-.dashboard-card .card-body {
-    padding: 1.5rem;
-}
-
-.section-title h4 {
-    color: #2c3e50;
-}
-
-/* KPI Grid */
-.kpi-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.kpi-item {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1.25rem;
-    background: #f8f9fa;
-    border-radius: 12px;
-    transition: all 0.3s ease;
-    border: 1px solid transparent;
-}
-
-.kpi-item:hover {
-    background: white;
-    border-color: #e9ecef;
-    transform: translateY(-2px);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-.kpi-icon-wrapper {
-    width: 50px;
-    height: 50px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.25rem;
-    flex-shrink: 0;
-}
-
-.kpi-value {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #2c3e50;
-    margin-bottom: 0.25rem;
-}
-
-.kpi-label {
-    font-size: 0.85rem;
-    color: #6c757d;
-    font-weight: 500;
-}
-
-/* Timeline */
-.timeline-container {
-    position: relative;
-}
-
-.timeline-item {
-    display: flex;
-    align-items: flex-start;
-    margin-bottom: 2rem;
-}
-
-.timeline-marker {
-    position: relative;
-    margin-right: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.timeline-dot {
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    border: 3px solid white;
-    box-shadow: 0 0 0 3px var(--bs-primary);
-    z-index: 2;
-}
-
-.timeline-line {
-    width: 2px;
-    flex: 1;
-    background: linear-gradient(to bottom, var(--bs-primary), #e9ecef);
-    margin-top: 0.5rem;
-    min-height: 40px;
-}
-
-.timeline-content {
-    flex: 1;
-    background: #f8f9fa;
-    padding: 1.25rem;
-    border-radius: 12px;
-    border-left: 4px solid var(--bs-primary);
-}
-
-.timeline-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 0.75rem;
-}
-
-.timeline-title {
-    font-weight: 600;
-    color: #2c3e50;
-    margin: 0;
-}
-
-.timeline-badge {
-    padding: 0.25rem 0.75rem;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
-}
-
-.timeline-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.timeline-date {
-    font-size: 0.85rem;
-}
-
-.timeline-amount {
-    font-size: 0.9rem;
-}
-
-/* Insights */
-.insights-container {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-}
-
-.insight-card {
-    padding: 1.25rem;
-    background: #f8f9fa;
-    border-radius: 12px;
-    transition: all 0.3s ease;
-}
-
-.insight-card:hover {
-    background: white;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-}
-
-.insight-header {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 0.75rem;
-}
-
-.insight-icon {
-    width: 45px;
-    height: 45px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.1rem;
-    flex-shrink: 0;
-}
-
-.insight-title {
-    font-weight: 600;
-    color: #2c3e50;
-    margin: 0;
-}
-
-.insight-text {
-    font-size: 0.9rem;
-    margin: 0;
-    line-height: 1.5;
-}
-
-/* Empty States */
-.empty-state {
-    padding: 3rem 2rem;
-}
-
-.empty-chart-icon, .empty-activity-icon {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto;
-    opacity: 0.7;
-}
-
-/* Chart */
-.chart-wrapper {
-    position: relative;
-    height: 280px;
-    width: 100%;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .metric-content {
-        flex-direction: column;
-        text-align: center;
-        gap: 1rem;
-    }
-    
-    .metric-value {
-        font-size: 1.75rem;
-    }
-    
-    .timeline-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
-    }
-    
-    .timeline-footer {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
-    }
-    
-    .header-icon-container {
-        margin-bottom: 1rem;
-    }
-    
-    .icon-wrapper {
-        width: 60px;
-        height: 60px;
-        font-size: 1.5rem;
-    }
-}
-
-/* Animations */
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.metric-card, .dashboard-card {
-    animation: fadeInUp 0.6s ease;
-}
-
-.metric-card:nth-child(2) { animation-delay: 0.1s; }
-.metric-card:nth-child(3) { animation-delay: 0.2s; }
-.metric-card:nth-child(4) { animation-delay: 0.3s; }
-</style>
-
-<script>
-// Enhanced interactivity
-document.addEventListener('DOMContentLoaded', function() {
-    // Time filter functionality
-    const timeFilters = document.querySelectorAll('input[name="timeFilter"]');
-    
-    timeFilters.forEach(filter => {
-        filter.addEventListener('change', function() {
-            // Add loading state
-            const chartContainer = document.querySelector('.chart-wrapper');
-            if (chartContainer) {
-                chartContainer.style.opacity = '0.7';
-                // Simulate API call delay
-                setTimeout(() => {
-                    chartContainer.style.opacity = '1';
-                }, 500);
-            }
-        });
-    });
-
-    // Add hover effects to interactive elements
-    const interactiveElements = document.querySelectorAll('.metric-card, .kpi-item, .insight-card');
-    
-    interactiveElements.forEach(element => {
-        element.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-3px)';
-        });
         
-        element.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0)';
-        });
-    });
+        .auth-container {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 440px;
+            animation: fadeInUp 0.8s ease-out;
+        }
 
-    // Initialize tooltips if needed
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-});
-</script>
-{% endblock %}
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .auth-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            box-shadow: 
+                0 25px 50px -12px rgba(0, 0, 0, 0.25),
+                0 0 0 1px rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .auth-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 
+                0 35px 60px -12px rgba(0, 0, 0, 0.3),
+                0 0 0 1px rgba(255, 255, 255, 0.2);
+        }
+
+        .auth-header {
+            background: linear-gradient(135deg, var(--primary-red), var(--dark-red));
+            color: var(--text-light);
+            padding: 2.5rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: rotate(45deg);
+            animation: shine 3s infinite;
+        }
+
+        @keyframes shine {
+            0% {
+                transform: rotate(45deg) translateX(-100%);
+            }
+            100% {
+                transform: rotate(45deg) translateX(100%);
+            }
+        }
+
+        .auth-logo {
+            width: 70px;
+            height: 70px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.2rem;
+            font-size: 1.8rem;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            position: relative;
+            z-index: 2;
+        }
+
+        .auth-header h2 {
+            font-weight: 700;
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .auth-subtitle {
+            font-weight: 400;
+            opacity: 0.9;
+            font-size: 0.95rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .auth-body {
+            padding: 2.5rem 2rem;
+            position: relative;
+        }
+
+        .auth-footer {
+            padding: 1.5rem 2rem;
+            background: rgba(248, 249, 250, 0.8);
+            text-align: center;
+            border-top: 1px solid rgba(233, 236, 239, 0.6);
+            backdrop-filter: blur(10px);
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .form-control {
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e2e8f0;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-red);
+            box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+            background: rgba(255, 255, 255, 0.95);
+            transform: translateY(-2px);
+        }
+
+        .input-group-text {
+            background: rgba(248, 249, 250, 0.8);
+            border: 2px solid #e2e8f0;
+            border-right: none;
+            border-radius: 10px 0 0 10px;
+        }
+
+        .input-group .form-control {
+            border-left: none;
+            border-radius: 0 10px 10px 0;
+        }
+
+        .btn {
+            border-radius: 12px;
+            font-weight: 600;
+            padding: 0.875rem 1.5rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-red), var(--dark-red));
+            border: none;
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, var(--dark-red), var(--darker-red));
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(231, 76, 60, 0.4);
+        }
+
+        .btn-primary:active {
+            transform: translateY(-1px);
+        }
+
+        .btn-outline-secondary {
+            border: 2px solid #e2e8f0;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        .btn-outline-secondary:hover {
+            background: rgba(248, 249, 250, 0.9);
+            border-color: #cbd5e0;
+            transform: translateY(-2px);
+        }
+
+        .alert {
+            border-radius: 12px;
+            border: none;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+            color: #155724;
+        }
+
+        .alert-danger {
+            background: linear-gradient(135deg, #f8d7da, #f1b0b7);
+            color: #721c24;
+        }
+
+        .alert-warning {
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+            color: #856404;
+        }
+
+        .alert-info {
+            background: linear-gradient(135deg, #d1ecf1, #b8e2e8);
+            color: #0c5460;
+        }
+
+        .form-text {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+
+        .form-check-input:checked {
+            background-color: var(--primary-red);
+            border-color: var(--primary-red);
+        }
+
+        .form-check-input:focus {
+            border-color: var(--primary-red);
+            box-shadow: 0 0 0 0.2rem rgba(231, 76, 60, 0.25);
+        }
+
+        a {
+            color: var(--primary-red);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        a:hover {
+            color: var(--dark-red);
+            text-decoration: underline;
+        }
+
+        .password-toggle, .confirm-password-toggle {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .password-toggle:hover, .confirm-password-toggle:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+            transform: scale(1.05);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 576px) {
+            .auth-container {
+                max-width: 100%;
+                margin: 0 10px;
+            }
+            
+            .auth-header {
+                padding: 2rem 1.5rem;
+            }
+            
+            .auth-body {
+                padding: 2rem 1.5rem;
+            }
+            
+            .auth-footer {
+                padding: 1.25rem 1.5rem;
+            }
+            
+            .auth-header h2 {
+                font-size: 1.5rem;
+            }
+        }
+
+        /* Loading state for buttons */
+        .btn-loading {
+            pointer-events: none;
+            opacity: 0.8;
+        }
+
+        .btn-loading::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            top: 50%;
+            left: 50%;
+            margin-left: -10px;
+            margin-top: -10px;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Ninja theme elements */
+        .ninja-badge {
+            background: linear-gradient(135deg, var(--primary-red), var(--dark-red));
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+        }
+
+        .ninja-shuriken {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary-red), var(--dark-red));
+            clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+            opacity: 0.1;
+            z-index: 1;
+        }
+
+        .shuriken-1 {
+            top: 10%;
+            left: 10%;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .shuriken-2 {
+            bottom: 15%;
+            right: 10%;
+            animation: float 8s ease-in-out infinite reverse;
+        }
+
+        .shuriken-3 {
+            top: 60%;
+            left: 5%;
+            animation: float 7s ease-in-out infinite 1s;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0) rotate(0deg);
+            }
+            50% {
+                transform: translateY(-20px) rotate(180deg);
+            }
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Floating shuriken decorations -->
+    <div class="ninja-shuriken shuriken-1"></div>
+    <div class="ninja-shuriken shuriken-2"></div>
+    <div class="ninja-shuriken shuriken-3"></div>
+    
+    <div class="auth-container">
+        {% block auth_content %}{% endblock %}
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script>
+        // Enhanced form handling
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add loading state to forms
+            const forms = document.querySelectorAll('form');
+            forms.forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    const submitBtn = this.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.classList.add('btn-loading');
+                        submitBtn.disabled = true;
+                        
+                        // Re-enable button after 10 seconds (safety measure)
+                        setTimeout(() => {
+                            submitBtn.classList.remove('btn-loading');
+                            submitBtn.disabled = false;
+                        }, 10000);
+                    }
+                });
+            });
+
+            // Auto-focus first input field
+            const firstInput = document.querySelector('form input:not([type="hidden"])');
+            if (firstInput) {
+                setTimeout(() => firstInput.focus(), 300);
+            }
+
+            // Enhanced input validation
+            const inputs = document.querySelectorAll('input[required]');
+            inputs.forEach(input => {
+                input.addEventListener('invalid', function() {
+                    this.style.borderColor = '#e74c3c';
+                    this.style.boxShadow = '0 0 0 3px rgba(231, 76, 60, 0.1)';
+                });
+                
+                input.addEventListener('input', function() {
+                    if (this.validity.valid) {
+                        this.style.borderColor = '#48bb78';
+                        this.style.boxShadow = '0 0 0 3px rgba(72, 187, 120, 0.1)';
+                    } else {
+                        this.style.borderColor = '#e2e8f0';
+                        this.style.boxShadow = 'none';
+                    }
+                });
+            });
+
+            // Prevent multiple form submissions
+            let formSubmitted = false;
+            forms.forEach(form => {
+                form.addEventListener('submit', function() {
+                    if (formSubmitted) {
+                        return false;
+                    }
+                    formSubmitted = true;
+                    return true;
+                });
+            });
+        });
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>
