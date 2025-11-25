@@ -1,3 +1,4 @@
+
 {% extends "base.html" %}
 
 {% block title %}Performance Analytics - ReferralNinja{% endblock %}
@@ -46,7 +47,7 @@
                                 <i class="fas fa-money-bill-trend-up"></i>
                             </div>
                             <div class="metric-data">
-                                <h3 class="metric-value">KSH {{ "%.2f"|format(total_earned) if total_earned else "0.00" }}</h3>
+                                <h3 class="metric-value">KSH {{ "%.2f"|format(total_earned) }}</h3>
                                 <p class="metric-label">Total Earnings</p>
                                 <div class="metric-trend positive">
                                     <i class="fas fa-chart-line me-1"></i>
@@ -66,7 +67,7 @@
                                 <i class="fas fa-wallet"></i>
                             </div>
                             <div class="metric-data">
-                                <h3 class="metric-value">KSH {{ "%.2f"|format(pending_balance) if pending_balance else "0.00" }}</h3>
+                                <h3 class="metric-value">KSH {{ "%.2f"|format(pending_balance) }}</h3>
                                 <p class="metric-label">Available Balance</p>
                                 <div class="metric-trend neutral">
                                     <i class="fas fa-clock me-1"></i>
@@ -86,7 +87,7 @@
                                 <i class="fas fa-piggy-bank"></i>
                             </div>
                             <div class="metric-data">
-                                <h3 class="metric-value">KSH {{ "%.2f"|format(total_withdrawn) if total_withdrawn else "0.00" }}</h3>
+                                <h3 class="metric-value">KSH {{ "%.2f"|format(total_withdrawn) }}</h3>
                                 <p class="metric-label">Total Withdrawn</p>
                                 <div class="metric-trend positive">
                                     <i class="fas fa-check-circle me-1"></i>
@@ -135,9 +136,14 @@
                             </div>
                             <div class="time-filters">
                                 <div class="btn-group" role="group">
-                                    <button type="button" class="btn btn-outline-primary btn-sm active" data-period="7d">7D</button>
-                                    <button type="button" class="btn btn-outline-primary btn-sm" data-period="30d">30D</button>
-                                    <button type="button" class="btn btn-outline-primary btn-sm" data-period="90d">90D</button>
+                                    <input type="radio" class="btn-check" name="timeFilter" id="week" autocomplete="off" checked>
+                                    <label class="btn btn-outline-primary btn-sm" for="week">7D</label>
+                                    
+                                    <input type="radio" class="btn-check" name="timeFilter" id="month" autocomplete="off">
+                                    <label class="btn btn-outline-primary btn-sm" for="month">30D</label>
+                                    
+                                    <input type="radio" class="btn-check" name="timeFilter" id="all" autocomplete="off">
+                                    <label class="btn btn-outline-primary btn-sm" for="all">ALL</label>
                                 </div>
                             </div>
                         </div>
@@ -180,7 +186,7 @@
                                     <i class="fas fa-calendar-day text-primary"></i>
                                 </div>
                                 <div class="kpi-content">
-                                    <div class="kpi-value">KSH {{ "%.2f"|format(daily_average) if daily_average else "0.00" }}</div>
+                                    <div class="kpi-value">KSH {{ "%.2f"|format(total_earned / 30 if total_earned > 0 else 0) }}</div>
                                     <div class="kpi-label">Daily Average</div>
                                 </div>
                             </div>
@@ -190,7 +196,7 @@
                                     <i class="fas fa-trophy text-warning"></i>
                                 </div>
                                 <div class="kpi-content">
-                                    <div class="kpi-value">KSH {{ "%.2f"|format(best_month) if best_month else "0.00" }}</div>
+                                    <div class="kpi-value">-</div>
                                     <div class="kpi-label">Best Month</div>
                                 </div>
                             </div>
@@ -200,7 +206,7 @@
                                     <i class="fas fa-percentage text-success"></i>
                                 </div>
                                 <div class="kpi-content">
-                                    <div class="kpi-value">{{ conversion_rate }}%</div>
+                                    <div class="kpi-value">-</div>
                                     <div class="kpi-label">Conversion Rate</div>
                                 </div>
                             </div>
@@ -210,7 +216,7 @@
                                     <i class="fas fa-fire text-info"></i>
                                 </div>
                                 <div class="kpi-content">
-                                    <div class="kpi-value">{{ active_streak }} days</div>
+                                    <div class="kpi-value">-</div>
                                     <div class="kpi-label">Active Streak</div>
                                 </div>
                             </div>
@@ -222,13 +228,7 @@
                                 Performance Insight
                             </h6>
                             <p class="text-muted mb-0 small">
-                                {% if conversion_rate > 50 %}
-                                Excellent conversion rate! Your referral strategy is performing exceptionally well.
-                                {% elif conversion_rate > 30 %}
-                                Good performance. Consider optimizing your outreach for even better results.
-                                {% else %}
-                                Focus on improving conversion rates by targeting the right audience.
-                                {% endif %}
+                                Monitor these metrics to optimize your referral strategy and maximize earnings potential.
                             </p>
                         </div>
                     </div>
@@ -250,37 +250,34 @@
                                 </h4>
                                 <p class="text-muted mb-0">Track your referral milestones and achievements</p>
                             </div>
-                            <span class="badge bg-primary rounded-pill">{{ recent_activities|length if recent_activities else 0 }} events</span>
+                            <span class="badge bg-primary rounded-pill">{{ referral_stats|length if referral_stats else 0 }} events</span>
                         </div>
                     </div>
                     <div class="card-body">
-                        {% if recent_activities %}
+                        {% if referral_stats %}
                         <div class="timeline-container">
-                            {% for activity in recent_activities %}
+                            {% for stat in referral_stats[:6] %}
                             <div class="timeline-item">
                                 <div class="timeline-marker">
-                                    <div class="timeline-dot bg-{{ activity.type_color }}"></div>
+                                    <div class="timeline-dot bg-primary"></div>
                                     {% if not loop.last %}
                                     <div class="timeline-line"></div>
                                     {% endif %}
                                 </div>
                                 <div class="timeline-content">
                                     <div class="timeline-header">
-                                        <h6 class="timeline-title mb-1">{{ activity.title }}</h6>
-                                        <span class="timeline-badge bg-{{ activity.type_color }}-subtle text-{{ activity.type_color }}">
-                                            <i class="fas fa-{{ activity.icon }} me-1"></i>{{ activity.type }}
+                                        <h6 class="timeline-title mb-1">{{ stat.count }} New Referral{% if stat.count != 1 %}s{% endif %}</h6>
+                                        <span class="timeline-badge bg-success-subtle text-success">
+                                            <i class="fas fa-arrow-up me-1"></i>Growth
                                         </span>
                                     </div>
-                                    <p class="timeline-description text-muted small mb-2">{{ activity.description }}</p>
                                     <div class="timeline-footer">
                                         <span class="timeline-date text-muted">
-                                            <i class="far fa-clock me-1"></i>{{ activity.timestamp }}
+                                            <i class="far fa-clock me-1"></i>{{ stat.date }}
                                         </span>
-                                        {% if activity.amount %}
                                         <span class="timeline-amount text-success fw-semibold">
-                                            +KSH {{ "%.2f"|format(activity.amount) }}
+                                            +KSH {{ (stat.count * 50)|float }}
                                         </span>
-                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -311,19 +308,41 @@
                     </div>
                     <div class="card-body">
                         <div class="insights-container">
-                            {% for insight in performance_insights %}
                             <div class="insight-card">
                                 <div class="insight-header">
-                                    <div class="insight-icon bg-{{ insight.color }}-subtle">
-                                        <i class="fas fa-{{ insight.icon }} text-{{ insight.color }}"></i>
+                                    <div class="insight-icon bg-success-subtle">
+                                        <i class="fas fa-rocket text-success"></i>
                                     </div>
-                                    <h6 class="insight-title">{{ insight.title }}</h6>
+                                    <h6 class="insight-title">Growth Opportunity</h6>
                                 </div>
                                 <p class="insight-text text-muted">
-                                    {{ insight.description }}
+                                    You're approaching Silver tier. Focus on consistent referrals to unlock higher rewards.
                                 </p>
                             </div>
-                            {% endfor %}
+                            
+                            <div class="insight-card">
+                                <div class="insight-header">
+                                    <div class="insight-icon bg-primary-subtle">
+                                        <i class="fas fa-share-alt text-primary"></i>
+                                    </div>
+                                    <h6 class="insight-title">Optimization Tip</h6>
+                                </div>
+                                <p class="insight-text text-muted">
+                                    Share your referral code across multiple platforms to increase visibility and conversions.
+                                </p>
+                            </div>
+                            
+                            <div class="insight-card">
+                                <div class="insight-header">
+                                    <div class="insight-icon bg-warning-subtle">
+                                        <i class="fas fa-target text-warning"></i>
+                                    </div>
+                                    <h6 class="insight-title">Weekly Target</h6>
+                                </div>
+                                <p class="insight-text text-muted">
+                                    Aim for 5-7 referrals this week to maximize your earning potential and rank progression.
+                                </p>
+                            </div>
                         </div>
                         
                         <div class="cta-section mt-4">
@@ -338,26 +357,10 @@
     </div>
 </div>
 
-<!-- Real-time Update Modal -->
-<div class="modal fade" id="updateModal" tabindex="-1">
-    <div class="modal-dialog modal-sm">
-        <div class="modal-content">
-            <div class="modal-body text-center p-4">
-                <div class="spinner-border text-primary mb-3" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
-                <h6 class="mb-2">Updating Data</h6>
-                <p class="text-muted small mb-0">Fetching latest performance metrics...</p>
-            </div>
-        </div>
-    </div>
-</div>
-
 {% if referral_stats %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize chart
     const ctx = document.getElementById('referralChart').getContext('2d');
     const dates = [{% for stat in referral_stats %}'{{ stat.date }}'{% if not loop.last %},{% endif %}{% endfor %}].reverse();
     const counts = [{% for stat in referral_stats %}{{ stat.count }}{% if not loop.last %},{% endif %}{% endfor %}].reverse();
@@ -367,7 +370,7 @@ document.addEventListener('DOMContentLoaded', function() {
     gradient.addColorStop(0, 'rgba(102, 126, 234, 0.4)');
     gradient.addColorStop(1, 'rgba(102, 126, 234, 0.05)');
 
-    const chart = new Chart(ctx, {
+    new Chart(ctx, {
         type: 'line',
         data: {
             labels: dates,
@@ -437,71 +440,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
-
-    // Time filter functionality
-    const timeFilters = document.querySelectorAll('.time-filters .btn');
-    
-    timeFilters.forEach(btn => {
-        btn.addEventListener('click', function() {
-            // Remove active class from all buttons
-            timeFilters.forEach(b => b.classList.remove('active'));
-            // Add active class to clicked button
-            this.classList.add('active');
-            
-            // Show loading state
-            const updateModal = new bootstrap.Modal(document.getElementById('updateModal'));
-            updateModal.show();
-            
-            // Simulate API call
-            setTimeout(() => {
-                updateModal.hide();
-                // Update chart data based on selected period
-                const period = this.dataset.period;
-                updateChartData(period, chart);
-            }, 1500);
-        });
-    });
-
-    // Auto-refresh data every 30 seconds
-    setInterval(() => {
-        refreshData();
-    }, 30000);
-
-    // Add hover effects
-    const interactiveElements = document.querySelectorAll('.metric-card, .kpi-item, .insight-card');
-    
-    interactiveElements.forEach(element => {
-        element.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-3px)';
-        });
-        
-        element.addEventListener('mouseleave', function() {
-            this.style.transform = 'translateY(0)';
-        });
-    });
 });
-
-function updateChartData(period, chart) {
-    // This would typically make an API call to get new data
-    // For demo purposes, we'll just update with sample data
-    const sampleData = {
-        '7d': [5, 7, 3, 8, 6, 9, 4],
-        '30d': [5, 7, 3, 8, 6, 9, 4, 2, 5, 7, 8, 4, 6, 3, 7, 9, 5, 8, 6, 4, 7, 9, 8, 5, 6, 7, 4, 8, 9, 6],
-        '90d': Array.from({length: 90}, () => Math.floor(Math.random() * 10) + 1)
-    };
-    
-    const labels = Array.from({length: sampleData[period].length}, (_, i) => `Day ${i + 1}`);
-    
-    chart.data.labels = labels;
-    chart.data.datasets[0].data = sampleData[period];
-    chart.update();
-}
-
-function refreshData() {
-    // Simulate data refresh
-    console.log('Refreshing analytics data...');
-    // In a real application, this would make an API call to update the metrics
-}
 </script>
 {% endif %}
 
@@ -754,10 +693,6 @@ function refreshData() {
     font-weight: 600;
 }
 
-.timeline-description {
-    line-height: 1.4;
-}
-
 .timeline-footer {
     display: flex;
     justify-content: space-between;
@@ -845,20 +780,6 @@ function refreshData() {
     width: 100%;
 }
 
-/* Time Filters */
-.time-filters .btn {
-    border-radius: 8px;
-    padding: 0.375rem 0.75rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-}
-
-.time-filters .btn.active {
-    background-color: #667eea;
-    border-color: #667eea;
-    color: white;
-}
-
 /* Responsive Design */
 @media (max-width: 768px) {
     .metric-content {
@@ -913,16 +834,46 @@ function refreshData() {
 .metric-card:nth-child(2) { animation-delay: 0.1s; }
 .metric-card:nth-child(3) { animation-delay: 0.2s; }
 .metric-card:nth-child(4) { animation-delay: 0.3s; }
-
-/* Real-time indicator */
-@keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.5; }
-    100% { opacity: 1; }
-}
-
-.status-badge .text-success {
-    animation: pulse 2s infinite;
-}
 </style>
+
+<script>
+// Enhanced interactivity
+document.addEventListener('DOMContentLoaded', function() {
+    // Time filter functionality
+    const timeFilters = document.querySelectorAll('input[name="timeFilter"]');
+    
+    timeFilters.forEach(filter => {
+        filter.addEventListener('change', function() {
+            // Add loading state
+            const chartContainer = document.querySelector('.chart-wrapper');
+            if (chartContainer) {
+                chartContainer.style.opacity = '0.7';
+                // Simulate API call delay
+                setTimeout(() => {
+                    chartContainer.style.opacity = '1';
+                }, 500);
+            }
+        });
+    });
+
+    // Add hover effects to interactive elements
+    const interactiveElements = document.querySelectorAll('.metric-card, .kpi-item, .insight-card');
+    
+    interactiveElements.forEach(element => {
+        element.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-3px)';
+        });
+        
+        element.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+
+    // Initialize tooltips if needed
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
 {% endblock %}
