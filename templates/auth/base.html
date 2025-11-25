@@ -36,6 +36,7 @@
             --space-sm: clamp(10px, 2vw, 16px);
             --space-md: clamp(16px, 3vw, 24px);
             --space-lg: clamp(26px, 4.5vw, 36px);
+            --space-xl: clamp(36px, 6vw, 48px);
         }
         
         * {
@@ -85,7 +86,7 @@
             width: 100%;
             max-width: clamp(350px, 90vw, 480px);
             animation: fadeInUp 0.8s ease-out;
-            margin: 0 auto;
+            margin: var(--space-md) auto;
         }
 
         @keyframes fadeInUp {
@@ -109,6 +110,7 @@
             overflow: hidden;
             border: 1px solid rgba(255, 255, 255, 0.3);
             transition: all 0.3s ease;
+            margin-top: var(--space-sm); /* Added top margin to move card down */
         }
 
         .auth-card:hover {
@@ -125,6 +127,7 @@
             text-align: center;
             position: relative;
             overflow: hidden;
+            padding-top: calc(var(--space-lg) + 8px); /* Added extra top padding */
         }
 
         .auth-header::before {
@@ -183,6 +186,15 @@
         .auth-body {
             padding: var(--space-lg);
             position: relative;
+        }
+
+        /* Increased spacing between buttons */
+        .auth-body .btn {
+            margin-bottom: var(--space-sm);
+        }
+
+        .auth-body .btn:last-child {
+            margin-bottom: 0;
         }
 
         .auth-footer {
@@ -335,11 +347,12 @@
         @media (max-width: 576px) {
             .auth-container {
                 max-width: 100%;
-                margin: 0 10px;
+                margin: var(--space-sm) auto;
             }
             
             .auth-header {
                 padding: var(--space-md);
+                padding-top: calc(var(--space-md) + 8px);
             }
             
             .auth-body {
@@ -361,6 +374,10 @@
             .auth-header,
             .auth-footer {
                 padding: var(--space-md);
+            }
+            
+            .auth-header {
+                padding-top: calc(var(--space-md) + 8px);
             }
         }
 
