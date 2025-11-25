@@ -23,20 +23,6 @@
             --bg-darker: #16213e;
             --text-light: #ffffff;
             --text-muted: #6c757d;
-
-            /* Responsive font scaling */
-            --fs-xs: clamp(0.8rem, 1.8vw, 0.95rem);
-            --fs-sm: clamp(0.9rem, 2vw, 1.05rem);
-            --fs-md: clamp(1rem, 2.3vw, 1.2rem);
-            --fs-lg: clamp(1.3rem, 3vw, 1.8rem);
-            --fs-xl: clamp(1.6rem, 4vw, 2.2rem);
-
-            /* Responsive spacing */
-            --space-xs: clamp(6px, 1vw, 10px);
-            --space-sm: clamp(10px, 2vw, 16px);
-            --space-md: clamp(16px, 3vw, 24px);
-            --space-lg: clamp(26px, 4.5vw, 36px);
-            --space-xl: clamp(36px, 6vw, 48px);
         }
         
         * {
@@ -52,7 +38,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: var(--space-md);
+            padding: 20px;
             position: relative;
             overflow-x: hidden;
         }
@@ -84,9 +70,8 @@
             position: relative;
             z-index: 10;
             width: 100%;
-            max-width: clamp(350px, 90vw, 480px);
+            max-width: 440px;
             animation: fadeInUp 0.8s ease-out;
-            margin-top: 40px; /* Increased top margin to move container down */
         }
 
         @keyframes fadeInUp {
@@ -101,7 +86,7 @@
         }
 
         .auth-card {
-            background: rgba(255, 255, 255, 0.96);
+            background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(20px);
             border-radius: 20px;
             box-shadow: 
@@ -122,11 +107,10 @@
         .auth-header {
             background: linear-gradient(135deg, var(--primary-red), var(--dark-red));
             color: var(--text-light);
-            padding: var(--space-lg);
+            padding: 2.5rem 2rem;
             text-align: center;
             position: relative;
             overflow: hidden;
-            padding-top: calc(var(--space-lg) + 25px); /* Significantly increased top padding */
         }
 
         .auth-header::before {
@@ -151,15 +135,15 @@
         }
 
         .auth-logo {
-            width: clamp(55px, 12vw, 80px);
-            height: clamp(55px, 12vw, 80px);
+            width: 70px;
+            height: 70px;
             background: rgba(255, 255, 255, 0.2);
             border-radius: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto var(--space-sm);
-            font-size: clamp(1.4rem, 3vw, 2rem);
+            margin: 0 auto 1.2rem;
+            font-size: 1.8rem;
             backdrop-filter: blur(10px);
             border: 2px solid rgba(255, 255, 255, 0.3);
             position: relative;
@@ -168,8 +152,8 @@
 
         .auth-header h2 {
             font-weight: 700;
-            font-size: var(--fs-lg);
-            margin-bottom: var(--space-xs);
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
             position: relative;
             z-index: 2;
         }
@@ -177,28 +161,18 @@
         .auth-subtitle {
             font-weight: 400;
             opacity: 0.9;
-            font-size: var(--fs-sm);
+            font-size: 0.95rem;
             position: relative;
             z-index: 2;
         }
 
         .auth-body {
-            padding: var(--space-lg);
+            padding: 2.5rem 2rem;
             position: relative;
         }
 
-        /* Automatic button spacing - no wrapper needed */
-        .auth-body .btn {
-            width: 100%;
-            margin-bottom: 20px; /* Increased spacing between buttons */
-        }
-
-        .auth-body .btn:last-child {
-            margin-bottom: 0;
-        }
-
         .auth-footer {
-            padding: var(--space-md);
+            padding: 1.5rem 2rem;
             background: rgba(248, 249, 250, 0.8);
             text-align: center;
             border-top: 1px solid rgba(233, 236, 239, 0.6);
@@ -208,22 +182,22 @@
         .form-label {
             font-weight: 600;
             color: #2d3748;
-            margin-bottom: var(--space-xs);
-            font-size: var(--fs-sm);
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
         }
 
         .form-control {
             border-radius: 10px;
-            padding: var(--space-sm);
+            padding: 0.75rem 1rem;
             border: 2px solid #e2e8f0;
-            font-size: var(--fs-sm);
+            font-size: 0.95rem;
             transition: all 0.3s ease;
             background: rgba(255, 255, 255, 0.8);
         }
 
         .form-control:focus {
             border-color: var(--primary-red);
-            box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.15);
+            box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
             background: rgba(255, 255, 255, 0.95);
             transform: translateY(-2px);
         }
@@ -243,8 +217,8 @@
         .btn {
             border-radius: 12px;
             font-weight: 600;
-            padding: var(--space-sm) var(--space-md);
-            font-size: var(--fs-md);
+            padding: 0.875rem 1.5rem;
+            font-size: 1rem;
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
@@ -281,8 +255,8 @@
         .alert {
             border-radius: 12px;
             border: none;
-            padding: var(--space-sm) var(--space-md);
-            margin-bottom: var(--space-md);
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
 
@@ -308,8 +282,8 @@
 
         .form-text {
             color: var(--text-muted);
-            font-size: var(--fs-xs);
-            margin-top: var(--space-xs);
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
         }
 
         .form-check-input:checked {
@@ -347,37 +321,23 @@
         @media (max-width: 576px) {
             .auth-container {
                 max-width: 100%;
-                margin: 30px 10px; /* Increased top margin for mobile */
+                margin: 0 10px;
             }
             
             .auth-header {
-                padding: var(--space-md);
-                padding-top: calc(var(--space-md) + 25px); /* Increased top padding for mobile */
+                padding: 2rem 1.5rem;
             }
             
             .auth-body {
-                padding: var(--space-md);
+                padding: 2rem 1.5rem;
             }
             
             .auth-footer {
-                padding: var(--space-sm) var(--space-md);
+                padding: 1.25rem 1.5rem;
             }
             
             .auth-header h2 {
-                font-size: var(--fs-md);
-            }
-        }
-
-        /* Fix for small phones */
-        @media (max-width: 400px) {
-            .auth-body,
-            .auth-header,
-            .auth-footer {
-                padding: var(--space-md);
-            }
-            
-            .auth-header {
-                padding-top: calc(var(--space-md) + 25px); /* Increased top padding for small phones */
+                font-size: 1.5rem;
             }
         }
 
@@ -411,19 +371,19 @@
         .ninja-badge {
             background: linear-gradient(135deg, var(--primary-red), var(--dark-red));
             color: white;
-            padding: var(--space-xs) var(--space-sm);
+            padding: 0.5rem 1rem;
             border-radius: 20px;
-            font-size: var(--fs-xs);
+            font-size: 0.8rem;
             font-weight: 600;
             display: inline-block;
-            margin-bottom: var(--space-md);
+            margin-bottom: 1rem;
             box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
         }
 
         .ninja-shuriken {
             position: absolute;
-            width: clamp(25px, 8vw, 45px);
-            height: clamp(25px, 8vw, 45px);
+            width: 40px;
+            height: 40px;
             background: linear-gradient(135deg, var(--primary-red), var(--dark-red));
             clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
             opacity: 0.1;
