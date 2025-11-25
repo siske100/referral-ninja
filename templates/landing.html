@@ -22,6 +22,10 @@
             align-items: center;
             position: relative;
             overflow: hidden;
+            padding-top: clamp(1rem, 5vh, 3rem);
+            padding-bottom: clamp(1rem, 5vh, 3rem);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
         }
         
         .hero-content {
@@ -34,10 +38,11 @@
             color: white;
             padding: 0.5rem 1.5rem;
             border-radius: 25px;
-            font-size: 0.9rem;
+            font-size: clamp(0.8rem, 2vw, 0.9rem);
             font-weight: 600;
             display: inline-block;
             margin-bottom: 1rem;
+            margin-top: clamp(0.5rem, 3vh, 2rem);
         }
         
         .hero-image {
@@ -46,7 +51,7 @@
         }
         
         .hero-image i {
-            font-size: 15rem;
+            font-size: clamp(8rem, 25vw, 15rem);
             color: rgba(231, 76, 60, 0.1);
             animation: float 3s ease-in-out infinite;
         }
@@ -60,7 +65,7 @@
             background: rgba(255,255,255,0.1);
             backdrop-filter: blur(10px);
             border-radius: 15px;
-            padding: 2rem;
+            padding: clamp(1.5rem, 4vw, 2rem);
             text-align: center;
             border: 1px solid rgba(255,255,255,0.2);
             transition: all 0.3s ease;
@@ -72,15 +77,15 @@
         }
         
         .feature-icon {
-            width: 80px;
-            height: 80px;
+            width: clamp(60px, 15vw, 80px);
+            height: clamp(60px, 15vw, 80px);
             background: linear-gradient(135deg, var(--primary-red), var(--primary-dark));
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto 1rem;
-            font-size: 2rem;
+            font-size: clamp(1.5rem, 4vw, 2rem);
             color: white;
         }
         
@@ -91,6 +96,7 @@
             font-weight: 600;
             border-radius: 25px;
             transition: all 0.3s ease;
+            font-size: clamp(0.9rem, 2vw, 1rem);
         }
         
         .btn-primary:hover {
@@ -104,11 +110,31 @@
             font-weight: 600;
             border-radius: 25px;
             transition: all 0.3s ease;
+            font-size: clamp(0.9rem, 2vw, 1rem);
         }
         
         .btn-outline-light:hover {
             background: white;
             color: var(--primary-red);
+        }
+        
+        .hero-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: clamp(0.75rem, 3vw, 1rem);
+        }
+        
+        .hero-buttons .btn {
+            flex: 1 1 auto;
+            min-width: 140px;
+        }
+        
+        h1.display-3 {
+            font-size: clamp(2rem, 8vw, 4.5rem);
+        }
+        
+        .earning-stats h3 {
+            font-size: clamp(1.25rem, 4vw, 1.75rem);
         }
     </style>
 </head>
@@ -149,7 +175,7 @@
                         </div>
                         
                         <div class="hero-buttons">
-                            <a href="{{ url_for('register') }}" class="btn btn-primary me-3">
+                            <a href="{{ url_for('register') }}" class="btn btn-primary">
                                 <i class="fas fa-user-plus me-2"></i>Start Earning Now
                             </a>
                             <a href="{{ url_for('login') }}" class="btn btn-outline-light">
