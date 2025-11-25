@@ -86,7 +86,7 @@
             width: 100%;
             max-width: clamp(350px, 90vw, 480px);
             animation: fadeInUp 0.8s ease-out;
-            margin: var(--space-md) auto;
+            margin-top: 40px; /* Increased top margin to move container down */
         }
 
         @keyframes fadeInUp {
@@ -110,7 +110,6 @@
             overflow: hidden;
             border: 1px solid rgba(255, 255, 255, 0.3);
             transition: all 0.3s ease;
-            margin-top: var(--space-sm); /* Added top margin to move card down */
         }
 
         .auth-card:hover {
@@ -127,7 +126,7 @@
             text-align: center;
             position: relative;
             overflow: hidden;
-            padding-top: calc(var(--space-lg) + 8px); /* Added extra top padding */
+            padding-top: calc(var(--space-lg) + 25px); /* Significantly increased top padding */
         }
 
         .auth-header::before {
@@ -188,9 +187,10 @@
             position: relative;
         }
 
-        /* Increased spacing between buttons */
+        /* Automatic button spacing - no wrapper needed */
         .auth-body .btn {
-            margin-bottom: var(--space-sm);
+            width: 100%;
+            margin-bottom: 20px; /* Increased spacing between buttons */
         }
 
         .auth-body .btn:last-child {
@@ -347,12 +347,12 @@
         @media (max-width: 576px) {
             .auth-container {
                 max-width: 100%;
-                margin: var(--space-sm) auto;
+                margin: 30px 10px; /* Increased top margin for mobile */
             }
             
             .auth-header {
                 padding: var(--space-md);
-                padding-top: calc(var(--space-md) + 8px);
+                padding-top: calc(var(--space-md) + 25px); /* Increased top padding for mobile */
             }
             
             .auth-body {
@@ -377,7 +377,7 @@
             }
             
             .auth-header {
-                padding-top: calc(var(--space-md) + 8px);
+                padding-top: calc(var(--space-md) + 25px); /* Increased top padding for small phones */
             }
         }
 
