@@ -306,12 +306,8 @@
             color: var(--text-dark);
         }
 
-        /* ===== SUPPORT / COMMUNITY BUTTONS ===== */
+        /* ===== SUPPORT / COMMUNITY BUTTONS - UPDATED ===== */
         .support-button, .community-button {
-            width: clamp(40px, 10vw, 50px);
-            height: clamp(40px, 10vw, 50px);
-            font-size: clamp(0.7rem, 2.5vw, 0.875rem);
-            padding: 0;
             position: fixed;
             right: 20px;
             background: var(--secondary-gradient);
@@ -328,10 +324,14 @@
             justify-content: center;
             gap: 8px;
             white-space: nowrap;
+            padding: 12px 20px;
+            font-size: 0.875rem;
+            min-width: auto;
         }
 
         .support-button {
             bottom: 20px;
+            background: var(--secondary-gradient);
         }
 
         .community-button {
@@ -343,6 +343,106 @@
             transform: translateY(-2px);
             box-shadow: var(--shadow-xl);
             color: white;
+            text-decoration: none;
+        }
+
+        /* Always show full button with text on larger screens */
+        @media (min-width: 768px) {
+            .support-button, .community-button {
+                width: auto;
+                height: auto;
+                padding: 12px 24px;
+                font-size: 0.9rem;
+                border-radius: 50px;
+            }
+            
+            .support-button span, 
+            .community-button span {
+                display: inline !important;
+                opacity: 1 !important;
+            }
+        }
+
+        /* Mobile: show as circular icons only */
+        @media (max-width: 767.98px) {
+            .support-button, .community-button {
+                width: 50px;
+                height: 50px;
+                padding: 0;
+                border-radius: 50%;
+                right: 15px;
+            }
+            
+            .support-button {
+                bottom: 15px;
+            }
+            
+            .community-button {
+                bottom: 75px;
+            }
+            
+            .support-button span, 
+            .community-button span {
+                display: none;
+            }
+            
+            .support-button i, 
+            .community-button i {
+                margin: 0;
+                font-size: 1.2rem;
+            }
+        }
+
+        /* Extra small mobile devices */
+        @media (max-width: 375px) {
+            .support-button, .community-button {
+                width: 45px;
+                height: 45px;
+                right: 10px;
+            }
+            
+            .support-button {
+                bottom: 10px;
+            }
+            
+            .community-button {
+                bottom: 65px;
+            }
+        }
+
+        /* Large desktop screens - ensure buttons are clearly visible */
+        @media (min-width: 1200px) {
+            .support-button, .community-button {
+                padding: 14px 28px;
+                font-size: 1rem;
+                right: 25px;
+            }
+            
+            .support-button {
+                bottom: 25px;
+            }
+            
+            .community-button {
+                bottom: 90px;
+            }
+        }
+
+        /* High contrast mode support */
+        @media (prefers-contrast: high) {
+            .support-button, .community-button {
+                border: 2px solid white;
+            }
+        }
+
+        /* Reduced motion support */
+        @media (prefers-reduced-motion: reduce) {
+            .support-button, .community-button {
+                transition: none;
+            }
+            
+            .support-button:hover, .community-button:hover {
+                transform: none;
+            }
         }
 
         /* ===== FLASH MESSAGES ===== */
@@ -655,32 +755,6 @@
                 margin: 0 0 0.5rem 0;
             }
 
-            .support-button,
-            .community-button {
-                padding: 10px 16px;
-                font-size: 0.875rem;
-                right: 15px;
-                bottom: 15px;
-            }
-
-            .community-button {
-                bottom: 70px;
-            }
-
-            .support-button span,
-            .community-button span {
-                display: none;
-            }
-
-            .support-button,
-            .community-button {
-                width: 50px;
-                height: 50px;
-                border-radius: 50%;
-                justify-content: center;
-                padding: 0;
-            }
-
             .card-header {
                 padding: 0.75rem 1rem;
             }
@@ -709,16 +783,6 @@
 
             .stat-value {
                 font-size: clamp(1.5rem, 8vw, 2rem);
-            }
-
-            .support-button,
-            .community-button {
-                padding: 10px 16px;
-                font-size: 0.875rem;
-            }
-
-            .community-button {
-                bottom: 75px;
             }
 
             .flash-message {
@@ -783,16 +847,6 @@
         @media (orientation: landscape) and (max-height: 500px) {
             .content-inner {
                 padding: 1rem 0.1rem;
-            }
-            
-            .support-button,
-            .community-button {
-                bottom: 10px;
-                right: 10px;
-            }
-            
-            .community-button {
-                bottom: 60px;
             }
         }
 
@@ -886,14 +940,22 @@
                 </div>
 
                 <!-- Join Community Button -->
-                <a href="https://chat.whatsapp.com/I1iZi0WjYjF0EDV0Byq7IW" class="community-button" target="_blank" title="Join our WhatsApp Community">
-                    <i class="fab fa-whatsapp"></i>
+                <a href="https://chat.whatsapp.com/I1iZi0WjYjF0EDV0Byq7IW" 
+                   class="community-button" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   aria-label="Join our WhatsApp Community for updates and discussions">
+                    <i class="fab fa-whatsapp" aria-hidden="true"></i>
                     <span>Join Community</span>
                 </a>
 
                 <!-- WhatsApp Support Button -->
-                <a href="https://wa.me/254799326074" class="support-button" target="_blank" title="Contact Support on WhatsApp">
-                    <i class="fab fa-whatsapp"></i>
+                <a href="https://wa.me/254799326074" 
+                   class="support-button" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   aria-label="Contact Support on WhatsApp for immediate assistance">
+                    <i class="fab fa-whatsapp" aria-hidden="true"></i>
                     <span>Contact Support</span>
                 </a>
             </main>
@@ -911,33 +973,8 @@
 
             // Responsive initialization
             function initializeResponsiveBehavior() {
-                setupResponsiveButtons();
                 setupResponsiveTables();
                 setupViewportHandling();
-            }
-
-            // Adjust button visibility and behavior
-            function setupResponsiveButtons() {
-                const supportButton = document.querySelector('.support-button');
-                const communityButton = document.querySelector('.community-button');
-                
-                function updateButtonText() {
-                    if (window.innerWidth < 576) {
-                        // Hide text on very small screens
-                        if (supportButton) supportButton.querySelector('span').style.display = 'none';
-                        if (communityButton) communityButton.querySelector('span').style.display = 'none';
-                    } else {
-                        // Show text on larger screens
-                        if (supportButton) supportButton.querySelector('span').style.display = 'inline';
-                        if (communityButton) communityButton.querySelector('span').style.display = 'inline';
-                    }
-                }
-
-                // Initial setup
-                updateButtonText();
-                
-                // Update on resize
-                window.addEventListener('resize', updateButtonText);
             }
 
             // Make tables responsive
