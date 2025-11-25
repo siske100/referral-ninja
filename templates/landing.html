@@ -14,24 +14,16 @@
             --accent-orange: #e67e22;
         }
         
-        * {
-            box-sizing: border-box;
-        }
-        
-        body {
-            overflow-x: hidden;
-        }
-        
         .landing-hero {
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             color: white;
-            min-height: 100dvh;
+            min-height: 100vh;
             display: flex;
             align-items: center;
             position: relative;
             overflow: hidden;
-            padding-top: clamp(1rem, 5dvh, 3rem);
-            padding-bottom: clamp(1rem, 5dvh, 3rem);
+            padding-top: clamp(1rem, 5vh, 3rem);
+            padding-bottom: clamp(1rem, 5vh, 3rem);
             padding-left: env(safe-area-inset-left);
             padding-right: env(safe-area-inset-right);
         }
@@ -39,29 +31,27 @@
         .hero-content {
             position: relative;
             z-index: 2;
-            padding: clamp(0.5rem, 2vw, 2rem);
         }
         
         .ninja-badge {
             background: linear-gradient(135deg, var(--primary-red), var(--primary-dark));
             color: white;
-            padding: clamp(0.4rem, 1.5vw, 0.8rem) clamp(1rem, 3vw, 1.5rem);
-            border-radius: clamp(20px, 4vw, 25px);
-            font-size: clamp(0.7rem, 1.8vw, 0.9rem);
+            padding: 0.5rem 1.5rem;
+            border-radius: 25px;
+            font-size: clamp(0.8rem, 2vw, 0.9rem);
             font-weight: 600;
             display: inline-block;
-            margin-bottom: clamp(0.8rem, 2vw, 1.5rem);
-            margin-top: clamp(0.5rem, 3dvh, 2rem);
+            margin-bottom: 1rem;
+            margin-top: clamp(0.5rem, 3vh, 2rem);
         }
         
         .hero-image {
             position: relative;
             text-align: center;
-            padding: clamp(1rem, 3vw, 2rem);
         }
         
         .hero-image i {
-            font-size: clamp(6rem, 20vw, 15rem);
+            font-size: clamp(8rem, 25vw, 15rem);
             color: rgba(231, 76, 60, 0.1);
             animation: float 3s ease-in-out infinite;
         }
@@ -74,13 +64,11 @@
         .feature-card {
             background: rgba(255,255,255,0.1);
             backdrop-filter: blur(10px);
-            border-radius: clamp(10px, 2vw, 15px);
-            padding: clamp(1rem, 3vw, 2rem);
+            border-radius: 15px;
+            padding: clamp(1.5rem, 4vw, 2rem);
             text-align: center;
             border: 1px solid rgba(255,255,255,0.2);
             transition: all 0.3s ease;
-            height: 100%;
-            margin-bottom: clamp(1rem, 3vw, 1.5rem);
         }
         
         .feature-card:hover {
@@ -89,28 +77,26 @@
         }
         
         .feature-icon {
-            width: clamp(50px, 12vw, 80px);
-            height: clamp(50px, 12vw, 80px);
+            width: clamp(60px, 15vw, 80px);
+            height: clamp(60px, 15vw, 80px);
             background: linear-gradient(135deg, var(--primary-red), var(--primary-dark));
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto clamp(0.8rem, 2vw, 1.5rem);
-            font-size: clamp(1.2rem, 3vw, 2rem);
+            margin: 0 auto 1rem;
+            font-size: clamp(1.5rem, 4vw, 2rem);
             color: white;
         }
         
         .btn-primary {
             background: linear-gradient(135deg, var(--primary-red), var(--primary-dark));
             border: none;
-            padding: clamp(0.6rem, 1.5vw, 0.8rem) clamp(1.5rem, 3vw, 2rem);
+            padding: 12px 30px;
             font-weight: 600;
-            border-radius: clamp(20px, 4vw, 25px);
+            border-radius: 25px;
             transition: all 0.3s ease;
-            font-size: clamp(0.8rem, 1.8vw, 1rem);
-            width: 100%;
-            margin-bottom: clamp(0.5rem, 1.5vw, 1rem);
+            font-size: clamp(0.9rem, 2vw, 1rem);
         }
         
         .btn-primary:hover {
@@ -120,12 +106,11 @@
         
         .btn-outline-light {
             border: 2px solid white;
-            padding: clamp(0.6rem, 1.5vw, 0.8rem) clamp(1.5rem, 3vw, 2rem);
+            padding: 12px 30px;
             font-weight: 600;
-            border-radius: clamp(20px, 4vw, 25px);
+            border-radius: 25px;
             transition: all 0.3s ease;
-            font-size: clamp(0.8rem, 1.8vw, 1rem);
-            width: 100%;
+            font-size: clamp(0.9rem, 2vw, 1rem);
         }
         
         .btn-outline-light:hover {
@@ -136,7 +121,7 @@
         .hero-buttons {
             display: flex;
             flex-wrap: wrap;
-            gap: clamp(0.5rem, 2vw, 1rem);
+            gap: clamp(0.75rem, 3vw, 1rem);
         }
         
         .hero-buttons .btn {
@@ -145,90 +130,11 @@
         }
         
         h1.display-3 {
-            font-size: clamp(1.8rem, 7vw, 4.5rem);
-            line-height: 1.2;
-            margin-bottom: clamp(1rem, 3vw, 1.5rem) !important;
-        }
-        
-        .lead {
-            font-size: clamp(0.9rem, 2vw, 1.25rem);
-            line-height: 1.5;
-            margin-bottom: clamp(1rem, 3vw, 1.5rem) !important;
+            font-size: clamp(2rem, 8vw, 4.5rem);
         }
         
         .earning-stats h3 {
-            font-size: clamp(1.1rem, 3.5vw, 1.75rem);
-            margin-bottom: 0.25rem;
-        }
-        
-        .earning-stats small {
-            font-size: clamp(0.7rem, 1.5vw, 0.85rem);
-        }
-        
-        .earning-stats {
-            margin-bottom: clamp(1.5rem, 4vw, 2.5rem) !important;
-        }
-        
-        .section-heading {
-            font-size: clamp(1.5rem, 4vw, 2.5rem);
-            margin-bottom: clamp(0.8rem, 2vw, 1.5rem);
-        }
-        
-        .section-subheading {
-            font-size: clamp(0.9rem, 2vw, 1.1rem);
-            margin-bottom: clamp(1.5rem, 4vw, 3rem);
-        }
-        
-        .feature-card h4 {
-            font-size: clamp(1.1rem, 2.5vw, 1.5rem);
-            margin-bottom: clamp(0.5rem, 1.5vw, 1rem);
-        }
-        
-        .feature-card p {
-            font-size: clamp(0.85rem, 1.8vw, 1rem);
-            line-height: 1.5;
-        }
-        
-        .btn-lg {
-            padding: clamp(0.8rem, 2vw, 1rem) clamp(2rem, 4vw, 2.5rem);
-            font-size: clamp(0.9rem, 2vw, 1.1rem);
-            border-radius: clamp(25px, 5vw, 30px);
-        }
-        
-        footer p {
-            font-size: clamp(0.9rem, 2vw, 1rem);
-        }
-        
-        footer small {
-            font-size: clamp(0.7rem, 1.5vw, 0.85rem);
-        }
-        
-        /* Improved responsive layout for buttons */
-        @media (min-width: 576px) {
-            .btn-primary, .btn-outline-light {
-                width: auto;
-            }
-            
-            .hero-buttons {
-                flex-wrap: nowrap;
-            }
-        }
-        
-        /* Adjust layout for very small screens */
-        @media (max-width: 400px) {
-            .hero-image i {
-                font-size: clamp(4rem, 15vw, 6rem);
-            }
-            
-            .earning-stats .col-4 {
-                padding: 0 0.25rem;
-            }
-        }
-        
-        /* Ensure proper spacing on all screen sizes */
-        .container {
-            padding-left: clamp(0.5rem, 3vw, 1rem);
-            padding-right: clamp(0.5rem, 3vw, 1rem);
+            font-size: clamp(1.25rem, 4vw, 1.75rem);
         }
     </style>
 </head>
@@ -237,22 +143,22 @@
     <section class="landing-hero">
         <div class="container">
             <div class="row align-items-center">
-                <div class="col-12 col-lg-6 order-2 order-lg-1">
+                <div class="col-lg-6">
                     <div class="hero-content">
                         <div class="ninja-badge">
                             <i class="fas fa-bolt me-1"></i> INSTANT EARNINGS
                         </div>
-                        <h1 class="display-3 fw-bold">
+                        <h1 class="display-3 fw-bold mb-4">
                             Become a 
                             <span class="text-danger">Referral Ninja</span>
                         </h1>
-                        <p class="lead">
+                        <p class="lead mb-4">
                             Earn <strong>KSH 50 instantly</strong> for every friend who joins using your referral code. 
                             Start building your income stream today!
                         </p>
                         
-                        <div class="earning-stats">
-                            <div class="row text-center">
+                        <div class="earning-stats mb-4">
+                            <div class="row">
                                 <div class="col-4">
                                     <h3 class="text-warning fw-bold">KSH 50</h3>
                                     <small>Per Referral</small>
@@ -278,7 +184,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-12 col-lg-6 order-1 order-lg-2">
+                <div class="col-lg-6">
                     <div class="hero-image">
                         <i class="fas fa-user-ninja"></i>
                     </div>
@@ -291,12 +197,12 @@
     <section class="py-5 bg-light">
         <div class="container">
             <div class="text-center mb-5">
-                <h2 class="section-heading fw-bold">How It Works</h2>
-                <p class="section-subheading text-muted">Start earning in just 3 simple steps</p>
+                <h2 class="fw-bold">How It Works</h2>
+                <p class="text-muted">Start earning in just 3 simple steps</p>
             </div>
             
-            <div class="row g-4 justify-content-center">
-                <div class="col-12 col-md-6 col-lg-4">
+            <div class="row g-4">
+                <div class="col-md-4">
                     <div class="feature-card">
                         <div class="feature-icon">
                             <i class="fas fa-user-plus"></i>
@@ -305,7 +211,7 @@
                         <p class="text-muted">Sign up with your phone number and pay the one-time KSH 200 registration fee</p>
                     </div>
                 </div>
-                <div class="col-12 col-md-6 col-lg-4">
+                <div class="col-md-4">
                     <div class="feature-card">
                         <div class="feature-icon">
                             <i class="fas fa-share-alt"></i>
@@ -314,7 +220,7 @@
                         <p class="text-muted">Share your unique referral code with friends and family</p>
                     </div>
                 </div>
-                <div class="col-12 col-md-6 col-lg-4">
+                <div class="col-md-4">
                     <div class="feature-card">
                         <div class="feature-icon">
                             <i class="fas fa-money-bill-wave"></i>
@@ -330,8 +236,8 @@
     <!-- CTA Section -->
     <section class="py-5" style="background: linear-gradient(135deg, var(--primary-red), var(--primary-dark)); color: white;">
         <div class="container text-center">
-            <h2 class="section-heading fw-bold mb-3">Ready to Start Earning?</h2>
-            <p class="section-subheading mb-4">Join thousands of Referral Ninjas already earning money by referring friends</p>
+            <h2 class="fw-bold mb-3">Ready to Start Earning?</h2>
+            <p class="mb-4">Join thousands of Referral Ninjas already earning money by referring friends</p>
             <a href="{{ url_for('register') }}" class="btn btn-light btn-lg">
                 <i class="fas fa-rocket me-2"></i>Join Now - KSH 200
             </a>
