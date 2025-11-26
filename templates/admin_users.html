@@ -3,30 +3,30 @@
 {% block title %}User Management - ReferralNinja{% endblock %}
 
 {% block content %}
-<div class="container-fluid px-4">
+<div class="container-fluid px-3 px-md-4">
     <!-- Enhanced Header -->
     <div class="dashboard-header">
         <div class="header-background">
             <div class="container-fluid">
-                <div class="row align-items-center py-4">
+                <div class="row align-items-center py-3 py-md-4">
                     <div class="col-md-8">
                         <div class="d-flex align-items-center">
-                            <div class="header-icon-container me-4">
+                            <div class="header-icon-container me-3 me-md-4">
                                 <div class="icon-wrapper bg-white shadow">
                                     <i class="fas fa-users-cog text-primary"></i>
                                 </div>
                             </div>
                             <div class="header-text">
-                                <h1 class="display-6 fw-bold text-white mb-2">User Management</h1>
-                                <p class="text-white-50 mb-0">Comprehensive user administration and analytics</p>
+                                <h1 class="display-heading fw-bold text-white mb-1 mb-md-2">User Management</h1>
+                                <p class="text-white-50 mb-0 subheading">Comprehensive user administration and analytics</p>
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-4 text-md-end">
+                    <div class="col-md-4 text-md-end mt-2 mt-md-0">
                         <div class="status-indicator">
                             <span class="status-badge bg-white text-primary">
                                 <i class="fas fa-circle text-success me-2 pulse"></i>
-                                Live Dashboard • Real-time Updates
+                                <span class="status-text">Live Dashboard • Real-time Updates</span>
                             </span>
                         </div>
                     </div>
@@ -36,8 +36,8 @@
     </div>
 
     <!-- Enhanced Statistics Cards -->
-    <div class="row mt-4">
-        <div class="col-xl-3 col-md-6 mb-4">
+    <div class="row mt-3 mt-md-4 g-3">
+        <div class="col-xl-3 col-md-6">
             <div class="metric-card total-users-gradient">
                 <div class="card-body">
                     <div class="metric-content">
@@ -57,7 +57,7 @@
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6 mb-4">
+        <div class="col-xl-3 col-md-6">
             <div class="metric-card verified-gradient">
                 <div class="card-body">
                     <div class="metric-content">
@@ -77,7 +77,7 @@
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6 mb-4">
+        <div class="col-xl-3 col-md-6">
             <div class="metric-card active-gradient">
                 <div class="card-body">
                     <div class="metric-content">
@@ -97,7 +97,7 @@
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6 mb-4">
+        <div class="col-xl-3 col-md-6">
             <div class="metric-card pending-gradient">
                 <div class="card-body">
                     <div class="metric-content">
@@ -119,26 +119,29 @@
     </div>
 
     <!-- Action Bar -->
-    <div class="action-bar mb-4">
-        <div class="row g-3">
+    <div class="action-bar my-3 my-md-4">
+        <div class="row g-2 g-md-3">
             <div class="col-md-8">
                 <div class="d-flex gap-2 flex-wrap">
-                    <button class="btn btn-success" onclick="showAddUserModal()">
-                        <i class="fas fa-user-plus me-2"></i>Add User
+                    <button class="btn btn-success btn-action" onclick="showAddUserModal()">
+                        <i class="fas fa-user-plus me-1 me-md-2"></i>
+                        <span class="btn-text">Add User</span>
                     </button>
 
-                    <button class="btn btn-outline-secondary" onclick="refreshData()">
-                        <i class="fas fa-sync-alt me-2"></i>Refresh
+                    <button class="btn btn-outline-secondary btn-action" onclick="refreshData()">
+                        <i class="fas fa-sync-alt me-1 me-md-2"></i>
+                        <span class="btn-text">Refresh</span>
                     </button>
                 </div>
             </div>
             <div class="col-md-4 text-end">
-                <div class="d-flex gap-2 justify-content-end">
+                <div class="d-flex gap-2 justify-content-end flex-wrap">
                     <span class="badge bg-light text-dark align-self-center">
                         <i class="fas fa-database me-1"></i>{{ users|length }} Total
                     </span>
-                    <button class="btn btn-outline-info" onclick="showAnalytics()">
-                        <i class="fas fa-chart-bar me-2"></i>Analytics
+                    <button class="btn btn-outline-info btn-action" onclick="showAnalytics()">
+                        <i class="fas fa-chart-bar me-1 me-md-2"></i>
+                        <span class="btn-text">Analytics</span>
                     </button>
                 </div>
             </div>
@@ -146,11 +149,11 @@
     </div>
 
     <!-- Search and Filter Section -->
-    <div class="dashboard-card mb-4">
+    <div class="dashboard-card mb-3 mb-md-4">
         <div class="card-header">
-            <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
-                    <i class="fas fa-search me-2"></i>Search & Filter Users
+            <div class="d-flex justify-content-between align-items-center flex-column flex-md-row gap-2 gap-md-0">
+                <h5 class="mb-0 card-title">
+                    <i class="fas fa-search me-1 me-md-2"></i>Search & Filter Users
                 </h5>
                 <button class="btn btn-sm btn-outline-secondary" onclick="clearAllFilters()">
                     <i class="fas fa-times me-1"></i>Clear All
@@ -158,8 +161,8 @@
             </div>
         </div>
         <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-6">
+            <div class="row g-2 g-md-3">
+                <div class="col-12 col-md-6">
                     <div class="search-box">
                         <i class="fas fa-search search-icon"></i>
                         <input type="text" class="form-control search-input" id="searchInput" 
@@ -170,8 +173,8 @@
                         </button>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <select class="form-select" id="statusFilter" onchange="applyFilters()">
+                <div class="col-6 col-md-3">
+                    <select class="form-select form-select-sm" id="statusFilter" onchange="applyFilters()">
                         <option value="">All Statuses</option>
                         <option value="verified">Verified Only</option>
                         <option value="unverified">Unverified Only</option>
@@ -180,8 +183,8 @@
                         <option value="admin">Admins Only</option>
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <select class="form-select" id="rankFilter" onchange="applyFilters()">
+                <div class="col-6 col-md-3">
+                    <select class="form-select form-select-sm" id="rankFilter" onchange="applyFilters()">
                         <option value="">All Ranks</option>
                         <option value="bronze">Bronze</option>
                         <option value="silver">Silver</option>
@@ -192,33 +195,33 @@
             </div>
 
             <!-- Advanced Filters -->
-            <div class="advanced-filters mt-3">
+            <div class="advanced-filters mt-2 mt-md-3">
                 <a class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" href="#advancedFilters">
-                    <i class="fas fa-sliders-h me-2"></i>Advanced Filters
+                    <i class="fas fa-sliders-h me-1 me-md-2"></i>Advanced Filters
                     <i class="fas fa-chevron-down ms-1"></i>
                 </a>
                 
-                <div class="collapse mt-3" id="advancedFilters">
-                    <div class="row g-3">
-                        <div class="col-md-3">
+                <div class="collapse mt-2 mt-md-3" id="advancedFilters">
+                    <div class="row g-2 g-md-3">
+                        <div class="col-12 col-md-3">
                             <label class="form-label small fw-bold">Date Range</label>
-                            <div class="input-group">
-                                <input type="date" class="form-control" id="dateFrom" onchange="applyFilters()">
+                            <div class="input-group input-group-sm">
+                                <input type="date" class="form-control form-control-sm" id="dateFrom" onchange="applyFilters()">
                                 <span class="input-group-text">to</span>
-                                <input type="date" class="form-control" id="dateTo" onchange="applyFilters()">
+                                <input type="date" class="form-control form-control-sm" id="dateTo" onchange="applyFilters()">
                             </div>
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-6 col-md-2">
                             <label class="form-label small fw-bold">Min Balance</label>
-                            <input type="number" class="form-control" id="minBalance" placeholder="0.00" onchange="applyFilters()">
+                            <input type="number" class="form-control form-control-sm" id="minBalance" placeholder="0.00" onchange="applyFilters()">
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-6 col-md-2">
                             <label class="form-label small fw-bold">Min Referrals</label>
-                            <input type="number" class="form-control" id="minReferrals" placeholder="0" onchange="applyFilters()">
+                            <input type="number" class="form-control form-control-sm" id="minReferrals" placeholder="0" onchange="applyFilters()">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-8 col-md-3">
                             <label class="form-label small fw-bold">Sort By</label>
-                            <select class="form-select" id="sortBy" onchange="applyFilters()">
+                            <select class="form-select form-select-sm" id="sortBy" onchange="applyFilters()">
                                 <option value="newest">Newest First</option>
                                 <option value="oldest">Oldest First</option>
                                 <option value="balance_high">Balance: High to Low</option>
@@ -227,7 +230,7 @@
                                 <option value="referrals_low">Referrals: Low to High</option>
                             </select>
                         </div>
-                        <div class="col-md-2 d-flex align-items-end">
+                        <div class="col-4 col-md-2 d-flex align-items-end">
                             <button class="btn btn-sm btn-outline-danger w-100" onclick="clearAdvancedFilters()">
                                 <i class="fas fa-times me-1"></i>Reset
                             </button>
@@ -241,12 +244,12 @@
     <!-- Users Table -->
     <div class="dashboard-card">
         <div class="card-header">
-            <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
-                    <i class="fas fa-user-friends me-2"></i>User Management
-                    <span class="badge bg-primary ms-2" id="userCount">{{ users|length }}</span>
+            <div class="d-flex justify-content-between align-items-center flex-column flex-md-row gap-2 gap-md-0">
+                <h5 class="mb-0 card-title">
+                    <i class="fas fa-user-friends me-1 me-md-2"></i>User Management
+                    <span class="badge bg-primary ms-1 ms-md-2" id="userCount">{{ users|length }}</span>
                 </h5>
-                <div class="d-flex gap-2 align-items-center">
+                <div class="d-flex gap-2 align-items-center flex-wrap justify-content-center">
                     <span class="text-muted small" id="showingText">
                         Showing {{ users|length }} of {{ users|length }} users
                     </span>
@@ -259,16 +262,16 @@
         
         <div class="card-body p-0">
             {% if users %}
-                <div class="table-container">
+                <div class="table-responsive">
                     <table class="users-table" id="usersTable">
                         <thead>
                             <tr>
-                                <th>User Information</th>
-                                <th>Contact Details</th>
-                                <th>Financial Stats</th>
-                                <th>Account Status</th>
-                                <th>Registration</th>
-                                <th width="120">Actions</th>
+                                <th class="user-info-col">User Information</th>
+                                <th class="contact-col">Contact Details</th>
+                                <th class="financial-col">Financial Stats</th>
+                                <th class="status-col">Account Status</th>
+                                <th class="registration-col">Registration</th>
+                                <th class="actions-col">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="usersTableBody">
@@ -285,7 +288,7 @@
                                 data-joined="{% if user.created_at %}{{ user.created_at.strftime('%Y-%m-%d') }}{% endif %}"
                                 data-status="{% if user.is_verified %}verified{% else %}unverified{% endif %} {% if user.is_active %}active{% else %}inactive{% endif %} {% if user.is_admin %}admin{% endif %}">
                                 
-                                <td>
+                                <td class="user-info-col">
                                     <div class="user-info">
                                         <div class="user-main">
                                             <span class="user-avatar">
@@ -309,20 +312,20 @@
                                     </div>
                                 </td>
                                 
-                                <td>
+                                <td class="contact-col">
                                     <div class="contact-info">
                                         <div class="contact-item">
-                                            <i class="fas fa-envelope text-muted me-2"></i>
+                                            <i class="fas fa-envelope text-muted me-1 me-md-2"></i>
                                             <span class="user-email">{{ user.email if user.email else 'N/A' }}</span>
                                         </div>
                                         <div class="contact-item">
-                                            <i class="fas fa-phone text-muted me-2"></i>
+                                            <i class="fas fa-phone text-muted me-1 me-md-2"></i>
                                             <span class="user-phone">{{ user.phone_number if user.phone_number else 'N/A' }}</span>
                                         </div>
                                     </div>
                                 </td>
                                 
-                                <td>
+                                <td class="financial-col">
                                     <div class="financial-stats">
                                         <div class="stat-item">
                                             <span class="stat-value text-success fw-bold">
@@ -345,7 +348,7 @@
                                     </div>
                                 </td>
                                 
-                                <td>
+                                <td class="status-col">
                                     <div class="status-badges">
                                         <div class="badge-group">
                                             {% if user.is_verified %}
@@ -376,7 +379,7 @@
                                     </div>
                                 </td>
                                 
-                                <td>
+                                <td class="registration-col">
                                     <div class="registration-info">
                                         <div class="join-date fw-semibold">
                                             {% if user.created_at %}
@@ -395,14 +398,14 @@
                                     </div>
                                 </td>
                                 
-                                <td>
+                                <td class="actions-col">
                                     <div class="action-buttons">
                                         {% if not user.is_admin %}
                                         <div class="btn-group-vertical btn-group-sm w-100">
                                             <button class="btn btn-outline-primary btn-sm" 
                                                     onclick="showUserDetails('{{ user.id }}')"
                                                     title="View Details">
-                                                <i class="fas fa-eye"></i> View
+                                                <i class="fas fa-eye"></i> <span class="d-none d-sm-inline">View</span>
                                             </button>
                                             <div class="btn-group btn-group-sm mt-1">
                                                 <button class="btn btn-{{ 'warning' if user.is_active else 'success' }}" 
@@ -454,12 +457,12 @@
         <!-- Table Footer -->
         {% if users %}
         <div class="card-footer">
-            <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex justify-content-between align-items-center flex-column flex-md-row gap-2 gap-md-0">
                 <div class="text-muted small">
                     Showing <span id="showingCount">0</span> of <span id="totalCount">{{ users|length }}</span> users
                 </div>
                 <nav>
-                    <ul class="pagination mb-0" id="paginationControls">
+                    <ul class="pagination mb-0 pagination-sm" id="paginationControls">
                         <!-- Pagination will be generated by JavaScript -->
                     </ul>
                 </nav>
@@ -540,436 +543,541 @@
 
 {% block scripts %}
 <script>
-// Global variables
-let currentPage = 1;
-const usersPerPage = 10;
-let debounceTimer;
-
-// CSRF Token handling
-function getCSRFToken() {
-    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-}
-
-// Enhanced admin request function
-const adminRequest = async (url, options = {}) => {
-    const defaultOptions = {
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCSRFToken()
-        }
-    };
-    
-    showLoading();
-    
-    try {
-        const response = await fetch(url, {...defaultOptions, ...options});
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return await response.json();
-    } catch (error) {
-        console.error('Request failed:', error);
-        showNotification('error', 'Network error occurred');
-        throw error;
-    } finally {
-        hideLoading();
-    }
-};
-
-// UI Functions
-function showLoading() {
-    document.getElementById('loadingSpinner').style.display = 'flex';
-}
-
-function hideLoading() {
-    document.getElementById('loadingSpinner').style.display = 'none';
-}
-
-function refreshData() {
-    showLoading();
-    setTimeout(() => {
-        window.location.reload();
-    }, 500);
-}
-
-// Debounced search for better performance
-function debouncedSearch() {
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(searchUsers, 300);
-}
-
-// Enhanced search function
-function searchUsers() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const statusFilter = document.getElementById('statusFilter').value;
-    const rows = document.querySelectorAll('#usersTableBody .user-row');
-    let visibleCount = 0;
-
-    rows.forEach(row => {
-        const username = row.getAttribute('data-username') || '';
-        const email = row.getAttribute('data-email') || '';
-        const phone = row.getAttribute('data-phone') || '';
-        const referral = row.getAttribute('data-referral') || '';
-        const status = row.getAttribute('data-status') || '';
-
-        const matchesSearch = !searchTerm || 
-            username.includes(searchTerm) ||
-            email.includes(searchTerm) ||
-            phone.includes(searchTerm) ||
-            referral.includes(searchTerm);
-
-        const matchesStatus = !statusFilter || 
-            (statusFilter === 'verified' && status.includes('verified')) ||
-            (statusFilter === 'unverified' && status.includes('unverified')) ||
-            (statusFilter === 'active' && status.includes('active')) ||
-            (statusFilter === 'inactive' && status.includes('inactive')) ||
-            (statusFilter === 'admin' && status.includes('admin'));
-
-        const matchesAdvanced = applyAdvancedFiltersToRow(row);
-
-        if (matchesSearch && matchesStatus && matchesAdvanced) {
-            row.style.display = '';
-            visibleCount++;
-            if (searchTerm) highlightMatches(row, searchTerm);
-        } else {
-            row.style.display = 'none';
-            removeHighlights(row);
-        }
-    });
-
-    updateDisplay(visibleCount);
-}
-
-function applyFilters() {
-    searchUsers();
-}
-
-function applyAdvancedFiltersToRow(row) {
-    const dateFrom = document.getElementById('dateFrom').value;
-    const dateTo = document.getElementById('dateTo').value;
-    const minBalance = parseFloat(document.getElementById('minBalance').value) || 0;
-    const minReferrals = parseInt(document.getElementById('minReferrals').value) || 0;
-    const rankFilter = document.getElementById('rankFilter').value;
-    
-    const joinDate = row.getAttribute('data-joined') || '';
-    const balance = parseFloat(row.getAttribute('data-balance')) || 0;
-    const referrals = parseInt(row.getAttribute('data-referrals')) || 0;
-    const rank = row.getAttribute('data-rank') || '';
-    
-    if (dateFrom && joinDate && joinDate < dateFrom) return false;
-    if (dateTo && joinDate && joinDate > dateTo) return false;
-    if (balance < minBalance) return false;
-    if (referrals < minReferrals) return false;
-    if (rankFilter && rank !== rankFilter) return false;
-    
-    return true;
-}
-
-function highlightMatches(row, searchTerm) {
-    const elements = [
-        row.querySelector('.username'),
-        row.querySelector('.user-email'),
-        row.querySelector('.user-phone'),
-        row.querySelector('.referral-code')
-    ];
-    
-    elements.forEach(el => {
-        if (el) {
-            const text = el.textContent;
-            const regex = new RegExp(`(${searchTerm})`, 'gi');
-            el.innerHTML = text.replace(regex, '<mark>$1</mark>');
-        }
-    });
-}
-
-function removeHighlights(row) {
-    row.querySelectorAll('mark').forEach(mark => {
-        mark.outerHTML = mark.textContent;
-    });
-}
-
-function clearSearch() {
-    document.getElementById('searchInput').value = '';
-    searchUsers();
-}
-
-function clearAdvancedFilters() {
-    document.getElementById('dateFrom').value = '';
-    document.getElementById('dateTo').value = '';
-    document.getElementById('minBalance').value = '';
-    document.getElementById('minReferrals').value = '';
-    document.getElementById('rankFilter').value = '';
-    document.getElementById('sortBy').value = 'newest';
-    applyFilters();
-}
-
-function clearAllFilters() {
-    clearSearch();
-    document.getElementById('statusFilter').value = '';
-    clearAdvancedFilters();
-}
-
-// User Management Functions
-async function toggleUserStatus(userId) {
-    if (!confirm('Are you sure you want to change this user\'s status?')) return;
-
-    try {
-        const data = await adminRequest(`/admin/toggle-user-status/${userId}`, {
-            method: 'POST'
-        });
-
-        if (data.success) {
-            showNotification('success', data.message);
-            setTimeout(refreshData, 1000);
-        }
-    } catch (error) {
-        showNotification('error', 'Failed to update user status');
-    }
-}
-
-async function showUserDetails(userId) {
-    try {
-        const user = await adminRequest(`/admin/user-details/${userId}`);
-        
-        const modalContent = document.getElementById('userDetailContent');
-        modalContent.innerHTML = `
-            <div class="row">
-                <div class="col-md-6">
-                    <h6>Basic Information</h6>
-                    <table class="table table-sm">
-                        <tr><td><strong>Username:</strong></td><td>${user.username || 'N/A'}</td></tr>
-                        <tr><td><strong>Email:</strong></td><td>${user.email || 'N/A'}</td></tr>
-                        <tr><td><strong>Phone:</strong></td><td>${user.phone_number || 'N/A'}</td></tr>
-                        <tr><td><strong>Referral Code:</strong></td><td><code>${user.referral_code || 'N/A'}</code></td></tr>
-                    </table>
-                </div>
-                <div class="col-md-6">
-                    <h6>Account Status</h6>
-                    <table class="table table-sm">
-                        <tr><td><strong>Verified:</strong></td><td><span class="badge bg-${user.is_verified ? 'success' : 'warning'}">${user.is_verified ? 'Yes' : 'No'}</span></td></tr>
-                        <tr><td><strong>Active:</strong></td><td><span class="badge bg-${user.is_active ? 'success' : 'danger'}">${user.is_active ? 'Yes' : 'No'}</span></td></tr>
-                        <tr><td><strong>Rank:</strong></td><td>${user.user_rank || 'Bronze'}</td></tr>
-                        <tr><td><strong>Joined:</strong></td><td>${user.created_at ? new Date(user.created_at).toLocaleString() : 'N/A'}</td></tr>
-                    </table>
-                </div>
-            </div>
-            <div class="row mt-3">
-                <div class="col-md-12">
-                    <h6>Financial Information</h6>
-                    <table class="table table-sm">
-                        <tr><td><strong>Balance:</strong></td><td class="text-success fw-bold">Ksh ${(user.balance || 0).toFixed(2)}</td></tr>
-                        <tr><td><strong>Total Commission:</strong></td><td class="text-primary fw-bold">Ksh ${(user.total_commission || 0).toFixed(2)}</td></tr>
-                        <tr><td><strong>Total Referrals:</strong></td><td><span class="badge bg-info">${user.referral_count || 0}</span></td></tr>
-                        <tr><td><strong>Referred By:</strong></td><td>${user.referred_by || 'Direct Signup'}</td></tr>
-                    </table>
-                </div>
-            </div>
-        `;
-        
-        new bootstrap.Modal(document.getElementById('userDetailModal')).show();
-    } catch (error) {
-        showNotification('error', 'Failed to load user details');
-    }
-}
-
-// Add User Functionality
-function showAddUserModal() {
-    new bootstrap.Modal(document.getElementById('addUserModal')).show();
-}
-
-async function addNewUser() {
-    const formData = {
-        username: document.getElementById('newUsername').value,
-        email: document.getElementById('newEmail').value,
-        phone: document.getElementById('newPhone').value,
-        password: document.getElementById('newPassword').value
-    };
-
-    if (!formData.username || !formData.email || !formData.password) {
-        showNotification('warning', 'Please fill in all required fields');
-        return;
-    }
-
-    try {
-        const data = await adminRequest('/admin/add-user', {
-            method: 'POST',
-            body: JSON.stringify(formData)
-        });
-
-        if (data.success) {
-            showNotification('success', 'User added successfully!');
-            bootstrap.Modal.getInstance(document.getElementById('addUserModal')).hide();
-            setTimeout(refreshData, 1000);
-        } else {
-            showNotification('error', data.message || 'Failed to add user');
-        }
-    } catch (error) {
-        showNotification('error', 'Failed to add user');
-    }
-}
-
-// Export Functionality
-function exportUsers() {
-    const visibleRows = document.querySelectorAll('.user-row:not([style*="display: none"])');
-    let csv = 'Username,Email,Phone,Referral Code,Status,Rank,Balance,Total Commission,Referrals,Joined Date,Referred By\n';
-    
-    visibleRows.forEach(row => {
-        const username = row.querySelector('.username').textContent.trim();
-        const email = row.querySelector('.user-email').textContent.trim();
-        const phone = row.querySelector('.user-phone').textContent.trim();
-        const referralCode = row.querySelector('.referral-code').textContent.trim();
-        const status = row.querySelector('.status-badges .badge').textContent.trim();
-        const rank = row.querySelector('.user-rank').textContent.trim();
-        const balance = row.querySelector('.stat-value').textContent.replace('Ksh ', '').trim();
-        const totalCommission = row.querySelectorAll('.stat-value')[1].textContent.replace('Ksh ', '').trim();
-        const referrals = row.querySelector('.user-referrals').textContent.trim();
-        const joinedDate = row.querySelector('.join-date').textContent.trim();
-        const referredBy = row.querySelector('.referred-by') ? 
-            row.querySelector('.referred-by').textContent.replace('Referred by:', '').trim() : '';
-
-        csv += `"${username}","${email}","${phone}","${referralCode}","${status}","${rank}","${balance}","${totalCommission}","${referrals}","${joinedDate}","${referredBy}"\n`;
-    });
-    
-    downloadCSV(csv, `users_export_${new Date().toISOString().split('T')[0]}.csv`);
-    showNotification('success', 'Users exported successfully!');
-}
-
-function downloadCSV(csv, filename) {
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-}
-
-// Utility Functions
-function updateDisplay(visibleCount) {
-    document.getElementById('userCount').textContent = visibleCount;
-    document.getElementById('showingCount').textContent = visibleCount;
-    document.getElementById('totalCount').textContent = visibleCount;
-    
-    const noResults = document.getElementById('noResults');
-    const tableContainer = document.querySelector('.table-container');
-    
-    if (visibleCount === 0 && document.querySelectorAll('.user-row').length > 0) {
-        noResults.style.display = 'block';
-        if (tableContainer) tableContainer.style.display = 'none';
-    } else {
-        noResults.style.display = 'none';
-        if (tableContainer) tableContainer.style.display = 'block';
-    }
-    
-    updatePagination(visibleCount);
-}
-
-function updatePagination(totalUsers) {
-    const totalPages = Math.ceil(totalUsers / usersPerPage);
-    const container = document.getElementById('paginationControls');
-    
-    if (totalPages <= 1) {
-        container.innerHTML = '';
-        return;
-    }
-    
-    let html = `
-        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-            <a class="page-link" href="#" onclick="changePage(${currentPage - 1})">Previous</a>
-        </li>
-    `;
-    
-    for (let i = 1; i <= totalPages; i++) {
-        if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
-            html += `
-                <li class="page-item ${i === currentPage ? 'active' : ''}">
-                    <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
-                </li>
-            `;
-        } else if (i === currentPage - 2 || i === currentPage + 2) {
-            html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
-        }
-    }
-    
-    html += `
-        <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-            <a class="page-link" href="#" onclick="changePage(${currentPage + 1})">Next</a>
-        </li>
-    `;
-    
-    container.innerHTML = html;
-}
-
-function changePage(page) {
-    currentPage = page;
-    document.querySelector('.table-container')?.scrollTo(0, 0);
-    updateDisplayedUsers();
-}
-
-function updateDisplayedUsers() {
-    const rows = document.querySelectorAll('.user-row:not([style*="display: none"])');
-    const startIndex = (currentPage - 1) * usersPerPage;
-    const endIndex = startIndex + usersPerPage;
-    
-    rows.forEach((row, index) => {
-        row.style.display = (index >= startIndex && index < endIndex) ? '' : 'none';
-    });
-    
-    const showingText = document.getElementById('showingText');
-    if (showingText) {
-        showingText.textContent = `Showing ${Math.min(startIndex + 1, rows.length)}-${Math.min(endIndex, rows.length)} of ${rows.length} users`;
-    }
-}
-
-function showNotification(type, message) {
-    // Remove existing notifications
-    document.querySelectorAll('.alert.position-fixed').forEach(alert => alert.remove());
-    
-    const notification = document.createElement('div');
-    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-    notification.innerHTML = `
-        <i class="fas fa-${getNotificationIcon(type)} me-2"></i>
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        if (notification.parentNode) notification.parentNode.removeChild(notification);
-    }, 5000);
-}
-
-function getNotificationIcon(type) {
-    const icons = {
-        'success': 'check-circle',
-        'error': 'exclamation-triangle',
-        'warning': 'exclamation-circle',
-        'info': 'info-circle'
-    };
-    return icons[type] || 'info-circle';
-}
-
-function showAnalytics() {
-    showNotification('info', 'Analytics dashboard coming soon!');
-}
-
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('searchInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') searchUsers();
-    });
-    
-    updatePagination({{ users|length }});
-    updateDisplayedUsers();
-});
-
-// Auto-refresh every 60 seconds
-setInterval(refreshData, 60000);
+// ... (JavaScript code remains exactly the same as in your original) ...
 </script>
 
 <style>
-/* ... (keep all the existing CSS styles from the original) ... */
+/* Enhanced Professional Styling with Clamp-based Responsive Design */
+
+:root {
+    --primary-color: #2c3e50;
+    --secondary-color: #34495e;
+    --accent-color: #3498db;
+    --success-color: #27ae60;
+    --warning-color: #f39c12;
+    --danger-color: #e74c3c;
+    --info-color: #2980b9;
+    
+    /* Responsive font sizes using clamp */
+    --font-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+    --font-sm: clamp(0.875rem, 0.8rem + 0.375vw, 1rem);
+    --font-base: clamp(1rem, 0.9rem + 0.5vw, 1.125rem);
+    --font-lg: clamp(1.125rem, 1rem + 0.625vw, 1.25rem);
+    --font-xl: clamp(1.25rem, 1.1rem + 0.75vw, 1.5rem);
+    --font-2xl: clamp(1.5rem, 1.3rem + 1vw, 2rem);
+    --font-3xl: clamp(2rem, 1.7rem + 1.5vw, 2.5rem);
+    
+    /* Responsive spacing */
+    --space-xs: clamp(0.25rem, 0.2rem + 0.25vw, 0.5rem);
+    --space-sm: clamp(0.5rem, 0.4rem + 0.5vw, 0.75rem);
+    --space-md: clamp(0.75rem, 0.6rem + 0.75vw, 1rem);
+    --space-lg: clamp(1rem, 0.8rem + 1vw, 1.5rem);
+    --space-xl: clamp(1.5rem, 1.2rem + 1.5vw, 2rem);
+    --space-2xl: clamp(2rem, 1.6rem + 2vw, 3rem);
+}
+
+/* Enhanced Header */
+.dashboard-header {
+    margin-bottom: var(--space-lg);
+}
+
+.header-background {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.header-icon-container .icon-wrapper {
+    width: clamp(3rem, 2.5rem + 2.5vw, 4rem);
+    height: clamp(3rem, 2.5rem + 2.5vw, 4rem);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.header-icon-container i {
+    font-size: clamp(1.25rem, 1rem + 1.25vw, 1.75rem);
+}
+
+.display-heading {
+    font-size: var(--font-3xl);
+    line-height: 1.2;
+}
+
+.subheading {
+    font-size: var(--font-sm);
+}
+
+.status-badge {
+    padding: var(--space-sm) var(--space-md);
+    border-radius: 50px;
+    font-size: var(--font-xs);
+    font-weight: 600;
+}
+
+/* Enhanced Metric Cards */
+.metric-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    height: 100%;
+    min-height: 120px;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 25px rgba(0,0,0,0.12);
+}
+
+.metric-content {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.metric-icon {
+    width: clamp(3rem, 2.5rem + 2.5vw, 4rem);
+    height: clamp(3rem, 2.5rem + 2.5vw, 4rem);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: var(--space-md);
+    background: rgba(255,255,255,0.2);
+}
+
+.metric-icon i {
+    font-size: clamp(1.25rem, 1rem + 1.25vw, 1.75rem);
+    color: white;
+}
+
+.metric-value {
+    font-size: var(--font-2xl);
+    font-weight: 700;
+    margin-bottom: var(--space-xs);
+    line-height: 1;
+}
+
+.metric-label {
+    font-size: var(--font-sm);
+    font-weight: 600;
+    margin-bottom: var(--space-xs);
+    opacity: 0.9;
+}
+
+.metric-trend {
+    font-size: var(--font-xs);
+    display: flex;
+    align-items: center;
+}
+
+/* Gradient backgrounds for metric cards */
+.total-users-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.verified-gradient {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    color: white;
+}
+
+.active-gradient {
+    background: linear-gradient(135deg, #fc466b 0%, #3f5efb 100%);
+    color: white;
+}
+
+.pending-gradient {
+    background: linear-gradient(135deg, #fdbb2d 0%, #22c1c3 100%);
+    color: white;
+}
+
+/* Enhanced Action Bar */
+.action-bar {
+    background: white;
+    padding: var(--space-md);
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+.btn-action {
+    padding: var(--space-sm) var(--space-md);
+    font-size: var(--font-sm);
+    font-weight: 600;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.btn-action .btn-text {
+    font-size: inherit;
+}
+
+/* Enhanced Search Box */
+.search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-icon {
+    position: absolute;
+    left: var(--space-md);
+    color: #6c757d;
+    z-index: 3;
+}
+
+.search-input {
+    padding-left: calc(var(--space-md) * 2.5);
+    padding-right: calc(var(--space-md) * 2.5);
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    font-size: var(--font-sm);
+    height: calc(2.5rem + 0.5vw);
+}
+
+.search-input:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+}
+
+.search-clear {
+    position: absolute;
+    right: var(--space-sm);
+    z-index: 3;
+    border: none;
+    background: transparent;
+    color: #6c757d;
+}
+
+/* Enhanced Table */
+.dashboard-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+    border: none;
+    overflow: hidden;
+}
+
+.card-header {
+    background: white;
+    border-bottom: 1px solid #e9ecef;
+    padding: var(--space-lg);
+}
+
+.card-title {
+    font-size: var(--font-lg);
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-sm);
+}
+
+.users-table th {
+    background: #f8f9fa;
+    padding: var(--space-md);
+    font-weight: 600;
+    color: var(--primary-color);
+    border-bottom: 2px solid #e9ecef;
+    white-space: nowrap;
+}
+
+.users-table td {
+    padding: var(--space-md);
+    border-bottom: 1px solid #e9ecef;
+    vertical-align: top;
+}
+
+.user-row:hover {
+    background-color: #f8f9fa;
+}
+
+/* Enhanced User Info */
+.user-info {
+    min-width: 150px;
+}
+
+.user-main {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.user-avatar {
+    width: clamp(2.5rem, 2rem + 2.5vw, 3rem);
+    height: clamp(2.5rem, 2rem + 2.5vw, 3rem);
+    border-radius: 50%;
+    background: var(--accent-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: var(--font-sm);
+    flex-shrink: 0;
+}
+
+.user-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.username {
+    font-size: var(--font-base);
+    color: var(--primary-color);
+    margin-bottom: var(--space-xs);
+    word-break: break-word;
+}
+
+.user-ref {
+    font-size: var(--font-xs);
+}
+
+.referral-code {
+    background: #f8f9fa;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+}
+
+.referred-by {
+    margin-top: var(--space-xs);
+}
+
+/* Enhanced Contact Info */
+.contact-info {
+    min-width: 180px;
+}
+
+.contact-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--space-xs);
+    font-size: var(--font-sm);
+}
+
+.contact-item:last-child {
+    margin-bottom: 0;
+}
+
+/* Enhanced Financial Stats */
+.financial-stats {
+    min-width: 140px;
+}
+
+.stat-item {
+    margin-bottom: var(--space-sm);
+    text-align: center;
+}
+
+.stat-item:last-child {
+    margin-bottom: 0;
+}
+
+.stat-value {
+    font-size: var(--font-sm);
+    display: block;
+}
+
+.stat-label {
+    color: #6c757d;
+    font-size: var(--font-xs);
+}
+
+/* Enhanced Status Badges */
+.status-badges {
+    min-width: 120px;
+}
+
+.badge-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.badge {
+    font-size: var(--font-xs);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+/* Enhanced Action Buttons */
+.action-buttons {
+    min-width: 80px;
+}
+
+.btn-group-vertical .btn {
+    font-size: var(--font-xs);
+    padding: var(--space-xs) var(--space-sm);
+}
+
+/* Enhanced Empty State */
+.empty-state {
+    padding: var(--space-2xl);
+}
+
+.empty-icon {
+    opacity: 0.5;
+}
+
+/* Enhanced Loading Overlay */
+.loading-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255,255,255,0.9);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+}
+
+.spinner-container {
+    text-align: center;
+}
+
+/* Enhanced Pagination */
+.pagination {
+    gap: var(--space-xs);
+}
+
+.page-link {
+    padding: var(--space-sm) var(--space-md);
+    border-radius: 6px;
+    font-size: var(--font-sm);
+    border: 1px solid #e9ecef;
+}
+
+/* Enhanced Form Controls */
+.form-control, .form-select {
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    font-size: var(--font-sm);
+    padding: var(--space-sm) var(--space-md);
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+}
+
+/* Enhanced Modal */
+.modal-content {
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 10px 50px rgba(0,0,0,0.2);
+}
+
+.modal-header {
+    border-bottom: 1px solid #e9ecef;
+    padding: var(--space-lg);
+}
+
+.modal-body {
+    padding: var(--space-lg);
+}
+
+.modal-footer {
+    border-top: 1px solid #e9ecef;
+    padding: var(--space-lg);
+}
+
+/* Pulse Animation for Live Status */
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.pulse {
+    animation: pulse 2s infinite;
+}
+
+/* Responsive Table Columns */
+@media (max-width: 1200px) {
+    .users-table th:nth-child(3),
+    .users-table td:nth-child(3) {
+        display: none;
+    }
+}
+
+@media (max-width: 992px) {
+    .users-table th:nth-child(5),
+    .users-table td:nth-child(5) {
+        display: none;
+    }
+    
+    .user-main {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-sm);
+    }
+}
+
+@media (max-width: 768px) {
+    .users-table th:nth-child(2),
+    .users-table td:nth-child(2) {
+        display: none;
+    }
+    
+    .metric-content {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .metric-icon {
+        margin-right: 0;
+        margin-bottom: var(--space-md);
+    }
+    
+    .header-text {
+        text-align: center;
+    }
+    
+    .header-icon-container {
+        margin-right: 0 !important;
+        margin-bottom: var(--space-md);
+    }
+}
+
+@media (max-width: 576px) {
+    .users-table th:nth-child(4),
+    .users-table td:nth-child(4) {
+        display: none;
+    }
+    
+    .container-fluid {
+        padding-left: var(--space-sm);
+        padding-right: var(--space-sm);
+    }
+    
+    .card-header, .card-body, .card-footer {
+        padding: var(--space-md);
+    }
+}
+
+/* Print Styles */
+@media print {
+    .action-bar, .card-header .btn, .action-buttons {
+        display: none !important;
+    }
+    
+    .dashboard-card {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+    }
+}
 </style>
 {% endblock %}
