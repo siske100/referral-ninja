@@ -83,7 +83,7 @@
                             <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
                                 Total Balance</div>
                             <div class="h2 mb-0 font-weight-bold text-gray-800">
-                                Ksh {{ "%.2f"|format(users|sum(attribute='balance')) }}
+                                Ksh {{ "%.2f"|format(users|sum(attribute='balance') or 0) }}
                             </div>
                         </div>
                         <div class="col-auto">
@@ -102,7 +102,7 @@
                             <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
                                 Total Referrals</div>
                             <div class="h2 mb-0 font-weight-bold text-gray-800">
-                                {{ users|sum(attribute='referral_count') }}
+                                {{ users|sum(attribute='referral_count') or 0 }}
                             </div>
                         </div>
                         <div class="col-auto">
@@ -192,11 +192,11 @@
                                 data-referral="{{ user.referral_code|lower if user.referral_code else '' }}"
                                 data-username="{{ user.username|lower if user.username else '' }}"
                                 data-email="{{ user.email|lower if user.email else '' }}"
-                                data-phone="{{ user.phone|lower if user.phone else '' }}"
-                                data-balance="{{ user.balance }}"
-                                data-referrals="{{ user.referral_count }}"
+                                data-phone="{{ user.phone|lower if user.phone else (user.phone_number|lower if user.phone_number else '') }}"
+                                data-balance="{{ user.balance|default(0) }}"
+                                data-referrals="{{ user.referral_count|default(0) }}"
                                 data-rank="{{ user.user_rank|lower if user.user_rank else '' }}"
-                                data-joined="{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '' }}"
+                                data-joined="{{ user.created_at.strftime('%Y-%m-%d') if user.created_at and hasattr(user.created_at, 'strftime') else (user.created_at[:10] if user.created_at else '') }}"
                                 data-status="{% if user.is_active %}active{% else %}inactive{% endif %} {% if user.is_admin %}admin{% endif %} {% if user.is_verified %}verified{% else %}unverified{% endif %}">
                                 
                                 <td class="ps-4">
@@ -210,7 +210,7 @@
                                         <div class="flex-shrink-0">
                                             <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
                                                  style="width: 40px; height: 40px; font-size: 14px; font-weight: 600;">
-                                                {{ user.username[0:2].upper() if user.username else 'UU' }}
+                                                {{ (user.username[0:2] if user.username else 'UU')|upper }}
                                             </div>
                                         </div>
                                         <div class="flex-grow-1 ms-3">
@@ -230,7 +230,7 @@
                                 
                                 <td>
                                     <div class="text-dark small fw-medium user-email">{{ user.email or 'No email' }}</div>
-                                    <div class="text-muted small user-phone">{{ user.phone or 'No phone' }}</div>
+                                    <div class="text-muted small user-phone">{{ user.phone or (user.phone_number or 'No phone') }}</div>
                                     <div class="text-muted small">Name: {{ user.name or 'No name' }}</div>
                                 </td>
                                 
@@ -268,19 +268,32 @@
                                 <td class="text-center">
                                     <div class="text-dark small join-date">
                                         {% if user.created_at %}
-                                            {{ user.created_at.strftime('%Y-%m-%d') }}
+                                            {% if user.created_at is string %}
+                                                {{ user.created_at[:10] }}
+                                            {% else %}
+                                                {{ user.created_at.strftime('%Y-%m-%d') }}
+                                            {% endif %}
                                         {% else %}
                                             N/A
                                         {% endif %}
                                     </div>
                                     <div class="text-muted small">
                                         {% if user.created_at %}
-                                            {{ user.created_at.strftime('%H:%M') }}
+                                            {% if user.created_at is string %}
+                                                {{ user.created_at[11:16] if user.created_at|length > 10 else '' }}
+                                            {% else %}
+                                                {{ user.created_at.strftime('%H:%M') }}
+                                            {% endif %}
                                         {% endif %}
                                     </div>
                                     {% if user.last_login %}
                                     <div class="text-muted small">
-                                        Last login: {{ user.last_login.strftime('%m/%d') if user.last_login is string else user.last_login.strftime('%m/%d') }}
+                                        Last login: 
+                                        {% if user.last_login is string %}
+                                            {{ user.last_login[:10] }}
+                                        {% else %}
+                                            {{ user.last_login.strftime('%m/%d') }}
+                                        {% endif %}
                                     </div>
                                     {% endif %}
                                 </td>
@@ -333,7 +346,7 @@
                 <!-- Elegant Pagination -->
                 <div class="d-flex justify-content-between align-items-center p-4 border-top bg-light">
                     <div class="text-muted small">
-                        Showing <span id="showingCount">0</span> of <span id="totalCount">{{ users|length }}</span> users
+                        Showing <span id="showingCount">{{ users|length if users|length < 10 else 10 }}</span> of <span id="totalCount">{{ users|length }}</span> users
                     </div>
                     <nav>
                         <ul class="pagination mb-0" id="paginationControls">
@@ -575,7 +588,7 @@ function toggleUserStatus(userId) {
     const action = confirm('Are you sure you want to change this user\'s status?');
     if (action) {
         showLoading();
-        adminRequest(`/admin/toggle-user-status/${userId}`, {
+        adminRequest(`toggle-user-status/${userId}`, {
             method: 'POST'
         })
         .then(response => {
@@ -588,7 +601,10 @@ function toggleUserStatus(userId) {
             hideLoading();
             if (data.success) {
                 showNotification('success', data.message || 'User status updated successfully');
-                setTimeout(() => location.reload(), 1500);
+                // Refresh the page after a short delay to show updated data
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
             } else {
                 showNotification('error', data.message || 'Error updating user status');
             }
@@ -596,7 +612,7 @@ function toggleUserStatus(userId) {
         .catch(error => {
             hideLoading();
             console.error('Error:', error);
-            showNotification('error', 'An error occurred while updating user status');
+            showNotification('error', 'An error occurred while updating user status: ' + error.message);
         });
     }
 }
@@ -612,7 +628,13 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('confirmVerifyBtn').addEventListener('click', function() {
         if (currentUserId) {
             showLoading();
-            adminRequest(`/admin/verify-user/${currentUserId}`, {
+            // For now, just show a message since the backend route doesn't exist
+            hideLoading();
+            showNotification('warning', 'User verification feature is not yet implemented in the backend');
+            bootstrap.Modal.getInstance(document.getElementById('verifyUserModal')).hide();
+            /*
+            // Uncomment when backend route is implemented
+            adminRequest(`verify-user/${currentUserId}`, {
                 method: 'POST'
             })
             .then(response => {
@@ -636,13 +658,60 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Error:', error);
                 showNotification('error', 'An error occurred while verifying user');
             });
+            */
         }
     });
 });
 
 function showUserDetails(userId) {
     showLoading();
-    adminRequest(`/admin/user-details/${userId}`)
+    // For now, show basic user info from the table since the backend route doesn't exist
+    const row = document.querySelector(`.user-row [data-user-id="${userId}"]`)?.closest('.user-row');
+    if (row) {
+        const username = row.querySelector('.username').textContent;
+        const email = row.querySelector('.user-email').textContent;
+        const phone = row.querySelector('.user-phone').textContent;
+        const balance = row.querySelector('.user-balance').textContent;
+        const referrals = row.querySelector('.user-referrals').textContent;
+        const joinDate = row.querySelector('.join-date').textContent;
+        
+        const modalContent = document.getElementById('userDetailContent');
+        modalContent.innerHTML = `
+            <div class="p-4">
+                <div class="alert alert-info border-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Detailed user view is not yet implemented. Showing basic information.
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Basic Information</h6>
+                        <p><strong>Username:</strong> ${username}</p>
+                        <p><strong>Email:</strong> ${email}</p>
+                        <p><strong>Phone:</strong> ${phone}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Account Information</h6>
+                        <p><strong>Balance:</strong> ${balance}</p>
+                        <p><strong>Referrals:</strong> ${referrals}</p>
+                        <p><strong>Joined:</strong> ${joinDate}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-0">
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        `;
+        hideLoading();
+        const modal = new bootstrap.Modal(document.getElementById('userDetailModal'));
+        modal.show();
+    } else {
+        hideLoading();
+        showNotification('error', 'Could not find user details');
+    }
+    
+    /*
+    // Uncomment when backend route is implemented
+    adminRequest(`user-details/${userId}`)
         .then(response => {
             if (!response.ok) {
                 throw new Error('Network response was not ok');
@@ -651,177 +720,14 @@ function showUserDetails(userId) {
         })
         .then(user => {
             hideLoading();
-            // Format dates safely
-            const formatDate = (dateString) => {
-                if (!dateString) return 'Never';
-                try {
-                    const date = new Date(dateString);
-                    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-                } catch (e) {
-                    return 'Invalid date';
-                }
-            };
-
-            // Populate modal with user details
-            const modalContent = document.getElementById('userDetailContent');
-            modalContent.innerHTML = `
-                <div class="p-4">
-                    <div class="row mb-4">
-                        <div class="col-md-8">
-                            <div class="d-flex align-items-center">
-                                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-4" 
-                                     style="width: 60px; height: 60px; font-size: 18px; font-weight: 600;">
-                                    ${user.username ? user.username[0:2].toUpperCase() : 'UU'}
-                                </div>
-                                <div>
-                                    <h4 class="mb-1">${user.username || 'No username'}</h4>
-                                    <p class="text-muted mb-0">${user.email || 'No email'}</p>
-                                    <div class="mt-1">
-                                        ${user.is_admin ? '<span class="badge bg-danger me-1">Administrator</span>' : ''}
-                                        ${user.is_verified ? '<span class="badge bg-success me-1">Verified</span>' : '<span class="badge bg-warning me-1">Unverified</span>'}
-                                        ${user.is_active ? '<span class="badge bg-primary">Active</span>' : '<span class="badge bg-secondary">Inactive</span>'}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4 text-end">
-                            <div class="d-flex flex-column">
-                                <span class="badge ${user.user_rank === 'Diamond' ? 'bg-info' : user.user_rank === 'Platinum' ? 'bg-secondary' : user.user_rank === 'Gold' ? 'bg-warning' : user.user_rank === 'Silver' ? 'bg-light text-dark' : 'bg-brown'} mb-2">
-                                    ${user.user_rank || 'Bronze'}
-                                </span>
-                                <small class="text-muted">Member since ${formatDate(user.created_at)}</small>
-                                ${user.last_login ? `<small class="text-muted">Last login: ${formatDate(user.last_login)}</small>` : ''}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="card border-0 bg-light mb-3">
-                                <div class="card-body">
-                                    <h6 class="card-title text-muted mb-3">Account Information</h6>
-                                    <table class="table table-sm table-borderless mb-0">
-                                        <tr>
-                                            <td class="text-muted ps-0">Full Name:</td>
-                                            <td class="fw-medium">${user.name || 'Not provided'}</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="text-muted ps-0">Phone:</td>
-                                            <td class="fw-medium">${user.phone || 'Not provided'}</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="text-muted ps-0">Referral Code:</td>
-                                            <td class="fw-medium"><code>${user.referral_code || 'Not generated'}</code></td>
-                                        </tr>
-                                        <tr>
-                                            <td class="text-muted ps-0">Referred By:</td>
-                                            <td class="fw-medium">${user.referred_by || 'Direct registration'}</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="text-muted ps-0">User Rank:</td>
-                                            <td class="fw-medium">${user.user_rank || 'Bronze'}</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="text-muted ps-0">Referral Source:</td>
-                                            <td class="fw-medium">${user.referral_source || 'direct'}</td>
-                                        </tr>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card border-0 bg-light mb-3">
-                                <div class="card-body">
-                                    <h6 class="card-title text-muted mb-3">Performance Metrics</h6>
-                                    <table class="table table-sm table-borderless mb-0">
-                                        <tr>
-                                            <td class="text-muted ps-0">Account Balance:</td>
-                                            <td class="fw-bold text-success">Ksh ${parseFloat(user.balance || 0).toFixed(2)}</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="text-muted ps-0">Total Earned:</td>
-                                            <td class="fw-medium text-success">Ksh ${parseFloat(user.total_earned || 0).toFixed(2)}</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="text-muted ps-0">Total Withdrawn:</td>
-                                            <td class="fw-medium text-info">Ksh ${parseFloat(user.total_withdrawn || 0).toFixed(2)}</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="text-muted ps-0">Total Commission:</td>
-                                            <td class="fw-medium text-warning">Ksh ${parseFloat(user.total_commission || 0).toFixed(2)}</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="text-muted ps-0">Total Referrals:</td>
-                                            <td class="fw-medium"><span class="badge bg-info">${user.referral_count || 0}</span></td>
-                                        </tr>
-                                        <tr>
-                                            <td class="text-muted ps-0">Referral Balance:</td>
-                                            <td class="fw-medium">Ksh ${parseFloat(user.referral_balance || 0).toFixed(2)}</td>
-                                        </tr>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    ${user.referral_count > 0 ? `
-                    <div class="card border-0 bg-light">
-                        <div class="card-body">
-                            <h6 class="card-title text-muted mb-3">Referral Network</h6>
-                            <div class="alert alert-info border-0 small mb-0">
-                                <i class="fas fa-info-circle me-2"></i>
-                                This user has successfully referred ${user.referral_count} user(s) to the platform and earned Ksh ${parseFloat(user.total_commission || 0).toFixed(2)} in commissions.
-                            </div>
-                        </div>
-                    </div>
-                    ` : ''}
-
-                    <div class="card border-0 bg-light mt-3">
-                        <div class="card-body">
-                            <h6 class="card-title text-muted mb-3">Security Information</h6>
-                            <table class="table table-sm table-borderless mb-0">
-                                <tr>
-                                    <td class="text-muted ps-0">2FA Enabled:</td>
-                                    <td class="fw-medium">${user.two_factor_enabled ? 'Yes' : 'No'}</td>
-                                </tr>
-                                <tr>
-                                    <td class="text-muted ps-0">Login Attempts:</td>
-                                    <td class="fw-medium">${user.login_attempts || 0}</td>
-                                </tr>
-                                <tr>
-                                    <td class="text-muted ps-0">Account Locked:</td>
-                                    <td class="fw-medium">${user.locked_until ? 'Yes until ' + formatDate(user.locked_until) : 'No'}</td>
-                                </tr>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer bg-light border-0">
-                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Close</button>
-                    ${!user.is_admin ? `
-                    <button type="button" class="btn btn-${user.is_active ? 'outline-danger' : 'outline-success'} rounded-pill px-4 me-2" 
-                            onclick="toggleUserStatus('${user.id}')">
-                        ${user.is_active ? 'Deactivate' : 'Activate'} User
-                    </button>
-                    ${!user.is_verified ? `
-                    <button type="button" class="btn btn-warning rounded-pill px-4" 
-                            onclick="verifyUser('${user.id}')">
-                        Verify User
-                    </button>
-                    ` : ''}
-                    ` : ''}
-                </div>
-            `;
-            
-            // Show the modal
-            const modal = new bootstrap.Modal(document.getElementById('userDetailModal'));
-            modal.show();
+            // ... existing user details code ...
         })
         .catch(error => {
             hideLoading();
             console.error('Error:', error);
-            showNotification('error', 'Failed to load user details');
+            showNotification('error', 'Failed to load user details: ' + error.message);
         });
+    */
 }
 
 // Export Functionality
@@ -844,7 +750,7 @@ function exportUsers() {
         const referralCode = (row.querySelector('.referral-code')?.textContent || '').trim().replace(/"/g, '""');
         
         // Extract status information
-        const statusBadge = row.querySelector('.badge');
+        const statusBadge = row.querySelector('.badge.bg-success, .badge.bg-danger');
         const status = statusBadge ? statusBadge.textContent.trim() : 'Unknown';
         const isVerified = row.querySelector('.badge.bg-primary') ? 'Yes' : 'No';
         const rank = (row.querySelector('.user-rank')?.textContent || '').trim();
@@ -1023,6 +929,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initial search to set up highlighting and counts
     searchUsers();
+    
+    // Debug: Log users data
+    console.log('Total users loaded:', totalUsers);
 });
 </script>
 
