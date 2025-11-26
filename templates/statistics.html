@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="analytics-container">
-    <!-- Enhanced Header Section -->
+    <!-- Header Section -->
     <div class="analytics-header">
         <div class="header-background">
             <div class="container-fluid">
@@ -17,8 +17,8 @@
                                 </div>
                             </div>
                             <div class="header-text">
-                                <h1 class="display-6 fw-bold text-white mb-2">Performance Dashboard</h1>
-                                <p class="text-white-50 mb-0">Comprehensive analytics for your referral performance and earnings</p>
+                                <h1 class="display-6 fw-bold text-white mb-2">Performance Analytics</h1>
+                                <p class="text-white-50 mb-0">Comprehensive insights into your referral performance and earnings</p>
                             </div>
                         </div>
                     </div>
@@ -26,7 +26,7 @@
                         <div class="status-indicator">
                             <span class="status-badge bg-white text-primary">
                                 <i class="fas fa-circle text-success me-2 pulse"></i>
-                                Live Analytics • Real-time Updates
+                                Live Data • Real-time Updates
                             </span>
                         </div>
                     </div>
@@ -35,9 +35,10 @@
         </div>
     </div>
 
-    <!-- Financial Summary Cards -->
+    <!-- Financial Overview -->
     <div class="container-fluid mt-4">
         <div class="row g-4 mb-5">
+            <!-- Total Earnings Card -->
             <div class="col-xl-3 col-md-6">
                 <div class="metric-card earnings-gradient">
                     <div class="card-body">
@@ -58,6 +59,7 @@
                 </div>
             </div>
             
+            <!-- Available Balance Card -->
             <div class="col-xl-3 col-md-6">
                 <div class="metric-card balance-gradient">
                     <div class="card-body">
@@ -78,6 +80,7 @@
                 </div>
             </div>
             
+            <!-- Total Withdrawn Card -->
             <div class="col-xl-3 col-md-6">
                 <div class="metric-card withdrawn-gradient">
                     <div class="card-body">
@@ -98,6 +101,7 @@
                 </div>
             </div>
 
+            <!-- Active Campaigns Card -->
             <div class="col-xl-3 col-md-6">
                 <div class="metric-card performance-gradient">
                     <div class="card-body">
@@ -121,7 +125,7 @@
 
         <!-- Analytics Dashboard -->
         <div class="row g-4">
-            <!-- Growth Chart -->
+            <!-- Performance Trends -->
             <div class="col-lg-8">
                 <div class="dashboard-card">
                     <div class="card-header border-0 bg-transparent">
@@ -129,9 +133,9 @@
                             <div class="section-title">
                                 <h4 class="fw-bold mb-1">
                                     <i class="fas fa-chart-line text-primary me-2"></i>
-                                    Referral Growth Analytics
+                                    Performance Trends
                                 </h4>
-                                <p class="text-muted mb-0">Track your referral performance over time</p>
+                                <p class="text-muted mb-0">Monitor your referral growth and conversion patterns</p>
                             </div>
                             <div class="time-filters">
                                 <div class="btn-group" role="group">
@@ -157,10 +161,10 @@
                             <div class="empty-chart-icon mb-4">
                                 <i class="fas fa-chart-bar fa-4x text-light"></i>
                             </div>
-                            <h4 class="text-muted mb-3">No Data Available</h4>
-                            <p class="text-muted mb-4">Start referring friends to unlock your growth analytics dashboard</p>
+                            <h4 class="text-muted mb-3">No Performance Data</h4>
+                            <p class="text-muted mb-4">Begin your referral campaigns to generate analytics data</p>
                             <a href="{{ url_for('referral_system') }}" class="btn btn-primary btn-lg">
-                                <i class="fas fa-rocket me-2"></i>Launch Referral Campaign
+                                <i class="fas fa-rocket me-2"></i>Initiate Referral Campaign
                             </a>
                         </div>
                         {% endif %}
@@ -168,15 +172,15 @@
                 </div>
             </div>
 
-            <!-- Performance Metrics -->
+            <!-- Key Metrics -->
             <div class="col-lg-4">
                 <div class="dashboard-card h-100">
                     <div class="card-header border-0 bg-transparent">
                         <h4 class="fw-bold mb-1">
                             <i class="fas fa-tachometer-alt text-primary me-2"></i>
-                            Key Performance Indicators
+                            Performance Metrics
                         </h4>
-                        <p class="text-muted mb-0">Essential metrics at a glance</p>
+                        <p class="text-muted mb-0">Key performance indicators</p>
                     </div>
                     <div class="card-body">
                         <div class="kpi-grid">
@@ -196,7 +200,7 @@
                                 </div>
                                 <div class="kpi-content">
                                     <div class="kpi-value">-</div>
-                                    <div class="kpi-label">Best Month</div>
+                                    <div class="kpi-label">Peak Performance</div>
                                 </div>
                             </div>
                             
@@ -224,10 +228,10 @@
                         <div class="performance-insight mt-4 p-3 bg-light rounded-3">
                             <h6 class="fw-semibold mb-2">
                                 <i class="fas fa-bullseye text-primary me-2"></i>
-                                Performance Insight
+                                Performance Analysis
                             </h6>
                             <p class="text-muted mb-0 small">
-                                Monitor these metrics to optimize your referral strategy and maximize earnings potential.
+                                Track these metrics to optimize your referral strategy and maximize revenue generation.
                             </p>
                         </div>
                     </div>
@@ -235,9 +239,9 @@
             </div>
         </div>
 
-        <!-- Activity & Insights Section -->
+        <!-- Activity & Strategy Section -->
         <div class="row g-4 mt-2">
-            <!-- Recent Activity -->
+            <!-- Activity Timeline -->
             <div class="col-lg-8">
                 <div class="dashboard-card">
                     <div class="card-header border-0 bg-transparent">
@@ -245,9 +249,9 @@
                             <div class="section-title">
                                 <h4 class="fw-bold mb-1">
                                     <i class="fas fa-list-alt text-primary me-2"></i>
-                                    Recent Activity Timeline
+                                    Activity Timeline
                                 </h4>
-                                <p class="text-muted mb-0">Track your referral milestones and achievements</p>
+                                <p class="text-muted mb-0">Recent referral milestones and achievements</p>
                             </div>
                             <span class="badge bg-primary rounded-pill">{{ referral_stats|length if referral_stats else 0 }} events</span>
                         </div>
@@ -288,22 +292,22 @@
                                 <i class="fas fa-history fa-3x text-light"></i>
                             </div>
                             <h5 class="text-muted mb-2">No Recent Activity</h5>
-                            <p class="text-muted">Your referral activity timeline will appear here</p>
+                            <p class="text-muted">Your referral activity will appear here</p>
                         </div>
                         {% endif %}
                     </div>
                 </div>
             </div>
 
-            <!-- Strategy Insights -->
+            <!-- Optimization Insights -->
             <div class="col-lg-4">
                 <div class="dashboard-card h-100">
                     <div class="card-header border-0 bg-transparent">
                         <h4 class="fw-bold mb-1">
                             <i class="fas fa-lightbulb text-primary me-2"></i>
-                            Strategy Insights
+                            Optimization Insights
                         </h4>
-                        <p class="text-muted mb-0">Tips to enhance your performance</p>
+                        <p class="text-muted mb-0">Strategies to enhance performance</p>
                     </div>
                     <div class="card-body">
                         <div class="insights-container">
@@ -312,10 +316,10 @@
                                     <div class="insight-icon bg-success-subtle">
                                         <i class="fas fa-rocket text-success"></i>
                                     </div>
-                                    <h6 class="insight-title">Growth Opportunity</h6>
+                                    <h6 class="insight-title">Growth Potential</h6>
                                 </div>
                                 <p class="insight-text text-muted">
-                                    You're approaching Silver tier. Focus on consistent referrals to unlock higher rewards.
+                                    Maintain consistent referral activity to achieve higher performance tiers and increased rewards.
                                 </p>
                             </div>
                             
@@ -324,10 +328,10 @@
                                     <div class="insight-icon bg-primary-subtle">
                                         <i class="fas fa-share-alt text-primary"></i>
                                     </div>
-                                    <h6 class="insight-title">Optimization Tip</h6>
+                                    <h6 class="insight-title">Distribution Strategy</h6>
                                 </div>
                                 <p class="insight-text text-muted">
-                                    Share your referral code across multiple platforms to increase visibility and conversions.
+                                    Utilize multiple distribution channels for your referral code to maximize visibility and engagement.
                                 </p>
                             </div>
                             
@@ -336,17 +340,17 @@
                                     <div class="insight-icon bg-warning-subtle">
                                         <i class="fas fa-target text-warning"></i>
                                     </div>
-                                    <h6 class="insight-title">Weekly Target</h6>
+                                    <h6 class="insight-title">Weekly Objectives</h6>
                                 </div>
                                 <p class="insight-text text-muted">
-                                    Aim for 5-7 referrals this week to maximize your earning potential and rank progression.
+                                    Target 5-7 referrals weekly to optimize your earning potential and accelerate tier progression.
                                 </p>
                             </div>
                         </div>
                         
                         <div class="cta-section mt-4">
                             <a href="{{ url_for('referral_system') }}" class="btn btn-primary w-100 py-3 fw-semibold">
-                                <i class="fas fa-chart-network me-2"></i>Optimize Referral Strategy
+                                <i class="fas fa-chart-network me-2"></i>Enhance Referral Strategy
                             </a>
                         </div>
                     </div>
@@ -364,7 +368,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const dates = [{% for stat in referral_stats %}'{{ stat.date }}'{% if not loop.last %},{% endif %}{% endfor %}].reverse();
     const counts = [{% for stat in referral_stats %}{{ stat.count }}{% if not loop.last %},{% endif %}{% endfor %}].reverse();
 
-    // Create gradient
     const gradient = ctx.createLinearGradient(0, 0, 0, 300);
     gradient.addColorStop(0, 'rgba(102, 126, 234, 0.4)');
     gradient.addColorStop(1, 'rgba(102, 126, 234, 0.05)');
@@ -374,7 +377,7 @@ document.addEventListener('DOMContentLoaded', function() {
         data: {
             labels: dates,
             datasets: [{
-                label: 'Daily Referrals',
+                label: 'Referral Activity',
                 data: counts,
                 borderColor: '#667eea',
                 backgroundColor: gradient,
@@ -482,7 +485,6 @@ document.addEventListener('DOMContentLoaded', function() {
     border: 1px solid rgba(102, 126, 234, 0.1);
 }
 
-/* Professional status indicator with pulse animation */
 .pulse {
     animation: pulse 2s infinite;
 }
@@ -857,18 +859,14 @@ document.addEventListener('DOMContentLoaded', function() {
 </style>
 
 <script>
-// Enhanced interactivity
 document.addEventListener('DOMContentLoaded', function() {
-    // Time filter functionality
     const timeFilters = document.querySelectorAll('input[name="timeFilter"]');
     
     timeFilters.forEach(filter => {
         filter.addEventListener('change', function() {
-            // Add loading state
             const chartContainer = document.querySelector('.chart-wrapper');
             if (chartContainer) {
                 chartContainer.style.opacity = '0.7';
-                // Simulate API call delay
                 setTimeout(() => {
                     chartContainer.style.opacity = '1';
                 }, 500);
@@ -876,7 +874,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Add hover effects to interactive elements
     const interactiveElements = document.querySelectorAll('.metric-card, .kpi-item, .insight-card');
     
     interactiveElements.forEach(element => {
@@ -887,12 +884,6 @@ document.addEventListener('DOMContentLoaded', function() {
         element.addEventListener('mouseleave', function() {
             this.style.transform = 'translateY(0)';
         });
-    });
-
-    // Initialize tooltips if needed
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 });
 </script>
