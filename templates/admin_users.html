@@ -141,6 +141,8 @@
                         <option value="active">Active Only</option>
                         <option value="inactive">Inactive Only</option>
                         <option value="admin">Admins Only</option>
+                        <option value="verified">Verified Only</option>
+                        <option value="unverified">Unverified Only</option>
                     </select>
                 </div>
             </div>
@@ -187,15 +189,15 @@
                         <tbody id="usersTableBody">
                             {% for user in users %}
                             <tr class="user-row align-middle" 
-                                data-referral="{{ user.referral_code|lower }}"
-                                data-username="{{ user.username|lower }}"
-                                data-email="{{ user.email|lower }}"
-                                data-phone="{{ user.phone_number|lower }}"
+                                data-referral="{{ user.referral_code|lower if user.referral_code else '' }}"
+                                data-username="{{ user.username|lower if user.username else '' }}"
+                                data-email="{{ user.email|lower if user.email else '' }}"
+                                data-phone="{{ user.phone|lower if user.phone else '' }}"
                                 data-balance="{{ user.balance }}"
                                 data-referrals="{{ user.referral_count }}"
-                                data-rank="{{ user.user_rank|lower }}"
+                                data-rank="{{ user.user_rank|lower if user.user_rank else '' }}"
                                 data-joined="{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '' }}"
-                                data-status="{% if user.is_active %}active{% else %}inactive{% endif %} {% if user.is_admin %}admin{% endif %}">
+                                data-status="{% if user.is_active %}active{% else %}inactive{% endif %} {% if user.is_admin %}admin{% endif %} {% if user.is_verified %}verified{% else %}unverified{% endif %}">
                                 
                                 <td class="ps-4">
                                     {% if not user.is_admin %}
@@ -208,13 +210,13 @@
                                         <div class="flex-shrink-0">
                                             <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
                                                  style="width: 40px; height: 40px; font-size: 14px; font-weight: 600;">
-                                                {{ user.username[0:2].upper() }}
+                                                {{ user.username[0:2].upper() if user.username else 'UU' }}
                                             </div>
                                         </div>
                                         <div class="flex-grow-1 ms-3">
-                                            <div class="fw-semibold text-dark username">{{ user.username }}</div>
+                                            <div class="fw-semibold text-dark username">{{ user.username or 'No username' }}</div>
                                             <div class="text-muted small">
-                                                <span class="referral-code">{{ user.referral_code }}</span>
+                                                <span class="referral-code">{{ user.referral_code or 'No code' }}</span>
                                                 {% if user.is_admin %}
                                                     <span class="badge bg-danger ms-1">Admin</span>
                                                 {% endif %}
@@ -227,17 +229,21 @@
                                 </td>
                                 
                                 <td>
-                                    <div class="text-dark small fw-medium user-email">{{ user.email }}</div>
-                                    <div class="text-muted small user-phone">{{ user.phone_number or 'No phone' }}</div>
+                                    <div class="text-dark small fw-medium user-email">{{ user.email or 'No email' }}</div>
+                                    <div class="text-muted small user-phone">{{ user.phone or 'No phone' }}</div>
+                                    <div class="text-muted small">Name: {{ user.name or 'No name' }}</div>
                                 </td>
                                 
                                 <td class="text-center">
-                                    <div class="fw-bold text-success fs-6 user-balance">Ksh {{ "%.2f"|format(user.balance) }}</div>
+                                    <div class="fw-bold text-success fs-6 user-balance">Ksh {{ "%.2f"|format(user.balance|default(0)) }}</div>
                                     <div class="text-muted small">Balance</div>
                                     <div class="mt-1">
                                         <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 user-referrals">
-                                            {{ user.referral_count }} referrals
+                                            {{ user.referral_count|default(0) }} referrals
                                         </span>
+                                    </div>
+                                    <div class="mt-1">
+                                        <small class="text-warning">Commission: Ksh {{ "%.2f"|format(user.total_commission|default(0)) }}</small>
                                     </div>
                                 </td>
                                 
@@ -247,18 +253,36 @@
                                     {% else %}
                                         <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">Inactive</span>
                                     {% endif %}
+                                    
+                                    {% if user.is_verified %}
+                                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 mt-1">Verified</span>
+                                    {% else %}
+                                        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 mt-1">Unverified</span>
+                                    {% endif %}
+                                    
                                     <div class="mt-1">
-                                        <small class="text-muted user-rank">{{ user.user_rank }}</small>
+                                        <small class="text-muted user-rank">{{ user.user_rank or 'Bronze' }}</small>
                                     </div>
                                 </td>
                                 
                                 <td class="text-center">
                                     <div class="text-dark small join-date">
-                                        {{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}
+                                        {% if user.created_at %}
+                                            {{ user.created_at.strftime('%Y-%m-%d') }}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
                                     </div>
                                     <div class="text-muted small">
-                                        {{ user.created_at.strftime('%H:%M') if user.created_at else '' }}
+                                        {% if user.created_at %}
+                                            {{ user.created_at.strftime('%H:%M') }}
+                                        {% endif %}
                                     </div>
+                                    {% if user.last_login %}
+                                    <div class="text-muted small">
+                                        Last login: {{ user.last_login.strftime('%m/%d') if user.last_login is string else user.last_login.strftime('%m/%d') }}
+                                    </div>
+                                    {% endif %}
                                 </td>
                                 
                                 <td class="text-center">
@@ -274,6 +298,15 @@
                                                     title="{{ 'Deactivate' if user.is_active else 'Activate' }}">
                                                 <i class="fas fa-{{ 'user-slash' if user.is_active else 'user-check' }}"></i>
                                             </button>
+                                        </div>
+                                        <div class="mt-1">
+                                            {% if not user.is_verified %}
+                                                <button class="btn btn-outline-warning btn-sm rounded-pill" 
+                                                        onclick="verifyUser('{{ user.id }}')"
+                                                        title="Verify User">
+                                                    <i class="fas fa-check-circle"></i> Verify
+                                                </button>
+                                            {% endif %}
                                         </div>
                                     {% else %}
                                         <span class="text-muted small">Admin Account</span>
@@ -336,6 +369,31 @@
     </div>
 </div>
 
+<!-- User Verification Modal -->
+<div class="modal fade" id="verifyUserModal" tabindex="-1" aria-labelledby="verifyUserModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-warning border-0 py-3">
+                <h5 class="modal-title text-dark fw-semibold" id="verifyUserModalLabel">
+                    <i class="fas fa-user-check me-2"></i>Verify User
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to verify this user? This will grant them full access to the platform.</p>
+                <div class="alert alert-info border-0 small">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Verified users can access all features including withdrawals and referrals.
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning rounded-pill px-4" id="confirmVerifyBtn">Verify User</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Loading Spinner -->
 <div id="loadingSpinner" class="d-none position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background: rgba(255,255,255,0.8); z-index: 9999;">
     <div class="text-center">
@@ -352,6 +410,7 @@
 // Global variables
 let currentPage = 1;
 const usersPerPage = 10;
+let currentUserId = null;
 
 // CSRF Token handling
 function getCSRFToken() {
@@ -367,7 +426,11 @@ const adminRequest = (url, options = {}) => {
             'X-CSRFToken': getCSRFToken()
         }
     };
-    return fetch(url, {...defaultOptions, ...options});
+    
+    // Ensure we're using absolute URLs for API calls
+    const fullUrl = url.startsWith('/') ? url : `/admin/${url}`;
+    
+    return fetch(fullUrl, {...defaultOptions, ...options});
 };
 
 function refreshPage() {
@@ -391,11 +454,11 @@ function searchUsers() {
     let visibleCount = 0;
 
     rows.forEach(row => {
-        const referral = row.getAttribute('data-referral');
-        const username = row.getAttribute('data-username');
-        const email = row.getAttribute('data-email');
-        const phone = row.getAttribute('data-phone');
-        const status = row.getAttribute('data-status');
+        const referral = row.getAttribute('data-referral') || '';
+        const username = row.getAttribute('data-username') || '';
+        const email = row.getAttribute('data-email') || '';
+        const phone = row.getAttribute('data-phone') || '';
+        const status = row.getAttribute('data-status') || '';
 
         // Check if row matches search term (multiple fields)
         const matchesSearch = searchTerm === '' || 
@@ -408,7 +471,9 @@ function searchUsers() {
         const matchesStatus = statusFilter === '' || 
             (statusFilter === 'active' && status.includes('active')) ||
             (statusFilter === 'inactive' && status.includes('inactive')) ||
-            (statusFilter === 'admin' && status.includes('admin'));
+            (statusFilter === 'admin' && status.includes('admin')) ||
+            (statusFilter === 'verified' && status.includes('verified')) ||
+            (statusFilter === 'unverified' && status.includes('unverified'));
 
         if (matchesSearch && matchesStatus) {
             row.style.display = '';
@@ -492,11 +557,17 @@ function toggleSelectAll(checkbox) {
             cb.checked = checkbox.checked;
         }
     });
+    updateBulkActions();
 }
 
 function getSelectedUserIds() {
     const checkboxes = document.querySelectorAll('.user-checkbox:checked');
     return Array.from(checkboxes).map(cb => cb.value);
+}
+
+function updateBulkActions() {
+    const selectedCount = getSelectedUserIds().length;
+    // You can add bulk action buttons here if needed
 }
 
 // User Management Functions
@@ -507,14 +578,19 @@ function toggleUserStatus(userId) {
         adminRequest(`/admin/toggle-user-status/${userId}`, {
             method: 'POST'
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
         .then(data => {
             hideLoading();
             if (data.success) {
-                showNotification('success', data.message);
+                showNotification('success', data.message || 'User status updated successfully');
                 setTimeout(() => location.reload(), 1500);
             } else {
-                showNotification('error', 'Error: ' + data.message);
+                showNotification('error', data.message || 'Error updating user status');
             }
         })
         .catch(error => {
@@ -525,12 +601,67 @@ function toggleUserStatus(userId) {
     }
 }
 
+function verifyUser(userId) {
+    currentUserId = userId;
+    const modal = new bootstrap.Modal(document.getElementById('verifyUserModal'));
+    modal.show();
+}
+
+// Setup verify button event listener
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('confirmVerifyBtn').addEventListener('click', function() {
+        if (currentUserId) {
+            showLoading();
+            adminRequest(`/admin/verify-user/${currentUserId}`, {
+                method: 'POST'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    showNotification('success', data.message || 'User verified successfully');
+                    bootstrap.Modal.getInstance(document.getElementById('verifyUserModal')).hide();
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showNotification('error', data.message || 'Error verifying user');
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Error:', error);
+                showNotification('error', 'An error occurred while verifying user');
+            });
+        }
+    });
+});
+
 function showUserDetails(userId) {
     showLoading();
     adminRequest(`/admin/user-details/${userId}`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
         .then(user => {
             hideLoading();
+            // Format dates safely
+            const formatDate = (dateString) => {
+                if (!dateString) return 'Never';
+                try {
+                    const date = new Date(dateString);
+                    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                } catch (e) {
+                    return 'Invalid date';
+                }
+            };
+
             // Populate modal with user details
             const modalContent = document.getElementById('userDetailContent');
             modalContent.innerHTML = `
@@ -540,21 +671,26 @@ function showUserDetails(userId) {
                             <div class="d-flex align-items-center">
                                 <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-4" 
                                      style="width: 60px; height: 60px; font-size: 18px; font-weight: 600;">
-                                    ${user.username[0:2].toUpperCase()}
+                                    ${user.username ? user.username[0:2].toUpperCase() : 'UU'}
                                 </div>
                                 <div>
-                                    <h4 class="mb-1">${user.username}</h4>
-                                    <p class="text-muted mb-0">${user.email}</p>
-                                    ${user.is_admin ? '<span class="badge bg-danger mt-1">Administrator</span>' : ''}
+                                    <h4 class="mb-1">${user.username || 'No username'}</h4>
+                                    <p class="text-muted mb-0">${user.email || 'No email'}</p>
+                                    <div class="mt-1">
+                                        ${user.is_admin ? '<span class="badge bg-danger me-1">Administrator</span>' : ''}
+                                        ${user.is_verified ? '<span class="badge bg-success me-1">Verified</span>' : '<span class="badge bg-warning me-1">Unverified</span>'}
+                                        ${user.is_active ? '<span class="badge bg-primary">Active</span>' : '<span class="badge bg-secondary">Inactive</span>'}
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-4 text-end">
                             <div class="d-flex flex-column">
-                                <span class="badge ${user.is_active ? 'bg-success' : 'bg-danger'} mb-2">
-                                    ${user.is_active ? 'Active' : 'Inactive'}
+                                <span class="badge ${user.user_rank === 'Diamond' ? 'bg-info' : user.user_rank === 'Platinum' ? 'bg-secondary' : user.user_rank === 'Gold' ? 'bg-warning' : user.user_rank === 'Silver' ? 'bg-light text-dark' : 'bg-brown'} mb-2">
+                                    ${user.user_rank || 'Bronze'}
                                 </span>
-                                <small class="text-muted">Member since ${new Date(user.created_at).toLocaleDateString()}</small>
+                                <small class="text-muted">Member since ${formatDate(user.created_at)}</small>
+                                ${user.last_login ? `<small class="text-muted">Last login: ${formatDate(user.last_login)}</small>` : ''}
                             </div>
                         </div>
                     </div>
@@ -566,12 +702,16 @@ function showUserDetails(userId) {
                                     <h6 class="card-title text-muted mb-3">Account Information</h6>
                                     <table class="table table-sm table-borderless mb-0">
                                         <tr>
+                                            <td class="text-muted ps-0">Full Name:</td>
+                                            <td class="fw-medium">${user.name || 'Not provided'}</td>
+                                        </tr>
+                                        <tr>
                                             <td class="text-muted ps-0">Phone:</td>
-                                            <td class="fw-medium">${user.phone_number || 'Not provided'}</td>
+                                            <td class="fw-medium">${user.phone || 'Not provided'}</td>
                                         </tr>
                                         <tr>
                                             <td class="text-muted ps-0">Referral Code:</td>
-                                            <td class="fw-medium"><code>${user.referral_code}</code></td>
+                                            <td class="fw-medium"><code>${user.referral_code || 'Not generated'}</code></td>
                                         </tr>
                                         <tr>
                                             <td class="text-muted ps-0">Referred By:</td>
@@ -579,7 +719,11 @@ function showUserDetails(userId) {
                                         </tr>
                                         <tr>
                                             <td class="text-muted ps-0">User Rank:</td>
-                                            <td class="fw-medium">${user.user_rank}</td>
+                                            <td class="fw-medium">${user.user_rank || 'Bronze'}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted ps-0">Referral Source:</td>
+                                            <td class="fw-medium">${user.referral_source || 'direct'}</td>
                                         </tr>
                                     </table>
                                 </div>
@@ -592,15 +736,27 @@ function showUserDetails(userId) {
                                     <table class="table table-sm table-borderless mb-0">
                                         <tr>
                                             <td class="text-muted ps-0">Account Balance:</td>
-                                            <td class="fw-bold text-success">Ksh ${parseFloat(user.balance).toFixed(2)}</td>
+                                            <td class="fw-bold text-success">Ksh ${parseFloat(user.balance || 0).toFixed(2)}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted ps-0">Total Earned:</td>
+                                            <td class="fw-medium text-success">Ksh ${parseFloat(user.total_earned || 0).toFixed(2)}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted ps-0">Total Withdrawn:</td>
+                                            <td class="fw-medium text-info">Ksh ${parseFloat(user.total_withdrawn || 0).toFixed(2)}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted ps-0">Total Commission:</td>
+                                            <td class="fw-medium text-warning">Ksh ${parseFloat(user.total_commission || 0).toFixed(2)}</td>
                                         </tr>
                                         <tr>
                                             <td class="text-muted ps-0">Total Referrals:</td>
-                                            <td class="fw-medium"><span class="badge bg-info">${user.referral_count}</span></td>
+                                            <td class="fw-medium"><span class="badge bg-info">${user.referral_count || 0}</span></td>
                                         </tr>
                                         <tr>
-                                            <td class="text-muted ps-0">Last Activity:</td>
-                                            <td class="fw-medium">${user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}</td>
+                                            <td class="text-muted ps-0">Referral Balance:</td>
+                                            <td class="fw-medium">Ksh ${parseFloat(user.referral_balance || 0).toFixed(2)}</td>
                                         </tr>
                                     </table>
                                 </div>
@@ -614,19 +770,45 @@ function showUserDetails(userId) {
                             <h6 class="card-title text-muted mb-3">Referral Network</h6>
                             <div class="alert alert-info border-0 small mb-0">
                                 <i class="fas fa-info-circle me-2"></i>
-                                This user has successfully referred ${user.referral_count} user(s) to the platform.
+                                This user has successfully referred ${user.referral_count} user(s) to the platform and earned Ksh ${parseFloat(user.total_commission || 0).toFixed(2)} in commissions.
                             </div>
                         </div>
                     </div>
                     ` : ''}
+
+                    <div class="card border-0 bg-light mt-3">
+                        <div class="card-body">
+                            <h6 class="card-title text-muted mb-3">Security Information</h6>
+                            <table class="table table-sm table-borderless mb-0">
+                                <tr>
+                                    <td class="text-muted ps-0">2FA Enabled:</td>
+                                    <td class="fw-medium">${user.two_factor_enabled ? 'Yes' : 'No'}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted ps-0">Login Attempts:</td>
+                                    <td class="fw-medium">${user.login_attempts || 0}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted ps-0">Account Locked:</td>
+                                    <td class="fw-medium">${user.locked_until ? 'Yes until ' + formatDate(user.locked_until) : 'No'}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer bg-light border-0">
                     <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Close</button>
                     ${!user.is_admin ? `
-                    <button type="button" class="btn btn-${user.is_active ? 'outline-danger' : 'outline-success'} rounded-pill px-4" 
+                    <button type="button" class="btn btn-${user.is_active ? 'outline-danger' : 'outline-success'} rounded-pill px-4 me-2" 
                             onclick="toggleUserStatus('${user.id}')">
                         ${user.is_active ? 'Deactivate' : 'Activate'} User
                     </button>
+                    ${!user.is_verified ? `
+                    <button type="button" class="btn btn-warning rounded-pill px-4" 
+                            onclick="verifyUser('${user.id}')">
+                        Verify User
+                    </button>
+                    ` : ''}
                     ` : ''}
                 </div>
             `;
@@ -645,25 +827,44 @@ function showUserDetails(userId) {
 // Export Functionality
 function exportUsers() {
     const visibleRows = document.querySelectorAll('#usersTableBody .user-row:not([style*="display: none"])');
-    let csv = 'Username,Email,Phone,Referral Code,Status,Rank,Balance,Referrals,Joined Date,Referred By\n';
+    
+    if (visibleRows.length === 0) {
+        showNotification('warning', 'No users to export');
+        return;
+    }
+    
+    let csv = 'Username,Email,Phone,Name,Referral Code,Status,Verified,Rank,Balance,Total Commission,Referrals,Joined Date,Referred By,User Rank\n';
     
     visibleRows.forEach(row => {
-        const username = row.querySelector('.username').textContent.trim();
-        const email = row.querySelector('.user-email').textContent.trim();
-        const phone = row.querySelector('.user-phone').textContent.trim();
-        const referralCode = row.querySelector('.referral-code').textContent.trim();
-        const status = row.querySelector('.badge').textContent.trim();
-        const rank = row.querySelector('.user-rank').textContent.trim();
-        const balance = row.querySelector('.user-balance').textContent.replace('Ksh ', '').trim();
-        const referrals = row.querySelector('.user-referrals').textContent.replace(' referrals', '').trim();
-        const joinedDate = row.querySelector('.join-date').textContent.trim();
-        const referredBy = row.querySelector('.text-info') ? row.querySelector('.text-info').textContent.replace('Referred by: ', '') : '';
+        const username = (row.querySelector('.username')?.textContent || '').trim().replace(/"/g, '""');
+        const email = (row.querySelector('.user-email')?.textContent || '').trim().replace(/"/g, '""');
+        const phone = (row.querySelector('.user-phone')?.textContent || '').trim().replace(/"/g, '""');
+        const nameElement = row.querySelector('.text-muted.small'); // Assuming name is in this format
+        const name = (nameElement?.textContent?.replace('Name: ', '') || '').trim().replace(/"/g, '""');
+        const referralCode = (row.querySelector('.referral-code')?.textContent || '').trim().replace(/"/g, '""');
         
-        csv += `"${username}","${email}","${phone}","${referralCode}","${status}","${rank}","${balance}","${referrals}","${joinedDate}","${referredBy}"\n`;
+        // Extract status information
+        const statusBadge = row.querySelector('.badge');
+        const status = statusBadge ? statusBadge.textContent.trim() : 'Unknown';
+        const isVerified = row.querySelector('.badge.bg-primary') ? 'Yes' : 'No';
+        const rank = (row.querySelector('.user-rank')?.textContent || '').trim();
+        const balance = (row.querySelector('.user-balance')?.textContent?.replace('Ksh ', '') || '0').trim();
+        const referrals = (row.querySelector('.user-referrals')?.textContent?.replace(' referrals', '') || '0').trim();
+        const joinedDate = (row.querySelector('.join-date')?.textContent || '').trim();
+        const referredBy = row.querySelector('.text-info') ? 
+            row.querySelector('.text-info').textContent.replace('Referred by: ', '').trim().replace(/"/g, '""') : '';
+        const userRank = rank;
+        
+        // Extract commission if available
+        const commissionElement = row.querySelector('.text-warning');
+        const totalCommission = commissionElement ? 
+            commissionElement.textContent.replace('Commission: Ksh ', '').trim() : '0';
+        
+        csv += `"${username}","${email}","${phone}","${name}","${referralCode}","${status}","${isVerified}","${rank}","${balance}","${totalCommission}","${referrals}","${joinedDate}","${referredBy}","${userRank}"\n`;
     });
     
     // Create and download CSV file
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.setAttribute('hidden', '');
@@ -672,8 +873,9 @@ function exportUsers() {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
     
-    showNotification('success', 'Users exported successfully!');
+    showNotification('success', `Exported ${visibleRows.length} users successfully!`);
 }
 
 // Pagination Functions
@@ -745,7 +947,6 @@ function updateDisplayedUsers() {
 }
 
 function updateUserCounts(visibleCount) {
-    document.getElementById('userCount').textContent = visibleCount;
     const startIndex = (currentPage - 1) * usersPerPage + 1;
     const endIndex = Math.min(startIndex + usersPerPage - 1, visibleCount);
     document.getElementById('showingCount').textContent = 
@@ -761,11 +962,11 @@ function toggleNoResultsMessage(visibleCount) {
     if (visibleCount === 0 && document.querySelectorAll('.user-row').length > 0) {
         noResults.style.display = 'block';
         table.style.display = 'none';
-        pagination.style.display = 'none';
+        if (pagination) pagination.style.display = 'none';
     } else {
         noResults.style.display = 'none';
         table.style.display = 'block';
-        pagination.style.display = 'flex';
+        if (pagination) pagination.style.display = 'flex';
     }
 }
 
@@ -814,9 +1015,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Initialize pagination
-    updatePagination({{ users|length }});
+    // Initialize pagination and display
+    const totalUsers = {{ users|length }};
+    updatePagination(totalUsers);
     updateDisplayedUsers();
+    updateUserCounts(totalUsers);
+    
+    // Initial search to set up highlighting and counts
+    searchUsers();
 });
 </script>
 
@@ -947,6 +1153,12 @@ document.addEventListener('DOMContentLoaded', function() {
 /* Smooth transitions */
 .card, .btn, .badge, .table tbody tr {
     transition: all 0.3s ease;
+}
+
+/* Bronze rank color */
+.bg-brown {
+    background-color: #cd7f32 !important;
+    color: white !important;
 }
 </style>
 {% endblock %}
