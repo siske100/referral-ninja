@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}User Management - ReferralNinja{% endblock %}
+{% block title %}Performance Analytics - ReferralNinja{% endblock %}
 
 {% block content %}
-<div class="container-fluid px-4">
-    <!-- Professional Header -->
-    <div class="dashboard-header">
+<div class="analytics-container">
+    <!-- Header Section -->
+    <div class="analytics-header">
         <div class="header-background">
             <div class="container-fluid">
                 <div class="row align-items-center py-4">
@@ -13,12 +13,12 @@
                         <div class="d-flex align-items-center">
                             <div class="header-icon-container me-4">
                                 <div class="icon-wrapper bg-white shadow">
-                                    <i class="fas fa-users-cog text-primary"></i>
+                                    <i class="fas fa-chart-pie text-primary"></i>
                                 </div>
                             </div>
                             <div class="header-text">
-                                <h1 class="display-6 fw-bold text-white mb-2">User Administration</h1>
-                                <p class="text-white-50 mb-0">Comprehensive user management and performance analytics</p>
+                                <h1 class="display-6 fw-bold text-white mb-2">Performance Analytics</h1>
+                                <p class="text-white-50 mb-0">Comprehensive insights into your referral performance and earnings</p>
                             </div>
                         </div>
                     </div>
@@ -26,7 +26,7 @@
                         <div class="status-indicator">
                             <span class="status-badge bg-white text-primary">
                                 <i class="fas fa-circle text-success me-2 pulse"></i>
-                                System Active • Real-time Monitoring
+                                Live Data • Real-time Updates
                             </span>
                         </div>
                     </div>
@@ -35,21 +35,87 @@
         </div>
     </div>
 
-    <!-- Performance Metrics -->
-    <div class="row mt-4">
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="metric-card total-users-gradient">
-                <div class="card-body">
-                    <div class="metric-content">
-                        <div class="metric-icon">
-                            <i class="fas fa-users"></i>
+    <!-- Financial Overview -->
+    <div class="container-fluid mt-4">
+        <div class="row g-4 mb-5">
+            <!-- Total Earnings Card -->
+            <div class="col-xl-3 col-md-6">
+                <div class="metric-card earnings-gradient">
+                    <div class="card-body">
+                        <div class="metric-content">
+                            <div class="metric-icon">
+                                <i class="fas fa-money-bill-trend-up"></i>
+                            </div>
+                            <div class="metric-data">
+                                <h3 class="metric-value">KSH {{ "%.2f"|format(total_earned) }}</h3>
+                                <p class="metric-label">Total Earnings</p>
+                                <div class="metric-trend positive">
+                                    <i class="fas fa-chart-line me-1"></i>
+                                    <span>Lifetime Performance</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="metric-data">
-                            <h3 class="metric-value">{{ users|length }}</h3>
-                            <p class="metric-label">Total Accounts</p>
-                            <div class="metric-trend positive">
-                                <i class="fas fa-chart-line me-1"></i>
-                                <span>System Total</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Available Balance Card -->
+            <div class="col-xl-3 col-md-6">
+                <div class="metric-card balance-gradient">
+                    <div class="card-body">
+                        <div class="metric-content">
+                            <div class="metric-icon">
+                                <i class="fas fa-wallet"></i>
+                            </div>
+                            <div class="metric-data">
+                                <h3 class="metric-value">KSH {{ "%.2f"|format(pending_balance) }}</h3>
+                                <p class="metric-label">Available Balance</p>
+                                <div class="metric-trend neutral">
+                                    <i class="fas fa-clock me-1"></i>
+                                    <span>Ready for Withdrawal</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Total Withdrawn Card -->
+            <div class="col-xl-3 col-md-6">
+                <div class="metric-card withdrawn-gradient">
+                    <div class="card-body">
+                        <div class="metric-content">
+                            <div class="metric-icon">
+                                <i class="fas fa-piggy-bank"></i>
+                            </div>
+                            <div class="metric-data">
+                                <h3 class="metric-value">KSH {{ "%.2f"|format(total_withdrawn) }}</h3>
+                                <p class="metric-label">Total Withdrawn</p>
+                                <div class="metric-trend positive">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    <span>Successfully Processed</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Campaigns Card -->
+            <div class="col-xl-3 col-md-6">
+                <div class="metric-card performance-gradient">
+                    <div class="card-body">
+                        <div class="metric-content">
+                            <div class="metric-icon">
+                                <i class="fas fa-trophy"></i>
+                            </div>
+                            <div class="metric-data">
+                                <h3 class="metric-value">{{ referral_stats|length if referral_stats else 0 }}</h3>
+                                <p class="metric-label">Active Campaigns</p>
+                                <div class="metric-trend positive">
+                                    <i class="fas fa-users me-1"></i>
+                                    <span>Referral Network</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -57,923 +123,339 @@
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="metric-card verified-gradient">
-                <div class="card-body">
-                    <div class="metric-content">
-                        <div class="metric-icon">
-                            <i class="fas fa-user-check"></i>
-                        </div>
-                        <div class="metric-data">
-                            <h3 class="metric-value">{{ users|selectattr('is_verified')|list|length }}</h3>
-                            <p class="metric-label">Verified Accounts</p>
-                            <div class="metric-trend positive">
-                                <i class="fas fa-shield-check me-1"></i>
-                                <span>{{ "%.1f"|format((users|selectattr('is_verified')|list|length / users|length * 100) if users|length > 0 else 0) }}% Verified</span>
+        <!-- Analytics Dashboard -->
+        <div class="row g-4">
+            <!-- Performance Trends -->
+            <div class="col-lg-8">
+                <div class="dashboard-card">
+                    <div class="card-header border-0 bg-transparent">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div class="section-title">
+                                <h4 class="fw-bold mb-1">
+                                    <i class="fas fa-chart-line text-primary me-2"></i>
+                                    Performance Trends
+                                </h4>
+                                <p class="text-muted mb-0">Monitor your referral growth and conversion patterns</p>
+                            </div>
+                            <div class="time-filters">
+                                <div class="btn-group" role="group">
+                                    <input type="radio" class="btn-check" name="timeFilter" id="week" autocomplete="off" checked>
+                                    <label class="btn btn-outline-primary btn-sm" for="week">7D</label>
+                                    
+                                    <input type="radio" class="btn-check" name="timeFilter" id="month" autocomplete="off">
+                                    <label class="btn btn-outline-primary btn-sm" for="month">30D</label>
+                                    
+                                    <input type="radio" class="btn-check" name="timeFilter" id="all" autocomplete="off">
+                                    <label class="btn btn-outline-primary btn-sm" for="all">ALL</label>
+                                </div>
                             </div>
                         </div>
                     </div>
+                    <div class="card-body pt-0">
+                        {% if referral_stats %}
+                        <div class="chart-wrapper">
+                            <canvas id="referralChart" height="280"></canvas>
+                        </div>
+                        {% else %}
+                        <div class="empty-state text-center py-5">
+                            <div class="empty-chart-icon mb-4">
+                                <i class="fas fa-chart-bar fa-4x text-light"></i>
+                            </div>
+                            <h4 class="text-muted mb-3">No Performance Data</h4>
+                            <p class="text-muted mb-4">Begin your referral campaigns to generate analytics data</p>
+                            <a href="{{ url_for('referral_system') }}" class="btn btn-primary btn-lg">
+                                <i class="fas fa-rocket me-2"></i>Initiate Referral Campaign
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="metric-card active-gradient">
-                <div class="card-body">
-                    <div class="metric-content">
-                        <div class="metric-icon">
-                            <i class="fas fa-user-circle"></i>
-                        </div>
-                        <div class="metric-data">
-                            <h3 class="metric-value">{{ users|selectattr('is_active')|list|length }}</h3>
-                            <p class="metric-label">Active Accounts</p>
-                            <div class="metric-trend positive">
-                                <i class="fas fa-rocket me-1"></i>
-                                <span>{{ "%.1f"|format((users|selectattr('is_active')|list|length / users|length * 100) if users|length > 0 else 0) }}% Active</span>
+            <!-- Key Metrics -->
+            <div class="col-lg-4">
+                <div class="dashboard-card h-100">
+                    <div class="card-header border-0 bg-transparent">
+                        <h4 class="fw-bold mb-1">
+                            <i class="fas fa-tachometer-alt text-primary me-2"></i>
+                            Performance Metrics
+                        </h4>
+                        <p class="text-muted mb-0">Key performance indicators</p>
+                    </div>
+                    <div class="card-body">
+                        <div class="kpi-grid">
+                            <div class="kpi-item">
+                                <div class="kpi-icon-wrapper bg-primary-subtle">
+                                    <i class="fas fa-calendar-day text-primary"></i>
+                                </div>
+                                <div class="kpi-content">
+                                    <div class="kpi-value">KSH {{ "%.2f"|format(total_earned / 30 if total_earned > 0 else 0) }}</div>
+                                    <div class="kpi-label">Daily Average</div>
+                                </div>
+                            </div>
+                            
+                            <div class="kpi-item">
+                                <div class="kpi-icon-wrapper bg-warning-subtle">
+                                    <i class="fas fa-trophy text-warning"></i>
+                                </div>
+                                <div class="kpi-content">
+                                    <div class="kpi-value">-</div>
+                                    <div class="kpi-label">Peak Performance</div>
+                                </div>
+                            </div>
+                            
+                            <div class="kpi-item">
+                                <div class="kpi-icon-wrapper bg-success-subtle">
+                                    <i class="fas fa-percentage text-success"></i>
+                                </div>
+                                <div class="kpi-content">
+                                    <div class="kpi-value">-</div>
+                                    <div class="kpi-label">Conversion Rate</div>
+                                </div>
+                            </div>
+                            
+                            <div class="kpi-item">
+                                <div class="kpi-icon-wrapper bg-info-subtle">
+                                    <i class="fas fa-fire text-info"></i>
+                                </div>
+                                <div class="kpi-content">
+                                    <div class="kpi-value">-</div>
+                                    <div class="kpi-label">Active Streak</div>
+                                </div>
                             </div>
                         </div>
+                        
+                        <div class="performance-insight mt-4 p-3 bg-light rounded-3">
+                            <h6 class="fw-semibold mb-2">
+                                <i class="fas fa-bullseye text-primary me-2"></i>
+                                Performance Analysis
+                            </h6>
+                            <p class="text-muted mb-0 small">
+                                Track these metrics to optimize your referral strategy and maximize revenue generation.
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="metric-card pending-gradient">
-                <div class="card-body">
-                    <div class="metric-content">
-                        <div class="metric-icon">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                        <div class="metric-data">
-                            <h3 class="metric-value">{{ users|rejectattr('is_verified')|list|length }}</h3>
-                            <p class="metric-label">Pending Verification</p>
-                            <div class="metric-trend neutral">
-                                <i class="fas fa-exclamation-circle me-1"></i>
-                                <span>Requires Attention</span>
+        <!-- Activity & Strategy Section -->
+        <div class="row g-4 mt-2">
+            <!-- Activity Timeline -->
+            <div class="col-lg-8">
+                <div class="dashboard-card">
+                    <div class="card-header border-0 bg-transparent">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="section-title">
+                                <h4 class="fw-bold mb-1">
+                                    <i class="fas fa-list-alt text-primary me-2"></i>
+                                    Activity Timeline
+                                </h4>
+                                <p class="text-muted mb-0">Recent referral milestones and achievements</p>
                             </div>
+                            <span class="badge bg-primary rounded-pill">{{ referral_stats|length if referral_stats else 0 }} events</span>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Administrative Controls -->
-    <div class="action-bar mb-4">
-        <div class="row g-3">
-            <div class="col-md-8">
-                <div class="d-flex gap-2 flex-wrap">
-                    <div class="dropdown">
-                        <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-cog me-2"></i>Administrative Actions
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#" onclick="quickAction('verify')"><i class="fas fa-check-circle text-success me-2"></i>Verify All Pending</a></li>
-                            <li><a class="dropdown-item" href="#" onclick="quickAction('activate')"><i class="fas fa-play-circle text-primary me-2"></i>Activate All Accounts</a></li>
-                            <li><a class="dropdown-item" href="#" onclick="quickAction('export')"><i class="fas fa-download text-info me-2"></i>Export User Data</a></li>
-                        </ul>
-                    </div>
-                    
-                    <div class="dropdown">
-                        <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" id="bulkActionsBtn" disabled>
-                            <i class="fas fa-layer-group me-2"></i>Batch Operations
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#" onclick="bulkAction('verify')"><i class="fas fa-check-circle text-success me-2"></i>Verify Selected</a></li>
-                            <li><a class="dropdown-item" href="#" onclick="bulkAction('activate')"><i class="fas fa-user-check text-primary me-2"></i>Activate Selected</a></li>
-                            <li><a class="dropdown-item" href="#" onclick="bulkAction('deactivate')"><i class="fas fa-user-slash text-warning me-2"></i>Deactivate Selected</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="#" onclick="bulkAction('delete')"><i class="fas fa-trash me-2"></i>Remove Selected</a></li>
-                        </ul>
-                    </div>
-
-                    <button class="btn btn-success" onclick="showAddUserModal()">
-                        <i class="fas fa-user-plus me-2"></i>Create Account
-                    </button>
-
-                    <button class="btn btn-outline-secondary" onclick="refreshData()">
-                        <i class="fas fa-sync-alt me-2"></i>Refresh Data
-                    </button>
-                </div>
-            </div>
-            <div class="col-md-4 text-end">
-                <div class="d-flex gap-2 justify-content-end">
-                    <span class="badge bg-light text-dark align-self-center">
-                        <i class="fas fa-database me-1"></i>{{ users|length }} Records
-                    </span>
-                    <button class="btn btn-outline-info" onclick="showAnalytics()">
-                        <i class="fas fa-chart-bar me-2"></i>System Analytics
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- User Search and Filtering -->
-    <div class="dashboard-card mb-4">
-        <div class="card-header">
-            <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
-                    <i class="fas fa-search me-2"></i>User Search & Filtering
-                </h5>
-                <button class="btn btn-sm btn-outline-secondary" onclick="clearAllFilters()">
-                    <i class="fas fa-times me-1"></i>Reset Filters
-                </button>
-            </div>
-        </div>
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <div class="search-box">
-                        <i class="fas fa-search search-icon"></i>
-                        <input type="text" class="form-control search-input" id="searchInput" 
-                               placeholder="Search by username, email, phone, or referral code..." 
-                               onkeyup="debouncedSearch()">
-                        <button class="btn btn-sm btn-outline-secondary search-clear" onclick="clearSearch()">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <select class="form-select" id="statusFilter" onchange="applyFilters()">
-                        <option value="">All Statuses</option>
-                        <option value="verified">Verified Only</option>
-                        <option value="unverified">Unverified Only</option>
-                        <option value="active">Active Only</option>
-                        <option value="inactive">Inactive Only</option>
-                        <option value="admin">Administrators</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <select class="form-select" id="rankFilter" onchange="applyFilters()">
-                        <option value="">All Performance Tiers</option>
-                        <option value="bronze">Bronze</option>
-                        <option value="silver">Silver</option>
-                        <option value="gold">Gold</option>
-                        <option value="platinum">Platinum</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Advanced Filtering Options -->
-            <div class="advanced-filters mt-3">
-                <a class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" href="#advancedFilters">
-                    <i class="fas fa-sliders-h me-2"></i>Advanced Filtering
-                    <i class="fas fa-chevron-down ms-1"></i>
-                </a>
-                
-                <div class="collapse mt-3" id="advancedFilters">
-                    <div class="row g-3">
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold">Registration Period</label>
-                            <div class="input-group">
-                                <input type="date" class="form-control" id="dateFrom" onchange="applyFilters()">
-                                <span class="input-group-text">to</span>
-                                <input type="date" class="form-control" id="dateTo" onchange="applyFilters()">
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label small fw-bold">Minimum Balance</label>
-                            <input type="number" class="form-control" id="minBalance" placeholder="0.00" onchange="applyFilters()">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label small fw-bold">Minimum Referrals</label>
-                            <input type="number" class="form-control" id="minReferrals" placeholder="0" onchange="applyFilters()">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold">Sort Results By</label>
-                            <select class="form-select" id="sortBy" onchange="applyFilters()">
-                                <option value="newest">Newest Registrations</option>
-                                <option value="oldest">Oldest Registrations</option>
-                                <option value="balance_high">Balance: High to Low</option>
-                                <option value="balance_low">Balance: Low to High</option>
-                                <option value="referrals_high">Referrals: High to Low</option>
-                                <option value="referrals_low">Referrals: Low to High</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2 d-flex align-items-end">
-                            <button class="btn btn-sm btn-outline-danger w-100" onclick="clearAdvancedFilters()">
-                                <i class="fas fa-undo me-1"></i>Reset
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- User Accounts Management -->
-    <div class="dashboard-card">
-        <div class="card-header">
-            <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
-                    <i class="fas fa-user-friends me-2"></i>User Accounts Management
-                    <span class="badge bg-primary ms-2" id="userCount">{{ users|length }}</span>
-                </h5>
-                <div class="d-flex gap-2 align-items-center">
-                    <span class="text-muted small" id="showingText">
-                        Displaying {{ users|length }} of {{ users|length }} user accounts
-                    </span>
-                    <button class="btn btn-sm btn-outline-success" onclick="exportUsers()">
-                        <i class="fas fa-file-export me-1"></i>Export Data
-                    </button>
-                </div>
-            </div>
-        </div>
-        
-        <div class="card-body p-0">
-            {% if users %}
-                <div class="table-container">
-                    <table class="users-table" id="usersTable">
-                        <thead>
-                            <tr>
-                                <th width="40">
-                                    <input type="checkbox" class="form-check-input" id="selectAll" onchange="toggleSelectAll(this)">
-                                </th>
-                                <th>Account Information</th>
-                                <th>Contact Details</th>
-                                <th>Financial Metrics</th>
-                                <th>Account Status</th>
-                                <th>Registration Date</th>
-                                <th width="120">Administrative Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="usersTableBody">
-                            {% for user in users %}
-                            <tr class="user-row" 
-                                data-user-id="{{ user.id }}"
-                                data-referral="{{ user.referral_code|lower if user.referral_code else '' }}"
-                                data-username="{{ user.username|lower if user.username else '' }}"
-                                data-email="{{ user.email|lower if user.email else '' }}"
-                                data-phone="{{ user.phone_number|lower if user.phone_number else '' }}"
-                                data-balance="{{ user.balance if user.balance is not none else 0 }}"
-                                data-referrals="{{ user.referral_count if user.referral_count is not none else 0 }}"
-                                data-rank="{{ user.user_rank|lower if user.user_rank else '' }}"
-                                data-joined="{% if user.created_at %}{{ user.created_at.strftime('%Y-%m-%d') }}{% endif %}"
-                                data-status="{% if user.is_verified %}verified{% else %}unverified{% endif %} {% if user.is_active %}active{% else %}inactive{% endif %} {% if user.is_admin %}admin{% endif %}">
-                                
-                                <td>
-                                    {% if not user.is_admin %}
-                                    <input type="checkbox" class="user-checkbox form-check-input" value="{{ user.id }}" onchange="updateBulkActions()">
-                                    {% else %}
-                                    <i class="fas fa-crown text-warning" title="Administrator Account"></i>
+                    <div class="card-body">
+                        {% if referral_stats %}
+                        <div class="timeline-container">
+                            {% for stat in referral_stats[:6] %}
+                            <div class="timeline-item">
+                                <div class="timeline-marker">
+                                    <div class="timeline-dot bg-primary"></div>
+                                    {% if not loop.last %}
+                                    <div class="timeline-line"></div>
                                     {% endif %}
-                                </td>
-                                
-                                <td>
-                                    <div class="user-info">
-                                        <div class="user-main">
-                                            <span class="user-avatar">
-                                                {{ (user.username[0] if user.username else 'U')|upper }}
-                                            </span>
-                                            <div class="user-details">
-                                                <div class="username fw-bold">{{ user.username if user.username else 'Not Provided' }}</div>
-                                                <div class="user-ref">
-                                                    <small class="text-muted">Referral: </small>
-                                                    <code class="referral-code">{{ user.referral_code if user.referral_code else 'N/A' }}</code>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {% if user.referred_by %}
-                                        <div class="referred-by">
-                                            <small class="text-info">
-                                                <i class="fas fa-user-friends me-1"></i>Referred by: {{ user.referred_by }}
-                                            </small>
-                                        </div>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                                
-                                <td>
-                                    <div class="contact-info">
-                                        <div class="contact-item">
-                                            <i class="fas fa-envelope text-muted me-2"></i>
-                                            <span class="user-email">{{ user.email if user.email else 'Not Provided' }}</span>
-                                        </div>
-                                        <div class="contact-item">
-                                            <i class="fas fa-phone text-muted me-2"></i>
-                                            <span class="user-phone">{{ user.phone_number if user.phone_number else 'Not Provided' }}</span>
-                                        </div>
-                                    </div>
-                                </td>
-                                
-                                <td>
-                                    <div class="financial-stats">
-                                        <div class="stat-item">
-                                            <span class="stat-value text-success fw-bold">
-                                                Ksh {{ "%.2f"|format(user.balance) if user.balance is not none else "0.00" }}
-                                            </span>
-                                            <small class="stat-label">Account Balance</small>
-                                        </div>
-                                        <div class="stat-item">
-                                            <span class="stat-value">
-                                                <span class="badge bg-info user-referrals">{{ user.referral_count if user.referral_count is not none else 0 }}</span>
-                                            </span>
-                                            <small class="stat-label">Referral Count</small>
-                                        </div>
-                                    </div>
-                                </td>
-                                
-                                <td>
-                                    <div class="status-badges">
-                                        <div class="badge-group">
-                                            {% if user.is_verified %}
-                                                <span class="badge bg-success">
-                                                    <i class="fas fa-check-circle me-1"></i>Verified
-                                                </span>
-                                            {% else %}
-                                                <span class="badge bg-warning text-dark">
-                                                    <i class="fas fa-clock me-1"></i>Pending Verification
-                                                </span>
-                                            {% endif %}
-                                            
-                                            {% if user.is_active %}
-                                                <span class="badge bg-success">
-                                                    <i class="fas fa-play-circle me-1"></i>Active
-                                                </span>
-                                            {% else %}
-                                                <span class="badge bg-danger">
-                                                    <i class="fas fa-pause-circle me-1"></i>Suspended
-                                                </span>
-                                            {% endif %}
-                                        </div>
-                                        <div class="user-rank mt-1">
-                                            <small class="text-muted user-rank">
-                                                <i class="fas fa-trophy me-1"></i>{{ user.user_rank if user.user_rank else 'No Tier' }}
-                                            </small>
-                                        </div>
-                                    </div>
-                                </td>
-                                
-                                <td>
-                                    <div class="registration-info">
-                                        <div class="join-date fw-semibold">
-                                            {% if user.created_at %}
-                                                {{ user.created_at.strftime('%Y-%m-%d') }}
-                                            {% else %}
-                                                Not Available
-                                            {% endif %}
-                                        </div>
-                                        <small class="text-muted">
-                                            {% if user.created_at %}
-                                                {{ user.created_at.strftime('%H:%M') }}
-                                            {% else %}
-                                                N/A
-                                            {% endif %}
-                                        </small>
-                                    </div>
-                                </td>
-                                
-                                <td>
-                                    <div class="action-buttons">
-                                        {% if not user.is_admin %}
-                                        <div class="btn-group-vertical btn-group-sm w-100">
-                                            <button class="btn btn-outline-primary btn-sm" 
-                                                    onclick="showUserDetails('{{ user.id }}')"
-                                                    title="View Account Details">
-                                                <i class="fas fa-eye"></i> Details
-                                            </button>
-                                            <div class="btn-group btn-group-sm mt-1">
-                                                <button class="btn btn-{{ 'warning' if user.is_active else 'success' }}" 
-                                                        onclick="toggleUserStatus('{{ user.id }}')"
-                                                        title="{{ 'Suspend Account' if user.is_active else 'Activate Account' }}">
-                                                    <i class="fas fa-{{ 'user-slash' if user.is_active else 'user-check' }}"></i>
-                                                </button>
-                                                {% if not user.is_verified %}
-                                                <button class="btn btn-success" 
-                                                        onclick="verifyUser('{{ user.id }}')"
-                                                        title="Verify Account">
-                                                    <i class="fas fa-check-circle"></i>
-                                                </button>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                        {% else %}
-                                        <span class="badge bg-dark">
-                                            <i class="fas fa-crown me-1"></i>Administrator
+                                </div>
+                                <div class="timeline-content">
+                                    <div class="timeline-header">
+                                        <h6 class="timeline-title mb-1">{{ stat.count }} New Referral{% if stat.count != 1 %}s{% endif %}</h6>
+                                        <span class="timeline-badge bg-success-subtle text-success">
+                                            <i class="fas fa-arrow-up me-1"></i>Growth
                                         </span>
-                                        {% endif %}
                                     </div>
-                                </td>
-                            </tr>
+                                    <div class="timeline-footer">
+                                        <span class="timeline-date text-muted">
+                                            <i class="far fa-clock me-1"></i>{{ stat.date }}
+                                        </span>
+                                        <span class="timeline-amount text-success fw-semibold">
+                                            +KSH {{ (stat.count * 50)|float }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
                             {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                
-                <!-- No Results Message -->
-                <div id="noResults" class="empty-state text-center py-5" style="display: none;">
-                    <div class="empty-icon mb-3">
-                        <i class="fas fa-search fa-3x text-muted"></i>
+                        </div>
+                        {% else %}
+                        <div class="empty-state text-center py-4">
+                            <div class="empty-activity-icon mb-3">
+                                <i class="fas fa-history fa-3x text-light"></i>
+                            </div>
+                            <h5 class="text-muted mb-2">No Recent Activity</h5>
+                            <p class="text-muted">Your referral activity will appear here</p>
+                        </div>
+                        {% endif %}
                     </div>
-                    <h5 class="text-muted mb-2">No Matching Accounts Found</h5>
-                    <p class="text-muted mb-3">No user accounts match your current search criteria</p>
-                    <button class="btn btn-primary" onclick="clearAllFilters()">
-                        <i class="fas fa-times me-1"></i> Reset All Filters
-                    </button>
                 </div>
-                
-            {% else %}
-                <div class="empty-state text-center py-5">
-                    <div class="empty-icon mb-3">
-                        <i class="fas fa-users fa-3x text-muted"></i>
-                    </div>
-                    <h5 class="text-muted mb-2">No User Accounts</h5>
-                    <p class="text-muted mb-3">No user accounts are currently registered in the system</p>
-                    <button class="btn btn-primary" onclick="showAddUserModal()">
-                        <i class="fas fa-user-plus me-1"></i> Create First Account
-                    </button>
-                </div>
-            {% endif %}
-        </div>
-        
-        <!-- Table Footer -->
-        {% if users %}
-        <div class="card-footer">
-            <div class="d-flex justify-content-between align-items-center">
-                <div class="text-muted small">
-                    Displaying <span id="showingCount">0</span> of <span id="totalCount">{{ users|length }}</span> accounts
-                </div>
-                <nav>
-                    <ul class="pagination mb-0" id="paginationControls">
-                        <!-- Pagination will be generated by JavaScript -->
-                    </ul>
-                </nav>
             </div>
-        </div>
-        {% endif %}
-    </div>
-</div>
 
-<!-- User Account Details Modal -->
-<div class="modal fade" id="userDetailModal" tabindex="-1" aria-labelledby="userDetailModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="userDetailModalLabel">
-                    <i class="fas fa-user me-2"></i>Account Details
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" id="userDetailContent">
-                <!-- User details will be loaded here -->
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" onclick="editUser()">Modify Account</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Create User Account Modal -->
-<div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addUserModalLabel">
-                    <i class="fas fa-user-plus me-2"></i>Create New Account
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="addUserForm">
-                    <div class="mb-3">
-                        <label for="newUsername" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="newUsername" required>
+            <!-- Optimization Insights -->
+            <div class="col-lg-4">
+                <div class="dashboard-card h-100">
+                    <div class="card-header border-0 bg-transparent">
+                        <h4 class="fw-bold mb-1">
+                            <i class="fas fa-lightbulb text-primary me-2"></i>
+                            Optimization Insights
+                        </h4>
+                        <p class="text-muted mb-0">Strategies to enhance performance</p>
                     </div>
-                    <div class="mb-3">
-                        <label for="newEmail" class="form-label">Email Address</label>
-                        <input type="email" class="form-control" id="newEmail" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="newPhone" class="form-label">Phone Number</label>
-                        <input type="tel" class="form-control" id="newPhone">
-                    </div>
-                    <div class="mb-3">
-                        <label for="newPassword" class="form-label">Account Password</label>
-                        <input type="password" class="form-control" id="newPassword" required>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="autoVerify">
-                                <label class="form-check-label" for="autoVerify">
-                                    Auto-verify Account
-                                </label>
+                    <div class="card-body">
+                        <div class="insights-container">
+                            <div class="insight-card">
+                                <div class="insight-header">
+                                    <div class="insight-icon bg-success-subtle">
+                                        <i class="fas fa-rocket text-success"></i>
+                                    </div>
+                                    <h6 class="insight-title">Growth Potential</h6>
+                                </div>
+                                <p class="insight-text text-muted">
+                                    Maintain consistent referral activity to achieve higher performance tiers and increased rewards.
+                                </p>
+                            </div>
+                            
+                            <div class="insight-card">
+                                <div class="insight-header">
+                                    <div class="insight-icon bg-primary-subtle">
+                                        <i class="fas fa-share-alt text-primary"></i>
+                                    </div>
+                                    <h6 class="insight-title">Distribution Strategy</h6>
+                                </div>
+                                <p class="insight-text text-muted">
+                                    Utilize multiple distribution channels for your referral code to maximize visibility and engagement.
+                                </p>
+                            </div>
+                            
+                            <div class="insight-card">
+                                <div class="insight-header">
+                                    <div class="insight-icon bg-warning-subtle">
+                                        <i class="fas fa-target text-warning"></i>
+                                    </div>
+                                    <h6 class="insight-title">Weekly Objectives</h6>
+                                </div>
+                                <p class="insight-text text-muted">
+                                    Target 5-7 referrals weekly to optimize your earning potential and accelerate tier progression.
+                                </p>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="autoActivate" checked>
-                                <label class="form-check-label" for="autoActivate">
-                                    Activate Immediately
-                                </label>
-                            </div>
+                        
+                        <div class="cta-section mt-4">
+                            <a href="{{ url_for('referral_system') }}" class="btn btn-primary w-100 py-3 fw-semibold">
+                                <i class="fas fa-chart-network me-2"></i>Enhance Referral Strategy
+                            </a>
                         </div>
                     </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="addNewUser()">Create Account</button>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- System Processing Overlay -->
-<div id="loadingSpinner" class="loading-overlay">
-    <div class="spinner-container">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Processing...</span>
-        </div>
-        <p class="mt-2 text-muted">System Processing...</p>
-    </div>
-</div>
-{% endblock %}
-
-{% block scripts %}
+{% if referral_stats %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-// System Configuration
-let currentPage = 1;
-const usersPerPage = 10;
-let debounceTimer;
-
-// Enhanced administrative request handler
-const adminRequest = async (url, options = {}) => {
-    const defaultOptions = {
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCSRFToken()
-        }
-    };
-    
-    showLoading();
-    
-    try {
-        const response = await fetch(url, {...defaultOptions, ...options});
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return await response.json();
-    } catch (error) {
-        console.error('Administrative request failed:', error);
-        showNotification('error', 'System communication error occurred');
-        throw error;
-    } finally {
-        hideLoading();
-    }
-};
-
-// Administrative Interface Functions
-function showLoading() {
-    document.getElementById('loadingSpinner').style.display = 'flex';
-}
-
-function hideLoading() {
-    document.getElementById('loadingSpinner').style.display = 'none';
-}
-
-function refreshData() {
-    showLoading();
-    setTimeout(() => {
-        window.location.reload();
-    }, 500);
-}
-
-// Enhanced search functionality
-function debouncedSearch() {
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(searchUsers, 300);
-}
-
-function searchUsers() {
-    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-    const statusFilter = document.getElementById('statusFilter').value;
-    const rows = document.querySelectorAll('#usersTableBody .user-row');
-    let visibleCount = 0;
-
-    rows.forEach(row => {
-        const username = row.getAttribute('data-username') || '';
-        const email = row.getAttribute('data-email') || '';
-        const phone = row.getAttribute('data-phone') || '';
-        const referral = row.getAttribute('data-referral') || '';
-        const status = row.getAttribute('data-status') || '';
-
-        const matchesSearch = !searchTerm || 
-            username.includes(searchTerm) ||
-            email.includes(searchTerm) ||
-            phone.includes(searchTerm) ||
-            referral.includes(searchTerm);
-
-        const matchesStatus = !statusFilter || 
-            (statusFilter === 'verified' && status.includes('verified')) ||
-            (statusFilter === 'unverified' && status.includes('unverified')) ||
-            (statusFilter === 'active' && status.includes('active')) ||
-            (statusFilter === 'inactive' && status.includes('inactive')) ||
-            (statusFilter === 'admin' && status.includes('admin'));
-
-        const matchesAdvanced = applyAdvancedFiltersToRow(row);
-
-        if (matchesSearch && matchesStatus && matchesAdvanced) {
-            row.style.display = '';
-            visibleCount++;
-            if (searchTerm) highlightMatches(row, searchTerm);
-        } else {
-            row.style.display = 'none';
-            removeHighlights(row);
-        }
-    });
-
-    updateDisplay(visibleCount);
-}
-
-function applyFilters() {
-    searchUsers();
-}
-
-// Batch Operations Management
-function toggleSelectAll(checkbox) {
-    document.querySelectorAll('.user-checkbox').forEach(cb => {
-        if (!cb.disabled) cb.checked = checkbox.checked;
-    });
-    updateBulkActions();
-}
-
-function updateBulkActions() {
-    const selectedCount = document.querySelectorAll('.user-checkbox:checked').length;
-    const bulkBtn = document.getElementById('bulkActionsBtn');
-    
-    if (selectedCount > 0) {
-        bulkBtn.disabled = false;
-        bulkBtn.innerHTML = `<i class="fas fa-layer-group me-2"></i>Batch Operations (${selectedCount})`;
-    } else {
-        bulkBtn.disabled = true;
-        bulkBtn.innerHTML = `<i class="fas fa-layer-group me-2"></i>Batch Operations`;
-    }
-}
-
-function getSelectedUserIds() {
-    return Array.from(document.querySelectorAll('.user-checkbox:checked')).map(cb => cb.value);
-}
-
-async function bulkAction(action) {
-    const userIds = getSelectedUserIds();
-    if (userIds.length === 0) {
-        showNotification('warning', 'Please select at least one user account');
-        return;
-    }
-
-    const actions = {
-        'verify': { 
-            endpoint: '/admin/bulk-verify-users', 
-            message: `verify ${userIds.length} account(s)`,
-            success: 'User accounts verified successfully!'
-        },
-        'activate': { 
-            endpoint: '/admin/bulk-activate-users', 
-            message: `activate ${userIds.length} account(s)`,
-            success: 'User accounts activated successfully!'
-        },
-        'deactivate': { 
-            endpoint: '/admin/bulk-deactivate-users', 
-            message: `suspend ${userIds.length} account(s)`,
-            success: 'User accounts suspended successfully!',
-            isDestructive: true
-        },
-        'delete': { 
-            endpoint: '/admin/bulk-delete-users', 
-            message: `permanently remove ${userIds.length} account(s)`,
-            success: 'User accounts removed successfully!',
-            isDestructive: true
-        }
-    };
-
-    const config = actions[action];
-    if (!config) return;
-
-    const confirmMessage = config.isDestructive ? 
-        `SECURITY NOTICE: This will ${config.message}. This action cannot be reversed. Confirm execution?` :
-        `Confirm ${config.message}?`;
-
-    if (!confirm(confirmMessage)) return;
-
-    try {
-        const data = await adminRequest(config.endpoint, {
-            method: 'POST',
-            body: JSON.stringify({ user_ids: userIds })
-        });
-
-        if (data.success) {
-            showNotification('success', config.success);
-            setTimeout(refreshData, 1000);
-        } else {
-            showNotification('error', data.message || 'Operation failed to execute');
-        }
-    } catch (error) {
-        showNotification('error', 'System communication error during batch operation');
-    }
-}
-
-// Administrative Quick Actions
-function quickAction(action) {
-    switch(action) {
-        case 'verify':
-            const unverifiedIds = Array.from(document.querySelectorAll('.user-row[data-status*="unverified"]'))
-                .map(row => row.getAttribute('data-user-id'));
-            if (unverifiedIds.length > 0) {
-                performBulkAction(unverifiedIds, 'verify', 'verify all pending accounts');
-            }
-            break;
-        case 'activate':
-            const inactiveIds = Array.from(document.querySelectorAll('.user-row[data-status*="inactive"]'))
-                .map(row => row.getAttribute('data-user-id'));
-            if (inactiveIds.length > 0) {
-                performBulkAction(inactiveIds, 'activate', 'activate all suspended accounts');
-            }
-            break;
-        case 'export':
-            exportUsers();
-            break;
-    }
-}
-
-// User Account Management
-async function toggleUserStatus(userId) {
-    if (!confirm('Confirm modification of this account status?')) return;
-
-    try {
-        const data = await adminRequest(`/admin/toggle-user-status/${userId}`, {
-            method: 'POST'
-        });
-
-        if (data.success) {
-            showNotification('success', data.message);
-            setTimeout(refreshData, 1000);
-        }
-    } catch (error) {
-        showNotification('error', 'Failed to update account status');
-    }
-}
-
-async function verifyUser(userId) {
-    if (!confirm('Confirm verification of this user account?')) return;
-
-    try {
-        const data = await adminRequest(`/admin/verify-user/${userId}`, {
-            method: 'POST'
-        });
-
-        if (data.success) {
-            showNotification('success', 'User account verified successfully!');
-            setTimeout(refreshData, 1000);
-        }
-    } catch (error) {
-        showNotification('error', 'Failed to verify user account');
-    }
-}
-
-// Account Creation
-function showAddUserModal() {
-    new bootstrap.Modal(document.getElementById('addUserModal')).show();
-}
-
-async function addNewUser() {
-    const formData = {
-        username: document.getElementById('newUsername').value,
-        email: document.getElementById('newEmail').value,
-        phone: document.getElementById('newPhone').value,
-        password: document.getElementById('newPassword').value,
-        auto_verify: document.getElementById('autoVerify').checked,
-        auto_activate: document.getElementById('autoActivate').checked
-    };
-
-    if (!formData.username || !formData.email || !formData.password) {
-        showNotification('warning', 'Please complete all required fields');
-        return;
-    }
-
-    try {
-        const data = await adminRequest('/admin/add-user', {
-            method: 'POST',
-            body: JSON.stringify(formData)
-        });
-
-        if (data.success) {
-            showNotification('success', 'User account created successfully!');
-            bootstrap.Modal.getInstance(document.getElementById('addUserModal')).hide();
-            setTimeout(refreshData, 1000);
-        } else {
-            showNotification('error', data.message || 'Account creation failed');
-        }
-    } catch (error) {
-        showNotification('error', 'System error during account creation');
-    }
-}
-
-// Data Export Functionality
-function exportUsers() {
-    const visibleRows = document.querySelectorAll('.user-row:not([style*="display: none"])');
-    let csv = 'Username,Email,Phone,Referral Code,Status,Performance Tier,Balance,Referrals,Registration Date,Referred By\n';
-    
-    visibleRows.forEach(row => {
-        const username = row.querySelector('.username').textContent.trim();
-        const email = row.querySelector('.user-email').textContent.trim();
-        const phone = row.querySelector('.user-phone').textContent.trim();
-        const referralCode = row.querySelector('.referral-code').textContent.trim();
-        const status = row.querySelector('.status-badges .badge').textContent.trim();
-        const rank = row.querySelector('.user-rank').textContent.trim();
-        const balance = row.querySelector('.stat-value').textContent.replace('Ksh ', '').trim();
-        const referrals = row.querySelector('.user-referrals').textContent.trim();
-        const joinedDate = row.querySelector('.join-date').textContent.trim();
-        const referredBy = row.querySelector('.referred-by') ? 
-            row.querySelector('.referred-by').textContent.replace('Referred by:', '').trim() : '';
-
-        csv += `"${username}","${email}","${phone}","${referralCode}","${status}","${rank}","${balance}","${referrals}","${joinedDate}","${referredBy}"\n`;
-    });
-    
-    downloadCSV(csv, `user_accounts_export_${new Date().toISOString().split('T')[0]}.csv`);
-    showNotification('success', 'User data exported successfully!');
-}
-
-// System Utility Functions
-function updateDisplay(visibleCount) {
-    document.getElementById('userCount').textContent = visibleCount;
-    document.getElementById('showingCount').textContent = visibleCount;
-    document.getElementById('totalCount').textContent = visibleCount;
-    
-    const noResults = document.getElementById('noResults');
-    const tableContainer = document.querySelector('.table-container');
-    
-    if (visibleCount === 0 && document.querySelectorAll('.user-row').length > 0) {
-        noResults.style.display = 'block';
-        if (tableContainer) tableContainer.style.display = 'none';
-    } else {
-        noResults.style.display = 'none';
-        if (tableContainer) tableContainer.style.display = 'block';
-    }
-    
-    updatePagination(visibleCount);
-}
-
-function showNotification(type, message) {
-    // Remove existing notifications
-    document.querySelectorAll('.alert.position-fixed').forEach(alert => alert.remove());
-    
-    const notification = document.createElement('div');
-    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-    notification.innerHTML = `
-        <i class="fas fa-${getNotificationIcon(type)} me-2"></i>
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        if (notification.parentNode) notification.parentNode.removeChild(notification);
-    }, 5000);
-}
-
-function getNotificationIcon(type) {
-    const icons = {
-        'success': 'check-circle',
-        'error': 'exclamation-triangle',
-        'warning': 'exclamation-circle',
-        'info': 'info-circle'
-    };
-    return icons[type] || 'info-circle';
-}
-
-function showAnalytics() {
-    showNotification('info', 'System analytics dashboard is currently under development');
-}
-
-function editUser() {
-    showNotification('info', 'Account modification interface is currently under development');
-}
-
-// System Initialization
 document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('searchInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') searchUsers();
-    });
-    
-    updatePagination({{ users|length }});
-    updateDisplayedUsers();
-    updateBulkActions();
-});
+    const ctx = document.getElementById('referralChart').getContext('2d');
+    const dates = [{% for stat in referral_stats %}'{{ stat.date }}'{% if not loop.last %},{% endif %}{% endfor %}].reverse();
+    const counts = [{% for stat in referral_stats %}{{ stat.count }}{% if not loop.last %},{% endif %}{% endfor %}].reverse();
 
-// System auto-refresh for real-time monitoring
-setInterval(refreshData, 60000);
+    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, 'rgba(102, 126, 234, 0.4)');
+    gradient.addColorStop(1, 'rgba(102, 126, 234, 0.05)');
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'Referral Activity',
+                data: counts,
+                borderColor: '#667eea',
+                backgroundColor: gradient,
+                borderWidth: 3,
+                fill: true,
+                tension: 0.3,
+                pointBackgroundColor: '#667eea',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                pointRadius: 5,
+                pointHoverRadius: 7
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(33, 37, 41, 0.95)',
+                    titleFont: {
+                        size: 13,
+                        weight: '600'
+                    },
+                    bodyFont: {
+                        size: 13
+                    },
+                    padding: 12,
+                    cornerRadius: 8,
+                    displayColors: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.04)'
+                    },
+                    ticks: {
+                        stepSize: 1,
+                        font: {
+                            size: 12
+                        }
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        font: {
+                            size: 11
+                        }
+                    }
+                }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            }
+        }
+    });
+});
 </script>
+{% endif %}
 
 <style>
-.dashboard-header {
+.analytics-container {
+    background: #f8fafc;
+    min-height: 100vh;
+}
+
+.analytics-header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border-radius: 0 0 20px 20px;
     overflow: hidden;
-    margin: -1rem -1rem 2rem -1rem;
 }
 
 .header-background {
@@ -1008,12 +490,21 @@ setInterval(refreshData, 60000);
 }
 
 @keyframes pulse {
-    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
-    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(40, 167, 69, 0); }
-    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+    }
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 6px rgba(40, 167, 69, 0);
+    }
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+    }
 }
 
-/* Professional Metric Cards */
+/* Metric Cards */
 .metric-card {
     border: none;
     border-radius: 16px;
@@ -1030,36 +521,49 @@ setInterval(refreshData, 60000);
 }
 
 .metric-card .card-body {
-    padding: 1.5rem;
+    padding: 2rem;
+    position: relative;
+    z-index: 2;
 }
 
-.total-users-gradient { background: linear-gradient(135deg, #667eea, #764ba2); }
-.verified-gradient { background: linear-gradient(135deg, #28a745, #20c997); }
-.active-gradient { background: linear-gradient(135deg, #fd7e14, #e83e8c); }
-.pending-gradient { background: linear-gradient(135deg, #ffc107, #fd7e14); }
+.earnings-gradient {
+    background: linear-gradient(135deg, #28a745, #20c997);
+}
+
+.balance-gradient {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.withdrawn-gradient {
+    background: linear-gradient(135deg, #17a2b8, #6f42c1);
+}
+
+.performance-gradient {
+    background: linear-gradient(135deg, #fd7e14, #e83e8c);
+}
 
 .metric-content {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 1.5rem;
 }
 
 .metric-icon {
-    font-size: 2rem;
+    font-size: 2.5rem;
     opacity: 0.9;
 }
 
 .metric-value {
-    font-size: 1.75rem;
+    font-size: 2rem;
     font-weight: 800;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.5rem;
     line-height: 1;
 }
 
 .metric-label {
     font-size: 0.9rem;
     opacity: 0.9;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
 }
 
 .metric-trend {
@@ -1069,192 +573,275 @@ setInterval(refreshData, 60000);
     align-items: center;
 }
 
-/* Professional Dashboard Components */
+.metric-trend.positive {
+    opacity: 0.95;
+}
+
+.metric-trend.neutral {
+    opacity: 0.8;
+}
+
+/* Dashboard Cards */
 .dashboard-card {
     background: white;
     border: none;
     border-radius: 16px;
     box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
-    margin-bottom: 1.5rem;
+    transition: all 0.3s ease;
 }
 
-.dashboard-card .card-header {
-    background: transparent;
-    border-bottom: 1px solid #e3e6f0;
-    padding: 1.25rem 1.5rem;
+.dashboard-card:hover {
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.12);
 }
 
 .dashboard-card .card-body {
     padding: 1.5rem;
 }
 
-/* Administrative Controls */
-.action-bar {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-}
-
-/* Enhanced Table Design */
-.table-container {
-    max-height: 600px;
-    overflow-y: auto;
-    border-radius: 8px;
-}
-
-.users-table {
-    width: 100%;
-    margin: 0;
-}
-
-.users-table thead {
-    position: sticky;
-    top: 0;
-    background: #f8f9fa;
-    z-index: 10;
-}
-
-.users-table th {
-    background: #f8f9fa;
-    font-weight: 600;
+.section-title h4 {
     color: #2c3e50;
-    padding: 1rem 0.75rem;
-    border-bottom: 2px solid #e3e6f0;
 }
 
-.users-table td {
-    padding: 1rem 0.75rem;
-    vertical-align: middle;
-    border-bottom: 1px solid #e3e6f0;
+/* KPI Grid */
+.kpi-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
 }
 
-.users-table tbody tr:hover {
-    background-color: #f8f9fa;
-}
-
-/* Professional User Information Display */
-.user-info .user-main {
+.kpi-item {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 1rem;
+    padding: 1.25rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
 }
 
-.user-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
+.kpi-item:hover {
+    background: white;
+    border-color: #e9ecef;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.kpi-icon-wrapper {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: bold;
-    font-size: 0.9rem;
+    font-size: 1.25rem;
+    flex-shrink: 0;
 }
 
-.user-details .username {
+.kpi-value {
+    font-size: 1.5rem;
+    font-weight: 700;
     color: #2c3e50;
     margin-bottom: 0.25rem;
 }
 
-.referral-code {
-    background: #f8f9fa;
-    padding: 0.2rem 0.4rem;
-    border-radius: 4px;
-    font-family: monospace;
-    font-size: 0.8rem;
+.kpi-label {
+    font-size: 0.85rem;
+    color: #6c757d;
+    font-weight: 500;
 }
 
-/* System Status Indicators */
-.status-badges .badge-group {
+/* Timeline */
+.timeline-container {
+    position: relative;
+}
+
+.timeline-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+}
+
+.timeline-marker {
+    position: relative;
+    margin-right: 1.5rem;
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    align-items: center;
 }
 
-.status-badges .badge {
+.timeline-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 3px solid white;
+    box-shadow: 0 0 0 3px var(--bs-primary);
+    z-index: 2;
+}
+
+.timeline-line {
+    width: 2px;
+    flex: 1;
+    background: linear-gradient(to bottom, var(--bs-primary), #e9ecef);
+    margin-top: 0.5rem;
+    min-height: 40px;
+}
+
+.timeline-content {
+    flex: 1;
+    background: #f8f9fa;
+    padding: 1.25rem;
+    border-radius: 12px;
+    border-left: 4px solid var(--bs-primary);
+}
+
+.timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+}
+
+.timeline-title {
+    font-weight: 600;
+    color: #2c3e50;
+    margin: 0;
+}
+
+.timeline-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
     font-size: 0.75rem;
-    padding: 0.35rem 0.6rem;
+    font-weight: 600;
 }
 
-/* Administrative Action Controls */
-.action-buttons .btn-group-vertical {
-    gap: 0.25rem;
+.timeline-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.action-buttons .btn {
-    font-size: 0.8rem;
-    padding: 0.375rem 0.5rem;
+.timeline-date {
+    font-size: 0.85rem;
 }
 
-/* System Processing Overlay */
-.loading-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.9);
-    display: none;
+.timeline-amount {
+    font-size: 0.9rem;
+}
+
+/* Insights */
+.insights-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.insight-card {
+    padding: 1.25rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.insight-card:hover {
+    background: white;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.insight-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.insight-icon {
+    width: 45px;
+    height: 45px;
+    border-radius: 10px;
+    display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 9999;
+    font-size: 1.1rem;
+    flex-shrink: 0;
 }
 
-.spinner-container {
-    text-align: center;
+.insight-title {
+    font-weight: 600;
+    color: #2c3e50;
+    margin: 0;
 }
 
-/* Professional Empty States */
+.insight-text {
+    font-size: 0.9rem;
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* Empty States */
 .empty-state {
     padding: 3rem 2rem;
 }
 
-.empty-icon {
-    opacity: 0.5;
+.empty-chart-icon, .empty-activity-icon {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    opacity: 0.7;
 }
 
-/* Responsive System Design */
+/* Chart */
+.chart-wrapper {
+    position: relative;
+    height: 280px;
+    width: 100%;
+}
+
+/* Responsive Design */
 @media (max-width: 768px) {
     .metric-content {
         flex-direction: column;
         text-align: center;
-        gap: 0.75rem;
+        gap: 1rem;
     }
     
     .metric-value {
+        font-size: 1.75rem;
+    }
+    
+    .timeline-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .timeline-footer {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .header-icon-container {
+        margin-bottom: 1rem;
+    }
+    
+    .icon-wrapper {
+        width: 60px;
+        height: 60px;
         font-size: 1.5rem;
     }
-    
-    .users-table {
-        font-size: 0.9rem;
-    }
-    
-    .action-buttons .btn-group-vertical {
-        flex-direction: row;
-    }
-    
-    .user-main {
-        flex-direction: column;
-        text-align: center;
-    }
-    
-    .financial-stats {
-        flex-direction: row;
-        justify-content: space-around;
-    }
 }
 
-/* Professional Animations */
-.user-row {
-    animation: fadeInUp 0.5s ease;
-}
-
+/* Animations */
 @keyframes fadeInUp {
     from {
         opacity: 0;
-        transform: translateY(10px);
+        transform: translateY(20px);
     }
     to {
         opacity: 1;
@@ -1262,12 +849,42 @@ setInterval(refreshData, 60000);
     }
 }
 
-/* Search Match Highlighting */
-mark {
-    background-color: #fff3cd;
-    padding: 0.1rem 0.2rem;
-    border-radius: 3px;
-    font-weight: bold;
+.metric-card, .dashboard-card {
+    animation: fadeInUp 0.6s ease;
 }
+
+.metric-card:nth-child(2) { animation-delay: 0.1s; }
+.metric-card:nth-child(3) { animation-delay: 0.2s; }
+.metric-card:nth-child(4) { animation-delay: 0.3s; }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const timeFilters = document.querySelectorAll('input[name="timeFilter"]');
+    
+    timeFilters.forEach(filter => {
+        filter.addEventListener('change', function() {
+            const chartContainer = document.querySelector('.chart-wrapper');
+            if (chartContainer) {
+                chartContainer.style.opacity = '0.7';
+                setTimeout(() => {
+                    chartContainer.style.opacity = '1';
+                }, 500);
+            }
+        });
+    });
+
+    const interactiveElements = document.querySelectorAll('.metric-card, .kpi-item, .insight-card');
+    
+    interactiveElements.forEach(element => {
+        element.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-3px)';
+        });
+        
+        element.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+});
+</script>
 {% endblock %}
