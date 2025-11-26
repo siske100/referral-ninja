@@ -3,31 +3,110 @@
 {% block title %}User Management - ReferralNinja{% endblock %}
 
 {% block content %}
-<div class="container-fluid px-3 px-md-4">
-    <!-- Enhanced Header -->
-    <div class="dashboard-header">
-        <div class="header-background">
-            <div class="container-fluid">
-                <div class="row align-items-center py-3 py-md-4">
-                    <div class="col-md-8">
-                        <div class="d-flex align-items-center">
-                            <div class="header-icon-container me-3 me-md-4">
-                                <div class="icon-wrapper bg-white shadow">
-                                    <i class="fas fa-users-cog text-primary"></i>
-                                </div>
-                            </div>
-                            <div class="header-text">
-                                <h1 class="display-heading fw-bold text-white mb-1 mb-md-2">User Management</h1>
-                                <p class="text-white-50 mb-0 subheading">Comprehensive user administration and analytics</p>
+<div class="container-fluid">
+    <!-- Elegant Header -->
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-4 pb-3 mb-4 border-bottom">
+        <div>
+            <h1 class="h3 fw-light text-dark mb-1">
+                <i class="fas fa-users me-2 text-primary"></i>User Management
+            </h1>
+            <p class="text-muted small mb-0">Manage and monitor user accounts and activities</p>
+        </div>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <span class="badge bg-light text-dark border me-3 px-3 py-2">
+                <i class="fas fa-user me-1 text-primary"></i>Total Users: {{ users|length }}
+            </span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refreshPage()">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show border-0 shadow-sm" role="alert">
+                    <i class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' }} me-2"></i>
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Minimal Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-0 shadow-sm h-100 py-3 bg-gradient-primary text-white">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-white-50 text-uppercase mb-1">
+                                Total Users</div>
+                            <div class="h2 mb-0 font-weight-bold">
+                                {{ users|length }}
                             </div>
                         </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users fa-2x text-white-50"></i>
+                        </div>
                     </div>
-                    <div class="col-md-4 text-md-end mt-2 mt-md-0">
-                        <div class="status-indicator">
-                            <span class="status-badge bg-white text-primary">
-                                <i class="fas fa-circle text-success me-2 pulse"></i>
-                                <span class="status-text">Live Dashboard • Real-time Updates</span>
-                            </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-0 shadow-sm h-100 py-3">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Active Users</div>
+                            <div class="h2 mb-0 font-weight-bold text-gray-800">
+                                {{ users|selectattr('is_active')|list|length }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-check fa-2x text-success opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-0 shadow-sm h-100 py-3">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Total Balance</div>
+                            <div class="h2 mb-0 font-weight-bold text-gray-800">
+                                Ksh {{ "%.2f"|format(users|sum(attribute='balance')) }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-wallet fa-2x text-info opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-0 shadow-sm h-100 py-3">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Total Referrals</div>
+                            <div class="h2 mb-0 font-weight-bold text-gray-800">
+                                {{ users|sum(attribute='referral_count') }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-share-alt fa-2x text-warning opacity-50"></i>
                         </div>
                     </div>
                 </div>
@@ -35,226 +114,54 @@
         </div>
     </div>
 
-    <!-- Enhanced Statistics Cards -->
-    <div class="row mt-3 mt-md-4 g-3">
-        <div class="col-xl-3 col-md-6">
-            <div class="metric-card total-users-gradient">
-                <div class="card-body">
-                    <div class="metric-content">
-                        <div class="metric-icon">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div class="metric-data">
-                            <h3 class="metric-value">{{ users|length }}</h3>
-                            <p class="metric-label">Total Users</p>
-                            <div class="metric-trend positive">
-                                <i class="fas fa-chart-line me-1"></i>
-                                <span>All Time</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6">
-            <div class="metric-card verified-gradient">
-                <div class="card-body">
-                    <div class="metric-content">
-                        <div class="metric-icon">
-                            <i class="fas fa-user-check"></i>
-                        </div>
-                        <div class="metric-data">
-                            <h3 class="metric-value">{{ users|selectattr('is_verified')|list|length }}</h3>
-                            <p class="metric-label">Verified Users</p>
-                            <div class="metric-trend positive">
-                                <i class="fas fa-shield-check me-1"></i>
-                                <span>{{ "%.1f"|format((users|selectattr('is_verified')|list|length / users|length * 100) if users|length > 0 else 0) }}% Rate</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6">
-            <div class="metric-card active-gradient">
-                <div class="card-body">
-                    <div class="metric-content">
-                        <div class="metric-icon">
-                            <i class="fas fa-user-circle"></i>
-                        </div>
-                        <div class="metric-data">
-                            <h3 class="metric-value">{{ users|selectattr('is_active')|list|length }}</h3>
-                            <p class="metric-label">Active Users</p>
-                            <div class="metric-trend positive">
-                                <i class="fas fa-rocket me-1"></i>
-                                <span>{{ "%.1f"|format((users|selectattr('is_active')|list|length / users|length * 100) if users|length > 0 else 0) }}% Active</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6">
-            <div class="metric-card pending-gradient">
-                <div class="card-body">
-                    <div class="metric-content">
-                        <div class="metric-icon">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                        <div class="metric-data">
-                            <h3 class="metric-value">{{ users|rejectattr('is_verified')|list|length }}</h3>
-                            <p class="metric-label">Pending Verification</p>
-                            <div class="metric-trend neutral">
-                                <i class="fas fa-exclamation-circle me-1"></i>
-                                <span>Requires Action</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Action Bar -->
-    <div class="action-bar my-3 my-md-4">
-        <div class="row g-2 g-md-3">
-            <div class="col-md-8">
-                <div class="d-flex gap-2 flex-wrap">
-                    <button class="btn btn-success btn-action" onclick="showAddUserModal()">
-                        <i class="fas fa-user-plus me-1 me-md-2"></i>
-                        <span class="btn-text">Add User</span>
-                    </button>
-
-                    <button class="btn btn-outline-secondary btn-action" onclick="refreshData()">
-                        <i class="fas fa-sync-alt me-1 me-md-2"></i>
-                        <span class="btn-text">Refresh</span>
-                    </button>
-                </div>
-            </div>
-            <div class="col-md-4 text-end">
-                <div class="d-flex gap-2 justify-content-end flex-wrap">
-                    <span class="badge bg-light text-dark align-self-center">
-                        <i class="fas fa-database me-1"></i>{{ users|length }} Total
-                    </span>
-                    <button class="btn btn-outline-info btn-action" onclick="showAnalytics()">
-                        <i class="fas fa-chart-bar me-1 me-md-2"></i>
-                        <span class="btn-text">Analytics</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Search and Filter Section -->
-    <div class="dashboard-card mb-3 mb-md-4">
-        <div class="card-header">
-            <div class="d-flex justify-content-between align-items-center flex-column flex-md-row gap-2 gap-md-0">
-                <h5 class="mb-0 card-title">
-                    <i class="fas fa-search me-1 me-md-2"></i>Search & Filter Users
-                </h5>
-                <button class="btn btn-sm btn-outline-secondary" onclick="clearAllFilters()">
-                    <i class="fas fa-times me-1"></i>Clear All
-                </button>
-            </div>
-        </div>
-        <div class="card-body">
-            <div class="row g-2 g-md-3">
-                <div class="col-12 col-md-6">
-                    <div class="search-box">
-                        <i class="fas fa-search search-icon"></i>
-                        <input type="text" class="form-control search-input" id="searchInput" 
-                               placeholder="Search by username, email, phone, or referral code..." 
-                               onkeyup="debouncedSearch()">
-                        <button class="btn btn-sm btn-outline-secondary search-clear" onclick="clearSearch()">
+    <!-- Search and Filter Section - Elegant Design -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-3">
+                    <div class="input-group">
+                        <span class="input-group-text bg-transparent border-0">
+                            <i class="fas fa-search text-muted"></i>
+                        </span>
+                        <input type="text" class="form-control border-0 ps-0" id="searchInput" 
+                               placeholder="Search users by name, email, phone, or referral code..." 
+                               onkeyup="searchUsers()">
+                        <button class="btn btn-outline-secondary border-0" type="button" onclick="clearSearch()">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
                 </div>
-                <div class="col-6 col-md-3">
-                    <select class="form-select form-select-sm" id="statusFilter" onchange="applyFilters()">
-                        <option value="">All Statuses</option>
-                        <option value="verified">Verified Only</option>
-                        <option value="unverified">Unverified Only</option>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-3">
+                    <select class="form-select border-0" id="statusFilter" onchange="filterUsers()">
+                        <option value="">All Users</option>
                         <option value="active">Active Only</option>
                         <option value="inactive">Inactive Only</option>
                         <option value="admin">Admins Only</option>
                     </select>
                 </div>
-                <div class="col-6 col-md-3">
-                    <select class="form-select form-select-sm" id="rankFilter" onchange="applyFilters()">
-                        <option value="">All Ranks</option>
-                        <option value="bronze">Bronze</option>
-                        <option value="silver">Silver</option>
-                        <option value="gold">Gold</option>
-                        <option value="platinum">Platinum</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Advanced Filters -->
-            <div class="advanced-filters mt-2 mt-md-3">
-                <a class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" href="#advancedFilters">
-                    <i class="fas fa-sliders-h me-1 me-md-2"></i>Advanced Filters
-                    <i class="fas fa-chevron-down ms-1"></i>
-                </a>
-                
-                <div class="collapse mt-2 mt-md-3" id="advancedFilters">
-                    <div class="row g-2 g-md-3">
-                        <div class="col-12 col-md-3">
-                            <label class="form-label small fw-bold">Date Range</label>
-                            <div class="input-group input-group-sm">
-                                <input type="date" class="form-control form-control-sm" id="dateFrom" onchange="applyFilters()">
-                                <span class="input-group-text">to</span>
-                                <input type="date" class="form-control form-control-sm" id="dateTo" onchange="applyFilters()">
-                            </div>
-                        </div>
-                        <div class="col-6 col-md-2">
-                            <label class="form-label small fw-bold">Min Balance</label>
-                            <input type="number" class="form-control form-control-sm" id="minBalance" placeholder="0.00" onchange="applyFilters()">
-                        </div>
-                        <div class="col-6 col-md-2">
-                            <label class="form-label small fw-bold">Min Referrals</label>
-                            <input type="number" class="form-control form-control-sm" id="minReferrals" placeholder="0" onchange="applyFilters()">
-                        </div>
-                        <div class="col-8 col-md-3">
-                            <label class="form-label small fw-bold">Sort By</label>
-                            <select class="form-select form-select-sm" id="sortBy" onchange="applyFilters()">
-                                <option value="newest">Newest First</option>
-                                <option value="oldest">Oldest First</option>
-                                <option value="balance_high">Balance: High to Low</option>
-                                <option value="balance_low">Balance: Low to High</option>
-                                <option value="referrals_high">Referrals: High to Low</option>
-                                <option value="referrals_low">Referrals: Low to High</option>
-                            </select>
-                        </div>
-                        <div class="col-4 col-md-2 d-flex align-items-end">
-                            <button class="btn btn-sm btn-outline-danger w-100" onclick="clearAdvancedFilters()">
-                                <i class="fas fa-times me-1"></i>Reset
-                            </button>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
 
-    <!-- Users Table -->
-    <div class="dashboard-card">
-        <div class="card-header">
-            <div class="d-flex justify-content-between align-items-center flex-column flex-md-row gap-2 gap-md-0">
-                <h5 class="mb-0 card-title">
-                    <i class="fas fa-user-friends me-1 me-md-2"></i>User Management
-                    <span class="badge bg-primary ms-1 ms-md-2" id="userCount">{{ users|length }}</span>
-                </h5>
-                <div class="d-flex gap-2 align-items-center flex-wrap justify-content-center">
-                    <span class="text-muted small" id="showingText">
-                        Showing {{ users|length }} of {{ users|length }} users
+    <!-- Users Table with Enhanced Elegance -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white py-3 border-0">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-0 text-dark fw-semibold">
+                        <i class="fas fa-user-friends me-2 text-primary"></i>User Directory
+                    </h6>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="badge bg-light text-dark border me-3">
+                        {{ users|selectattr('is_active')|list|length }} Active
                     </span>
-                    <button class="btn btn-sm btn-outline-success" onclick="exportUsers()">
-                        <i class="fas fa-file-export me-1"></i>Export
+                    <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="exportUsers()">
+                        <i class="fas fa-download me-1"></i> Export
                     </button>
                 </div>
             </div>
@@ -262,165 +169,115 @@
         
         <div class="card-body p-0">
             {% if users %}
-                <div class="table-responsive">
-                    <table class="users-table" id="usersTable">
-                        <thead>
+                <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                    <table class="table table-hover mb-0" id="usersTable">
+                        <thead class="bg-light">
                             <tr>
-                                <th class="user-info-col">User Information</th>
-                                <th class="contact-col">Contact Details</th>
-                                <th class="financial-col">Financial Stats</th>
-                                <th class="status-col">Account Status</th>
-                                <th class="registration-col">Registration</th>
-                                <th class="actions-col">Actions</th>
+                                <th class="border-0 ps-4" style="width: 40px;">
+                                    <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
+                                </th>
+                                <th class="border-0 py-3 text-dark fw-semibold">User Profile</th>
+                                <th class="border-0 py-3 text-dark fw-semibold">Contact Information</th>
+                                <th class="border-0 py-3 text-dark fw-semibold text-center">Performance</th>
+                                <th class="border-0 py-3 text-dark fw-semibold text-center">Membership</th>
+                                <th class="border-0 py-3 text-dark fw-semibold text-center">Registration</th>
+                                <th class="border-0 py-3 text-dark fw-semibold text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="usersTableBody">
                             {% for user in users %}
-                            <tr class="user-row" 
-                                data-user-id="{{ user.id }}"
-                                data-referral="{{ user.referral_code|lower if user.referral_code else '' }}"
-                                data-username="{{ user.username|lower if user.username else '' }}"
-                                data-email="{{ user.email|lower if user.email else '' }}"
-                                data-phone="{{ user.phone_number|lower if user.phone_number else '' }}"
-                                data-balance="{{ user.balance if user.balance is not none else 0 }}"
-                                data-referrals="{{ user.referral_count if user.referral_count is not none else 0 }}"
-                                data-rank="{{ user.user_rank|lower if user.user_rank else '' }}"
-                                data-joined="{% if user.created_at %}{{ user.created_at.strftime('%Y-%m-%d') }}{% endif %}"
-                                data-status="{% if user.is_verified %}verified{% else %}unverified{% endif %} {% if user.is_active %}active{% else %}inactive{% endif %} {% if user.is_admin %}admin{% endif %}">
+                            <tr class="user-row align-middle" 
+                                data-referral="{{ user.referral_code|lower }}"
+                                data-username="{{ user.username|lower }}"
+                                data-email="{{ user.email|lower }}"
+                                data-phone="{{ user.phone_number|lower }}"
+                                data-balance="{{ user.balance }}"
+                                data-referrals="{{ user.referral_count }}"
+                                data-rank="{{ user.user_rank|lower }}"
+                                data-joined="{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '' }}"
+                                data-status="{% if user.is_active %}active{% else %}inactive{% endif %} {% if user.is_admin %}admin{% endif %}">
                                 
-                                <td class="user-info-col">
-                                    <div class="user-info">
-                                        <div class="user-main">
-                                            <span class="user-avatar">
-                                                {{ (user.username[0] if user.username else 'U')|upper }}
-                                            </span>
-                                            <div class="user-details">
-                                                <div class="username fw-bold">{{ user.username if user.username else 'N/A' }}</div>
-                                                <div class="user-ref">
-                                                    <small class="text-muted">Ref: </small>
-                                                    <code class="referral-code">{{ user.referral_code if user.referral_code else 'N/A' }}</code>
-                                                </div>
+                                <td class="ps-4">
+                                    {% if not user.is_admin %}
+                                    <input type="checkbox" class="user-checkbox" value="{{ user.id }}" onchange="updateBulkActions()">
+                                    {% endif %}
+                                </td>
+                                
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-shrink-0">
+                                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                                                 style="width: 40px; height: 40px; font-size: 14px; font-weight: 600;">
+                                                {{ user.username[0:2].upper() }}
                                             </div>
                                         </div>
-                                        {% if user.referred_by %}
-                                        <div class="referred-by">
-                                            <small class="text-info">
-                                                <i class="fas fa-user-friends me-1"></i>Referred by: {{ user.referred_by }}
-                                            </small>
-                                        </div>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                                
-                                <td class="contact-col">
-                                    <div class="contact-info">
-                                        <div class="contact-item">
-                                            <i class="fas fa-envelope text-muted me-1 me-md-2"></i>
-                                            <span class="user-email">{{ user.email if user.email else 'N/A' }}</span>
-                                        </div>
-                                        <div class="contact-item">
-                                            <i class="fas fa-phone text-muted me-1 me-md-2"></i>
-                                            <span class="user-phone">{{ user.phone_number if user.phone_number else 'N/A' }}</span>
-                                        </div>
-                                    </div>
-                                </td>
-                                
-                                <td class="financial-col">
-                                    <div class="financial-stats">
-                                        <div class="stat-item">
-                                            <span class="stat-value text-success fw-bold">
-                                                Ksh {{ "%.2f"|format(user.balance) if user.balance is not none else "0.00" }}
-                                            </span>
-                                            <small class="stat-label">Balance</small>
-                                        </div>
-                                        <div class="stat-item">
-                                            <span class="stat-value">
-                                                <span class="badge bg-info user-referrals">{{ user.referral_count if user.referral_count is not none else 0 }}</span>
-                                            </span>
-                                            <small class="stat-label">Referrals</small>
-                                        </div>
-                                        <div class="stat-item">
-                                            <span class="stat-value text-primary fw-bold">
-                                                Ksh {{ "%.2f"|format(user.total_commission) if user.total_commission is not none else "0.00" }}
-                                            </span>
-                                            <small class="stat-label">Total Commission</small>
-                                        </div>
-                                    </div>
-                                </td>
-                                
-                                <td class="status-col">
-                                    <div class="status-badges">
-                                        <div class="badge-group">
-                                            {% if user.is_verified %}
-                                                <span class="badge bg-success">
-                                                    <i class="fas fa-check-circle me-1"></i>Verified
-                                                </span>
-                                            {% else %}
-                                                <span class="badge bg-warning text-dark">
-                                                    <i class="fas fa-clock me-1"></i>Unverified
-                                                </span>
-                                            {% endif %}
-                                            
-                                            {% if user.is_active %}
-                                                <span class="badge bg-success">
-                                                    <i class="fas fa-play-circle me-1"></i>Active
-                                                </span>
-                                            {% else %}
-                                                <span class="badge bg-danger">
-                                                    <i class="fas fa-pause-circle me-1"></i>Inactive
-                                                </span>
+                                        <div class="flex-grow-1 ms-3">
+                                            <div class="fw-semibold text-dark username">{{ user.username }}</div>
+                                            <div class="text-muted small">
+                                                <span class="referral-code">{{ user.referral_code }}</span>
+                                                {% if user.is_admin %}
+                                                    <span class="badge bg-danger ms-1">Admin</span>
+                                                {% endif %}
+                                            </div>
+                                            {% if user.referred_by %}
+                                                <div class="text-info small">Referred by: {{ user.referred_by }}</div>
                                             {% endif %}
                                         </div>
-                                        <div class="user-rank mt-1">
-                                            <span class="badge bg-secondary">
-                                                <i class="fas fa-trophy me-1"></i>{{ user.user_rank if user.user_rank else 'Bronze' }}
-                                            </span>
-                                        </div>
                                     </div>
                                 </td>
                                 
-                                <td class="registration-col">
-                                    <div class="registration-info">
-                                        <div class="join-date fw-semibold">
-                                            {% if user.created_at %}
-                                                {{ user.created_at.strftime('%Y-%m-%d') }}
-                                            {% else %}
-                                                N/A
-                                            {% endif %}
-                                        </div>
-                                        <small class="text-muted">
-                                            {% if user.created_at %}
-                                                {{ user.created_at.strftime('%H:%M') }}
-                                            {% else %}
-                                                N/A
-                                            {% endif %}
-                                        </small>
+                                <td>
+                                    <div class="text-dark small fw-medium user-email">{{ user.email }}</div>
+                                    <div class="text-muted small user-phone">{{ user.phone_number or 'No phone' }}</div>
+                                </td>
+                                
+                                <td class="text-center">
+                                    <div class="fw-bold text-success fs-6 user-balance">Ksh {{ "%.2f"|format(user.balance) }}</div>
+                                    <div class="text-muted small">Balance</div>
+                                    <div class="mt-1">
+                                        <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 user-referrals">
+                                            {{ user.referral_count }} referrals
+                                        </span>
                                     </div>
                                 </td>
                                 
-                                <td class="actions-col">
-                                    <div class="action-buttons">
-                                        {% if not user.is_admin %}
-                                        <div class="btn-group-vertical btn-group-sm w-100">
-                                            <button class="btn btn-outline-primary btn-sm" 
+                                <td class="text-center">
+                                    {% if user.is_active %}
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">Active</span>
+                                    {% else %}
+                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">Inactive</span>
+                                    {% endif %}
+                                    <div class="mt-1">
+                                        <small class="text-muted user-rank">{{ user.user_rank }}</small>
+                                    </div>
+                                </td>
+                                
+                                <td class="text-center">
+                                    <div class="text-dark small join-date">
+                                        {{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}
+                                    </div>
+                                    <div class="text-muted small">
+                                        {{ user.created_at.strftime('%H:%M') if user.created_at else '' }}
+                                    </div>
+                                </td>
+                                
+                                <td class="text-center">
+                                    {% if not user.is_admin %}
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-primary rounded-start-pill" 
                                                     onclick="showUserDetails('{{ user.id }}')"
                                                     title="View Details">
-                                                <i class="fas fa-eye"></i> <span class="d-none d-sm-inline">View</span>
+                                                <i class="fas fa-eye"></i>
                                             </button>
-                                            <div class="btn-group btn-group-sm mt-1">
-                                                <button class="btn btn-{{ 'warning' if user.is_active else 'success' }}" 
-                                                        onclick="toggleUserStatus('{{ user.id }}')"
-                                                        title="{{ 'Deactivate' if user.is_active else 'Activate' }}">
-                                                    <i class="fas fa-{{ 'user-slash' if user.is_active else 'user-check' }}"></i>
-                                                </button>
-                                            </div>
+                                            <button class="btn btn-{{ 'outline-danger' if user.is_active else 'outline-success' }} rounded-end-pill" 
+                                                    onclick="toggleUserStatus('{{ user.id }}')"
+                                                    title="{{ 'Deactivate' if user.is_active else 'Activate' }}">
+                                                <i class="fas fa-{{ 'user-slash' if user.is_active else 'user-check' }}"></i>
+                                            </button>
                                         </div>
-                                        {% else %}
-                                        <span class="badge bg-dark">
-                                            <i class="fas fa-crown me-1"></i>Admin
-                                        </span>
-                                        {% endif %}
-                                    </div>
+                                    {% else %}
+                                        <span class="text-muted small">Admin Account</span>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}
@@ -429,655 +286,667 @@
                 </div>
                 
                 <!-- No Results Message -->
-                <div id="noResults" class="empty-state text-center py-5" style="display: none;">
-                    <div class="empty-icon mb-3">
-                        <i class="fas fa-search fa-3x text-muted"></i>
+                <div id="noResults" class="text-center py-5" style="display: none;">
+                    <div class="py-4">
+                        <i class="fas fa-search fa-2x text-muted mb-3 opacity-50"></i>
+                        <h6 class="text-muted mb-2">No users found</h6>
+                        <p class="text-muted small mb-3">Try adjusting your search criteria</p>
+                        <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="clearAllFilters()">
+                            Clear Filters
+                        </button>
                     </div>
-                    <h5 class="text-muted mb-2">No Users Found</h5>
-                    <p class="text-muted mb-3">No users match your current search criteria</p>
-                    <button class="btn btn-primary" onclick="clearAllFilters()">
-                        <i class="fas fa-times me-1"></i> Clear All Filters
-                    </button>
                 </div>
                 
-            {% else %}
-                <div class="empty-state text-center py-5">
-                    <div class="empty-icon mb-3">
-                        <i class="fas fa-users fa-3x text-muted"></i>
+                <!-- Elegant Pagination -->
+                <div class="d-flex justify-content-between align-items-center p-4 border-top bg-light">
+                    <div class="text-muted small">
+                        Showing <span id="showingCount">0</span> of <span id="totalCount">{{ users|length }}</span> users
                     </div>
-                    <h5 class="text-muted mb-2">No Users Found</h5>
-                    <p class="text-muted mb-3">There are no users in the system yet</p>
-                    <button class="btn btn-primary" onclick="showAddUserModal()">
-                        <i class="fas fa-user-plus me-1"></i> Add First User
-                    </button>
+                    <nav>
+                        <ul class="pagination mb-0" id="paginationControls">
+                            <!-- Pagination will be generated by JavaScript -->
+                        </ul>
+                    </nav>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-users fa-3x text-muted mb-3 opacity-50"></i>
+                    <h6 class="text-muted">No users found in the system</h6>
+                    <p class="text-muted small">Users will appear here once they register</p>
                 </div>
             {% endif %}
         </div>
-        
-        <!-- Table Footer -->
-        {% if users %}
-        <div class="card-footer">
-            <div class="d-flex justify-content-between align-items-center flex-column flex-md-row gap-2 gap-md-0">
-                <div class="text-muted small">
-                    Showing <span id="showingCount">0</span> of <span id="totalCount">{{ users|length }}</span> users
-                </div>
-                <nav>
-                    <ul class="pagination mb-0 pagination-sm" id="paginationControls">
-                        <!-- Pagination will be generated by JavaScript -->
-                    </ul>
-                </nav>
-            </div>
-        </div>
-        {% endif %}
     </div>
 </div>
 
-<!-- User Detail Modal -->
+<!-- Enhanced User Detail Modal -->
 <div class="modal fade" id="userDetailModal" tabindex="-1" aria-labelledby="userDetailModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="userDetailModalLabel">
-                    <i class="fas fa-user me-2"></i>User Details
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light border-0 py-4">
+                <h5 class="modal-title text-dark fw-semibold" id="userDetailModalLabel">
+                    <i class="fas fa-user-circle me-2 text-primary"></i>User Profile
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body" id="userDetailContent">
+            <div class="modal-body p-0" id="userDetailContent">
                 <!-- User details will be loaded here -->
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Add User Modal -->
-<div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="addUserModalLabel">
-                    <i class="fas fa-user-plus me-2"></i>Add New User
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="addUserForm">
-                    <div class="mb-3">
-                        <label for="newUsername" class="form-label">Username</label>
-                        <input type="text" class="form-control" id="newUsername" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="newEmail" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="newEmail" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="newPhone" class="form-label">Phone Number</label>
-                        <input type="tel" class="form-control" id="newPhone">
-                    </div>
-                    <div class="mb-3">
-                        <label for="newPassword" class="form-label">Password</label>
-                        <input type="password" class="form-control" id="newPassword" required>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="addNewUser()">Add User</button>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Loading Spinner -->
-<div id="loadingSpinner" class="loading-overlay">
-    <div class="spinner-container">
-        <div class="spinner-border text-primary" role="status">
+<div id="loadingSpinner" class="d-none position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background: rgba(255,255,255,0.8); z-index: 9999;">
+    <div class="text-center">
+        <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
             <span class="visually-hidden">Loading...</span>
         </div>
-        <p class="mt-2 text-muted">Processing...</p>
+        <p class="text-muted">Loading...</p>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-// ... (JavaScript code remains exactly the same as in your original) ...
+// Global variables
+let currentPage = 1;
+const usersPerPage = 10;
+
+// CSRF Token handling
+function getCSRFToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    return metaTag ? metaTag.getAttribute('content') : '';
+}
+
+// Enhanced admin request function with CSRF protection
+const adminRequest = (url, options = {}) => {
+    const defaultOptions = {
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        }
+    };
+    return fetch(url, {...defaultOptions, ...options});
+};
+
+function refreshPage() {
+    showLoading();
+    window.location.reload();
+}
+
+function showLoading() {
+    document.getElementById('loadingSpinner').classList.remove('d-none');
+}
+
+function hideLoading() {
+    document.getElementById('loadingSpinner').classList.add('d-none');
+}
+
+// Enhanced search with multiple criteria
+function searchUsers() {
+    const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+    const statusFilter = document.getElementById('statusFilter').value;
+    const rows = document.querySelectorAll('#usersTableBody .user-row');
+    let visibleCount = 0;
+
+    rows.forEach(row => {
+        const referral = row.getAttribute('data-referral');
+        const username = row.getAttribute('data-username');
+        const email = row.getAttribute('data-email');
+        const phone = row.getAttribute('data-phone');
+        const status = row.getAttribute('data-status');
+
+        // Check if row matches search term (multiple fields)
+        const matchesSearch = searchTerm === '' || 
+            referral.includes(searchTerm) ||
+            username.includes(searchTerm) ||
+            email.includes(searchTerm) ||
+            phone.includes(searchTerm);
+
+        // Check if row matches status filter
+        const matchesStatus = statusFilter === '' || 
+            (statusFilter === 'active' && status.includes('active')) ||
+            (statusFilter === 'inactive' && status.includes('inactive')) ||
+            (statusFilter === 'admin' && status.includes('admin'));
+
+        if (matchesSearch && matchesStatus) {
+            row.style.display = '';
+            visibleCount++;
+            
+            // Highlight matching text if search term is not empty
+            if (searchTerm !== '') {
+                highlightMatchingText(row, searchTerm);
+            }
+        } else {
+            row.style.display = 'none';
+            removeHighlighting(row);
+        }
+    });
+
+    // Update counts and pagination
+    updateUserCounts(visibleCount);
+    updatePagination(visibleCount);
+    
+    // Show/hide no results message
+    toggleNoResultsMessage(visibleCount);
+}
+
+function highlightMatchingText(row, searchTerm) {
+    const elementsToHighlight = [
+        row.querySelector('.username'),
+        row.querySelector('.user-email'),
+        row.querySelector('.user-phone'),
+        row.querySelector('.referral-code')
+    ];
+    
+    elementsToHighlight.forEach(element => {
+        if (element) {
+            const originalText = element.textContent;
+            const lowerOriginal = originalText.toLowerCase();
+            const lowerSearch = searchTerm.toLowerCase();
+            
+            if (lowerOriginal.includes(lowerSearch)) {
+                const index = lowerOriginal.indexOf(lowerSearch);
+                const highlightedText = 
+                    originalText.substring(0, index) +
+                    '<mark class="bg-warning bg-opacity-25 px-1 rounded">' + 
+                    originalText.substring(index, index + searchTerm.length) + 
+                    '</mark>' +
+                    originalText.substring(index + searchTerm.length);
+                element.innerHTML = highlightedText;
+            }
+        }
+    });
+}
+
+function removeHighlighting(row) {
+    const elements = row.querySelectorAll('mark');
+    elements.forEach(element => {
+        const parent = element.parentNode;
+        parent.replaceChild(document.createTextNode(element.textContent), element);
+        parent.normalize();
+    });
+}
+
+function clearSearch() {
+    document.getElementById('searchInput').value = '';
+    searchUsers();
+}
+
+function clearAllFilters() {
+    clearSearch();
+    document.getElementById('statusFilter').value = '';
+    searchUsers();
+}
+
+function filterUsers() {
+    searchUsers();
+}
+
+// Bulk Actions Functions
+function toggleSelectAll(checkbox) {
+    const checkboxes = document.querySelectorAll('.user-checkbox');
+    checkboxes.forEach(cb => {
+        if (!cb.disabled) {
+            cb.checked = checkbox.checked;
+        }
+    });
+}
+
+function getSelectedUserIds() {
+    const checkboxes = document.querySelectorAll('.user-checkbox:checked');
+    return Array.from(checkboxes).map(cb => cb.value);
+}
+
+// User Management Functions
+function toggleUserStatus(userId) {
+    const action = confirm('Are you sure you want to change this user\'s status?');
+    if (action) {
+        showLoading();
+        adminRequest(`/admin/toggle-user-status/${userId}`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
+            if (data.success) {
+                showNotification('success', data.message);
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showNotification('error', 'Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('Error:', error);
+            showNotification('error', 'An error occurred while updating user status');
+        });
+    }
+}
+
+function showUserDetails(userId) {
+    showLoading();
+    adminRequest(`/admin/user-details/${userId}`)
+        .then(response => response.json())
+        .then(user => {
+            hideLoading();
+            // Populate modal with user details
+            const modalContent = document.getElementById('userDetailContent');
+            modalContent.innerHTML = `
+                <div class="p-4">
+                    <div class="row mb-4">
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-4" 
+                                     style="width: 60px; height: 60px; font-size: 18px; font-weight: 600;">
+                                    ${user.username[0:2].toUpperCase()}
+                                </div>
+                                <div>
+                                    <h4 class="mb-1">${user.username}</h4>
+                                    <p class="text-muted mb-0">${user.email}</p>
+                                    ${user.is_admin ? '<span class="badge bg-danger mt-1">Administrator</span>' : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="d-flex flex-column">
+                                <span class="badge ${user.is_active ? 'bg-success' : 'bg-danger'} mb-2">
+                                    ${user.is_active ? 'Active' : 'Inactive'}
+                                </span>
+                                <small class="text-muted">Member since ${new Date(user.created_at).toLocaleDateString()}</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-light mb-3">
+                                <div class="card-body">
+                                    <h6 class="card-title text-muted mb-3">Account Information</h6>
+                                    <table class="table table-sm table-borderless mb-0">
+                                        <tr>
+                                            <td class="text-muted ps-0">Phone:</td>
+                                            <td class="fw-medium">${user.phone_number || 'Not provided'}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted ps-0">Referral Code:</td>
+                                            <td class="fw-medium"><code>${user.referral_code}</code></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted ps-0">Referred By:</td>
+                                            <td class="fw-medium">${user.referred_by || 'Direct registration'}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted ps-0">User Rank:</td>
+                                            <td class="fw-medium">${user.user_rank}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-0 bg-light mb-3">
+                                <div class="card-body">
+                                    <h6 class="card-title text-muted mb-3">Performance Metrics</h6>
+                                    <table class="table table-sm table-borderless mb-0">
+                                        <tr>
+                                            <td class="text-muted ps-0">Account Balance:</td>
+                                            <td class="fw-bold text-success">Ksh ${parseFloat(user.balance).toFixed(2)}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted ps-0">Total Referrals:</td>
+                                            <td class="fw-medium"><span class="badge bg-info">${user.referral_count}</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted ps-0">Last Activity:</td>
+                                            <td class="fw-medium">${user.last_login ? new Date(user.last_login).toLocaleDateString() : 'Never'}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${user.referral_count > 0 ? `
+                    <div class="card border-0 bg-light">
+                        <div class="card-body">
+                            <h6 class="card-title text-muted mb-3">Referral Network</h6>
+                            <div class="alert alert-info border-0 small mb-0">
+                                <i class="fas fa-info-circle me-2"></i>
+                                This user has successfully referred ${user.referral_count} user(s) to the platform.
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Close</button>
+                    ${!user.is_admin ? `
+                    <button type="button" class="btn btn-${user.is_active ? 'outline-danger' : 'outline-success'} rounded-pill px-4" 
+                            onclick="toggleUserStatus('${user.id}')">
+                        ${user.is_active ? 'Deactivate' : 'Activate'} User
+                    </button>
+                    ` : ''}
+                </div>
+            `;
+            
+            // Show the modal
+            const modal = new bootstrap.Modal(document.getElementById('userDetailModal'));
+            modal.show();
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('Error:', error);
+            showNotification('error', 'Failed to load user details');
+        });
+}
+
+// Export Functionality
+function exportUsers() {
+    const visibleRows = document.querySelectorAll('#usersTableBody .user-row:not([style*="display: none"])');
+    let csv = 'Username,Email,Phone,Referral Code,Status,Rank,Balance,Referrals,Joined Date,Referred By\n';
+    
+    visibleRows.forEach(row => {
+        const username = row.querySelector('.username').textContent.trim();
+        const email = row.querySelector('.user-email').textContent.trim();
+        const phone = row.querySelector('.user-phone').textContent.trim();
+        const referralCode = row.querySelector('.referral-code').textContent.trim();
+        const status = row.querySelector('.badge').textContent.trim();
+        const rank = row.querySelector('.user-rank').textContent.trim();
+        const balance = row.querySelector('.user-balance').textContent.replace('Ksh ', '').trim();
+        const referrals = row.querySelector('.user-referrals').textContent.replace(' referrals', '').trim();
+        const joinedDate = row.querySelector('.join-date').textContent.trim();
+        const referredBy = row.querySelector('.text-info') ? row.querySelector('.text-info').textContent.replace('Referred by: ', '') : '';
+        
+        csv += `"${username}","${email}","${phone}","${referralCode}","${status}","${rank}","${balance}","${referrals}","${joinedDate}","${referredBy}"\n`;
+    });
+    
+    // Create and download CSV file
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.setAttribute('hidden', '');
+    a.setAttribute('href', url);
+    a.setAttribute('download', `users_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    
+    showNotification('success', 'Users exported successfully!');
+}
+
+// Pagination Functions
+function updatePagination(totalUsers) {
+    const totalPages = Math.ceil(totalUsers / usersPerPage);
+    const paginationContainer = document.getElementById('paginationControls');
+    
+    if (totalPages <= 1) {
+        paginationContainer.innerHTML = '';
+        return;
+    }
+    
+    let paginationHTML = '';
+    
+    // Previous button
+    paginationHTML += `
+        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+            <a class="page-link border-0 rounded-start-pill" href="#" onclick="changePage(${currentPage - 1})">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+        </li>
+    `;
+    
+    // Page numbers
+    for (let i = 1; i <= totalPages; i++) {
+        if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+            paginationHTML += `
+                <li class="page-item ${i === currentPage ? 'active' : ''}">
+                    <a class="page-link border-0 ${i === currentPage ? 'bg-primary' : ''}" href="#" onclick="changePage(${i})">${i}</a>
+                </li>
+            `;
+        } else if (i === currentPage - 2 || i === currentPage + 2) {
+            paginationHTML += `<li class="page-item disabled"><span class="page-link border-0">...</span></li>`;
+        }
+    }
+    
+    // Next button
+    paginationHTML += `
+        <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+            <a class="page-link border-0 rounded-end-pill" href="#" onclick="changePage(${currentPage + 1})">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+        </li>
+    `;
+    
+    paginationContainer.innerHTML = paginationHTML;
+}
+
+function changePage(page) {
+    currentPage = page;
+    document.querySelector('.table-responsive').scrollTop = 0;
+    updateDisplayedUsers();
+}
+
+function updateDisplayedUsers() {
+    const rows = document.querySelectorAll('#usersTableBody .user-row:not([style*="display: none"])');
+    const startIndex = (currentPage - 1) * usersPerPage;
+    const endIndex = startIndex + usersPerPage;
+    
+    rows.forEach((row, index) => {
+        if (index >= startIndex && index < endIndex) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    updateUserCounts(rows.length);
+}
+
+function updateUserCounts(visibleCount) {
+    document.getElementById('userCount').textContent = visibleCount;
+    const startIndex = (currentPage - 1) * usersPerPage + 1;
+    const endIndex = Math.min(startIndex + usersPerPage - 1, visibleCount);
+    document.getElementById('showingCount').textContent = 
+        visibleCount > 0 ? `${startIndex}-${endIndex}` : '0';
+    document.getElementById('totalCount').textContent = visibleCount;
+}
+
+function toggleNoResultsMessage(visibleCount) {
+    const noResults = document.getElementById('noResults');
+    const table = document.querySelector('.table-responsive');
+    const pagination = document.querySelector('.d-flex.justify-content-between');
+    
+    if (visibleCount === 0 && document.querySelectorAll('.user-row').length > 0) {
+        noResults.style.display = 'block';
+        table.style.display = 'none';
+        pagination.style.display = 'none';
+    } else {
+        noResults.style.display = 'none';
+        table.style.display = 'block';
+        pagination.style.display = 'flex';
+    }
+}
+
+// Utility Functions
+function showNotification(type, message) {
+    // Remove existing notifications
+    const existingAlerts = document.querySelectorAll('.alert.position-fixed');
+    existingAlerts.forEach(alert => alert.remove());
+    
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed border-0 shadow`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        <i class="fas fa-${getNotificationIcon(type)} me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+        }
+    }, 5000);
+}
+
+function getNotificationIcon(type) {
+    const icons = {
+        'success': 'check-circle',
+        'error': 'exclamation-triangle',
+        'warning': 'exclamation-circle',
+        'info': 'info-circle'
+    };
+    return icons[type] || 'info-circle';
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Add event listener for Enter key in search
+    document.getElementById('searchInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            searchUsers();
+        }
+    });
+    
+    // Initialize pagination
+    updatePagination({{ users|length }});
+    updateDisplayedUsers();
+});
 </script>
 
 <style>
-/* Enhanced Professional Styling with Clamp-based Responsive Design */
-
-:root {
-    --primary-color: #2c3e50;
-    --secondary-color: #34495e;
-    --accent-color: #3498db;
-    --success-color: #27ae60;
-    --warning-color: #f39c12;
-    --danger-color: #e74c3c;
-    --info-color: #2980b9;
-    
-    /* Responsive font sizes using clamp */
-    --font-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
-    --font-sm: clamp(0.875rem, 0.8rem + 0.375vw, 1rem);
-    --font-base: clamp(1rem, 0.9rem + 0.5vw, 1.125rem);
-    --font-lg: clamp(1.125rem, 1rem + 0.625vw, 1.25rem);
-    --font-xl: clamp(1.25rem, 1.1rem + 0.75vw, 1.5rem);
-    --font-2xl: clamp(1.5rem, 1.3rem + 1vw, 2rem);
-    --font-3xl: clamp(2rem, 1.7rem + 1.5vw, 2.5rem);
-    
-    /* Responsive spacing */
-    --space-xs: clamp(0.25rem, 0.2rem + 0.25vw, 0.5rem);
-    --space-sm: clamp(0.5rem, 0.4rem + 0.5vw, 0.75rem);
-    --space-md: clamp(0.75rem, 0.6rem + 0.75vw, 1rem);
-    --space-lg: clamp(1rem, 0.8rem + 1vw, 1.5rem);
-    --space-xl: clamp(1.5rem, 1.2rem + 1.5vw, 2rem);
-    --space-2xl: clamp(2rem, 1.6rem + 2vw, 3rem);
-}
-
-/* Enhanced Header */
-.dashboard-header {
-    margin-bottom: var(--space-lg);
-}
-
-.header-background {
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+/* Enhanced Elegant Styling */
+.card {
     border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
 }
 
-.header-icon-container .icon-wrapper {
-    width: clamp(3rem, 2.5rem + 2.5vw, 4rem);
-    height: clamp(3rem, 2.5rem + 2.5vw, 4rem);
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.header-icon-container i {
-    font-size: clamp(1.25rem, 1rem + 1.25vw, 1.75rem);
-}
-
-.display-heading {
-    font-size: var(--font-3xl);
-    line-height: 1.2;
-}
-
-.subheading {
-    font-size: var(--font-sm);
-}
-
-.status-badge {
-    padding: var(--space-sm) var(--space-md);
-    border-radius: 50px;
-    font-size: var(--font-xs);
-    font-weight: 600;
-}
-
-/* Enhanced Metric Cards */
-.metric-card {
-    border: none;
-    border-radius: 12px;
-    box-shadow: 0 2px 15px rgba(0,0,0,0.08);
-    transition: all 0.3s ease;
-    height: 100%;
-    min-height: 120px;
-}
-
-.metric-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 25px rgba(0,0,0,0.12);
-}
-
-.metric-content {
-    display: flex;
-    align-items: center;
-    height: 100%;
-}
-
-.metric-icon {
-    width: clamp(3rem, 2.5rem + 2.5vw, 4rem);
-    height: clamp(3rem, 2.5rem + 2.5vw, 4rem);
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: var(--space-md);
-    background: rgba(255,255,255,0.2);
-}
-
-.metric-icon i {
-    font-size: clamp(1.25rem, 1rem + 1.25vw, 1.75rem);
-    color: white;
-}
-
-.metric-value {
-    font-size: var(--font-2xl);
-    font-weight: 700;
-    margin-bottom: var(--space-xs);
-    line-height: 1;
-}
-
-.metric-label {
-    font-size: var(--font-sm);
-    font-weight: 600;
-    margin-bottom: var(--space-xs);
-    opacity: 0.9;
-}
-
-.metric-trend {
-    font-size: var(--font-xs);
-    display: flex;
-    align-items: center;
-}
-
-/* Gradient backgrounds for metric cards */
-.total-users-gradient {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-}
-
-.verified-gradient {
-    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-    color: white;
-}
-
-.active-gradient {
-    background: linear-gradient(135deg, #fc466b 0%, #3f5efb 100%);
-    color: white;
-}
-
-.pending-gradient {
-    background: linear-gradient(135deg, #fdbb2d 0%, #22c1c3 100%);
-    color: white;
-}
-
-/* Enhanced Action Bar */
-.action-bar {
-    background: white;
-    padding: var(--space-md);
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-}
-
-.btn-action {
-    padding: var(--space-sm) var(--space-md);
-    font-size: var(--font-sm);
-    font-weight: 600;
+.btn {
     border-radius: 8px;
-    transition: all 0.3s ease;
-}
-
-.btn-action .btn-text {
-    font-size: inherit;
-}
-
-/* Enhanced Search Box */
-.search-box {
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-.search-icon {
-    position: absolute;
-    left: var(--space-md);
-    color: #6c757d;
-    z-index: 3;
-}
-
-.search-input {
-    padding-left: calc(var(--space-md) * 2.5);
-    padding-right: calc(var(--space-md) * 2.5);
-    border-radius: 8px;
-    border: 1px solid #e9ecef;
-    font-size: var(--font-sm);
-    height: calc(2.5rem + 0.5vw);
-}
-
-.search-input:focus {
-    border-color: var(--accent-color);
-    box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
-}
-
-.search-clear {
-    position: absolute;
-    right: var(--space-sm);
-    z-index: 3;
-    border: none;
-    background: transparent;
-    color: #6c757d;
-}
-
-/* Enhanced Table */
-.dashboard-card {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 15px rgba(0,0,0,0.08);
-    border: none;
-    overflow: hidden;
-}
-
-.card-header {
-    background: white;
-    border-bottom: 1px solid #e9ecef;
-    padding: var(--space-lg);
-}
-
-.card-title {
-    font-size: var(--font-lg);
-    font-weight: 600;
-    color: var(--primary-color);
-}
-
-.table-responsive {
-    overflow-x: auto;
-}
-
-.users-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: var(--font-sm);
-}
-
-.users-table th {
-    background: #f8f9fa;
-    padding: var(--space-md);
-    font-weight: 600;
-    color: var(--primary-color);
-    border-bottom: 2px solid #e9ecef;
-    white-space: nowrap;
-}
-
-.users-table td {
-    padding: var(--space-md);
-    border-bottom: 1px solid #e9ecef;
-    vertical-align: top;
-}
-
-.user-row:hover {
-    background-color: #f8f9fa;
-}
-
-/* Enhanced User Info */
-.user-info {
-    min-width: 150px;
-}
-
-.user-main {
-    display: flex;
-    align-items: center;
-    gap: var(--space-md);
-}
-
-.user-avatar {
-    width: clamp(2.5rem, 2rem + 2.5vw, 3rem);
-    height: clamp(2.5rem, 2rem + 2.5vw, 3rem);
-    border-radius: 50%;
-    background: var(--accent-color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: 600;
-    font-size: var(--font-sm);
-    flex-shrink: 0;
-}
-
-.user-details {
-    flex: 1;
-    min-width: 0;
-}
-
-.username {
-    font-size: var(--font-base);
-    color: var(--primary-color);
-    margin-bottom: var(--space-xs);
-    word-break: break-word;
-}
-
-.user-ref {
-    font-size: var(--font-xs);
-}
-
-.referral-code {
-    background: #f8f9fa;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-family: 'Courier New', monospace;
-}
-
-.referred-by {
-    margin-top: var(--space-xs);
-}
-
-/* Enhanced Contact Info */
-.contact-info {
-    min-width: 180px;
-}
-
-.contact-item {
-    display: flex;
-    align-items: center;
-    margin-bottom: var(--space-xs);
-    font-size: var(--font-sm);
-}
-
-.contact-item:last-child {
-    margin-bottom: 0;
-}
-
-/* Enhanced Financial Stats */
-.financial-stats {
-    min-width: 140px;
-}
-
-.stat-item {
-    margin-bottom: var(--space-sm);
-    text-align: center;
-}
-
-.stat-item:last-child {
-    margin-bottom: 0;
-}
-
-.stat-value {
-    font-size: var(--font-sm);
-    display: block;
-}
-
-.stat-label {
-    color: #6c757d;
-    font-size: var(--font-xs);
-}
-
-/* Enhanced Status Badges */
-.status-badges {
-    min-width: 120px;
-}
-
-.badge-group {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xs);
 }
 
 .badge {
-    font-size: var(--font-xs);
-    padding: var(--space-xs) var(--space-sm);
     border-radius: 6px;
+    font-weight: 500;
+}
+
+.table th {
     font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-/* Enhanced Action Buttons */
-.action-buttons {
-    min-width: 80px;
+.table td {
+    padding: 1rem 0.75rem;
+    border-bottom: 1px solid #f0f0f0;
 }
 
-.btn-group-vertical .btn {
-    font-size: var(--font-xs);
-    padding: var(--space-xs) var(--space-sm);
+.table tbody tr:last-child td {
+    border-bottom: none;
 }
 
-/* Enhanced Empty State */
-.empty-state {
-    padding: var(--space-2xl);
+.table tbody tr:hover {
+    background-color: #f8fafc;
+    transform: translateY(-1px);
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
-.empty-icon {
-    opacity: 0.5;
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c73e6 100%) !important;
 }
 
-/* Enhanced Loading Overlay */
-.loading-overlay {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(255,255,255,0.9);
-    z-index: 9999;
-    align-items: center;
-    justify-content: center;
+/* Custom scrollbar for table */
+.table-responsive::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
 }
 
-.spinner-container {
-    text-align: center;
+.table-responsive::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
 }
 
-/* Enhanced Pagination */
-.pagination {
-    gap: var(--space-xs);
+.table-responsive::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 10px;
 }
 
-.page-link {
-    padding: var(--space-sm) var(--space-md);
-    border-radius: 6px;
-    font-size: var(--font-sm);
-    border: 1px solid #e9ecef;
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
 }
 
-/* Enhanced Form Controls */
-.form-control, .form-select {
-    border-radius: 8px;
-    border: 1px solid #e9ecef;
-    font-size: var(--font-sm);
-    padding: var(--space-sm) var(--space-md);
+/* Loading animation */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-.form-control:focus, .form-select:focus {
-    border-color: var(--accent-color);
-    box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+.user-row {
+    animation: fadeIn 0.3s ease-out;
 }
 
-/* Enhanced Modal */
+/* Modal enhancements */
 .modal-content {
-    border-radius: 12px;
-    border: none;
-    box-shadow: 0 10px 50px rgba(0,0,0,0.2);
+    border-radius: 16px;
 }
 
 .modal-header {
-    border-bottom: 1px solid #e9ecef;
-    padding: var(--space-lg);
+    border-radius: 16px 16px 0 0;
 }
 
-.modal-body {
-    padding: var(--space-lg);
+/* Input group enhancements */
+.input-group:focus-within {
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+    border-radius: 8px;
 }
 
-.modal-footer {
-    border-top: 1px solid #e9ecef;
-    padding: var(--space-lg);
+/* Pagination styling */
+.page-link {
+    border: none !important;
+    margin: 0 2px;
+    border-radius: 8px !important;
 }
 
-/* Pulse Animation for Live Status */
-@keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.5; }
-    100% { opacity: 1; }
+.page-link:hover {
+    background-color: #f8f9fa;
 }
 
-.pulse {
-    animation: pulse 2s infinite;
+.page-item.active .page-link {
+    background-color: #4f46e5;
+    border-color: #4f46e5;
 }
 
-/* Responsive Table Columns */
-@media (max-width: 1200px) {
-    .users-table th:nth-child(3),
-    .users-table td:nth-child(3) {
-        display: none;
-    }
+/* Badge enhancements */
+.badge {
+    font-size: 0.75em;
+    padding: 0.35em 0.65em;
 }
 
-@media (max-width: 992px) {
-    .users-table th:nth-child(5),
-    .users-table td:nth-child(5) {
-        display: none;
-    }
-    
-    .user-main {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: var(--space-sm);
-    }
+/* Table header sticky enhancement */
+.table thead th {
+    position: sticky;
+    top: 0;
+    background: #f8f9fa;
+    z-index: 10;
+    border-bottom: 2px solid #e9ecef;
 }
 
-@media (max-width: 768px) {
-    .users-table th:nth-child(2),
-    .users-table td:nth-child(2) {
-        display: none;
-    }
-    
-    .metric-content {
-        flex-direction: column;
-        text-align: center;
-    }
-    
-    .metric-icon {
-        margin-right: 0;
-        margin-bottom: var(--space-md);
-    }
-    
-    .header-text {
-        text-align: center;
-    }
-    
-    .header-icon-container {
-        margin-right: 0 !important;
-        margin-bottom: var(--space-md);
-    }
+/* Custom checkbox styling */
+.form-check-input:checked {
+    background-color: #4f46e5;
+    border-color: #4f46e5;
 }
 
-@media (max-width: 576px) {
-    .users-table th:nth-child(4),
-    .users-table td:nth-child(4) {
-        display: none;
-    }
-    
-    .container-fluid {
-        padding-left: var(--space-sm);
-        padding-right: var(--space-sm);
-    }
-    
-    .card-header, .card-body, .card-footer {
-        padding: var(--space-md);
-    }
-}
-
-/* Print Styles */
-@media print {
-    .action-bar, .card-header .btn, .action-buttons {
-        display: none !important;
-    }
-    
-    .dashboard-card {
-        box-shadow: none !important;
-        border: 1px solid #ddd !important;
-    }
+/* Smooth transitions */
+.card, .btn, .badge, .table tbody tr {
+    transition: all 0.3s ease;
 }
 </style>
 {% endblock %}
