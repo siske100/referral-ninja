@@ -115,36 +115,44 @@
     <div class="card shadow mb-4">
         <div class="card-header py-3">
             <h6 class="m-0 font-weight-bold text-primary">
-                <i class="fas fa-search me-2"></i>Search Users
+                <i class="fas fa-search me-2"></i>Search & Filter Users
             </h6>
         </div>
         <div class="card-body">
-            <div class="row">
-                <div class="col-md-8">
+            <div class="row g-3">
+                <div class="col-md-6">
                     <div class="input-group">
-                        <input type="text" class="form-control" id="searchInput" placeholder="Search by username, email, phone, or referral code..." onkeyup="searchUsers()">
+                        <input type="text" class="form-control" id="searchInput" 
+                               placeholder="Search by username, email, phone, or referral code..." 
+                               onkeyup="searchUsers()">
+                        <button class="btn btn-primary" type="button" onclick="searchUsers()">
+                            <i class="fas fa-search"></i> Search
+                        </button>
                         <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()">
-                            <i class="fas fa-times"></i> Clear
+                            <i class="fas fa-times"></i>
                         </button>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="form-group">
-                        <select class="form-control" id="statusFilter" onchange="filterUsers()">
-                            <option value="">All Statuses</option>
-                            <option value="verified">Verified Only</option>
-                            <option value="unverified">Unverified Only</option>
-                            <option value="active">Active Only</option>
-                            <option value="inactive">Inactive Only</option>
-                            <option value="admin">Admins Only</option>
-                        </select>
-                    </div>
+                    <select class="form-select" id="statusFilter" onchange="filterUsers()">
+                        <option value="">All Statuses</option>
+                        <option value="verified">Verified Only</option>
+                        <option value="unverified">Unverified Only</option>
+                        <option value="active">Active Only</option>
+                        <option value="inactive">Inactive Only</option>
+                        <option value="admin">Admins Only</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-outline-info w-100" type="button" onclick="showAdvancedFilters()">
+                        <i class="fas fa-filter"></i> More
+                    </button>
                 </div>
             </div>
             <div class="mt-2">
                 <small class="text-muted">
                     <i class="fas fa-info-circle me-1"></i>
-                    Search by username, email, phone, or referral code
+                    Search by username, email, phone, or referral code. Use filters to narrow results.
                 </small>
             </div>
         </div>
@@ -589,6 +597,10 @@ function clearSearch() {
     // Ensure table is visible
     document.getElementById('noResults').style.display = 'none';
     document.querySelector('.table-responsive').style.display = 'block';
+}
+
+function showAdvancedFilters() {
+    showNotification('info', 'Advanced filters feature coming soon!');
 }
 
 function exportUsers() {
@@ -1079,6 +1091,19 @@ mark {
 /* Security action buttons */
 .btn:disabled {
     cursor: not-allowed;
+}
+
+/* Improved search section styles */
+.form-select {
+    border-radius: 0.375rem;
+}
+
+.input-group .btn {
+    border-radius: 0 0.375rem 0.375rem 0;
+}
+
+.input-group .btn:first-of-type {
+    border-radius: 0;
 }
 </style>
 {% endblock %}
