@@ -203,15 +203,15 @@
                                     <div>
                                         <small>{{ user.email }}</small>
                                         <br>
-                                        <small>{{ user.phone_number }}</small>
+                                        <small>{{ user.phone_number or 'N/A' }}</small>
                                     </div>
                                 </td>
                                 <td>
                                     <div class="text-center">
-                                        <div class="fw-bold text-success">Ksh {{ "%.2f"|format(user.balance) }}</div>
+                                        <div class="fw-bold text-success">Ksh {{ "%.2f"|format(user.balance or 0) }}</div>
                                         <small class="text-muted">Balance</small>
                                         <br>
-                                        <span class="badge bg-info">{{ user.referral_count }} referrals</span>
+                                        <span class="badge bg-info">{{ user.referral_count or 0 }} referrals</span>
                                     </div>
                                 </td>
                                 <td>
@@ -228,26 +228,30 @@
                                             <span class="badge bg-danger">Inactive</span>
                                         {% endif %}
                                         <br>
-                                        <small class="text-muted">{{ user.user_rank }}</small>
+                                        <small class="text-muted">{{ user.user_rank or 'N/A' }}</small>
                                     </div>
                                 </td>
                                 <td>
-                                    <small>{{ user.created_at.strftime('%Y-%m-%d') }}</small>
-                                    <br>
-                                    <small class="text-muted">{{ user.created_at.strftime('%H:%M') }}</small>
+                                    {% if user.created_at %}
+                                        <small>{{ user.created_at.strftime('%Y-%m-%d') }}</small>
+                                        <br>
+                                        <small class="text-muted">{{ user.created_at.strftime('%H:%M') }}</small>
+                                    {% else %}
+                                        <small class="text-muted">N/A</small>
+                                    {% endif %}
                                 </td>
                                 <td>
                                     {% if not user.is_admin %}
                                         <div class="btn-group-vertical btn-group-sm">
                                             <button class="btn btn-{{ 'danger' if user.is_active else 'success' }}" 
-                                                    onclick="toggleUserStatus({{ user.id }})"
+                                                    onclick="toggleUserStatus('{{ user.id }}')"
                                                     title="{{ 'Deactivate' if user.is_active else 'Activate' }} User">
                                                 <i class="fas fa-{{ 'user-slash' if user.is_active else 'user-check' }}"></i>
                                                 {{ 'Deactivate' if user.is_active else 'Activate' }}
                                             </button>
                                             {% if not user.is_verified %}
                                                 <button class="btn btn-warning mt-1" 
-                                                        onclick="verifyUser({{ user.id }})"
+                                                        onclick="verifyUser('{{ user.id }}')"
                                                         title="Verify User">
                                                     <i class="fas fa-check-circle"></i> Verify
                                                 </button>
@@ -298,7 +302,7 @@ function searchUsers() {
         const status = row.getAttribute('data-status');
 
         // Check if row matches search term (ONLY referral codes now)
-        const matchesSearch = searchTerm === '' || referral.includes(searchTerm);
+        const matchesSearch = searchTerm === '' || (referral && referral.includes(searchTerm));
 
         // Check if row matches status filter
         const matchesStatus = statusFilter === '' || 
@@ -315,17 +319,19 @@ function searchUsers() {
             // Highlight the matching referral code if search term is not empty
             if (searchTerm !== '') {
                 const referralElement = row.querySelector('.referral-code');
-                const originalCode = referralElement.textContent;
-                const lowerOriginal = originalCode.toLowerCase();
-                const lowerSearch = searchTerm.toLowerCase();
-                
-                if (lowerOriginal.includes(lowerSearch)) {
-                    const index = lowerOriginal.indexOf(lowerSearch);
-                    const highlightedCode = 
-                        originalCode.substring(0, index) +
-                        '<mark>' + originalCode.substring(index, index + searchTerm.length) + '</mark>' +
-                        originalCode.substring(index + searchTerm.length);
-                    referralElement.innerHTML = highlightedCode;
+                if (referralElement) {
+                    const originalCode = referralElement.textContent;
+                    const lowerOriginal = originalCode.toLowerCase();
+                    const lowerSearch = searchTerm.toLowerCase();
+                    
+                    if (lowerOriginal.includes(lowerSearch)) {
+                        const index = lowerOriginal.indexOf(lowerSearch);
+                        const highlightedCode = 
+                            originalCode.substring(0, index) +
+                            '<mark>' + originalCode.substring(index, index + searchTerm.length) + '</mark>' +
+                            originalCode.substring(index + searchTerm.length);
+                        referralElement.innerHTML = highlightedCode;
+                    }
                 }
             }
         } else {
@@ -380,13 +386,19 @@ function exportUsers() {
         const cells = row.querySelectorAll('td');
         const username = cells[0].querySelector('strong').textContent.trim();
         const email = cells[1].querySelector('small').textContent.trim();
-        const phone = cells[1].querySelectorAll('small')[1].textContent.trim();
+        const phoneElements = cells[1].querySelectorAll('small');
+        const phone = phoneElements.length > 1 ? phoneElements[1].textContent.trim() : 'N/A';
         const referralCode = cells[0].querySelector('.referral-code').textContent.trim();
-        const status = cells[3].querySelectorAll('.badge')[0].textContent.trim();
-        const rank = cells[3].querySelectorAll('small')[0].textContent.trim();
-        const balance = cells[2].querySelector('.fw-bold').textContent.replace('Ksh ', '').trim();
-        const referrals = cells[2].querySelector('.badge').textContent.replace(' referrals', '').trim();
-        const joinedDate = cells[4].querySelector('small').textContent.trim();
+        const statusElements = cells[3].querySelectorAll('.badge');
+        const status = statusElements.length > 0 ? statusElements[0].textContent.trim() : 'N/A';
+        const rankElements = cells[3].querySelectorAll('small');
+        const rank = rankElements.length > 0 ? rankElements[0].textContent.trim() : 'N/A';
+        const balanceElement = cells[2].querySelector('.fw-bold');
+        const balance = balanceElement ? balanceElement.textContent.replace('Ksh ', '').trim() : '0.00';
+        const referralsElement = cells[2].querySelector('.badge');
+        const referrals = referralsElement ? referralsElement.textContent.replace(' referrals', '').trim() : '0';
+        const joinedDateElement = cells[4].querySelector('small');
+        const joinedDate = joinedDateElement ? joinedDateElement.textContent.trim() : 'N/A';
         
         csv += `"${username}","${email}","${phone}","${referralCode}","${status}","${rank}","${balance}","${referrals}","${joinedDate}"\n`;
     });
@@ -433,8 +445,25 @@ function toggleUserStatus(userId) {
 function verifyUser(userId) {
     const action = confirm('Are you sure you want to verify this user? This will activate their account.');
     if (action) {
-        // You'll need to implement this endpoint
-        showNotification('info', 'User verification feature coming soon!');
+        fetch(`/admin/verify-user/${userId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('success', data.message);
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showNotification('error', 'Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('error', 'An error occurred while verifying user');
+        });
     }
 }
 
