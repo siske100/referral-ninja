@@ -211,14 +211,30 @@
                                     <i class="fas fa-copy me-2"></i>Copy
                                 </button>
                             </div>
-                            <div class="link-stats mt-3">
-                                <div class="stat">
-                                    <span class="number">{{ referrals|length }}</span>
-                                    <span class="label">Total Referrals</span>
-                                </div>
-                                <div class="stat">
-                                    <span class="number">KSH {{ referrals|length * 50 }}</span>
-                                    <span class="label">Total Earnings</span>
+                            
+                            <!-- QR Code Section -->
+                            <div class="qr-code-section mt-4">
+                                <div class="row align-items-center">
+                                    <div class="col-md-6">
+                                        <div class="qr-code-container text-center">
+                                            <div id="qrcode" class="mb-2"></div>
+                                            <p class="text-muted small mb-0">
+                                                <i class="fas fa-qrcode me-1"></i>Scan to share instantly
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="link-stats">
+                                            <div class="stat">
+                                                <span class="number">{{ referrals|length }}</span>
+                                                <span class="label">Total Referrals</span>
+                                            </div>
+                                            <div class="stat">
+                                                <span class="number">KSH {{ referrals|length * 50 }}</span>
+                                                <span class="label">Total Earnings</span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -273,6 +289,14 @@
                         <i class="fas fa-copy"></i>
                     </div>
                     <span class="share-label">Copy Link</span>
+                </a>
+            </div>
+            <div class="col-xl-2 col-md-3 col-6 mb-3">
+                <a href="#" class="share-btn qr-btn" onclick="downloadQRCode()">
+                    <div class="share-icon">
+                        <i class="fas fa-download"></i>
+                    </div>
+                    <span class="share-label">Save QR</span>
                 </a>
             </div>
         </div>
@@ -423,7 +447,23 @@
     </div>
 </div>
 
+<!-- Include QR Code Library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
 <script>
+// Initialize QR Code
+document.addEventListener('DOMContentLoaded', function() {
+    const referralUrl = document.getElementById('referralUrl').value;
+    const qrcode = new QRCode(document.getElementById("qrcode"), {
+        text: referralUrl,
+        width: 120,
+        height: 120,
+        colorDark: "#2c3e50",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+    });
+});
+
 function copyReferralLink() {
     const referralUrl = document.getElementById('referralUrl');
     referralUrl.select();
@@ -437,6 +477,19 @@ function copyReferralLink() {
         // Fallback for older browsers
         document.execCommand('copy');
         showNotification('🎉 Referral link copied to clipboard!', 'success');
+    }
+}
+
+function downloadQRCode() {
+    const qrCanvas = document.querySelector('#qrcode canvas');
+    if (qrCanvas) {
+        const link = document.createElement('a');
+        link.download = 'referral-qr-code.png';
+        link.href = qrCanvas.toDataURL('image/png');
+        link.click();
+        showNotification('📱 QR code downloaded successfully!', 'success');
+    } else {
+        showNotification('❌ Unable to download QR code. Please try again.', 'error');
     }
 }
 
@@ -504,6 +557,31 @@ document.addEventListener('DOMContentLoaded', function() {
     max-width: 1400px;
     margin: 0 auto;
     padding: 0 15px;
+}
+
+/* QR Code Styles */
+.qr-code-section {
+    border-top: 1px solid #e9ecef;
+    padding-top: 1.5rem;
+}
+
+.qr-code-container {
+    padding: 1rem;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    border: 1px solid #e9ecef;
+}
+
+#qrcode {
+    display: inline-block;
+    padding: 10px;
+    background: white;
+    border-radius: 10px;
+}
+
+.qr-btn .share-icon {
+    background: linear-gradient(135deg, #6a11cb, #2575fc);
 }
 
 /* Diani Challenge Styles */
@@ -870,8 +948,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .link-stats {
     display: flex;
-    gap: 2rem;
-    justify-content: center;
+    flex-direction: column;
+    gap: 1rem;
 }
 
 .stat {
@@ -940,12 +1018,14 @@ document.addEventListener('DOMContentLoaded', function() {
 .twitter-btn .share-icon { background: #1DA1F2; }
 .telegram-btn .share-icon { background: #0088CC; }
 .copy-btn .share-icon { background: #667eea; }
+.qr-btn .share-icon { background: #6a11cb; }
 
 .whatsapp-btn:hover { box-shadow: 0 10px 25px rgba(37, 211, 102, 0.3); }
 .facebook-btn:hover { box-shadow: 0 10px 25px rgba(24, 119, 242, 0.3); }
 .twitter-btn:hover { box-shadow: 0 10px 25px rgba(29, 161, 242, 0.3); }
 .telegram-btn:hover { box-shadow: 0 10px 25px rgba(0, 136, 204, 0.3); }
 .copy-btn:hover { box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3); }
+.qr-btn:hover { box-shadow: 0 10px 25px rgba(106, 17, 203, 0.3); }
 
 /* Earnings Cards */
 .earning-card {
@@ -1229,6 +1309,11 @@ document.addEventListener('DOMContentLoaded', function() {
         flex-direction: column;
         text-align: center;
         gap: 0.5rem;
+    }
+    
+    .qr-code-section .row {
+        flex-direction: column;
+        gap: 1.5rem;
     }
 }
 </style>
