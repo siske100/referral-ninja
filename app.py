@@ -11,34 +11,40 @@ import logging
 import asyncio
 import threading
 import secrets
-from flask import abort
 import string
 import hashlib
-import requests
 from datetime import datetime, timezone, timedelta
 from urllib.parse import urlparse
 from functools import wraps
 from typing import Dict, List, Any, Tuple, Optional
-from werkzeug import Request
-from flask import request
+
+import requests
+import httpx
 import psutil
 import psycopg2
 import redis
 from dotenv import load_dotenv
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, Blueprint, current_app, abort
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask import (
+    Flask, render_template, request, redirect, url_for, 
+    flash, session, jsonify, Blueprint, current_app, abort
+)
+from flask_login import (
+    LoginManager, UserMixin, login_user, login_required, 
+    logout_user, current_user
+)
+from flask_jwt_extended import (
+    JWTManager, create_access_token, jwt_required, get_jwt_identity
+)
 from flask_bcrypt import Bcrypt
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug import Request
 from logging.handlers import RotatingFileHandler
 from supabase import create_client
 from telegram import Bot
-import httpx
 
 # Emergency recursion limit and logging fixes
-import sys
 sys.setrecursionlimit(5000)
 
 # Load environment variables from .env file
@@ -104,8 +110,6 @@ logger.info(f"Current directory: {os.getcwd()}")
 logger.info(f".env file exists: {os.path.exists('.env')}")
 logger.info(f"SUPABASE_URL loaded: {bool(os.environ.get('SUPABASE_URL'))}")
 logger.info(f"SUPABASE_KEY loaded: {bool(os.environ.get('SUPABASE_SERVICE_ROLE_KEY'))}")
-
-# Remove the PostgreSQL connection test entirely - only use Supabase
 
 # =============================================================================
 # FLASK APP CONFIGURATION
@@ -409,6 +413,17 @@ except Exception as e:
 supabase = create_client(app.config.get('SUPABASE_URL'), app.config.get('SUPABASE_KEY'))
 
 # =============================================================================
+# EXTENSIONS INITIALIZATION
+# =============================================================================
+
+# Initialize extensions
+bcrypt = Bcrypt(app)
+jwt = JWTManager(app)
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
+login_manager.login_message_category = 'info'
+
+# =============================================================================
 # ENHANCED RATE LIMITING CONFIGURATION - FIXED
 # =============================================================================
 
@@ -465,17 +480,6 @@ except Exception as e:
         # REMOVED: exempt_when parameter causing the error
     )
     logger.info("Rate limiter fallback to memory storage")
-    
-# =============================================================================
-# EXTENSIONS INITIALIZATION
-# =============================================================================
-
-# Initialize extensions
-bcrypt = Bcrypt(app)
-jwt = JWTManager(app)
-login_manager = LoginManager(app)
-login_manager.login_view = 'login'
-login_manager.login_message_category = 'info'
 
 # =============================================================================
 # DATABASE MODELS
@@ -939,13 +943,14 @@ class SupabaseDB:
     @staticmethod
     def get_all_users():
         try:
-           response = supabase.table('users')\
-              .select('id, username, total_commission, user_rank, referral_count')\
-              .execute()
-           return response.data if response.data else []
+            response = supabase.table('users')\
+                .select('id, username, email, phone, name, balance, total_commission, total_withdrawn, referral_code, referred_by, referral_balance, referral_count, is_verified, is_active, user_rank, created_at, last_login')\
+                .order('created_at', desc=True)\
+                .execute()
+            return response.data if response.data else []
         except Exception as e:
-           logger.error(f"Error getting all users: {e}")
-           return []
+            logger.error(f"Error getting all users: {e}")
+            return []
         
     @staticmethod
     def get_pending_withdrawals():
@@ -1413,438 +1418,6 @@ class FixedSecurityMiddleware:
 
 # Apply the fixed security middleware - CORRECTED
 app.wsgi_app = FixedSecurityMiddleware(app.wsgi_app, fraud_detector)
-
-# =============================================================================
-# DATABASE SCHEMA MANAGER
-# =============================================================================
-
-def supabase_check(table_name: str, limit: int = 1, retries: int = 3, timeout: int = 5):
-    """Check Supabase availability with retry logic and timeout."""
-    for attempt in range(1, retries + 1):
-        try:
-            # Supabase-py doesn't support direct timeout, so use requests timeout override
-            response = supabase.table(table_name).select("*").limit(limit).execute()
-            return response
-        except Exception as e:
-            logger.warning(f"Supabase attempt {attempt} failed: {e}")
-            time.sleep(min(2 ** attempt, 10))  # exponential backoff
-    raise ConnectionError(f"Supabase {table_name} check failed after {retries} attempts")
-
-class DatabaseHealthMonitor:
-    """Monitor database health and performance"""
-    
-    @staticmethod
-    def get_database_metrics():
-        """Get comprehensive database metrics"""
-        try:
-            metrics = {
-                'timestamp': datetime.now(timezone.utc).isoformat(),
-                'connection_status': 'unknown',
-                'response_time': 0,
-                'table_counts': {},
-                'performance': {}
-            }
-            
-            # Test connection speed
-            start_time = time.time()
-            response = supabase.table('users').select('*', count='exact').limit(1).execute()
-            metrics['response_time'] = round((time.time() - start_time) * 1000, 2)
-            metrics['connection_status'] = 'healthy'
-            
-            # Get table counts
-            tables = ['users', 'transactions', 'referrals', 'security_logs', 'mpesa_callbacks', 'two_factor_codes']
-            for table in tables:
-                try:
-                    response = supabase.table(table).select('*', count='exact').execute()
-                    metrics['table_counts'][table] = len(response.data)
-                except Exception as e:
-                    metrics['table_counts'][table] = f"error: {e}"
-            
-            return metrics
-            
-        except Exception as e:
-            return {
-                'timestamp': datetime.now(timezone.utc).isoformat(),
-                'connection_status': 'unhealthy',
-                'error': str(e)
-            }
-    
-    @staticmethod
-    def log_database_health():
-        """Log database health status"""
-        metrics = DatabaseHealthMonitor.get_database_metrics()
-        
-        if metrics['connection_status'] == 'healthy':
-            logger.info(f"Database health: {metrics['response_time']}ms response")
-        else:
-            logger.error(f"Database health issue: {metrics.get('error', 'Unknown error')}")
-        
-        return metrics
-
-class DatabaseManager:
-    """Production-grade database schema manager for Supabase (uses direct DB connection)."""
-    
-    def __init__(self, supabase_client):
-        self.supabase = supabase_client
-        self.logger = logging.getLogger(__name__)
-    
-    def _run_sql_via_db_url(self, sql: str, db_url: Optional[str] = None, timeout: int = 30) -> None:
-        """
-        Execute raw SQL using direct Postgres connection via SUPABASE_DB_URL.
-        Raises Exception on failure.
-        """
-        db_url = db_url or os.environ.get('SUPABASE_DB_URL')
-        if not db_url:
-            raise Exception("SUPABASE_DB_URL not set; cannot execute raw SQL via direct DB connection.")
-        
-        # Use autocommit for DDL/DDL-like statements
-        conn = psycopg2.connect(db_url)
-        conn.autocommit = True
-        try:
-            with conn.cursor() as cur:
-                cur.execute(sql)
-        finally:
-            conn.close()
-    
-    def execute_sql(self, sql: str, max_retries: int = 3) -> bool:
-        """Execute SQL with proper error handling and retries using direct DB connection."""
-        for attempt in range(max_retries):
-            try:
-                self._run_sql_via_db_url(sql)
-                self.logger.info(f"SQL executed successfully (attempt {attempt + 1})")
-                return True
-                
-            except Exception as e:
-                err = str(e)
-                # Avoid emoji in logs to prevent Windows console encoding errors
-                self.logger.warning(f"SQL execution attempt {attempt + 1} failed: {err}")
-                
-                if "already exists" in err.lower():
-                    self.logger.info("Table/index already exists (non-fatal)")
-                    return True
-                
-                if attempt < max_retries - 1:
-                    wait = 2 ** attempt
-                    self.logger.info(f"Retrying SQL execution in {wait} seconds...")
-                    time.sleep(wait)
-                else:
-                    self.logger.error(f"All SQL execution attempts failed: {err}")
-                    return False
-        return False
-    
-    def create_tables(self) -> bool:
-        """Create all required tables with proper constraints"""
-        tables = self._get_table_definitions()
-        
-        for table_name, sql in tables:
-            self.logger.info(f"Creating table: {table_name}")
-            if not self.execute_sql(sql):
-                self.logger.error(f"Failed to create table: {table_name}")
-                return False
-        
-        self.logger.info("All tables created successfully")
-        return True
-    
-    def create_indexes(self) -> bool:
-        """Create performance indexes"""
-        indexes = self._get_index_definitions()
-        
-        for index_name, sql in indexes:
-            self.logger.info(f"Creating index: {index_name}")
-            if not self.execute_sql(sql):
-                self.logger.warning(f"Index creation failed (may already exist): {index_name}")
-        
-        self.logger.info("All indexes created/verified")
-        return True
-    
-    def _get_table_definitions(self) -> List[Tuple[str, str]]:
-        """Return all table creation SQL with proper error handling"""
-        return [
-            ("users", """
-            CREATE TABLE IF NOT EXISTS users (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                username VARCHAR(50) UNIQUE NOT NULL,
-                email VARCHAR(255) UNIQUE,
-                phone VARCHAR(20) UNIQUE NOT NULL,
-                name VARCHAR(255) NOT NULL,
-                password_hash TEXT NOT NULL,
-                balance DECIMAL(10,2) DEFAULT 0.0 CHECK (balance >= 0),
-                total_earned DECIMAL(10,2) DEFAULT 0.0 CHECK (total_earned >= 0),
-                total_withdrawn DECIMAL(10,2) DEFAULT 0.0 CHECK (total_withdrawn >= 0),
-                referral_code VARCHAR(20) UNIQUE,
-                referred_by VARCHAR(20),
-                referral_balance DECIMAL(10,2) DEFAULT 0.0 CHECK (referral_balance >= 0),
-                referral_count INTEGER DEFAULT 0 CHECK (referral_count >= 0),
-                is_admin BOOLEAN DEFAULT FALSE,
-                is_verified BOOLEAN DEFAULT FALSE,
-                is_active BOOLEAN DEFAULT TRUE,
-                created_at TIMESTAMPTZ DEFAULT NOW(),
-                last_login TIMESTAMPTZ,
-                login_attempts INTEGER DEFAULT 0 CHECK (login_attempts >= 0),
-                locked_until TIMESTAMPTZ,
-                two_factor_enabled BOOLEAN DEFAULT FALSE,
-                user_rank VARCHAR(20) DEFAULT 'Bronze',
-                total_commission DECIMAL(10,2) DEFAULT 0.0 CHECK (total_commission >= 0),
-                referral_source VARCHAR(50) DEFAULT 'direct',
-                reset_token TEXT,
-                reset_token_expires TIMESTAMPTZ,
-                -- Additional constraints
-                CONSTRAINT valid_phone CHECK (phone ~ '^254[17]\\d{8}$'),
-                CONSTRAINT valid_email CHECK (email IS NULL OR email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$'),
-                CONSTRAINT chk_balance_limits CHECK (balance <= 1000000),
-                CONSTRAINT chk_username_length CHECK (LENGTH(username) >= 3)
-            );
-            """),
-            
-            ("transactions", """
-            CREATE TABLE IF NOT EXISTS transactions (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                amount DECIMAL(10,2) NOT NULL CHECK (ABS(amount) <= 50000),
-                transaction_type VARCHAR(50) NOT NULL CHECK (transaction_type IN ('withdrawal', 'registration_fee', 'referral_bonus')),
-                status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed', 'rejected', 'Under Review')),
-                phone_number VARCHAR(20),
-                mpesa_code VARCHAR(100),
-                checkout_request_id VARCHAR(100),
-                merchant_request_id VARCHAR(100),
-                b2c_conversation_id VARCHAR(100),
-                b2c_originator_conversation_id VARCHAR(100),
-                description TEXT,
-                ip_address INET,
-                user_agent TEXT,
-                device_fingerprint TEXT,
-                fraud_warnings TEXT,
-                created_at TIMESTAMPTZ DEFAULT NOW(),
-                processed_at TIMESTAMPTZ,
-                -- Constraints
-                CONSTRAINT chk_withdrawal_amount CHECK (
-                    transaction_type != 'withdrawal' OR 
-                    (amount <= 0 AND ABS(amount) >= 400 AND ABS(amount) <= 5000)
-                ),
-                CONSTRAINT chk_registration_fee CHECK (
-                    transaction_type != 'registration_fee' OR 
-                    (amount = 200)
-                )
-            );
-            """),
-            
-            ("referrals", """
-            CREATE TABLE IF NOT EXISTS referrals (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                referrer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                referred_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                referral_code_used VARCHAR(20) NOT NULL,
-                commission_earned DECIMAL(10,2) DEFAULT 0.0 CHECK (commission_earned >= 0),
-                status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
-                created_at TIMESTAMPTZ DEFAULT NOW(),
-                -- Ensure unique referral relationships
-                CONSTRAINT unique_referral_relationship UNIQUE (referrer_id, referred_id)
-            );
-            """),
-            
-            ("security_logs", """
-            CREATE TABLE IF NOT EXISTS security_logs (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-                event_type VARCHAR(100) NOT NULL,
-                ip_address INET,
-                user_agent TEXT,
-                device_fingerprint TEXT,
-                details TEXT,
-                created_at TIMESTAMPTZ DEFAULT NOW(),
-                -- Index for faster querying
-                CONSTRAINT valid_event_type CHECK (event_type IN (
-                    'LOGIN_SUCCESS', 'LOGIN_FAILED', 'REGISTRATION', 'LOGOUT',
-                    'WITHDRAWAL_INITIATED', 'WITHDRAWAL_COMPLETED', 'WITHDRAWAL_FAILED',
-                    'SUSPICIOUS_WITHDRAWAL', '2FA_SUCCESS', '2FA_FAILED',
-                    'PASSWORD_CHANGE', 'PROFILE_UPDATE', 'SMS_SENT_SUCCESS',
-                    'SMS_SENT_FAILED', 'UNAUTHORIZED_ACCESS', 'ADMIN_ACTION',
-                    'SUSPICIOUS_REGISTRATION', 'USER_BLOCKED_FRAUD', 'SUSPICIOUS_USER_AGENT'
-                ))
-            );
-            """),
-            
-            ("mpesa_callbacks", """
-            CREATE TABLE IF NOT EXISTS mpesa_callbacks (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                payload JSONB NOT NULL,
-                ip_address INET,
-                callback_type VARCHAR(50) CHECK (callback_type IN ('STK', 'B2C', 'C2B')),
-                processed BOOLEAN DEFAULT FALSE,
-                processed_at TIMESTAMPTZ,
-                error_message TEXT,
-                created_at TIMESTAMPTZ DEFAULT NOW()
-            );
-            """),
-            
-            ("jobs", """
-            CREATE TABLE IF NOT EXISTS jobs (
-              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-              title VARCHAR(255) NOT NULL,
-              description TEXT,
-               company VARCHAR(255),
-               job_link TEXT NOT NULL,
-               category VARCHAR(100),
-               location VARCHAR(100),
-               salary_range VARCHAR(100),
-               application_deadline DATE,
-               is_active BOOLEAN DEFAULT TRUE,
-               is_featured BOOLEAN DEFAULT FALSE,
-               created_by UUID REFERENCES users(id),
-               created_at TIMESTAMPTZ DEFAULT NOW(),
-               updated_at TIMESTAMPTZ DEFAULT NOW(),
-               -- Constraints
-               CONSTRAINT valid_job_link CHECK (job_link ~ '^https?://'),
-                CONSTRAINT valid_category CHECK (category IN ('Internship', 'Full-time', 'Part-time', 'Contract', 'Remote', 'Other'))
-            );
-            """),
-            
-            ("two_factor_codes", """
-            CREATE TABLE IF NOT EXISTS two_factor_codes (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                code VARCHAR(10) NOT NULL,
-                purpose VARCHAR(50) NOT NULL CHECK (purpose IN ('LOGIN', 'WITHDRAWAL', 'PASSWORD_RESET')),
-                expires_at TIMESTAMPTZ NOT NULL,
-                is_used BOOLEAN DEFAULT FALSE,
-                used_at TIMESTAMPTZ,
-                created_at TIMESTAMPTZ DEFAULT NOW(),
-                -- Ensure codes are unique per user and purpose when not used
-                CONSTRAINT unique_active_code UNIQUE (user_id, code, purpose) 
-                WHERE (is_used = FALSE AND expires_at > NOW())
-            );
-            """)
-        ]
-    
-    def _get_index_definitions(self) -> List[Tuple[str, str]]:
-        """Return all index creation SQL"""
-        return [
-            # Users table indexes
-            ("idx_users_phone", "CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);"),
-            ("idx_users_email", "CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);"),
-            ("idx_users_referral_code", "CREATE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code);"),
-            ("idx_users_referred_by", "CREATE INDEX IF NOT EXISTS idx_users_referred_by ON users(referred_by);"),
-            ("idx_users_created_at", "CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at);"),
-            ("idx_users_is_verified", "CREATE INDEX IF NOT EXISTS idx_users_is_verified ON users(is_verified) WHERE is_verified = true;"),
-            
-            # Transactions table indexes
-            ("idx_transactions_user_id", "CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);"),
-            ("idx_transactions_status", "CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status);"),
-            ("idx_transactions_created_at", "CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at);"),
-            ("idx_transactions_type_status", "CREATE INDEX IF NOT EXISTS idx_transactions_type_status ON transactions(transaction_type, status);"),
-            ("idx_transactions_mpesa_code", "CREATE INDEX IF NOT EXISTS idx_transactions_mpesa_code ON transactions(mpesa_code) WHERE mpesa_code IS NOT NULL;"),
-            ("idx_transactions_device_fingerprint", "CREATE INDEX IF NOT EXISTS idx_transactions_device_fingerprint ON transactions(device_fingerprint);"),
-            
-            # Referrals table indexes
-            ("idx_referrals_referrer_id", "CREATE INDEX IF NOT EXISTS idx_referrals_referrer_id ON referrals(referrer_id);"),
-            ("idx_referrals_referred_id", "CREATE INDEX IF NOT EXISTS idx_referrals_referred_id ON referrals(referred_id);"),
-            ("idx_referrals_created_at", "CREATE INDEX IF NOT EXISTS idx_referrals_created_at ON referrals(created_at);"),
-            
-            # Security logs indexes
-            ("idx_security_logs_user_id", "CREATE INDEX IF NOT EXISTS idx_security_logs_user_id ON security_logs(user_id);"),
-            ("idx_security_logs_created_at", "CREATE INDEX IF NOT EXISTS idx_security_logs_created_at ON security_logs(created_at);"),
-            ("idx_security_logs_event_type", "CREATE INDEX IF NOT EXISTS idx_security_logs_event_type ON security_logs(event_type);"),
-            ("idx_security_logs_device_fingerprint", "CREATE INDEX IF NOT EXISTS idx_security_logs_device_fingerprint ON security_logs(device_fingerprint);"),
-            
-            # Two-factor codes indexes
-            ("idx_two_factor_codes_user_id", "CREATE INDEX IF NOT EXISTS idx_two_factor_codes_user_id ON two_factor_codes(user_id);"),
-            ("idx_two_factor_codes_code", "CREATE INDEX IF NOT EXISTS idx_two_factor_codes_code ON two_factor_codes(code);"),
-            ("idx_two_factor_codes_expires", "CREATE INDEX IF NOT EXISTS idx_two_factor_codes_expires ON two_factor_codes(expires_at) WHERE is_used = false;"),
-            
-            # M-Pesa callbacks indexes
-            ("idx_mpesa_callbacks_processed", "CREATE INDEX IF NOT EXISTS idx_mpesa_callbacks_processed ON mpesa_callbacks(processed) WHERE processed = false;"),
-            ("idx_mpesa_callbacks_created_at", "CREATE INDEX IF NOT EXISTS idx_mpesa_callbacks_created_at ON mpesa_callbacks(created_at);")
-        ]
-    
-    def verify_schema(self) -> dict:
-        """Verify all tables and indexes exist and are accessible"""
-        verification_results = {}
-        tables_to_check = ['users', 'transactions', 'referrals', 'security_logs', 'mpesa_callbacks', 'two_factor_codes']
-        
-        for table in tables_to_check:
-            try:
-                # Try to select one row from each table via Supabase client
-                response = self.supabase.table(table).select('*', count='exact').limit(1).execute()
-                verification_results[table] = {
-                    'exists': True,
-                    'accessible': True,
-                    'row_count': len(response.data) if hasattr(response, 'data') else 0
-                }
-            except Exception as e:
-                verification_results[table] = {
-                    'exists': False,
-                    'accessible': False,
-                    'error': str(e)
-                }
-        
-        return verification_results
-    
-    def initialize_database(self) -> bool:
-        """Complete database initialization process"""
-        self.logger.info("Starting database initialization...")
-        
-        # Step 1: Create tables
-        if not self.create_tables():
-            self.logger.error("Table creation failed")
-            return False
-        
-        # Step 2: Create indexes
-        if not self.create_indexes():
-            self.logger.error("Index creation failed")
-            return False
-        
-        # Step 3: Verify schema
-        verification = self.verify_schema()
-        failed_tables = [table for table, result in verification.items() if not result['exists']]
-        
-        if failed_tables:
-            self.logger.error(f"Schema verification failed for tables: {failed_tables}")
-            return False
-        
-        self.logger.info("Database initialization completed successfully")
-        return True
-
-def create_admin_user_if_missing():
-    """Create admin user only if it doesn't exist"""
-    try:
-        admin_user = SupabaseDB.get_user_by_username('admin')
-        if not admin_user:
-            logger.info("Creating admin user...")
-            
-            admin_data = {
-                'id': str(uuid.uuid4()),
-                'username': 'admin',
-                'email': os.environ.get('ADMIN_EMAIL', 'admin@referralninja.co.ke'),
-                'phone': os.environ.get('ADMIN_PHONE', '254712345678'),
-                'name': 'System Administrator',
-                'is_admin': True,
-                'is_verified': True,
-                'is_active': True,
-                'created_at': datetime.now(timezone.utc).isoformat()
-            }
-            
-            admin = User(admin_data)
-            admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')  # Change in production!
-            admin.set_password(admin_password)
-            admin.generate_phone_linked_referral_code()
-            
-            admin_dict = admin.to_dict()
-            admin_dict.pop('password_hash', None)
-            admin_dict['password_hash'] = admin.password_hash
-            
-            created_admin = SupabaseDB.create_user(admin_dict)
-            if created_admin:
-                logger.info("Admin user created successfully")
-                logger.info(f"Username: admin")
-                logger.info(f"Password: {admin_password}")
-                logger.info("CHANGE THE PASSWORD IMMEDIATELY!")
-            else:
-                logger.error("Failed to create admin user")
-        else:
-            logger.info("Admin user already exists")
-            
-    except Exception as e:
-        logger.error(f"Admin user creation error: {e}")
 
 # =============================================================================
 # SECURITY CLASSES
@@ -2485,6 +2058,438 @@ Please process this withdrawal in the admin dashboard.
     except Exception as e:
         logger.error(f"Error sending withdrawal notification to Telegram: {str(e)}")
         return False
+
+# =============================================================================
+# DATABASE SCHEMA MANAGER
+# =============================================================================
+
+def supabase_check(table_name: str, limit: int = 1, retries: int = 3, timeout: int = 5):
+    """Check Supabase availability with retry logic and timeout."""
+    for attempt in range(1, retries + 1):
+        try:
+            # Supabase-py doesn't support direct timeout, so use requests timeout override
+            response = supabase.table(table_name).select("*").limit(limit).execute()
+            return response
+        except Exception as e:
+            logger.warning(f"Supabase attempt {attempt} failed: {e}")
+            time.sleep(min(2 ** attempt, 10))  # exponential backoff
+    raise ConnectionError(f"Supabase {table_name} check failed after {retries} attempts")
+
+class DatabaseHealthMonitor:
+    """Monitor database health and performance"""
+    
+    @staticmethod
+    def get_database_metrics():
+        """Get comprehensive database metrics"""
+        try:
+            metrics = {
+                'timestamp': datetime.now(timezone.utc).isoformat(),
+                'connection_status': 'unknown',
+                'response_time': 0,
+                'table_counts': {},
+                'performance': {}
+            }
+            
+            # Test connection speed
+            start_time = time.time()
+            response = supabase.table('users').select('*', count='exact').limit(1).execute()
+            metrics['response_time'] = round((time.time() - start_time) * 1000, 2)
+            metrics['connection_status'] = 'healthy'
+            
+            # Get table counts
+            tables = ['users', 'transactions', 'referrals', 'security_logs', 'mpesa_callbacks', 'two_factor_codes']
+            for table in tables:
+                try:
+                    response = supabase.table(table).select('*', count='exact').execute()
+                    metrics['table_counts'][table] = len(response.data)
+                except Exception as e:
+                    metrics['table_counts'][table] = f"error: {e}"
+            
+            return metrics
+            
+        except Exception as e:
+            return {
+                'timestamp': datetime.now(timezone.utc).isoformat(),
+                'connection_status': 'unhealthy',
+                'error': str(e)
+            }
+    
+    @staticmethod
+    def log_database_health():
+        """Log database health status"""
+        metrics = DatabaseHealthMonitor.get_database_metrics()
+        
+        if metrics['connection_status'] == 'healthy':
+            logger.info(f"Database health: {metrics['response_time']}ms response")
+        else:
+            logger.error(f"Database health issue: {metrics.get('error', 'Unknown error')}")
+        
+        return metrics
+
+class DatabaseManager:
+    """Production-grade database schema manager for Supabase (uses direct DB connection)."""
+    
+    def __init__(self, supabase_client):
+        self.supabase = supabase_client
+        self.logger = logging.getLogger(__name__)
+    
+    def _run_sql_via_db_url(self, sql: str, db_url: Optional[str] = None, timeout: int = 30) -> None:
+        """
+        Execute raw SQL using direct Postgres connection via SUPABASE_DB_URL.
+        Raises Exception on failure.
+        """
+        db_url = db_url or os.environ.get('SUPABASE_DB_URL')
+        if not db_url:
+            raise Exception("SUPABASE_DB_URL not set; cannot execute raw SQL via direct DB connection.")
+        
+        # Use autocommit for DDL/DDL-like statements
+        conn = psycopg2.connect(db_url)
+        conn.autocommit = True
+        try:
+            with conn.cursor() as cur:
+                cur.execute(sql)
+        finally:
+            conn.close()
+    
+    def execute_sql(self, sql: str, max_retries: int = 3) -> bool:
+        """Execute SQL with proper error handling and retries using direct DB connection."""
+        for attempt in range(max_retries):
+            try:
+                self._run_sql_via_db_url(sql)
+                self.logger.info(f"SQL executed successfully (attempt {attempt + 1})")
+                return True
+                
+            except Exception as e:
+                err = str(e)
+                # Avoid emoji in logs to prevent Windows console encoding errors
+                self.logger.warning(f"SQL execution attempt {attempt + 1} failed: {err}")
+                
+                if "already exists" in err.lower():
+                    self.logger.info("Table/index already exists (non-fatal)")
+                    return True
+                
+                if attempt < max_retries - 1:
+                    wait = 2 ** attempt
+                    self.logger.info(f"Retrying SQL execution in {wait} seconds...")
+                    time.sleep(wait)
+                else:
+                    self.logger.error(f"All SQL execution attempts failed: {err}")
+                    return False
+        return False
+    
+    def create_tables(self) -> bool:
+        """Create all required tables with proper constraints"""
+        tables = self._get_table_definitions()
+        
+        for table_name, sql in tables:
+            self.logger.info(f"Creating table: {table_name}")
+            if not self.execute_sql(sql):
+                self.logger.error(f"Failed to create table: {table_name}")
+                return False
+        
+        self.logger.info("All tables created successfully")
+        return True
+    
+    def create_indexes(self) -> bool:
+        """Create performance indexes"""
+        indexes = self._get_index_definitions()
+        
+        for index_name, sql in indexes:
+            self.logger.info(f"Creating index: {index_name}")
+            if not self.execute_sql(sql):
+                self.logger.warning(f"Index creation failed (may already exist): {index_name}")
+        
+        self.logger.info("All indexes created/verified")
+        return True
+    
+    def _get_table_definitions(self) -> List[Tuple[str, str]]:
+        """Return all table creation SQL with proper error handling"""
+        return [
+            ("users", """
+            CREATE TABLE IF NOT EXISTS users (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                username VARCHAR(50) UNIQUE NOT NULL,
+                email VARCHAR(255) UNIQUE,
+                phone VARCHAR(20) UNIQUE NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                password_hash TEXT NOT NULL,
+                balance DECIMAL(10,2) DEFAULT 0.0 CHECK (balance >= 0),
+                total_earned DECIMAL(10,2) DEFAULT 0.0 CHECK (total_earned >= 0),
+                total_withdrawn DECIMAL(10,2) DEFAULT 0.0 CHECK (total_withdrawn >= 0),
+                referral_code VARCHAR(20) UNIQUE,
+                referred_by VARCHAR(20),
+                referral_balance DECIMAL(10,2) DEFAULT 0.0 CHECK (referral_balance >= 0),
+                referral_count INTEGER DEFAULT 0 CHECK (referral_count >= 0),
+                is_admin BOOLEAN DEFAULT FALSE,
+                is_verified BOOLEAN DEFAULT FALSE,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                last_login TIMESTAMPTZ,
+                login_attempts INTEGER DEFAULT 0 CHECK (login_attempts >= 0),
+                locked_until TIMESTAMPTZ,
+                two_factor_enabled BOOLEAN DEFAULT FALSE,
+                user_rank VARCHAR(20) DEFAULT 'Bronze',
+                total_commission DECIMAL(10,2) DEFAULT 0.0 CHECK (total_commission >= 0),
+                referral_source VARCHAR(50) DEFAULT 'direct',
+                reset_token TEXT,
+                reset_token_expires TIMESTAMPTZ,
+                -- Additional constraints
+                CONSTRAINT valid_phone CHECK (phone ~ '^254[17]\\d{8}$'),
+                CONSTRAINT valid_email CHECK (email IS NULL OR email ~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$'),
+                CONSTRAINT chk_balance_limits CHECK (balance <= 1000000),
+                CONSTRAINT chk_username_length CHECK (LENGTH(username) >= 3)
+            );
+            """),
+            
+            ("transactions", """
+            CREATE TABLE IF NOT EXISTS transactions (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                amount DECIMAL(10,2) NOT NULL CHECK (ABS(amount) <= 50000),
+                transaction_type VARCHAR(50) NOT NULL CHECK (transaction_type IN ('withdrawal', 'registration_fee', 'referral_bonus')),
+                status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed', 'rejected', 'Under Review')),
+                phone_number VARCHAR(20),
+                mpesa_code VARCHAR(100),
+                checkout_request_id VARCHAR(100),
+                merchant_request_id VARCHAR(100),
+                b2c_conversation_id VARCHAR(100),
+                b2c_originator_conversation_id VARCHAR(100),
+                description TEXT,
+                ip_address INET,
+                user_agent TEXT,
+                device_fingerprint TEXT,
+                fraud_warnings TEXT,
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                processed_at TIMESTAMPTZ,
+                -- Constraints
+                CONSTRAINT chk_withdrawal_amount CHECK (
+                    transaction_type != 'withdrawal' OR 
+                    (amount <= 0 AND ABS(amount) >= 400 AND ABS(amount) <= 5000)
+                ),
+                CONSTRAINT chk_registration_fee CHECK (
+                    transaction_type != 'registration_fee' OR 
+                    (amount = 200)
+                )
+            );
+            """),
+            
+            ("referrals", """
+            CREATE TABLE IF NOT EXISTS referrals (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                referrer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                referred_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                referral_code_used VARCHAR(20) NOT NULL,
+                commission_earned DECIMAL(10,2) DEFAULT 0.0 CHECK (commission_earned >= 0),
+                status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                -- Ensure unique referral relationships
+                CONSTRAINT unique_referral_relationship UNIQUE (referrer_id, referred_id)
+            );
+            """),
+            
+            ("security_logs", """
+            CREATE TABLE IF NOT EXISTS security_logs (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+                event_type VARCHAR(100) NOT NULL,
+                ip_address INET,
+                user_agent TEXT,
+                device_fingerprint TEXT,
+                details TEXT,
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                -- Index for faster querying
+                CONSTRAINT valid_event_type CHECK (event_type IN (
+                    'LOGIN_SUCCESS', 'LOGIN_FAILED', 'REGISTRATION', 'LOGOUT',
+                    'WITHDRAWAL_INITIATED', 'WITHDRAWAL_COMPLETED', 'WITHDRAWAL_FAILED',
+                    'SUSPICIOUS_WITHDRAWAL', '2FA_SUCCESS', '2FA_FAILED',
+                    'PASSWORD_CHANGE', 'PROFILE_UPDATE', 'SMS_SENT_SUCCESS',
+                    'SMS_SENT_FAILED', 'UNAUTHORIZED_ACCESS', 'ADMIN_ACTION',
+                    'SUSPICIOUS_REGISTRATION', 'USER_BLOCKED_FRAUD', 'SUSPICIOUS_USER_AGENT'
+                ))
+            );
+            """),
+            
+            ("mpesa_callbacks", """
+            CREATE TABLE IF NOT EXISTS mpesa_callbacks (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                payload JSONB NOT NULL,
+                ip_address INET,
+                callback_type VARCHAR(50) CHECK (callback_type IN ('STK', 'B2C', 'C2B')),
+                processed BOOLEAN DEFAULT FALSE,
+                processed_at TIMESTAMPTZ,
+                error_message TEXT,
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            );
+            """),
+            
+            ("jobs", """
+            CREATE TABLE IF NOT EXISTS jobs (
+              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+              title VARCHAR(255) NOT NULL,
+              description TEXT,
+               company VARCHAR(255),
+               job_link TEXT NOT NULL,
+               category VARCHAR(100),
+               location VARCHAR(100),
+               salary_range VARCHAR(100),
+               application_deadline DATE,
+               is_active BOOLEAN DEFAULT TRUE,
+               is_featured BOOLEAN DEFAULT FALSE,
+               created_by UUID REFERENCES users(id),
+               created_at TIMESTAMPTZ DEFAULT NOW(),
+               updated_at TIMESTAMPTZ DEFAULT NOW(),
+               -- Constraints
+               CONSTRAINT valid_job_link CHECK (job_link ~ '^https?://'),
+                CONSTRAINT valid_category CHECK (category IN ('Internship', 'Full-time', 'Part-time', 'Contract', 'Remote', 'Other'))
+            );
+            """),
+            
+            ("two_factor_codes", """
+            CREATE TABLE IF NOT EXISTS two_factor_codes (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                code VARCHAR(10) NOT NULL,
+                purpose VARCHAR(50) NOT NULL CHECK (purpose IN ('LOGIN', 'WITHDRAWAL', 'PASSWORD_RESET')),
+                expires_at TIMESTAMPTZ NOT NULL,
+                is_used BOOLEAN DEFAULT FALSE,
+                used_at TIMESTAMPTZ,
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                -- Ensure codes are unique per user and purpose when not used
+                CONSTRAINT unique_active_code UNIQUE (user_id, code, purpose) 
+                WHERE (is_used = FALSE AND expires_at > NOW())
+            );
+            """)
+        ]
+    
+    def _get_index_definitions(self) -> List[Tuple[str, str]]:
+        """Return all index creation SQL"""
+        return [
+            # Users table indexes
+            ("idx_users_phone", "CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);"),
+            ("idx_users_email", "CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);"),
+            ("idx_users_referral_code", "CREATE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code);"),
+            ("idx_users_referred_by", "CREATE INDEX IF NOT EXISTS idx_users_referred_by ON users(referred_by);"),
+            ("idx_users_created_at", "CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at);"),
+            ("idx_users_is_verified", "CREATE INDEX IF NOT EXISTS idx_users_is_verified ON users(is_verified) WHERE is_verified = true;"),
+            
+            # Transactions table indexes
+            ("idx_transactions_user_id", "CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);"),
+            ("idx_transactions_status", "CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status);"),
+            ("idx_transactions_created_at", "CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at);"),
+            ("idx_transactions_type_status", "CREATE INDEX IF NOT EXISTS idx_transactions_type_status ON transactions(transaction_type, status);"),
+            ("idx_transactions_mpesa_code", "CREATE INDEX IF NOT EXISTS idx_transactions_mpesa_code ON transactions(mpesa_code) WHERE mpesa_code IS NOT NULL;"),
+            ("idx_transactions_device_fingerprint", "CREATE INDEX IF NOT EXISTS idx_transactions_device_fingerprint ON transactions(device_fingerprint);"),
+            
+            # Referrals table indexes
+            ("idx_referrals_referrer_id", "CREATE INDEX IF NOT EXISTS idx_referrals_referrer_id ON referrals(referrer_id);"),
+            ("idx_referrals_referred_id", "CREATE INDEX IF NOT EXISTS idx_referrals_referred_id ON referrals(referred_id);"),
+            ("idx_referrals_created_at", "CREATE INDEX IF NOT EXISTS idx_referrals_created_at ON referrals(created_at);"),
+            
+            # Security logs indexes
+            ("idx_security_logs_user_id", "CREATE INDEX IF NOT EXISTS idx_security_logs_user_id ON security_logs(user_id);"),
+            ("idx_security_logs_created_at", "CREATE INDEX IF NOT EXISTS idx_security_logs_created_at ON security_logs(created_at);"),
+            ("idx_security_logs_event_type", "CREATE INDEX IF NOT EXISTS idx_security_logs_event_type ON security_logs(event_type);"),
+            ("idx_security_logs_device_fingerprint", "CREATE INDEX IF NOT EXISTS idx_security_logs_device_fingerprint ON security_logs(device_fingerprint);"),
+            
+            # Two-factor codes indexes
+            ("idx_two_factor_codes_user_id", "CREATE INDEX IF NOT EXISTS idx_two_factor_codes_user_id ON two_factor_codes(user_id);"),
+            ("idx_two_factor_codes_code", "CREATE INDEX IF NOT EXISTS idx_two_factor_codes_code ON two_factor_codes(code);"),
+            ("idx_two_factor_codes_expires", "CREATE INDEX IF NOT EXISTS idx_two_factor_codes_expires ON two_factor_codes(expires_at) WHERE is_used = false;"),
+            
+            # M-Pesa callbacks indexes
+            ("idx_mpesa_callbacks_processed", "CREATE INDEX IF NOT EXISTS idx_mpesa_callbacks_processed ON mpesa_callbacks(processed) WHERE processed = false;"),
+            ("idx_mpesa_callbacks_created_at", "CREATE INDEX IF NOT EXISTS idx_mpesa_callbacks_created_at ON mpesa_callbacks(created_at);")
+        ]
+    
+    def verify_schema(self) -> dict:
+        """Verify all tables and indexes exist and are accessible"""
+        verification_results = {}
+        tables_to_check = ['users', 'transactions', 'referrals', 'security_logs', 'mpesa_callbacks', 'two_factor_codes']
+        
+        for table in tables_to_check:
+            try:
+                # Try to select one row from each table via Supabase client
+                response = self.supabase.table(table).select('*', count='exact').limit(1).execute()
+                verification_results[table] = {
+                    'exists': True,
+                    'accessible': True,
+                    'row_count': len(response.data) if hasattr(response, 'data') else 0
+                }
+            except Exception as e:
+                verification_results[table] = {
+                    'exists': False,
+                    'accessible': False,
+                    'error': str(e)
+                }
+        
+        return verification_results
+    
+    def initialize_database(self) -> bool:
+        """Complete database initialization process"""
+        self.logger.info("Starting database initialization...")
+        
+        # Step 1: Create tables
+        if not self.create_tables():
+            self.logger.error("Table creation failed")
+            return False
+        
+        # Step 2: Create indexes
+        if not self.create_indexes():
+            self.logger.error("Index creation failed")
+            return False
+        
+        # Step 3: Verify schema
+        verification = self.verify_schema()
+        failed_tables = [table for table, result in verification.items() if not result['exists']]
+        
+        if failed_tables:
+            self.logger.error(f"Schema verification failed for tables: {failed_tables}")
+            return False
+        
+        self.logger.info("Database initialization completed successfully")
+        return True
+
+def create_admin_user_if_missing():
+    """Create admin user only if it doesn't exist"""
+    try:
+        admin_user = SupabaseDB.get_user_by_username('admin')
+        if not admin_user:
+            logger.info("Creating admin user...")
+            
+            admin_data = {
+                'id': str(uuid.uuid4()),
+                'username': 'admin',
+                'email': os.environ.get('ADMIN_EMAIL', 'admin@referralninja.co.ke'),
+                'phone': os.environ.get('ADMIN_PHONE', '254712345678'),
+                'name': 'System Administrator',
+                'is_admin': True,
+                'is_verified': True,
+                'is_active': True,
+                'created_at': datetime.now(timezone.utc).isoformat()
+            }
+            
+            admin = User(admin_data)
+            admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')  # Change in production!
+            admin.set_password(admin_password)
+            admin.generate_phone_linked_referral_code()
+            
+            admin_dict = admin.to_dict()
+            admin_dict.pop('password_hash', None)
+            admin_dict['password_hash'] = admin.password_hash
+            
+            created_admin = SupabaseDB.create_user(admin_dict)
+            if created_admin:
+                logger.info("Admin user created successfully")
+                logger.info(f"Username: admin")
+                logger.info(f"Password: {admin_password}")
+                logger.info("CHANGE THE PASSWORD IMMEDIATELY!")
+            else:
+                logger.error("Failed to create admin user")
+        else:
+            logger.info("Admin user already exists")
+            
+    except Exception as e:
+        logger.error(f"Admin user creation error: {e}")
 
 # =============================================================================
 # HEALTH MONITORING SYSTEM
