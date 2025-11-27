@@ -1,10 +1,10 @@
 <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
         <div class="logo-container">
-            <div class="logo-icon">
-                <div class="logo-gradient">
-                    <i class="fas fa-chart-network"></i>
-                </div>
+            <div class="logo-image">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" 
+                     alt="Referral Ninja Logo" 
+                     class="sidebar-logo">
             </div>
             <div class="logo-text">
                 <h2>ReferralNinja</h2>
@@ -296,18 +296,25 @@
     gap: 12px;
 }
 
-.logo-gradient {
+.logo-image {
     width: 40px;
     height: 40px;
-    background: var(--sidebar-accent);
     border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.2rem;
+    overflow: hidden;
+    flex-shrink: 0;
     box-shadow: 
         0 4px 15px rgba(102, 126, 234, 0.4),
         0 0 0 1px rgba(255,255,255,0.1);
+}
+
+.sidebar-logo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
 }
 
 .logo-text h2 {
@@ -324,6 +331,17 @@
     font-size: 0.7rem;
     color: var(--text-secondary);
     font-weight: 500;
+}
+
+/* Update collapsed state for logo */
+.sidebar.collapsed .logo-image {
+    width: 35px;
+    height: 35px;
+    margin-right: 0;
+}
+
+.sidebar.collapsed .logo-text {
+    display: none;
 }
 
 /* User Section */
