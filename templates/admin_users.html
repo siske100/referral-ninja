@@ -4,20 +4,17 @@
 
 {% block content %}
 <div class="container-fluid">
-    <!-- Elegant Header -->
-    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-4 pb-3 mb-4 border-bottom">
-        <div>
-            <h1 class="h3 fw-light text-dark mb-1">
-                <i class="fas fa-users me-2 text-primary"></i>User Management
-            </h1>
-            <p class="text-muted small mb-0">Manage and monitor user accounts and activities</p>
-        </div>
+    <!-- Header -->
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">
+            <i class="fas fa-users me-2"></i>User Management
+        </h1>
         <div class="btn-toolbar mb-2 mb-md-0">
-            <span class="badge bg-light text-dark border me-3 px-3 py-2">
-                <i class="fas fa-user me-1 text-primary"></i>Total Users: {{ users|length }}
+            <span class="badge bg-light text-dark me-2">
+                <i class="fas fa-user me-1"></i>Total Users: {{ users|length }}
             </span>
             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refreshPage()">
-                <i class="fas fa-sync-alt"></i>
+                <i class="fas fa-sync-alt"></i> Refresh
             </button>
         </div>
     </div>
@@ -26,7 +23,7 @@
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
-                <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show border-0 shadow-sm" role="alert">
+                <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
                     <i class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' }} me-2"></i>
                     {{ message }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -35,21 +32,21 @@
         {% endif %}
     {% endwith %}
 
-    <!-- Minimal Statistics Cards -->
+    <!-- Statistics Cards -->
     <div class="row mb-4">
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-0 shadow-sm h-100 py-3 bg-gradient-primary text-white">
+            <div class="card border-left-primary shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-white-50 text-uppercase mb-1">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
                                 Total Users</div>
-                            <div class="h2 mb-0 font-weight-bold">
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
                                 {{ users|length }}
                             </div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-users fa-2x text-white-50"></i>
+                            <i class="fas fa-users fa-2x text-gray-300"></i>
                         </div>
                     </div>
                 </div>
@@ -57,18 +54,18 @@
         </div>
 
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-0 shadow-sm h-100 py-3">
+            <div class="card border-left-success shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                Active Users</div>
-                            <div class="h2 mb-0 font-weight-bold text-gray-800">
-                                {{ users|selectattr('is_active')|list|length }}
+                                Verified Users</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ users|selectattr('is_verified')|list|length }}
                             </div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-user-check fa-2x text-success opacity-50"></i>
+                            <i class="fas fa-user-check fa-2x text-gray-300"></i>
                         </div>
                     </div>
                 </div>
@@ -76,18 +73,18 @@
         </div>
 
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-0 shadow-sm h-100 py-3">
+            <div class="card border-left-info shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                Total Balance</div>
-                            <div class="h2 mb-0 font-weight-bold text-gray-800">
-                                Ksh {{ "%.2f"|format(users|sum(attribute='balance') or 0) }}
+                                Active Users</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ users|selectattr('is_active')|list|length }}
                             </div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-wallet fa-2x text-info opacity-50"></i>
+                            <i class="fas fa-user-circle fa-2x text-gray-300"></i>
                         </div>
                     </div>
                 </div>
@@ -95,18 +92,18 @@
         </div>
 
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-0 shadow-sm h-100 py-3">
+            <div class="card border-left-warning shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                Total Referrals</div>
-                            <div class="h2 mb-0 font-weight-bold text-gray-800">
-                                {{ users|sum(attribute='referral_count') or 0 }}
+                                Pending Verification</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ users|rejectattr('is_verified')|list|length }}
                             </div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-share-alt fa-2x text-warning opacity-50"></i>
+                            <i class="fas fa-clock fa-2x text-gray-300"></i>
                         </div>
                     </div>
                 </div>
@@ -114,215 +111,150 @@
         </div>
     </div>
 
-    <!-- Search and Filter Section - Elegant Design -->
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-body p-3">
+    <!-- Search Bar -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-search me-2"></i>Search Users by Referral Code
+            </h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-8">
                     <div class="input-group">
-                        <span class="input-group-text bg-transparent border-0">
-                            <i class="fas fa-search text-muted"></i>
-                        </span>
-                        <input type="text" class="form-control border-0 ps-0" id="searchInput" 
-                               placeholder="Search users by name, email, phone, or referral code..." 
-                               onkeyup="searchUsers()">
-                        <button class="btn btn-outline-secondary border-0" type="button" onclick="clearSearch()">
-                            <i class="fas fa-times"></i>
+                        <input type="text" class="form-control" id="searchInput" placeholder="Enter referral code to search (e.g., RNA1B2C3)..." onkeyup="searchUsers()">
+                        <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()">
+                            <i class="fas fa-times"></i> Clear
                         </button>
                     </div>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm mb-4">
-                <div class="card-body p-3">
-                    <select class="form-select border-0" id="statusFilter" onchange="filterUsers()">
-                        <option value="">All Users</option>
-                        <option value="active">Active Only</option>
-                        <option value="inactive">Inactive Only</option>
-                        <option value="admin">Admins Only</option>
-                        <option value="verified">Verified Only</option>
-                        <option value="unverified">Unverified Only</option>
-                    </select>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <select class="form-control" id="statusFilter" onchange="filterUsers()">
+                            <option value="">All Statuses</option>
+                            <option value="verified">Verified Only</option>
+                            <option value="unverified">Unverified Only</option>
+                            <option value="active">Active Only</option>
+                            <option value="inactive">Inactive Only</option>
+                            <option value="admin">Admins Only</option>
+                        </select>
+                    </div>
                 </div>
+            </div>
+            <div class="mt-2">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Search only by referral code. Type the full or partial referral code to filter users.
+                </small>
             </div>
         </div>
     </div>
 
-    <!-- Users Table with Enhanced Elegance -->
-    <div class="card border-0 shadow-sm">
-        <div class="card-header bg-white py-3 border-0">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h6 class="mb-0 text-dark fw-semibold">
-                        <i class="fas fa-user-friends me-2 text-primary"></i>User Directory
-                    </h6>
-                </div>
-                <div class="d-flex align-items-center">
-                    <span class="badge bg-light text-dark border me-3">
-                        {{ users|selectattr('is_active')|list|length }} Active
-                    </span>
-                    <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="exportUsers()">
-                        <i class="fas fa-download me-1"></i> Export
-                    </button>
-                </div>
+    <!-- Users Table with Scrolling Section -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-user-friends me-2"></i>All Users
+                <span id="userCount" class="badge bg-primary ms-2">{{ users|length }}</span>
+            </h6>
+            <div>
+                <span class="badge bg-warning text-dark me-2">
+                    {{ users|selectattr('is_verified')|list|length }} Verified
+                </span>
+                <button class="btn btn-sm btn-outline-secondary" onclick="exportUsers()">
+                    <i class="fas fa-download me-1"></i> Export
+                </button>
             </div>
         </div>
-        
         <div class="card-body p-0">
             {% if users %}
                 <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
-                    <table class="table table-hover mb-0" id="usersTable">
-                        <thead class="bg-light">
+                    <table class="table table-bordered mb-0" id="usersTable" width="100%" cellspacing="0">
+                        <thead class="sticky-top bg-light">
                             <tr>
-                                <th class="border-0 ps-4" style="width: 40px;">
-                                    <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
-                                </th>
-                                <th class="border-0 py-3 text-dark fw-semibold">User Profile</th>
-                                <th class="border-0 py-3 text-dark fw-semibold">Contact Information</th>
-                                <th class="border-0 py-3 text-dark fw-semibold text-center">Performance</th>
-                                <th class="border-0 py-3 text-dark fw-semibold text-center">Membership</th>
-                                <th class="border-0 py-3 text-dark fw-semibold text-center">Registration</th>
-                                <th class="border-0 py-3 text-dark fw-semibold text-center">Actions</th>
+                                <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">User Info</th>
+                                <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">Contact</th>
+                                <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">Stats</th>
+                                <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">Status</th>
+                                <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">Joined</th>
+                                <th style="position: sticky; top: 0; background: #f8f9fa; z-index: 10;">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="usersTableBody">
                             {% for user in users %}
-                            <tr class="user-row align-middle" 
-                                data-referral="{{ user.referral_code|lower if user.referral_code else '' }}"
-                                data-username="{{ user.username|lower if user.username else '' }}"
-                                data-email="{{ user.email|lower if user.email else '' }}"
-                                data-phone="{{ user.phone|lower if user.phone else (user.phone_number|lower if user.phone_number else '') }}"
-                                data-balance="{{ user.balance|default(0) }}"
-                                data-referrals="{{ user.referral_count|default(0) }}"
-                                data-rank="{{ user.user_rank|lower if user.user_rank else '' }}"
-                                data-joined="{{ user.created_at.strftime('%Y-%m-%d') if user.created_at and hasattr(user.created_at, 'strftime') else (user.created_at[:10] if user.created_at else '') }}"
-                                data-status="{% if user.is_active %}active{% else %}inactive{% endif %} {% if user.is_admin %}admin{% endif %} {% if user.is_verified %}verified{% else %}unverified{% endif %}">
-                                
-                                <td class="ps-4">
-                                    {% if not user.is_admin %}
-                                    <input type="checkbox" class="user-checkbox" value="{{ user.id }}" onchange="updateBulkActions()">
-                                    {% endif %}
-                                </td>
-                                
+                            <tr class="user-row" 
+                                data-referral="{{ user.referral_code|lower }}"
+                                data-status="{% if user.is_verified %}verified{% else %}unverified{% endif %} {% if user.is_active %}active{% else %}inactive{% endif %} {% if user.is_admin %}admin{% endif %}">
                                 <td>
-                                    <div class="d-flex align-items-center">
-                                        <div class="flex-shrink-0">
-                                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
-                                                 style="width: 40px; height: 40px; font-size: 14px; font-weight: 600;">
-                                                {{ (user.username[0:2] if user.username else 'UU')|upper }}
-                                            </div>
-                                        </div>
-                                        <div class="flex-grow-1 ms-3">
-                                            <div class="fw-semibold text-dark username">{{ user.username or 'No username' }}</div>
-                                            <div class="text-muted small">
-                                                <span class="referral-code">{{ user.referral_code or 'No code' }}</span>
-                                                {% if user.is_admin %}
-                                                    <span class="badge bg-danger ms-1">Admin</span>
-                                                {% endif %}
-                                            </div>
-                                            {% if user.referred_by %}
-                                                <div class="text-info small">Referred by: {{ user.referred_by }}</div>
-                                            {% endif %}
-                                        </div>
+                                    <div>
+                                        <strong>{{ user.username }}</strong>
+                                        {% if user.is_admin %}
+                                            <span class="badge bg-danger ms-1">Admin</span>
+                                        {% endif %}
+                                        <br>
+                                        <small class="text-muted">Ref: <span class="referral-code">{{ user.referral_code }}</span></small>
+                                        {% if user.referred_by %}
+                                            <br>
+                                            <small class="text-info">Referred by: {{ user.referred_by }}</small>
+                                        {% endif %}
                                     </div>
                                 </td>
-                                
                                 <td>
-                                    <div class="text-dark small fw-medium user-email">{{ user.email or 'No email' }}</div>
-                                    <div class="text-muted small user-phone">{{ user.phone or (user.phone_number or 'No phone') }}</div>
-                                    <div class="text-muted small">Name: {{ user.name or 'No name' }}</div>
-                                </td>
-                                
-                                <td class="text-center">
-                                    <div class="fw-bold text-success fs-6 user-balance">Ksh {{ "%.2f"|format(user.balance|default(0)) }}</div>
-                                    <div class="text-muted small">Balance</div>
-                                    <div class="mt-1">
-                                        <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 user-referrals">
-                                            {{ user.referral_count|default(0) }} referrals
-                                        </span>
-                                    </div>
-                                    <div class="mt-1">
-                                        <small class="text-warning">Commission: Ksh {{ "%.2f"|format(user.total_commission|default(0)) }}</small>
+                                    <div>
+                                        <small>{{ user.email }}</small>
+                                        <br>
+                                        <small>{{ user.phone_number }}</small>
                                     </div>
                                 </td>
-                                
-                                <td class="text-center">
-                                    {% if user.is_active %}
-                                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">Active</span>
-                                    {% else %}
-                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">Inactive</span>
-                                    {% endif %}
-                                    
-                                    {% if user.is_verified %}
-                                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 mt-1">Verified</span>
-                                    {% else %}
-                                        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 mt-1">Unverified</span>
-                                    {% endif %}
-                                    
-                                    <div class="mt-1">
-                                        <small class="text-muted user-rank">{{ user.user_rank or 'Bronze' }}</small>
+                                <td>
+                                    <div class="text-center">
+                                        <div class="fw-bold text-success">Ksh {{ "%.2f"|format(user.balance) }}</div>
+                                        <small class="text-muted">Balance</small>
+                                        <br>
+                                        <span class="badge bg-info">{{ user.referral_count }} referrals</span>
                                     </div>
                                 </td>
-                                
-                                <td class="text-center">
-                                    <div class="text-dark small join-date">
-                                        {% if user.created_at %}
-                                            {% if user.created_at is string %}
-                                                {{ user.created_at[:10] }}
-                                            {% else %}
-                                                {{ user.created_at.strftime('%Y-%m-%d') }}
-                                            {% endif %}
+                                <td>
+                                    <div class="text-center">
+                                        {% if user.is_verified %}
+                                            <span class="badge bg-success">Verified</span>
                                         {% else %}
-                                            N/A
+                                            <span class="badge bg-warning text-dark">Unverified</span>
                                         {% endif %}
-                                    </div>
-                                    <div class="text-muted small">
-                                        {% if user.created_at %}
-                                            {% if user.created_at is string %}
-                                                {{ user.created_at[11:16] if user.created_at|length > 10 else '' }}
-                                            {% else %}
-                                                {{ user.created_at.strftime('%H:%M') }}
-                                            {% endif %}
-                                        {% endif %}
-                                    </div>
-                                    {% if user.last_login %}
-                                    <div class="text-muted small">
-                                        Last login: 
-                                        {% if user.last_login is string %}
-                                            {{ user.last_login[:10] }}
+                                        <br>
+                                        {% if user.is_active %}
+                                            <span class="badge bg-success">Active</span>
                                         {% else %}
-                                            {{ user.last_login.strftime('%m/%d') }}
+                                            <span class="badge bg-danger">Inactive</span>
                                         {% endif %}
+                                        <br>
+                                        <small class="text-muted">{{ user.user_rank }}</small>
                                     </div>
-                                    {% endif %}
                                 </td>
-                                
-                                <td class="text-center">
+                                <td>
+                                    <small>{{ user.created_at.strftime('%Y-%m-%d') }}</small>
+                                    <br>
+                                    <small class="text-muted">{{ user.created_at.strftime('%H:%M') }}</small>
+                                </td>
+                                <td>
                                     {% if not user.is_admin %}
-                                        <div class="btn-group btn-group-sm">
-                                            <button class="btn btn-outline-primary rounded-start-pill" 
-                                                    onclick="showUserDetails('{{ user.id }}')"
-                                                    title="View Details">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                            <button class="btn btn-{{ 'outline-danger' if user.is_active else 'outline-success' }} rounded-end-pill" 
-                                                    onclick="toggleUserStatus('{{ user.id }}')"
-                                                    title="{{ 'Deactivate' if user.is_active else 'Activate' }}">
+                                        <div class="btn-group-vertical btn-group-sm">
+                                            <button class="btn btn-{{ 'danger' if user.is_active else 'success' }}" 
+                                                    onclick="toggleUserStatus({{ user.id }})"
+                                                    title="{{ 'Deactivate' if user.is_active else 'Activate' }} User">
                                                 <i class="fas fa-{{ 'user-slash' if user.is_active else 'user-check' }}"></i>
+                                                {{ 'Deactivate' if user.is_active else 'Activate' }}
                                             </button>
-                                        </div>
-                                        <div class="mt-1">
                                             {% if not user.is_verified %}
-                                                <button class="btn btn-outline-warning btn-sm rounded-pill" 
-                                                        onclick="verifyUser('{{ user.id }}')"
+                                                <button class="btn btn-warning mt-1" 
+                                                        onclick="verifyUser({{ user.id }})"
                                                         title="Verify User">
                                                     <i class="fas fa-check-circle"></i> Verify
                                                 </button>
                                             {% endif %}
                                         </div>
                                     {% else %}
-                                        <span class="text-muted small">Admin Account</span>
+                                        <span class="text-muted">Admin Account</span>
                                     {% endif %}
                                 </td>
                             </tr>
@@ -330,136 +262,31 @@
                         </tbody>
                     </table>
                 </div>
-                
                 <!-- No Results Message -->
-                <div id="noResults" class="text-center py-5" style="display: none;">
-                    <div class="py-4">
-                        <i class="fas fa-search fa-2x text-muted mb-3 opacity-50"></i>
-                        <h6 class="text-muted mb-2">No users found</h6>
-                        <p class="text-muted small mb-3">Try adjusting your search criteria</p>
-                        <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="clearAllFilters()">
-                            Clear Filters
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Elegant Pagination -->
-                <div class="d-flex justify-content-between align-items-center p-4 border-top bg-light">
-                    <div class="text-muted small">
-                        Showing <span id="showingCount">{{ users|length if users|length < 10 else 10 }}</span> of <span id="totalCount">{{ users|length }}</span> users
-                    </div>
-                    <nav>
-                        <ul class="pagination mb-0" id="paginationControls">
-                            <!-- Pagination will be generated by JavaScript -->
-                        </ul>
-                    </nav>
+                <div id="noResults" class="text-center py-4" style="display: none;">
+                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No users found with this referral code</p>
+                    <button class="btn btn-primary" onclick="clearSearch()">
+                        <i class="fas fa-times me-1"></i> Clear Search
+                    </button>
                 </div>
             {% else %}
-                <div class="text-center py-5">
-                    <i class="fas fa-users fa-3x text-muted mb-3 opacity-50"></i>
-                    <h6 class="text-muted">No users found in the system</h6>
-                    <p class="text-muted small">Users will appear here once they register</p>
+                <div class="text-center py-4">
+                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No users found in the system</p>
                 </div>
             {% endif %}
         </div>
-    </div>
-</div>
-
-<!-- Enhanced User Detail Modal -->
-<div class="modal fade" id="userDetailModal" tabindex="-1" aria-labelledby="userDetailModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-light border-0 py-4">
-                <h5 class="modal-title text-dark fw-semibold" id="userDetailModalLabel">
-                    <i class="fas fa-user-circle me-2 text-primary"></i>User Profile
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-0" id="userDetailContent">
-                <!-- User details will be loaded here -->
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- User Verification Modal -->
-<div class="modal fade" id="verifyUserModal" tabindex="-1" aria-labelledby="verifyUserModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-warning border-0 py-3">
-                <h5 class="modal-title text-dark fw-semibold" id="verifyUserModalLabel">
-                    <i class="fas fa-user-check me-2"></i>Verify User
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Are you sure you want to verify this user? This will grant them full access to the platform.</p>
-                <div class="alert alert-info border-0 small">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Verified users can access all features including withdrawals and referrals.
-                </div>
-            </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-warning rounded-pill px-4" id="confirmVerifyBtn">Verify User</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Loading Spinner -->
-<div id="loadingSpinner" class="d-none position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background: rgba(255,255,255,0.8); z-index: 9999;">
-    <div class="text-center">
-        <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
-            <span class="visually-hidden">Loading...</span>
-        </div>
-        <p class="text-muted">Loading...</p>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-// Global variables
-let currentPage = 1;
-const usersPerPage = 10;
-let currentUserId = null;
-
-// CSRF Token handling
-function getCSRFToken() {
-    const metaTag = document.querySelector('meta[name="csrf-token"]');
-    return metaTag ? metaTag.getAttribute('content') : '';
-}
-
-// Enhanced admin request function with CSRF protection
-const adminRequest = (url, options = {}) => {
-    const defaultOptions = {
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCSRFToken()
-        }
-    };
-    
-    // Ensure we're using absolute URLs for API calls
-    const fullUrl = url.startsWith('/') ? url : `/admin/${url}`;
-    
-    return fetch(fullUrl, {...defaultOptions, ...options});
-};
-
 function refreshPage() {
-    showLoading();
     window.location.reload();
 }
 
-function showLoading() {
-    document.getElementById('loadingSpinner').classList.remove('d-none');
-}
-
-function hideLoading() {
-    document.getElementById('loadingSpinner').classList.add('d-none');
-}
-
-// Enhanced search with multiple criteria
 function searchUsers() {
     const searchTerm = document.getElementById('searchInput').value.toLowerCase();
     const statusFilter = document.getElementById('statusFilter').value;
@@ -467,427 +294,157 @@ function searchUsers() {
     let visibleCount = 0;
 
     rows.forEach(row => {
-        const referral = row.getAttribute('data-referral') || '';
-        const username = row.getAttribute('data-username') || '';
-        const email = row.getAttribute('data-email') || '';
-        const phone = row.getAttribute('data-phone') || '';
-        const status = row.getAttribute('data-status') || '';
+        const referral = row.getAttribute('data-referral');
+        const status = row.getAttribute('data-status');
 
-        // Check if row matches search term (multiple fields)
-        const matchesSearch = searchTerm === '' || 
-            referral.includes(searchTerm) ||
-            username.includes(searchTerm) ||
-            email.includes(searchTerm) ||
-            phone.includes(searchTerm);
+        // Check if row matches search term (ONLY referral codes now)
+        const matchesSearch = searchTerm === '' || referral.includes(searchTerm);
 
         // Check if row matches status filter
         const matchesStatus = statusFilter === '' || 
+            (statusFilter === 'verified' && status.includes('verified')) ||
+            (statusFilter === 'unverified' && status.includes('unverified')) ||
             (statusFilter === 'active' && status.includes('active')) ||
             (statusFilter === 'inactive' && status.includes('inactive')) ||
-            (statusFilter === 'admin' && status.includes('admin')) ||
-            (statusFilter === 'verified' && status.includes('verified')) ||
-            (statusFilter === 'unverified' && status.includes('unverified'));
+            (statusFilter === 'admin' && status.includes('admin'));
 
         if (matchesSearch && matchesStatus) {
             row.style.display = '';
             visibleCount++;
             
-            // Highlight matching text if search term is not empty
+            // Highlight the matching referral code if search term is not empty
             if (searchTerm !== '') {
-                highlightMatchingText(row, searchTerm);
+                const referralElement = row.querySelector('.referral-code');
+                const originalCode = referralElement.textContent;
+                const lowerOriginal = originalCode.toLowerCase();
+                const lowerSearch = searchTerm.toLowerCase();
+                
+                if (lowerOriginal.includes(lowerSearch)) {
+                    const index = lowerOriginal.indexOf(lowerSearch);
+                    const highlightedCode = 
+                        originalCode.substring(0, index) +
+                        '<mark>' + originalCode.substring(index, index + searchTerm.length) + '</mark>' +
+                        originalCode.substring(index + searchTerm.length);
+                    referralElement.innerHTML = highlightedCode;
+                }
             }
         } else {
             row.style.display = 'none';
-            removeHighlighting(row);
-        }
-    });
-
-    // Update counts and pagination
-    updateUserCounts(visibleCount);
-    updatePagination(visibleCount);
-    
-    // Show/hide no results message
-    toggleNoResultsMessage(visibleCount);
-}
-
-function highlightMatchingText(row, searchTerm) {
-    const elementsToHighlight = [
-        row.querySelector('.username'),
-        row.querySelector('.user-email'),
-        row.querySelector('.user-phone'),
-        row.querySelector('.referral-code')
-    ];
-    
-    elementsToHighlight.forEach(element => {
-        if (element) {
-            const originalText = element.textContent;
-            const lowerOriginal = originalText.toLowerCase();
-            const lowerSearch = searchTerm.toLowerCase();
-            
-            if (lowerOriginal.includes(lowerSearch)) {
-                const index = lowerOriginal.indexOf(lowerSearch);
-                const highlightedText = 
-                    originalText.substring(0, index) +
-                    '<mark class="bg-warning bg-opacity-25 px-1 rounded">' + 
-                    originalText.substring(index, index + searchTerm.length) + 
-                    '</mark>' +
-                    originalText.substring(index + searchTerm.length);
-                element.innerHTML = highlightedText;
+            // Reset highlighting for hidden rows
+            const referralElement = row.querySelector('.referral-code');
+            if (referralElement) {
+                referralElement.innerHTML = referralElement.textContent;
             }
         }
     });
+
+    // Update user count
+    document.getElementById('userCount').textContent = visibleCount;
+
+    // Show/hide no results message
+    const noResults = document.getElementById('noResults');
+    const table = document.querySelector('.table-responsive');
+    
+    if (visibleCount === 0 && rows.length > 0) {
+        noResults.style.display = 'block';
+        table.style.display = 'none';
+    } else {
+        noResults.style.display = 'none';
+        table.style.display = 'block';
+    }
 }
 
-function removeHighlighting(row) {
-    const elements = row.querySelectorAll('mark');
-    elements.forEach(element => {
-        const parent = element.parentNode;
-        parent.replaceChild(document.createTextNode(element.textContent), element);
-        parent.normalize();
-    });
+function filterUsers() {
+    searchUsers(); // Reuse the search function for filtering
 }
 
 function clearSearch() {
     document.getElementById('searchInput').value = '';
-    searchUsers();
-}
-
-function clearAllFilters() {
-    clearSearch();
     document.getElementById('statusFilter').value = '';
-    searchUsers();
-}
-
-function filterUsers() {
-    searchUsers();
-}
-
-// Bulk Actions Functions
-function toggleSelectAll(checkbox) {
-    const checkboxes = document.querySelectorAll('.user-checkbox');
-    checkboxes.forEach(cb => {
-        if (!cb.disabled) {
-            cb.checked = checkbox.checked;
-        }
+    
+    // Remove all highlighting
+    const referralElements = document.querySelectorAll('.referral-code');
+    referralElements.forEach(element => {
+        element.innerHTML = element.textContent;
     });
-    updateBulkActions();
+    
+    searchUsers();
 }
 
-function getSelectedUserIds() {
-    const checkboxes = document.querySelectorAll('.user-checkbox:checked');
-    return Array.from(checkboxes).map(cb => cb.value);
+function exportUsers() {
+    // Simple CSV export functionality
+    const rows = document.querySelectorAll('#usersTableBody .user-row:not([style*="display: none"])');
+    let csv = 'Username,Email,Phone,Referral Code,Status,Rank,Balance,Referrals,Joined Date\n';
+    
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        const username = cells[0].querySelector('strong').textContent.trim();
+        const email = cells[1].querySelector('small').textContent.trim();
+        const phone = cells[1].querySelectorAll('small')[1].textContent.trim();
+        const referralCode = cells[0].querySelector('.referral-code').textContent.trim();
+        const status = cells[3].querySelectorAll('.badge')[0].textContent.trim();
+        const rank = cells[3].querySelectorAll('small')[0].textContent.trim();
+        const balance = cells[2].querySelector('.fw-bold').textContent.replace('Ksh ', '').trim();
+        const referrals = cells[2].querySelector('.badge').textContent.replace(' referrals', '').trim();
+        const joinedDate = cells[4].querySelector('small').textContent.trim();
+        
+        csv += `"${username}","${email}","${phone}","${referralCode}","${status}","${rank}","${balance}","${referrals}","${joinedDate}"\n`;
+    });
+    
+    // Create and download CSV file
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.setAttribute('hidden', '');
+    a.setAttribute('href', url);
+    a.setAttribute('download', 'users_export.csv');
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    
+    showNotification('success', 'Users exported successfully!');
 }
 
-function updateBulkActions() {
-    const selectedCount = getSelectedUserIds().length;
-    // You can add bulk action buttons here if needed
-}
-
-// User Management Functions
 function toggleUserStatus(userId) {
     const action = confirm('Are you sure you want to change this user\'s status?');
     if (action) {
-        showLoading();
-        adminRequest(`toggle-user-status/${userId}`, {
-            method: 'POST'
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
+        fetch(`/admin/toggle-user-status/${userId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
             }
-            return response.json();
         })
+        .then(response => response.json())
         .then(data => {
-            hideLoading();
             if (data.success) {
-                showNotification('success', data.message || 'User status updated successfully');
-                // Refresh the page after a short delay to show updated data
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
+                showNotification('success', data.message);
+                setTimeout(() => location.reload(), 1500);
             } else {
-                showNotification('error', data.message || 'Error updating user status');
+                showNotification('error', 'Error: ' + data.message);
             }
         })
         .catch(error => {
-            hideLoading();
             console.error('Error:', error);
-            showNotification('error', 'An error occurred while updating user status: ' + error.message);
+            showNotification('error', 'An error occurred while updating user status');
         });
     }
 }
 
 function verifyUser(userId) {
-    currentUserId = userId;
-    const modal = new bootstrap.Modal(document.getElementById('verifyUserModal'));
-    modal.show();
-}
-
-// Setup verify button event listener
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('confirmVerifyBtn').addEventListener('click', function() {
-        if (currentUserId) {
-            showLoading();
-            // For now, just show a message since the backend route doesn't exist
-            hideLoading();
-            showNotification('warning', 'User verification feature is not yet implemented in the backend');
-            bootstrap.Modal.getInstance(document.getElementById('verifyUserModal')).hide();
-            /*
-            // Uncomment when backend route is implemented
-            adminRequest(`verify-user/${currentUserId}`, {
-                method: 'POST'
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                hideLoading();
-                if (data.success) {
-                    showNotification('success', data.message || 'User verified successfully');
-                    bootstrap.Modal.getInstance(document.getElementById('verifyUserModal')).hide();
-                    setTimeout(() => location.reload(), 1500);
-                } else {
-                    showNotification('error', data.message || 'Error verifying user');
-                }
-            })
-            .catch(error => {
-                hideLoading();
-                console.error('Error:', error);
-                showNotification('error', 'An error occurred while verifying user');
-            });
-            */
-        }
-    });
-});
-
-function showUserDetails(userId) {
-    showLoading();
-    // For now, show basic user info from the table since the backend route doesn't exist
-    const row = document.querySelector(`.user-row [data-user-id="${userId}"]`)?.closest('.user-row');
-    if (row) {
-        const username = row.querySelector('.username').textContent;
-        const email = row.querySelector('.user-email').textContent;
-        const phone = row.querySelector('.user-phone').textContent;
-        const balance = row.querySelector('.user-balance').textContent;
-        const referrals = row.querySelector('.user-referrals').textContent;
-        const joinDate = row.querySelector('.join-date').textContent;
-        
-        const modalContent = document.getElementById('userDetailContent');
-        modalContent.innerHTML = `
-            <div class="p-4">
-                <div class="alert alert-info border-0">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Detailed user view is not yet implemented. Showing basic information.
-                </div>
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6>Basic Information</h6>
-                        <p><strong>Username:</strong> ${username}</p>
-                        <p><strong>Email:</strong> ${email}</p>
-                        <p><strong>Phone:</strong> ${phone}</p>
-                    </div>
-                    <div class="col-md-6">
-                        <h6>Account Information</h6>
-                        <p><strong>Balance:</strong> ${balance}</p>
-                        <p><strong>Referrals:</strong> ${referrals}</p>
-                        <p><strong>Joined:</strong> ${joinDate}</p>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer bg-light border-0">
-                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Close</button>
-            </div>
-        `;
-        hideLoading();
-        const modal = new bootstrap.Modal(document.getElementById('userDetailModal'));
-        modal.show();
-    } else {
-        hideLoading();
-        showNotification('error', 'Could not find user details');
-    }
-    
-    /*
-    // Uncomment when backend route is implemented
-    adminRequest(`user-details/${userId}`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(user => {
-            hideLoading();
-            // ... existing user details code ...
-        })
-        .catch(error => {
-            hideLoading();
-            console.error('Error:', error);
-            showNotification('error', 'Failed to load user details: ' + error.message);
-        });
-    */
-}
-
-// Export Functionality
-function exportUsers() {
-    const visibleRows = document.querySelectorAll('#usersTableBody .user-row:not([style*="display: none"])');
-    
-    if (visibleRows.length === 0) {
-        showNotification('warning', 'No users to export');
-        return;
-    }
-    
-    let csv = 'Username,Email,Phone,Name,Referral Code,Status,Verified,Rank,Balance,Total Commission,Referrals,Joined Date,Referred By,User Rank\n';
-    
-    visibleRows.forEach(row => {
-        const username = (row.querySelector('.username')?.textContent || '').trim().replace(/"/g, '""');
-        const email = (row.querySelector('.user-email')?.textContent || '').trim().replace(/"/g, '""');
-        const phone = (row.querySelector('.user-phone')?.textContent || '').trim().replace(/"/g, '""');
-        const nameElement = row.querySelector('.text-muted.small'); // Assuming name is in this format
-        const name = (nameElement?.textContent?.replace('Name: ', '') || '').trim().replace(/"/g, '""');
-        const referralCode = (row.querySelector('.referral-code')?.textContent || '').trim().replace(/"/g, '""');
-        
-        // Extract status information
-        const statusBadge = row.querySelector('.badge.bg-success, .badge.bg-danger');
-        const status = statusBadge ? statusBadge.textContent.trim() : 'Unknown';
-        const isVerified = row.querySelector('.badge.bg-primary') ? 'Yes' : 'No';
-        const rank = (row.querySelector('.user-rank')?.textContent || '').trim();
-        const balance = (row.querySelector('.user-balance')?.textContent?.replace('Ksh ', '') || '0').trim();
-        const referrals = (row.querySelector('.user-referrals')?.textContent?.replace(' referrals', '') || '0').trim();
-        const joinedDate = (row.querySelector('.join-date')?.textContent || '').trim();
-        const referredBy = row.querySelector('.text-info') ? 
-            row.querySelector('.text-info').textContent.replace('Referred by: ', '').trim().replace(/"/g, '""') : '';
-        const userRank = rank;
-        
-        // Extract commission if available
-        const commissionElement = row.querySelector('.text-warning');
-        const totalCommission = commissionElement ? 
-            commissionElement.textContent.replace('Commission: Ksh ', '').trim() : '0';
-        
-        csv += `"${username}","${email}","${phone}","${name}","${referralCode}","${status}","${isVerified}","${rank}","${balance}","${totalCommission}","${referrals}","${joinedDate}","${referredBy}","${userRank}"\n`;
-    });
-    
-    // Create and download CSV file
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.setAttribute('hidden', '');
-    a.setAttribute('href', url);
-    a.setAttribute('download', `users_export_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-    
-    showNotification('success', `Exported ${visibleRows.length} users successfully!`);
-}
-
-// Pagination Functions
-function updatePagination(totalUsers) {
-    const totalPages = Math.ceil(totalUsers / usersPerPage);
-    const paginationContainer = document.getElementById('paginationControls');
-    
-    if (totalPages <= 1) {
-        paginationContainer.innerHTML = '';
-        return;
-    }
-    
-    let paginationHTML = '';
-    
-    // Previous button
-    paginationHTML += `
-        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
-            <a class="page-link border-0 rounded-start-pill" href="#" onclick="changePage(${currentPage - 1})">
-                <i class="fas fa-chevron-left"></i>
-            </a>
-        </li>
-    `;
-    
-    // Page numbers
-    for (let i = 1; i <= totalPages; i++) {
-        if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
-            paginationHTML += `
-                <li class="page-item ${i === currentPage ? 'active' : ''}">
-                    <a class="page-link border-0 ${i === currentPage ? 'bg-primary' : ''}" href="#" onclick="changePage(${i})">${i}</a>
-                </li>
-            `;
-        } else if (i === currentPage - 2 || i === currentPage + 2) {
-            paginationHTML += `<li class="page-item disabled"><span class="page-link border-0">...</span></li>`;
-        }
-    }
-    
-    // Next button
-    paginationHTML += `
-        <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
-            <a class="page-link border-0 rounded-end-pill" href="#" onclick="changePage(${currentPage + 1})">
-                <i class="fas fa-chevron-right"></i>
-            </a>
-        </li>
-    `;
-    
-    paginationContainer.innerHTML = paginationHTML;
-}
-
-function changePage(page) {
-    currentPage = page;
-    document.querySelector('.table-responsive').scrollTop = 0;
-    updateDisplayedUsers();
-}
-
-function updateDisplayedUsers() {
-    const rows = document.querySelectorAll('#usersTableBody .user-row:not([style*="display: none"])');
-    const startIndex = (currentPage - 1) * usersPerPage;
-    const endIndex = startIndex + usersPerPage;
-    
-    rows.forEach((row, index) => {
-        if (index >= startIndex && index < endIndex) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
-    });
-    
-    updateUserCounts(rows.length);
-}
-
-function updateUserCounts(visibleCount) {
-    const startIndex = (currentPage - 1) * usersPerPage + 1;
-    const endIndex = Math.min(startIndex + usersPerPage - 1, visibleCount);
-    document.getElementById('showingCount').textContent = 
-        visibleCount > 0 ? `${startIndex}-${endIndex}` : '0';
-    document.getElementById('totalCount').textContent = visibleCount;
-}
-
-function toggleNoResultsMessage(visibleCount) {
-    const noResults = document.getElementById('noResults');
-    const table = document.querySelector('.table-responsive');
-    const pagination = document.querySelector('.d-flex.justify-content-between');
-    
-    if (visibleCount === 0 && document.querySelectorAll('.user-row').length > 0) {
-        noResults.style.display = 'block';
-        table.style.display = 'none';
-        if (pagination) pagination.style.display = 'none';
-    } else {
-        noResults.style.display = 'none';
-        table.style.display = 'block';
-        if (pagination) pagination.style.display = 'flex';
+    const action = confirm('Are you sure you want to verify this user? This will activate their account.');
+    if (action) {
+        // You'll need to implement this endpoint
+        showNotification('info', 'User verification feature coming soon!');
     }
 }
 
-// Utility Functions
 function showNotification(type, message) {
-    // Remove existing notifications
-    const existingAlerts = document.querySelectorAll('.alert.position-fixed');
-    existingAlerts.forEach(alert => alert.remove());
-    
     // Create notification element
     const notification = document.createElement('div');
-    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed border-0 shadow`;
+    notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
     notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
     notification.innerHTML = `
-        <i class="fas fa-${getNotificationIcon(type)} me-2"></i>
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
@@ -902,17 +459,7 @@ function showNotification(type, message) {
     }, 5000);
 }
 
-function getNotificationIcon(type) {
-    const icons = {
-        'success': 'check-circle',
-        'error': 'exclamation-triangle',
-        'warning': 'exclamation-circle',
-        'info': 'info-circle'
-    };
-    return icons[type] || 'info-circle';
-}
-
-// Initialize on page load
+// Initialize search on page load
 document.addEventListener('DOMContentLoaded', function() {
     // Add event listener for Enter key in search
     document.getElementById('searchInput').addEventListener('keypress', function(e) {
@@ -920,154 +467,69 @@ document.addEventListener('DOMContentLoaded', function() {
             searchUsers();
         }
     });
-    
-    // Initialize pagination and display
-    const totalUsers = {{ users|length }};
-    updatePagination(totalUsers);
-    updateDisplayedUsers();
-    updateUserCounts(totalUsers);
-    
-    // Initial search to set up highlighting and counts
-    searchUsers();
-    
-    // Debug: Log users data
-    console.log('Total users loaded:', totalUsers);
 });
+
+// Auto-refresh every 30 seconds
+setTimeout(refreshPage, 30000);
 </script>
 
 <style>
-/* Enhanced Elegant Styling */
-.card {
-    border-radius: 12px;
-}
-
-.btn {
-    border-radius: 8px;
-}
-
-.badge {
-    border-radius: 6px;
-    font-weight: 500;
-}
-
-.table th {
-    font-weight: 600;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+.btn-group-vertical .btn {
+    margin-bottom: 2px;
 }
 
 .table td {
-    padding: 1rem 0.75rem;
-    border-bottom: 1px solid #f0f0f0;
+    vertical-align: middle;
 }
 
-.table tbody tr:last-child td {
-    border-bottom: none;
+.badge {
+    font-size: 0.75em;
+}
+
+.referral-code {
+    font-family: monospace;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+mark {
+    background-color: #fff3cd;
+    padding: 1px 3px;
+    border-radius: 3px;
+    font-weight: bold;
+}
+
+#searchInput {
+    border-right: none;
+}
+
+#searchInput:focus {
+    border-color: #ced4da;
+    box-shadow: none;
+}
+
+.input-group .btn {
+    border-left: none;
+}
+
+/* Scrolling table styles */
+.table-responsive {
+    border: 1px solid #e3e6f0;
+}
+
+.table thead th {
+    border-bottom: 2px solid #e3e6f0;
+    font-weight: 600;
 }
 
 .table tbody tr:hover {
-    background-color: #f8fafc;
-    transform: translateY(-1px);
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-}
-
-.bg-gradient-primary {
-    background: linear-gradient(135deg, #4f46e5 0%, #7c73e6 100%) !important;
-}
-
-/* Custom scrollbar for table */
-.table-responsive::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-}
-
-.table-responsive::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 10px;
-}
-
-.table-responsive::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 10px;
-}
-
-.table-responsive::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
-}
-
-/* Loading animation */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.user-row {
-    animation: fadeIn 0.3s ease-out;
-}
-
-/* Modal enhancements */
-.modal-content {
-    border-radius: 16px;
-}
-
-.modal-header {
-    border-radius: 16px 16px 0 0;
-}
-
-/* Input group enhancements */
-.input-group:focus-within {
-    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
-    border-radius: 8px;
-}
-
-/* Pagination styling */
-.page-link {
-    border: none !important;
-    margin: 0 2px;
-    border-radius: 8px !important;
-}
-
-.page-link:hover {
     background-color: #f8f9fa;
 }
 
-.page-item.active .page-link {
-    background-color: #4f46e5;
-    border-color: #4f46e5;
-}
-
-/* Badge enhancements */
-.badge {
-    font-size: 0.75em;
-    padding: 0.35em 0.65em;
-}
-
-/* Table header sticky enhancement */
-.table thead th {
+/* Ensure sticky header works properly */
+.sticky-top {
+    position: -webkit-sticky;
     position: sticky;
-    top: 0;
-    background: #f8f9fa;
-    z-index: 10;
-    border-bottom: 2px solid #e9ecef;
-}
-
-/* Custom checkbox styling */
-.form-check-input:checked {
-    background-color: #4f46e5;
-    border-color: #4f46e5;
-}
-
-/* Smooth transitions */
-.card, .btn, .badge, .table tbody tr {
-    transition: all 0.3s ease;
-}
-
-/* Bronze rank color */
-.bg-brown {
-    background-color: #cd7f32 !important;
-    color: white !important;
 }
 </style>
 {% endblock %}
