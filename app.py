@@ -5989,6 +5989,24 @@ def reject_withdrawal(transaction_id):
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
+@app.route('/admin/user-details/<user_id>')
+@login_required
+@admin_required
+def admin_user_details(user_id):
+    """Get detailed user information for admin"""
+    try:
+        user = SupabaseDB.get_user_by_id(user_id)
+        if user:
+            return jsonify({
+                'success': True,
+                'user': user.to_dict()  # Your User class already has this method
+            })
+        else:
+            return jsonify({'success': False, 'message': 'User not found'})
+    except Exception as e:
+        logger.error(f"Error getting user details: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)})
+
 @app.route('/admin/users')
 @login_required
 @admin_required
