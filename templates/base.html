@@ -5,6 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Referral Ninja - Professional Referral Platform{% endblock %}</title>
 
+    <!-- ===== CRITICAL SEO META TAGS ===== -->
+    <meta name="description" content="Referral Ninja - Kenya's premier platform for earning money through referrals and discovering job opportunities. Join our professional network for student referrals and job placements.">
+    <meta name="keywords" content="referral ninja, earn money Kenya, referrals, jobs Kenya, student jobs, mobile money, M-Pesa, professional network, referral program, Nairobi jobs">
+    <meta name="author" content="Referral Ninja">
+    <meta name="robots" content="index, follow, max-image-preview:large">
+    <meta name="googlebot" content="index, follow">
+    <meta name="bingbot" content="index, follow">
+
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="Referral Ninja - Professional Referral Platform">
+    <meta property="og:description" content="Join Referral Ninja to earn money by referring friends and discover professional job opportunities in Kenya.">
+    <meta property="og:url" content="https://www.referralninja.co.ke">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://www.referralninja.co.ke/static/images/logo.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Referral Ninja Logo - Professional Referral Platform">
+    <meta property="og:site_name" content="Referral Ninja">
+    <meta property="og:locale" content="en_KE">
+
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Referral Ninja - Professional Referral Platform">
+    <meta name="twitter:description" content="Join Referral Ninja to earn money by referring friends and discover professional job opportunities in Kenya.">
+    <meta name="twitter:image" content="https://www.referralninja.co.ke/static/images/logo.png">
+    <meta name="twitter:image:alt" content="Referral Ninja Logo">
+    <meta name="twitter:site" content="@referralninja">
+    <meta name="twitter:creator" content="@referralninja">
+
     <!-- Comprehensive Favicon Setup -->
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon-96x96.png') }}" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}" />
@@ -13,7 +42,7 @@
     <meta name="apple-mobile-web-app-title" content="Referral Ninja" />
     <link rel="manifest" href="{{ url_for('static', filename='images/site.webmanifest') }}" />
     
-    <!-- Additional Favicon Sizes for Better Compatibility -->
+    <!-- Additional Favicon Sizes -->
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='images/favicon-32x32.png') }}">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='images/favicon-16x16.png') }}">
     
@@ -22,51 +51,92 @@
     <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}" type="image/x-icon">
 
     <!-- Organization Logo for SEO -->
-    <link rel="logo" type="image/png" href="{{ url_for('static', filename='images/logo-120x120.png') }}">
-    <meta itemprop="logo" content="{{ url_for('static', filename='images/logo-120x120.png') }}">
-    <meta property="og:logo" content="{{ url_for('static', filename='images/logo-120x120.png') }}">
+    <link rel="logo" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+    <meta itemprop="logo" content="{{ url_for('static', filename='images/logo.png') }}">
+    <meta property="og:logo" content="{{ url_for('static', filename='images/logo.png') }}">
 
-    <!-- Enhanced Structured Data -->
+    <!-- Enhanced Structured Data for Search Engines -->
     <script type="application/ld+json">
     {
         "@context": "https://schema.org",
         "@type": "Organization",
         "name": "Referral Ninja",
         "url": "https://www.referralninja.co.ke",
-        "logo": "https://www.referralninja.co.ke/static/images/logo-120x120.png",
+        "logo": "https://www.referralninja.co.ke/static/images/logo.png",
         "description": "Referral Ninja - Kenya's premier platform for earning money through referrals and discovering job opportunities. Join our professional network for student referrals and job placements.",
+        "foundingDate": "2024",
         "address": {
             "@type": "PostalAddress",
             "addressCountry": "KE",
-            "addressRegion": "Nairobi"
+            "addressRegion": "Nairobi",
+            "addressLocality": "Nairobi"
         },
         "contactPoint": {
             "@type": "ContactPoint",
             "telephone": "+254799326074",
             "contactType": "customer service",
             "areaServed": "KE",
-            "availableLanguage": "English"
+            "availableLanguage": ["English", "Swahili"]
         },
         "sameAs": [
             "https://chat.whatsapp.com/I1iZi0WjYjF0EDV0Byq7IW"
-        ]
+        ],
+        "keywords": "referral program, earn money, jobs Kenya, student referrals"
     }
     </script>
 
-    <!-- SEO Meta Tags -->
-    <meta name="description" content="Referral Ninja - Kenya's premier platform for earning money through referrals and discovering job opportunities. Join our professional network for student referrals and job placements.">
-    <meta name="keywords" content="referral, earn money, jobs Kenya, student jobs, referrals, mobile money, M-Pesa, professional network">
-    <meta name="author" content="Referral Ninja">
-    <meta property="og:title" content="Referral Ninja - Professional Referral Platform">
-    <meta property="og:description" content="Join Referral Ninja to earn money by referring friends and discover professional job opportunities in Kenya.">
-    <meta property="og:url" content="https://www.referralninja.co.ke">
-    <meta property="og:type" content="website">
-    <meta property="og:image" content="{{ url_for('static', filename='images/og-image.png') }}">
-    <meta property="og:site_name" content="Referral Ninja">
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Referral Ninja - Professional Referral Platform">
-    <meta name="twitter:description" content="Join Referral Ninja to earn money by referring friends and discover professional job opportunities in Kenya.">
-    <meta name="twitter:image" content="{{ url_for('static', filename='images/logo-120x120.png') }}">
+    <!-- Website Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Referral Ninja",
+        "url": "https://www.referralninja.co.ke",
+        "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://www.referralninja.co.ke/search?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+        },
+        "publisher": {
+            "@type": "Organization",
+            "name": "Referral Ninja",
+            "logo": "https://www.referralninja.co.ke/static/images/logo.png"
+        }
+    }
+    </script>
+
+    <!-- Local Business Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": "Referral Ninja",
+        "description": "Professional referral platform for earning money and finding job opportunities in Kenya",
+        "url": "https://www.referralninja.co.ke",
+        "telephone": "+254799326074",
+        "address": {
+            "@type": "PostalAddress",
+            "addressCountry": "KE",
+            "addressRegion": "Nairobi"
+        },
+        "geo": {
+            "@type": "GeoCoordinates",
+            "latitude": "-1.286389",
+            "longitude": "36.817223"
+        },
+        "openingHours": "Mo-Su 00:00-23:59",
+        "priceRange": "Free to join",
+        "image": "https://www.referralninja.co.ke/static/images/logo.png"
+    }
+    </script>
+
+    <!-- Additional SEO Meta Tags -->
+    <meta name="theme-color" content="#667eea">
+    <meta name="msapplication-TileColor" content="#667eea">
+    <meta name="msapplication-config" content="{{ url_for('static', filename='images/browserconfig.xml') }}">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://www.referralninja.co.ke">
 
     <!-- PWA Manifest -->
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
