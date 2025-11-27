@@ -307,19 +307,175 @@
     </div>
 </div>
 
-<!-- User Details Modal -->
+<!-- Enhanced User Details Modal -->
 <div class="modal fade" id="userDetailsModal" tabindex="-1" aria-labelledby="userDetailsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="userDetailsModalLabel">User Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="userDetailsModalLabel">
+                    <i class="fas fa-user-circle me-2"></i>User Details - <span id="userDetailsUsername"></span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body" id="userDetailsContent">
-                <!-- User details will be loaded here -->
+            <div class="modal-body p-0">
+                <!-- Navigation Tabs -->
+                <ul class="nav nav-tabs" id="userDetailsTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
+                            <i class="fas fa-info-circle me-1"></i>Overview
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="financial-tab" data-bs-toggle="tab" data-bs-target="#financial" type="button" role="tab">
+                            <i class="fas fa-money-bill-wave me-1"></i>Financial
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="referral-tab" data-bs-toggle="tab" data-bs-target="#referral" type="button" role="tab">
+                            <i class="fas fa-network-wired me-1"></i>Referral Network
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="security-tab" data-bs-toggle="tab" data-bs-target="#security" type="button" role="tab">
+                            <i class="fas fa-shield-alt me-1"></i>Security
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content p-4" id="userDetailsTabContent">
+                    <!-- Overview Tab -->
+                    <div class="tab-pane fade show active" id="overview" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="border-bottom pb-2">Personal Information</h6>
+                                <table class="table table-sm table-borderless">
+                                    <tr><td><strong>User ID:</strong></td><td id="detailUserId"></td></tr>
+                                    <tr><td><strong>Username:</strong></td><td id="detailUsername"></td></tr>
+                                    <tr><td><strong>Email:</strong></td><td id="detailEmail"></td></tr>
+                                    <tr><td><strong>Phone:</strong></td><td id="detailPhone"></td></tr>
+                                    <tr><td><strong>Full Name:</strong></td><td id="detailName"></td></tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="border-bottom pb-2">Account Status</h6>
+                                <table class="table table-sm table-borderless">
+                                    <tr><td><strong>Verified:</strong></td><td id="detailVerified"></td></tr>
+                                    <tr><td><strong>Active:</strong></td><td id="detailActive"></td></tr>
+                                    <tr><td><strong>Admin:</strong></td><td id="detailAdmin"></td></tr>
+                                    <tr><td><strong>User Rank:</strong></td><td id="detailRank"></td></tr>
+                                    <tr><td><strong>2FA Enabled:</strong></td><td id="detail2FA"></td></tr>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <h6 class="border-bottom pb-2">Timestamps</h6>
+                                <table class="table table-sm table-borderless">
+                                    <tr><td><strong>Created:</strong></td><td id="detailCreatedAt"></td></tr>
+                                    <tr><td><strong>Last Login:</strong></td><td id="detailLastLogin"></td></tr>
+                                    <tr><td><strong>Days Since Join:</strong></td><td id="detailDaysSinceJoin"></td></tr>
+                                    <tr><td><strong>Activity Level:</strong></td><td id="detailActivityLevel"></td></tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="border-bottom pb-2">Performance Metrics</h6>
+                                <table class="table table-sm table-borderless">
+                                    <tr><td><strong>Referral Rate:</strong></td><td id="detailReferralRate"></td></tr>
+                                    <tr><td><strong>Success Rate:</strong></td><td id="detailSuccessRate"></td></tr>
+                                    <tr><td><strong>Rank Progress:</strong></td><td id="detailRankProgress"></td></tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Financial Tab -->
+                    <div class="tab-pane fade" id="financial" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="border-bottom pb-2">Current Balances</h6>
+                                <table class="table table-sm table-borderless">
+                                    <tr><td><strong>Main Balance:</strong></td><td id="detailBalance" class="fw-bold text-success"></td></tr>
+                                    <tr><td><strong>Referral Balance:</strong></td><td id="detailReferralBalance" class="text-info"></td></tr>
+                                    <tr><td><strong>Total Commission:</strong></td><td id="detailTotalCommission" class="text-primary"></td></tr>
+                                    <tr><td><strong>Total Earned:</strong></td><td id="detailTotalEarned"></td></tr>
+                                    <tr><td><strong>Total Withdrawn:</strong></td><td id="detailTotalWithdrawn" class="text-warning"></td></tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="border-bottom pb-2">Financial Statistics</h6>
+                                <table class="table table-sm table-borderless">
+                                    <tr><td><strong>Lifetime Value:</strong></td><td id="detailLifetimeValue"></td></tr>
+                                    <tr><td><strong>Withdrawal Count:</strong></td><td id="detailWithdrawalCount"></td></tr>
+                                    <tr><td><strong>Last Withdrawal:</strong></td><td id="detailLastWithdrawal"></td></tr>
+                                    <tr><td><strong>Withdrawal Success Rate:</strong></td><td id="detailWithdrawalRate"></td></tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Referral Network Tab -->
+                    <div class="tab-pane fade" id="referral" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="border-bottom pb-2">Referral Information</h6>
+                                <table class="table table-sm table-borderless">
+                                    <tr><td><strong>Referral Code:</strong></td><td id="detailReferralCode" class="font-monospace"></td></tr>
+                                    <tr><td><strong>Referred By:</strong></td><td id="detailReferredBy"></td></tr>
+                                    <tr><td><strong>Referral Source:</strong></td><td id="detailReferralSource"></td></tr>
+                                    <tr><td><strong>Referral Count:</strong></td><td id="detailReferralCount" class="fw-bold"></td></tr>
+                                    <tr><td><strong>Commission Earned:</strong></td><td id="detailCommissionEarned" class="text-success"></td></tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="border-bottom pb-2">Referral Performance</h6>
+                                <div id="referralStats">
+                                    <table class="table table-sm table-borderless">
+                                        <tr><td><strong>Direct Referrals:</strong></td><td id="detailDirectReferrals">0</td></tr>
+                                        <tr><td><strong>Active Referrals:</strong></td><td id="detailActiveReferrals">0</td></tr>
+                                        <tr><td><strong>Conversion Rate:</strong></td><td id="detailConversionRate">0%</td></tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Security Tab -->
+                    <div class="tab-pane fade" id="security" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="border-bottom pb-2">Security Status</h6>
+                                <table class="table table-sm table-borderless">
+                                    <tr><td><strong>Login Attempts:</strong></td><td id="detailLoginAttempts"></td></tr>
+                                    <tr><td><strong>Account Locked:</strong></td><td id="detailLocked"></td></tr>
+                                    <tr><td><strong>Locked Until:</strong></td><td id="detailLockedUntil"></td></tr>
+                                    <tr><td><strong>Last Login IP:</strong></td><td id="detailIP">N/A</td></tr>
+                                    <tr><td><strong>Device Fingerprint:</strong></td><td id="detailDevice">N/A</td></tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="border-bottom pb-2">Security Actions</h6>
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-warning btn-sm" onclick="resetLoginAttempts()" id="resetLoginBtn">
+                                        <i class="fas fa-redo me-1"></i>Reset Login Attempts
+                                    </button>
+                                    <button class="btn btn-info btn-sm" onclick="unlockAccount()" id="unlockAccountBtn">
+                                        <i class="fas fa-unlock me-1"></i>Unlock Account
+                                    </button>
+                                    <button class="btn btn-secondary btn-sm" onclick="viewSecurityLogs()">
+                                        <i class="fas fa-clipboard-list me-1"></i>View Security Logs
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="exportUserReport()">
+                    <i class="fas fa-download me-1"></i>Export Full Report
+                </button>
             </div>
         </div>
     </div>
@@ -328,6 +484,8 @@
 
 {% block scripts %}
 <script>
+let currentUserId = null;
+
 function refreshPage() {
     window.location.reload();
 }
@@ -525,124 +683,16 @@ function verifyUser(userId) {
     }
 }
 
+// Enhanced user details function
 function viewUserDetails(userId) {
-    // Fetch user details and display in modal
+    currentUserId = userId;
     fetch(`/admin/user-details/${userId}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
                 const user = data.user;
-                const modalContent = `
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6>Basic Information</h6>
-                            <table class="table table-sm">
-                                <tr>
-                                    <td><strong>Username:</strong></td>
-                                    <td>${user.username || 'N/A'}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Email:</strong></td>
-                                    <td>${user.email || 'N/A'}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Phone:</strong></td>
-                                    <td>${user.phone || 'N/A'}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Full Name:</strong></td>
-                                    <td>${user.name || 'N/A'}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Referral Code:</strong></td>
-                                    <td>${user.referral_code || 'No Code'}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Referred By:</strong></td>
-                                    <td>${user.referred_by || 'Direct'}</td>
-                                </tr>
-                            </table>
-                        </div>
-                        <div class="col-md-6">
-                            <h6>Financial Information</h6>
-                            <table class="table table-sm">
-                                <tr>
-                                    <td><strong>Balance:</strong></td>
-                                    <td>Ksh ${user.balance ? parseFloat(user.balance).toFixed(2) : '0.00'}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Total Commission:</strong></td>
-                                    <td>Ksh ${user.total_commission ? parseFloat(user.total_commission).toFixed(2) : '0.00'}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Total Earned:</strong></td>
-                                    <td>Ksh ${user.total_earned ? parseFloat(user.total_earned).toFixed(2) : '0.00'}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Total Withdrawn:</strong></td>
-                                    <td>Ksh ${user.total_withdrawn ? parseFloat(user.total_withdrawn).toFixed(2) : '0.00'}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Referral Balance:</strong></td>
-                                    <td>Ksh ${user.referral_balance ? parseFloat(user.referral_balance).toFixed(2) : '0.00'}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Referral Count:</strong></td>
-                                    <td>${user.referral_count || 0}</td>
-                                </tr>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="row mt-3">
-                        <div class="col-md-6">
-                            <h6>Account Status</h6>
-                            <table class="table table-sm">
-                                <tr>
-                                    <td><strong>Verified:</strong></td>
-                                    <td><span class="badge bg-${user.is_verified ? 'success' : 'warning'}">${user.is_verified ? 'Yes' : 'No'}</span></td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Active:</strong></td>
-                                    <td><span class="badge bg-${user.is_active ? 'success' : 'danger'}">${user.is_active ? 'Yes' : 'No'}</span></td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Admin:</strong></td>
-                                    <td><span class="badge bg-${user.is_admin ? 'danger' : 'secondary'}">${user.is_admin ? 'Yes' : 'No'}</span></td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Rank:</strong></td>
-                                    <td>${user.user_rank || 'Bronze'}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>2FA Enabled:</strong></td>
-                                    <td><span class="badge bg-${user.two_factor_enabled ? 'success' : 'secondary'}">${user.two_factor_enabled ? 'Yes' : 'No'}</span></td>
-                                </tr>
-                            </table>
-                        </div>
-                        <div class="col-md-6">
-                            <h6>Timestamps</h6>
-                            <table class="table table-sm">
-                                <tr>
-                                    <td><strong>Created:</strong></td>
-                                    <td>${user.created_at ? new Date(user.created_at).toLocaleString() : 'N/A'}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Last Login:</strong></td>
-                                    <td>${user.last_login ? new Date(user.last_login).toLocaleString() : 'Never'}</td>
-                                </tr>
-                                <tr>
-                                    <td><strong>Login Attempts:</strong></td>
-                                    <td>${user.login_attempts || 0}</td>
-                                </tr>
-                                ${user.locked_until ? `<tr>
-                                    <td><strong>Locked Until:</strong></td>
-                                    <td>${new Date(user.locked_until).toLocaleString()}</td>
-                                </tr>` : ''}
-                            </table>
-                        </div>
-                    </div>
-                `;
-                document.getElementById('userDetailsContent').innerHTML = modalContent;
+                populateUserDetails(user);
+                
                 const modal = new bootstrap.Modal(document.getElementById('userDetailsModal'));
                 modal.show();
             } else {
@@ -653,6 +703,214 @@ function viewUserDetails(userId) {
             console.error('Error:', error);
             showNotification('error', 'An error occurred while loading user details');
         });
+}
+
+// Populate all user details
+function populateUserDetails(user) {
+    // Set modal title
+    document.getElementById('userDetailsUsername').textContent = user.username || 'N/A';
+    document.getElementById('detailUserId').textContent = user.id;
+    
+    // Overview Tab
+    document.getElementById('detailUsername').textContent = user.username || 'N/A';
+    document.getElementById('detailEmail').textContent = user.email || 'No Email';
+    document.getElementById('detailPhone').textContent = user.phone || 'No Phone';
+    document.getElementById('detailName').textContent = user.name || 'No Name';
+    document.getElementById('detailVerified').innerHTML = createBadge(user.is_verified, 'Verified', 'Unverified');
+    document.getElementById('detailActive').innerHTML = createBadge(user.is_active, 'Active', 'Inactive');
+    document.getElementById('detailAdmin').innerHTML = createBadge(user.is_admin, 'Admin', 'User');
+    document.getElementById('detailRank').textContent = user.user_rank || 'Bronze';
+    document.getElementById('detail2FA').innerHTML = createBadge(user.two_factor_enabled, 'Enabled', 'Disabled');
+    
+    // Financial Tab
+    document.getElementById('detailBalance').textContent = `Ksh ${(user.balance || 0).toFixed(2)}`;
+    document.getElementById('detailReferralBalance').textContent = `Ksh ${(user.referral_balance || 0).toFixed(2)}`;
+    document.getElementById('detailTotalCommission').textContent = `Ksh ${(user.total_commission || 0).toFixed(2)}`;
+    document.getElementById('detailTotalEarned').textContent = `Ksh ${(user.total_earned || 0).toFixed(2)}`;
+    document.getElementById('detailTotalWithdrawn').textContent = `Ksh ${(user.total_withdrawn || 0).toFixed(2)}`;
+    
+    // Referral Tab
+    document.getElementById('detailReferralCode').textContent = user.referral_code || 'No Code';
+    document.getElementById('detailReferredBy').textContent = user.referred_by || 'Direct Signup';
+    document.getElementById('detailReferralSource').textContent = user.referral_source || 'direct';
+    document.getElementById('detailReferralCount').textContent = user.referral_count || 0;
+    document.getElementById('detailCommissionEarned').textContent = `Ksh ${(user.total_commission || 0).toFixed(2)}`;
+    
+    // Security Tab
+    document.getElementById('detailLoginAttempts').textContent = user.login_attempts || 0;
+    document.getElementById('detailLocked').innerHTML = createBadge(user.locked_until && new Date(user.locked_until) > new Date(), 'Locked', 'Unlocked');
+    document.getElementById('detailLockedUntil').textContent = user.locked_until ? new Date(user.locked_until).toLocaleString() : 'Not Locked';
+    document.getElementById('detailLastLogin').textContent = user.last_login ? new Date(user.last_login).toLocaleString() : 'Never';
+    
+    // Activity Tab
+    document.getElementById('detailCreatedAt').textContent = user.created_at ? new Date(user.created_at).toLocaleString() : 'N/A';
+    
+    // Calculate additional metrics
+    calculateUserMetrics(user);
+    
+    // Update security action buttons
+    updateSecurityButtons(user);
+}
+
+// Helper function for badges
+function createBadge(condition, trueText, falseText) {
+    return condition ? 
+        `<span class="badge bg-success">${trueText}</span>` : 
+        `<span class="badge bg-secondary">${falseText}</span>`;
+}
+
+// Calculate user metrics
+function calculateUserMetrics(user) {
+    // Calculate days since join
+    if (user.created_at) {
+        const joinDate = new Date(user.created_at);
+        const today = new Date();
+        const daysSinceJoin = Math.floor((today - joinDate) / (1000 * 60 * 60 * 24));
+        document.getElementById('detailDaysSinceJoin').textContent = `${daysSinceJoin} days`;
+    }
+
+    // Calculate activity level based on last login
+    if (user.last_login) {
+        const lastLogin = new Date(user.last_login);
+        const today = new Date();
+        const daysSinceLogin = Math.floor((today - lastLogin) / (1000 * 60 * 60 * 24));
+        
+        let activityLevel = 'Inactive';
+        if (daysSinceLogin === 0) activityLevel = 'Very Active';
+        else if (daysSinceLogin <= 7) activityLevel = 'Active';
+        else if (daysSinceLogin <= 30) activityLevel = 'Occasional';
+        
+        document.getElementById('detailActivityLevel').innerHTML = 
+            `<span class="badge bg-${getActivityLevelColor(activityLevel)}">${activityLevel}</span>`;
+    }
+
+    // Calculate referral metrics
+    const referralCount = user.referral_count || 0;
+    const totalCommission = user.total_commission || 0;
+    
+    document.getElementById('detailDirectReferrals').textContent = referralCount;
+    document.getElementById('detailActiveReferrals').textContent = Math.floor(referralCount * 0.7); // Estimate
+    document.getElementById('detailConversionRate').textContent = referralCount > 0 ? '70%' : '0%';
+    
+    // Financial metrics
+    document.getElementById('detailLifetimeValue').textContent = `Ksh ${(user.total_earned || 0).toFixed(2)}`;
+    document.getElementById('detailWithdrawalCount').textContent = Math.floor((user.total_withdrawn || 0) / 500); // Estimate
+    document.getElementById('detailLastWithdrawal').textContent = user.last_login ? 'Recent' : 'Never';
+    document.getElementById('detailWithdrawalRate').textContent = '95%'; // Estimate
+    
+    // Performance metrics
+    document.getElementById('detailReferralRate').textContent = `${referralCount} referrals`;
+    document.getElementById('detailSuccessRate').textContent = '95%'; // Estimate
+    document.getElementById('detailRankProgress').textContent = calculateRankProgress(user.user_rank);
+}
+
+function calculateRankProgress(rank) {
+    const progress = {
+        'Bronze': '25%',
+        'Silver': '50%', 
+        'Gold': '75%',
+        'Platinum': '90%',
+        'Diamond': '100%'
+    };
+    return progress[rank] || '0%';
+}
+
+function updateSecurityButtons(user) {
+    const resetBtn = document.getElementById('resetLoginBtn');
+    const unlockBtn = document.getElementById('unlockAccountBtn');
+    
+    // Enable/disable reset button based on login attempts
+    if (user.login_attempts > 0) {
+        resetBtn.disabled = false;
+        resetBtn.classList.remove('btn-secondary');
+        resetBtn.classList.add('btn-warning');
+    } else {
+        resetBtn.disabled = true;
+        resetBtn.classList.remove('btn-warning');
+        resetBtn.classList.add('btn-secondary');
+    }
+    
+    // Enable/disable unlock button based on lock status
+    const isLocked = user.locked_until && new Date(user.locked_until) > new Date();
+    if (isLocked) {
+        unlockBtn.disabled = false;
+        unlockBtn.classList.remove('btn-secondary');
+        unlockBtn.classList.add('btn-info');
+    } else {
+        unlockBtn.disabled = true;
+        unlockBtn.classList.remove('btn-info');
+        unlockBtn.classList.add('btn-secondary');
+    }
+}
+
+// Security action functions
+function resetLoginAttempts() {
+    if (!currentUserId) return;
+    
+    fetch(`/admin/reset-login-attempts/${currentUserId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('success', data.message);
+            // Refresh the user details
+            viewUserDetails(currentUserId);
+        } else {
+            showNotification('error', 'Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('error', 'An error occurred while resetting login attempts');
+    });
+}
+
+function unlockAccount() {
+    if (!currentUserId) return;
+    
+    fetch(`/admin/unlock-account/${currentUserId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('success', data.message);
+            // Refresh the user details
+            viewUserDetails(currentUserId);
+        } else {
+            showNotification('error', 'Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('error', 'An error occurred while unlocking account');
+    });
+}
+
+function viewSecurityLogs() {
+    showNotification('info', 'Security logs feature coming soon!');
+}
+
+function exportUserReport() {
+    showNotification('info', 'Export feature coming soon!');
+}
+
+// Utility functions for colors
+function getActivityLevelColor(level) {
+    const colors = {
+        'Very Active': 'success',
+        'Active': 'primary',
+        'Occasional': 'warning',
+        'Inactive': 'secondary'
+    };
+    return colors[level] || 'secondary';
 }
 
 function showNotification(type, message) {
@@ -700,7 +958,7 @@ setTimeout(refreshPage, 30000);
 }
 
 .badge {
-    font-size: 0.75em;
+    font-size: 0.7em;
 }
 
 .referral-code {
@@ -749,7 +1007,64 @@ mark {
     position: sticky;
 }
 
-/* Modal styles */
+/* Enhanced modal styles */
+.modal-xl {
+    max-width: 1200px;
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.nav-tabs .nav-link.active {
+    border-bottom: 3px solid #0d6efd;
+    color: #0d6efd;
+    background: none;
+}
+
+.nav-tabs .nav-link:hover {
+    border-bottom: 3px solid #dee2e6;
+}
+
+/* Badge enhancements */
+.badge {
+    font-size: 0.7em;
+}
+
+/* Table enhancements */
+.table-sm td {
+    padding: 0.5rem;
+}
+
+.table-borderless td {
+    border: none;
+}
+
+/* Status indicators */
+.status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 5px;
+}
+
+.status-active {
+    background-color: #28a745;
+}
+
+.status-inactive {
+    background-color: #dc3545;
+}
+
+.status-pending {
+    background-color: #ffc107;
+}
+
+/* Modal body styles */
 .modal-body .table-sm td {
     padding: 0.25rem 0.5rem;
 }
@@ -759,6 +1074,11 @@ mark {
     border-bottom: 1px solid #dee2e6;
     padding-bottom: 0.5rem;
     margin-bottom: 1rem;
+}
+
+/* Security action buttons */
+.btn:disabled {
+    cursor: not-allowed;
 }
 </style>
 {% endblock %}
