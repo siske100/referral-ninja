@@ -3689,7 +3689,18 @@ def utility_processor():
             return dt.strftime(fmt) if dt else ""
         except Exception:
             return ""
-    return dict(safe_strftime=safe_strftime)
+
+    return {
+        'safe_strftime': safe_strftime,
+        'abs': abs,
+        'min': min,
+        'max': max,
+        'round': round,
+        'len': len,
+        'now': datetime.now(timezone.utc),
+        'hasattr': hasattr,  # Add this line
+        'getattr': getattr   # Add this for consistency
+    }
 
 @app.route('/robots.txt')
 def robots():
@@ -6277,18 +6288,6 @@ def before_request():
         except Exception as e:
             logger.warning(f"Security logging failed: {e}")
       
-# Add utility functions to Jinja2 context
-@app.context_processor
-def utility_processor():
-    return {
-        'abs': abs,
-        'min': min,
-        'max': max,
-        'round': round,
-        'len': len,
-        'now': datetime.now(timezone.utc)
-    }
-
 # =============================================================================
 # APPLICATION STARTUP
 # =============================================================================
