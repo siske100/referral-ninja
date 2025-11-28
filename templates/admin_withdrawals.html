@@ -13,7 +13,8 @@
                 <p class="page-subtitle">Monitor and process user withdrawal requests with fraud detection</p>
             </div>
             <div class="mt-2 mt-md-0">
-                <span class="live-indicator">Live Updates</span>
+                <span class="live-indicator" id="liveIndicator">Live Updates</span>
+                <span class="connection-status ms-2" id="connectionStatus" style="display: none;"></span>
             </div>
         </div>
     </div>
@@ -100,7 +101,6 @@
                         </tr>
                     </thead>
                     <tbody id="withdrawals-table">
-                        <!-- Withdrawals will be populated via JavaScript -->
                         <tr>
                             <td colspan="8" class="text-center py-4">
                                 <div class="loading-spinner"></div>
@@ -110,6 +110,19 @@
                     </tbody>
                 </table>
             </div>
+            
+            <!-- Pagination -->
+            <nav aria-label="Withdrawal pagination" id="pagination-container" style="display: none;">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item disabled" id="prev-page">
+                        <a class="page-link" href="#" tabindex="-1">Previous</a>
+                    </li>
+                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                    <li class="page-item" id="next-page">
+                        <a class="page-link" href="#">Next</a>
+                    </li>
+                </ul>
+            </nav>
         </div>
     </div>
 
@@ -123,13 +136,19 @@
                 <div class="col-12 col-md-6 mb-3 mb-md-0">
                     <h5>Suspicious Activity</h5>
                     <div id="suspicious-activity">
-                        <!-- Suspicious activity alerts will be populated here -->
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Loading fraud detection data...
+                        </div>
                     </div>
                 </div>
                 <div class="col-12 col-md-6">
                     <h5>Security Events</h5>
                     <div id="security-events">
-                        <!-- Security events will be populated here -->
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Loading security events...
+                        </div>
                     </div>
                 </div>
             </div>
@@ -147,12 +166,34 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body" id="withdrawalDetailsContent">
-                <!-- Content will be populated by JavaScript -->
+                <div class="text-center py-4">
+                    <div class="loading-spinner"></div>
+                    Loading withdrawal details...
+                </div>
             </div>
             <div class="modal-footer d-flex flex-column flex-sm-row">
                 <button type="button" class="btn btn-secondary mb-2 mb-sm-0 flex-fill" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary mb-2 mb-sm-0 flex-fill" id="approveBtn">Approve & Process</button>
-                <button type="button" class="btn btn-danger flex-fill" id="rejectBtn">Reject & Refund</button>
+                <button type="button" class="btn btn-primary mb-2 mb-sm-0 flex-fill" id="approveBtn" style="display: none;">Approve & Process</button>
+                <button type="button" class="btn btn-danger flex-fill" id="rejectBtn" style="display: none;">Reject & Refund</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="confirmationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmationTitle">Confirm Action</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="confirmationMessage">
+                Are you sure you want to proceed?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmActionBtn">Confirm</button>
             </div>
         </div>
     </div>
@@ -367,6 +408,44 @@
     font-size: 0.8rem;
 }
 
+.connection-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.connection-status.online {
+    background: rgba(56, 161, 105, 0.1);
+    color: var(--success);
+}
+
+.connection-status.offline {
+    background: rgba(229, 62, 62, 0.1);
+    color: var(--danger);
+}
+
+.connection-status i {
+    margin-right: 0.5rem;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
 /* Responsive Design for Admin Withdrawal Management */
 @media (max-width: 768px) {
     .bulk-actions .d-flex {
@@ -452,7 +531,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     // DOM Elements
     const totalPendingEl = document.getElementById('total-pending');
@@ -466,11 +544,15 @@
     const withdrawalDetailsContent = document.getElementById('withdrawalDetailsContent');
     const approveBtn = document.getElementById('approveBtn');
     const rejectBtn = document.getElementById('rejectBtn');
+    const connectionStatusEl = document.getElementById('connectionStatus');
 
     // Global variables
     let withdrawalsData = [];
     let selectedWithdrawals = new Set();
     let currentWithdrawalId = null;
+    let currentPage = 1;
+    let itemsPerPage = 10;
+    let totalPages = 1;
 
     // API Base URL
     const API_BASE = window.location.origin;
@@ -482,6 +564,8 @@
 
     // Initialize dashboard
     document.addEventListener('DOMContentLoaded', function() {
+        console.log('Initializing Admin Withdrawal Management with Real-time Data...');
+        
         // Load initial data
         loadDashboardStats();
         loadWithdrawalsData();
@@ -491,18 +575,28 @@
         selectAll.addEventListener('change', toggleSelectAll);
         
         // Set up real-time updates
-        setInterval(loadDashboardStats, 30000); // Refresh stats every 30 seconds
-        setInterval(loadWithdrawalsData, 60000); // Refresh data every 60 seconds
+        setInterval(loadDashboardStats, 30000);
+        setInterval(loadWithdrawalsData, 60000);
         
         // Set up connection monitoring
         monitorConnection();
+        
+        console.log('Admin Withdrawal Management initialized successfully');
     });
 
     // Load dashboard statistics
     async function loadDashboardStats() {
         try {
-            const response = await fetch(`${API_BASE}/api/admin/stats`);
-            if (!response.ok) throw new Error('Failed to fetch stats');
+            const response = await fetch(`${API_BASE}/api/admin/stats`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Authorization': `Bearer ${getAuthToken()}`
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
             
             const data = await response.json();
             
@@ -512,27 +606,17 @@
             underReviewEl.textContent = data.under_review || 0;
             processingEl.textContent = data.processing || 0;
             
+            updateConnectionStatus(true);
+            
         } catch (error) {
             console.error('Error loading dashboard stats:', error);
-            // Fallback to calculating from local data
-            updateStatsFromLocalData();
+            updateConnectionStatus(false);
+            // Don't fall back to local data - show zeros
+            totalPendingEl.textContent = '0';
+            totalAmountEl.textContent = 'KES 0';
+            underReviewEl.textContent = '0';
+            processingEl.textContent = '0';
         }
-    }
-
-    // Update stats from local withdrawals data
-    function updateStatsFromLocalData() {
-        const pending = withdrawalsData.filter(w => w.status === 'pending').length;
-        const underReview = withdrawalsData.filter(w => w.status === 'Under Review').length;
-        const processing = withdrawalsData.filter(w => w.status === 'processing').length;
-        
-        const totalAmount = withdrawalsData
-            .filter(w => ['pending', 'Under Review', 'processing'].includes(w.status))
-            .reduce((sum, w) => sum + Math.abs(w.amount), 0);
-        
-        totalPendingEl.textContent = pending;
-        totalAmountEl.textContent = `KES ${totalAmount.toLocaleString()}`;
-        underReviewEl.textContent = underReview;
-        processingEl.textContent = processing;
     }
 
     // Load withdrawals data from backend
@@ -540,102 +624,76 @@
         try {
             showLoadingState();
             
-            // The backend serves HTML, but we need to get data via API
-            await fetchWithdrawalsFromAPI();
+            const response = await fetch(`${API_BASE}/admin/withdrawal-notice?page=${currentPage}&limit=${itemsPerPage}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Authorization': `Bearer ${getAuthToken()}`
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const html = await response.text();
+            
+            // Parse the HTML response to extract withdrawal data
+            await parseWithdrawalsFromHTML(html);
+            
+            updateConnectionStatus(true);
             
         } catch (error) {
             console.error('Error loading withdrawals data:', error);
-            showToast('Error loading withdrawal data', 'error');
-            document.getElementById('errorState').style.display = 'block';
+            updateConnectionStatus(false);
+            showToast('Error loading withdrawal data from server', 'error');
+            showErrorState();
         }
     }
 
-    // Fetch withdrawals via API
-    async function fetchWithdrawalsFromAPI() {
+    // Parse withdrawals data from HTML response
+    async function parseWithdrawalsFromHTML(html) {
         try {
-            // Use the existing API endpoint that returns JSON
-            const response = await fetch(`${API_BASE}/api/admin/withdrawals`);
-            if (!response.ok) throw new Error('API request failed');
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
             
-            // Since the actual endpoint might return HTML, we'll use mock data for demonstration
-            await loadMockWithdrawalsData();
+            // Extract withdrawal data from the table
+            const rows = doc.querySelectorAll('table tbody tr');
+            withdrawalsData = [];
+            
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 8) {
+                    const withdrawal = {
+                        id: row.dataset.withdrawalId || cells[0]?.querySelector('input')?.value || generateId(),
+                        user_id: cells[1]?.querySelector('.user-id')?.value || 'unknown',
+                        amount: parseFloat(cells[2]?.textContent.replace('KES', '').replace(/,/g, '').trim()) || 0,
+                        transaction_type: 'withdrawal',
+                        status: cells[4]?.querySelector('.badge')?.textContent.trim() || 'pending',
+                        phone_number: cells[3]?.textContent.trim() || 'N/A',
+                        description: cells[2]?.textContent.trim() || 'Withdrawal request',
+                        fraud_warnings: row.querySelector('.fraud-warning') ? row.querySelector('.fraud-warning').textContent.trim() : null,
+                        created_at: cells[5]?.textContent.trim() || new Date().toISOString(),
+                        user: {
+                            id: cells[1]?.querySelector('.user-id')?.value || 'unknown',
+                            username: cells[1]?.querySelector('.fw-bold')?.textContent.trim() || 'Unknown User',
+                            email: cells[1]?.querySelector('.text-muted')?.textContent.trim() || 'No email',
+                            phone: cells[3]?.textContent.trim() || 'N/A',
+                            balance: 0,
+                            total_commission: 0,
+                            created_at: new Date().toISOString()
+                        }
+                    };
+                    withdrawalsData.push(withdrawal);
+                }
+            });
+            
+            renderWithdrawalsTable();
+            updateFraudAlerts();
             
         } catch (error) {
-            console.error('Error fetching withdrawals from API:', error);
-            // Fallback to mock data for demonstration
-            await loadMockWithdrawalsData();
+            console.error('Error parsing HTML data:', error);
+            showErrorState();
         }
-    }
-
-    // Load mock data (fallback)
-    async function loadMockWithdrawalsData() {
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Mock data for demonstration
-        withdrawalsData = [
-            {
-                id: '1',
-                user_id: 'user1',
-                amount: -1500,
-                transaction_type: 'withdrawal',
-                status: 'pending',
-                phone_number: '254712345678',
-                description: 'Withdrawal request',
-                fraud_warnings: null,
-                created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-                user: {
-                    id: 'user1',
-                    username: 'john_doe',
-                    email: 'john@example.com',
-                    phone: '254712345678',
-                    created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-                    transactions: []
-                }
-            },
-            {
-                id: '2',
-                user_id: 'user2',
-                amount: -2500,
-                transaction_type: 'withdrawal',
-                status: 'Under Review',
-                phone_number: '254723456789',
-                description: 'Withdrawal request - Under review',
-                fraud_warnings: 'Multiple rapid withdrawals detected',
-                created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-                user: {
-                    id: 'user2',
-                    username: 'jane_smith',
-                    email: 'jane@example.com',
-                    phone: '254723456789',
-                    created_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-                    transactions: []
-                }
-            },
-            {
-                id: '3',
-                user_id: 'user3',
-                amount: -3000,
-                transaction_type: 'withdrawal',
-                status: 'processing',
-                phone_number: '254734567890',
-                description: 'M-Pesa processing initiated',
-                fraud_warnings: null,
-                created_at: new Date(Date.now() - 0.5 * 24 * 60 * 60 * 1000).toISOString(),
-                user: {
-                    id: 'user3',
-                    username: 'mike_wilson',
-                    email: 'mike@example.com',
-                    phone: '254734567890',
-                    created_at: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
-                    transactions: []
-                }
-            }
-        ];
-        
-        renderWithdrawalsTable();
-        updateFraudAlerts();
-        updateStatsFromLocalData();
     }
 
     // Show loading state
@@ -650,7 +708,37 @@
         `;
     }
 
-    // Render withdrawals table
+    // Show error state
+    function showErrorState() {
+        withdrawalsTableEl.innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center py-4">
+                    <i class="fas fa-exclamation-triangle fa-2x text-warning mb-3"></i>
+                    <p class="text-muted">Failed to load withdrawal data from server</p>
+                    <button class="btn btn-sm btn-primary" onclick="loadWithdrawalsData()">
+                        <i class="fas fa-redo me-2"></i>Retry
+                    </button>
+                </td>
+            </tr>
+        `;
+        
+        // Clear fraud alerts on error
+        document.getElementById('suspicious-activity').innerHTML = `
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Unable to load fraud detection data
+            </div>
+        `;
+        
+        document.getElementById('security-events').innerHTML = `
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Unable to load security events
+            </div>
+        `;
+    }
+
+    // Render withdrawals table with real data
     function renderWithdrawalsTable() {
         if (withdrawalsData.length === 0) {
             withdrawalsTableEl.innerHTML = `
@@ -661,6 +749,7 @@
                     </td>
                 </tr>
             `;
+            document.getElementById('pagination-container').style.display = 'none';
             return;
         }
         
@@ -677,26 +766,26 @@
                             ${withdrawal.user?.username?.charAt(0)?.toUpperCase() || 'U'}
                         </div>
                         <div>
-                            <div class="fw-bold">${withdrawal.user?.username || 'Unknown User'}</div>
-                            <small class="text-muted d-block d-md-none">${withdrawal.phone_number}</small>
-                            <small class="text-muted d-none d-md-block">${withdrawal.user?.email || 'No email'}</small>
+                            <div class="fw-bold">${escapeHtml(withdrawal.user?.username || 'Unknown User')}</div>
+                            <small class="text-muted d-block d-md-none">${escapeHtml(withdrawal.phone_number)}</small>
+                            <small class="text-muted d-none d-md-block">${escapeHtml(withdrawal.user?.email || 'No email')}</small>
                         </div>
                     </div>
                 </td>
                 <td class="fw-bold">KES ${Math.abs(withdrawal.amount).toLocaleString()}</td>
-                <td class="d-none d-md-table-cell">${withdrawal.phone_number}</td>
+                <td class="d-none d-md-table-cell">${escapeHtml(withdrawal.phone_number)}</td>
                 <td>
                     <span class="badge ${getStatusBadgeClass(withdrawal.status)}">
-                        ${withdrawal.status}
+                        ${escapeHtml(withdrawal.status)}
                     </span>
                     ${withdrawal.fraud_warnings ? `
                         <div class="fraud-warning mt-1">
                             <i class="fas fa-exclamation-triangle me-1"></i>
-                            Fraud detected
+                            ${escapeHtml(withdrawal.fraud_warnings)}
                         </div>
                     ` : ''}
                 </td>
-                <td class="d-none d-md-table-cell">${new Date(withdrawal.created_at).toLocaleDateString()}</td>
+                <td class="d-none d-md-table-cell">${formatDate(withdrawal.created_at)}</td>
                 <td>${calculateDaysPending(withdrawal.created_at)}</td>
                 <td>
                     <div class="action-buttons">
@@ -731,13 +820,35 @@
                 updateSelectAllState();
             });
         });
+        
+        // Show pagination if needed
+        if (totalPages > 1) {
+            document.getElementById('pagination-container').style.display = 'block';
+            updatePagination();
+        }
+    }
+
+    // Format date for display
+    function formatDate(dateString) {
+        if (!dateString) return 'N/A';
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        } catch (error) {
+            return 'Invalid Date';
+        }
     }
 
     // Get status badge class
     function getStatusBadgeClass(status) {
         if (!status) return 'badge-secondary';
         
-        switch (status.toLowerCase()) {
+        const statusLower = status.toLowerCase();
+        switch (statusLower) {
             case 'pending': return 'badge-warning';
             case 'under review': return 'badge-danger';
             case 'processing': return 'badge-info';
@@ -752,10 +863,14 @@
     function calculateDaysPending(createdAt) {
         if (!createdAt) return 0;
         
-        const created = new Date(createdAt);
-        const now = new Date();
-        const diffTime = Math.abs(now - created);
-        return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        try {
+            const created = new Date(createdAt);
+            const now = new Date();
+            const diffTime = Math.abs(now - created);
+            return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        } catch (error) {
+            return 0;
+        }
     }
 
     // Toggle select all
@@ -795,43 +910,57 @@
             
             currentWithdrawalId = withdrawalId;
             
-            // Fetch additional user details if needed
+            // Show loading state in modal
+            withdrawalDetailsContent.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="loading-spinner"></div>
+                    Loading withdrawal details...
+                </div>
+            `;
+            
+            // Fetch additional user details from backend
             let userDetails = withdrawal.user;
-            if (!userDetails || !userDetails.transactions) {
-                try {
-                    const response = await fetch(`${API_BASE}/admin/user-details/${withdrawal.user_id}`);
-                    if (response.ok) {
-                        const data = await response.json();
-                        if (data.success) {
-                            userDetails = data.user;
-                        }
+            try {
+                const response = await fetch(`${API_BASE}/admin/user-details/${withdrawal.user_id}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Authorization': `Bearer ${getAuthToken()}`
                     }
-                } catch (error) {
-                    console.error('Error fetching user details:', error);
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        userDetails = data.user;
+                    }
                 }
+            } catch (error) {
+                console.error('Error fetching user details:', error);
             }
             
+            // Render withdrawal details
             withdrawalDetailsContent.innerHTML = `
                 <div class="row">
                     <div class="col-12 col-md-6 mb-3">
                         <div class="user-details-card">
                             <h6>User Information</h6>
-                            <p><strong>Username:</strong> ${userDetails?.username || 'N/A'}</p>
-                            <p><strong>Email:</strong> ${userDetails?.email || 'N/A'}</p>
-                            <p><strong>Phone:</strong> ${userDetails?.phone || 'N/A'}</p>
-                            <p><strong>Joined:</strong> ${userDetails?.created_at ? new Date(userDetails.created_at).toLocaleDateString() : 'N/A'}</p>
+                            <p><strong>Username:</strong> ${escapeHtml(userDetails?.username || 'N/A')}</p>
+                            <p><strong>Email:</strong> ${escapeHtml(userDetails?.email || 'N/A')}</p>
+                            <p><strong>Phone:</strong> ${escapeHtml(userDetails?.phone || 'N/A')}</p>
+                            <p><strong>Joined:</strong> ${userDetails?.created_at ? formatDate(userDetails.created_at) : 'N/A'}</p>
                             <p><strong>Balance:</strong> KES ${(userDetails?.balance || 0).toLocaleString()}</p>
+                            <p><strong>Total Commission:</strong> KES ${(userDetails?.total_commission || 0).toLocaleString()}</p>
                         </div>
                     </div>
                     <div class="col-12 col-md-6 mb-3">
                         <div class="user-details-card">
                             <h6>Withdrawal Details</h6>
                             <p><strong>Amount:</strong> KES ${Math.abs(withdrawal.amount).toLocaleString()}</p>
-                            <p><strong>Phone:</strong> ${withdrawal.phone_number}</p>
+                            <p><strong>Phone:</strong> ${escapeHtml(withdrawal.phone_number)}</p>
                             <p><strong>Status:</strong> <span class="badge ${getStatusBadgeClass(withdrawal.status)}">${withdrawal.status}</span></p>
-                            <p><strong>Requested:</strong> ${new Date(withdrawal.created_at).toLocaleString()}</p>
-                            ${withdrawal.description ? `<p><strong>Description:</strong> ${withdrawal.description}</p>` : ''}
-                            ${withdrawal.mpesa_code ? `<p><strong>M-Pesa Code:</strong> ${withdrawal.mpesa_code}</p>` : ''}
+                            <p><strong>Requested:</strong> ${formatDate(withdrawal.created_at)}</p>
+                            ${withdrawal.description ? `<p><strong>Description:</strong> ${escapeHtml(withdrawal.description)}</p>` : ''}
+                            ${withdrawal.mpesa_code ? `<p><strong>M-Pesa Code:</strong> ${escapeHtml(withdrawal.mpesa_code)}</p>` : ''}
                         </div>
                     </div>
                 </div>
@@ -839,7 +968,7 @@
                 ${withdrawal.fraud_warnings ? `
                 <div class="fraud-alert mt-3">
                     <h6><i class="fas fa-exclamation-triangle me-2"></i>Fraud Detection Alert</h6>
-                    <p class="mb-0">${withdrawal.fraud_warnings}</p>
+                    <p class="mb-0">${escapeHtml(withdrawal.fraud_warnings)}</p>
                 </div>
                 ` : ''}
                 
@@ -859,10 +988,10 @@
                                 ${userDetails?.transactions && userDetails.transactions.length > 0 ? 
                                     userDetails.transactions.slice(0, 5).map(t => `
                                         <tr>
-                                            <td>${new Date(t.created_at).toLocaleDateString()}</td>
-                                            <td>${t.transaction_type}</td>
+                                            <td>${formatDate(t.created_at)}</td>
+                                            <td>${escapeHtml(t.transaction_type)}</td>
                                             <td>KES ${Math.abs(t.amount).toLocaleString()}</td>
-                                            <td><span class="badge ${getStatusBadgeClass(t.status)}">${t.status}</span></td>
+                                            <td><span class="badge ${getStatusBadgeClass(t.status)}">${escapeHtml(t.status)}</span></td>
                                         </tr>
                                     `).join('') : 
                                     '<tr><td colspan="4" class="text-center">No recent transactions</td></tr>'
@@ -877,6 +1006,8 @@
             const canApprove = ['pending', 'Under Review'].includes(withdrawal.status);
             const canReject = !['completed', 'rejected'].includes(withdrawal.status);
             
+            approveBtn.style.display = canApprove ? 'block' : 'none';
+            rejectBtn.style.display = canReject ? 'block' : 'none';
             approveBtn.disabled = !canApprove;
             rejectBtn.disabled = !canReject;
             
@@ -895,209 +1026,249 @@
 
     // Approve withdrawal
     async function approveWithdrawal(withdrawalId) {
-        if (!confirm('Are you sure you want to approve this withdrawal? This will initiate M-Pesa processing.')) {
+        const withdrawal = withdrawalsData.find(w => w.id === withdrawalId);
+        if (!withdrawal) {
+            showToast('Withdrawal not found', 'error');
             return;
         }
         
-        try {
-            showToast('Processing withdrawal...', 'info');
-            
-            const response = await fetch(`${API_BASE}/admin/approve-withdrawal/${withdrawalId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
+        showConfirmation(
+            'Approve Withdrawal',
+            `Are you sure you want to approve this withdrawal of KES ${Math.abs(withdrawal.amount).toLocaleString()}? This will initiate M-Pesa processing.`,
+            async () => {
+                try {
+                    showToast('Processing withdrawal...', 'info');
+                    
+                    const response = await fetch(`${API_BASE}/admin/approve-withdrawal/${withdrawalId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCSRFToken(),
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        showToast(result.message, 'success');
+                        withdrawalDetailsModal.hide();
+                        
+                        // Refresh data
+                        loadDashboardStats();
+                        loadWithdrawalsData();
+                    } else {
+                        showToast(result.message || 'Approval failed', 'error');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error approving withdrawal:', error);
+                    showToast('Error approving withdrawal', 'error');
                 }
-            });
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                showToast(result.message, 'success');
-                withdrawalDetailsModal.hide();
-                
-                // Refresh data
-                loadDashboardStats();
-                loadWithdrawalsData();
-            } else {
-                showToast(result.message, 'error');
             }
-            
-        } catch (error) {
-            console.error('Error approving withdrawal:', error);
-            showToast('Error approving withdrawal', 'error');
-        }
+        );
     }
 
     // Reject withdrawal
     async function rejectWithdrawal(withdrawalId) {
-        const reason = prompt('Please enter a reason for rejection:');
-        if (!reason) return;
-        
-        try {
-            showToast('Rejecting withdrawal...', 'info');
-            
-            const response = await fetch(`${API_BASE}/admin/reject-withdrawal/${withdrawalId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
-                },
-                body: JSON.stringify({ reason })
-            });
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                showToast(result.message, 'success');
-                withdrawalDetailsModal.hide();
-                
-                // Refresh data
-                loadDashboardStats();
-                loadWithdrawalsData();
-            } else {
-                showToast(result.message, 'error');
-            }
-            
-        } catch (error) {
-            console.error('Error rejecting withdrawal:', error);
-            showToast('Error rejecting withdrawal', 'error');
+        const withdrawal = withdrawalsData.find(w => w.id === withdrawalId);
+        if (!withdrawal) {
+            showToast('Withdrawal not found', 'error');
+            return;
         }
+        
+        showConfirmation(
+            'Reject Withdrawal',
+            `Are you sure you want to reject this withdrawal of KES ${Math.abs(withdrawal.amount).toLocaleString()}? The amount will be refunded to the user's balance.`,
+            async () => {
+                const reason = prompt('Please enter a reason for rejection:');
+                if (!reason) return;
+                
+                try {
+                    showToast('Rejecting withdrawal...', 'info');
+                    
+                    const response = await fetch(`${API_BASE}/admin/reject-withdrawal/${withdrawalId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCSRFToken(),
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({ reason })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        showToast(result.message, 'success');
+                        withdrawalDetailsModal.hide();
+                        
+                        // Refresh data
+                        loadDashboardStats();
+                        loadWithdrawalsData();
+                    } else {
+                        showToast(result.message || 'Rejection failed', 'error');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error rejecting withdrawal:', error);
+                    showToast('Error rejecting withdrawal', 'error');
+                }
+            }
+        );
     }
 
     // Bulk actions
     async function bulkApprove() {
         if (selectedWithdrawals.size === 0) {
-            alert('Please select at least one withdrawal to approve');
+            showToast('Please select at least one withdrawal to approve', 'warning');
             return;
         }
         
-        if (!confirm(`Are you sure you want to approve ${selectedWithdrawals.size} withdrawal(s)?`)) {
-            return;
-        }
-        
-        try {
-            showToast(`Processing ${selectedWithdrawals.size} withdrawals...`, 'info');
-            
-            const response = await fetch(`${API_BASE}/admin/withdrawal-notice/bulk-action`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
-                },
-                body: JSON.stringify({
-                    action: 'approve',
-                    transaction_ids: Array.from(selectedWithdrawals)
-                })
-            });
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                showToast(result.message, 'success');
-                clearSelection();
-                
-                // Refresh data
-                loadDashboardStats();
-                loadWithdrawalsData();
-            } else {
-                showToast(result.message, 'error');
+        showConfirmation(
+            'Approve Multiple Withdrawals',
+            `Are you sure you want to approve ${selectedWithdrawals.size} withdrawal(s)? This will initiate M-Pesa processing for all selected withdrawals.`,
+            async () => {
+                try {
+                    showToast(`Processing ${selectedWithdrawals.size} withdrawals...`, 'info');
+                    
+                    const response = await fetch(`${API_BASE}/admin/withdrawal-notice/bulk-action`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCSRFToken(),
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({
+                            action: 'approve',
+                            transaction_ids: Array.from(selectedWithdrawals)
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        showToast(result.message, 'success');
+                        clearSelection();
+                        
+                        // Refresh data
+                        loadDashboardStats();
+                        loadWithdrawalsData();
+                    } else {
+                        showToast(result.message || 'Bulk approval failed', 'error');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error in bulk approve:', error);
+                    showToast('Error processing bulk approval', 'error');
+                }
             }
-            
-        } catch (error) {
-            console.error('Error in bulk approve:', error);
-            showToast('Error processing bulk approval', 'error');
-        }
+        );
     }
 
     async function bulkReject() {
         if (selectedWithdrawals.size === 0) {
-            alert('Please select at least one withdrawal to reject');
+            showToast('Please select at least one withdrawal to reject', 'warning');
             return;
         }
         
         const reason = prompt('Please enter a reason for rejection:');
         if (!reason) return;
         
-        try {
-            showToast(`Rejecting ${selectedWithdrawals.size} withdrawals...`, 'info');
-            
-            const response = await fetch(`${API_BASE}/admin/withdrawal-notice/bulk-action`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
-                },
-                body: JSON.stringify({
-                    action: 'reject',
-                    transaction_ids: Array.from(selectedWithdrawals),
-                    reason: reason
-                })
-            });
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                showToast(result.message, 'success');
-                clearSelection();
-                
-                // Refresh data
-                loadDashboardStats();
-                loadWithdrawalsData();
-            } else {
-                showToast(result.message, 'error');
+        showConfirmation(
+            'Reject Multiple Withdrawals',
+            `Are you sure you want to reject ${selectedWithdrawals.size} withdrawal(s)? The amounts will be refunded to users' balances.`,
+            async () => {
+                try {
+                    showToast(`Rejecting ${selectedWithdrawals.size} withdrawals...`, 'info');
+                    
+                    const response = await fetch(`${API_BASE}/admin/withdrawal-notice/bulk-action`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCSRFToken(),
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({
+                            action: 'reject',
+                            transaction_ids: Array.from(selectedWithdrawals),
+                            reason: reason
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        showToast(result.message, 'success');
+                        clearSelection();
+                        
+                        // Refresh data
+                        loadDashboardStats();
+                        loadWithdrawalsData();
+                    } else {
+                        showToast(result.message || 'Bulk rejection failed', 'error');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error in bulk reject:', error);
+                    showToast('Error processing bulk rejection', 'error');
+                }
             }
-            
-        } catch (error) {
-            console.error('Error in bulk reject:', error);
-            showToast('Error processing bulk rejection', 'error');
-        }
+        );
     }
 
     async function bulkMarkUnderReview() {
         if (selectedWithdrawals.size === 0) {
-            alert('Please select at least one withdrawal to mark as under review');
+            showToast('Please select at least one withdrawal to mark as under review', 'warning');
             return;
         }
         
-        try {
-            showToast(`Marking ${selectedWithdrawals.size} withdrawals as under review...`, 'info');
-            
-            const response = await fetch(`${API_BASE}/admin/withdrawal-notice/bulk-action`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
-                },
-                body: JSON.stringify({
-                    action: 'review',
-                    transaction_ids: Array.from(selectedWithdrawals)
-                })
-            });
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                showToast(result.message, 'success');
-                clearSelection();
-                
-                // Refresh data
-                loadDashboardStats();
-                loadWithdrawalsData();
-            } else {
-                showToast(result.message, 'error');
+        showConfirmation(
+            'Mark Withdrawals for Review',
+            `Are you sure you want to mark ${selectedWithdrawals.size} withdrawal(s) as under review? This will flag them for further investigation.`,
+            async () => {
+                try {
+                    showToast(`Marking ${selectedWithdrawals.size} withdrawals as under review...`, 'info');
+                    
+                    const response = await fetch(`${API_BASE}/admin/withdrawal-notice/bulk-action`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCSRFToken(),
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({
+                            action: 'review',
+                            transaction_ids: Array.from(selectedWithdrawals)
+                        })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        showToast(result.message, 'success');
+                        clearSelection();
+                        
+                        // Refresh data
+                        loadDashboardStats();
+                        loadWithdrawalsData();
+                    } else {
+                        showToast(result.message || 'Bulk action failed', 'error');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error in bulk mark under review:', error);
+                    showToast('Error processing bulk action', 'error');
+                }
             }
-            
-        } catch (error) {
-            console.error('Error in bulk mark under review:', error);
-            showToast('Error processing bulk action', 'error');
-        }
+        );
     }
 
     function clearSelection() {
         selectedWithdrawals.clear();
         document.querySelectorAll('.withdrawal-checkbox').forEach(cb => cb.checked = false);
         updateSelectAllState();
+        showToast('Selection cleared', 'info');
     }
 
     // Refresh withdrawals
@@ -1108,32 +1279,40 @@
         refreshBtn.disabled = true;
         
         Promise.all([loadDashboardStats(), loadWithdrawalsData()]).finally(() => {
-            refreshBtn.innerHTML = originalHTML;
-            refreshBtn.disabled = false;
+            setTimeout(() => {
+                refreshBtn.innerHTML = originalHTML;
+                refreshBtn.disabled = false;
+            }, 1000);
         });
     }
 
     // Export withdrawal data
     function exportWithdrawalData() {
+        if (withdrawalsData.length === 0) {
+            showToast('No data to export', 'warning');
+            return;
+        }
+        
         showToast('Preparing export data...', 'info');
         
         // Create CSV content
-        const headers = ['ID', 'Username', 'Amount', 'Phone', 'Status', 'Date', 'Days Pending'];
+        const headers = ['ID', 'Username', 'Amount', 'Phone', 'Status', 'Date', 'Days Pending', 'Fraud Warnings'];
         const csvContent = [
             headers.join(','),
             ...withdrawalsData.map(w => [
                 w.id,
-                w.user?.username || 'Unknown',
+                `"${w.user?.username || 'Unknown'}"`,
                 Math.abs(w.amount),
                 w.phone_number,
                 w.status,
-                new Date(w.created_at).toLocaleDateString(),
-                calculateDaysPending(w.created_at)
+                formatDate(w.created_at),
+                calculateDaysPending(w.created_at),
+                `"${w.fraud_warnings || 'None'}"`
             ].join(','))
         ].join('\n');
         
         // Create and download file
-        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.setAttribute('hidden', '');
@@ -1142,11 +1321,12 @@
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
         
         showToast('Export data downloaded successfully!', 'success');
     }
 
-    // Update fraud alerts
+    // Update fraud alerts with real data
     function updateFraudAlerts() {
         const suspiciousActivityEl = document.getElementById('suspicious-activity');
         const securityEventsEl = document.getElementById('security-events');
@@ -1159,44 +1339,149 @@
         suspiciousActivityEl.innerHTML = suspiciousWithdrawals.length > 0 ? 
             suspiciousWithdrawals.map(w => `
                 <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                    <strong>${w.user?.username || 'Unknown User'}</strong> - KES ${Math.abs(w.amount).toLocaleString()}
-                    <br><small>${w.fraud_warnings}</small>
+                    <strong>${escapeHtml(w.user?.username || 'Unknown User')}</strong> - KES ${Math.abs(w.amount).toLocaleString()}
+                    <br><small>${escapeHtml(w.fraud_warnings)}</small>
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             `).join('') : 
-            '<p class="text-muted">No suspicious activity detected</p>';
+            '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>No suspicious activity detected</div>';
         
         securityEventsEl.innerHTML = securityEvents.length > 0 ?
             securityEvents.map(w => `
                 <div class="alert alert-info alert-dismissible fade show" role="alert">
-                    <strong>${w.user?.username || 'Unknown User'}</strong> - Under Review
-                    <br><small>${new Date(w.created_at).toLocaleDateString()}</small>
+                    <strong>${escapeHtml(w.user?.username || 'Unknown User')}</strong> - Under Review
+                    <br><small>KES ${Math.abs(w.amount).toLocaleString()} - ${formatDate(w.created_at)}</small>
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             `).join('') :
-            '<p class="text-muted">No security events</p>';
+            '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>No security events</div>';
     }
 
     // Monitor connection
     function monitorConnection() {
-        const connectionStatus = document.getElementById('connectionStatus');
-        
-        // Check connection periodically
         setInterval(async () => {
             try {
-                await fetch(`${API_BASE}/health`);
-                connectionStatus.className = 'connection-status online';
-                connectionStatus.innerHTML = '<i class="fas fa-wifi"></i><span>Connected</span>';
+                const response = await fetch(`${API_BASE}/health`, {
+                    method: 'HEAD',
+                    cache: 'no-cache'
+                });
+                updateConnectionStatus(response.ok);
             } catch (error) {
-                connectionStatus.className = 'connection-status offline';
-                connectionStatus.innerHTML = '<i class="fas fa-wifi-slash"></i><span>Offline</span>';
+                updateConnectionStatus(false);
             }
-            
-            connectionStatus.style.display = 'flex';
-            setTimeout(() => {
-                connectionStatus.style.display = 'none';
-            }, 3000);
         }, 30000);
+    }
+
+    function updateConnectionStatus(connected) {
+        if (connected) {
+            connectionStatusEl.className = 'connection-status online';
+            connectionStatusEl.innerHTML = '<i class="fas fa-wifi"></i><span>Connected</span>';
+            connectionStatusEl.style.display = 'flex';
+            
+            setTimeout(() => {
+                connectionStatusEl.style.display = 'none';
+            }, 3000);
+        } else {
+            connectionStatusEl.className = 'connection-status offline';
+            connectionStatusEl.innerHTML = '<i class="fas fa-wifi-slash"></i><span>Offline</span>';
+            connectionStatusEl.style.display = 'flex';
+        }
+    }
+
+    // Utility functions
+    function escapeHtml(unsafe) {
+        if (typeof unsafe !== 'string') return unsafe;
+        return unsafe
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function generateId() {
+        return 'id_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    function getAuthToken() {
+        // This should be implemented based on your auth system
+        return localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token') || '';
+    }
+
+    function showConfirmation(title, message, confirmCallback) {
+        const confirmationModal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+        document.getElementById('confirmationTitle').textContent = title;
+        document.getElementById('confirmationMessage').textContent = message;
+        
+        const confirmBtn = document.getElementById('confirmActionBtn');
+        confirmBtn.onclick = function() {
+            confirmationModal.hide();
+            confirmCallback();
+        };
+        
+        confirmationModal.show();
+    }
+
+    function showToast(message, type = 'info') {
+        // Create or use existing toast system
+        const toastContainer = document.getElementById('toast-container') || createToastContainer();
+        
+        const toast = document.createElement('div');
+        toast.className = `toast align-items-center text-bg-${type} border-0`;
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+        
+        toastContainer.appendChild(toast);
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+        
+        toast.addEventListener('hidden.bs.toast', () => {
+            toast.remove();
+        });
+    }
+
+    function createToastContainer() {
+        const container = document.createElement('div');
+        container.id = 'toast-container';
+        container.className = 'toast-container position-fixed top-0 end-0 p-3';
+        container.style.zIndex = '9999';
+        document.body.appendChild(container);
+        return container;
+    }
+
+    function updatePagination() {
+        const prevPage = document.getElementById('prev-page');
+        const nextPage = document.getElementById('next-page');
+        
+        prevPage.classList.toggle('disabled', currentPage === 1);
+        nextPage.classList.toggle('disabled', currentPage === totalPages);
+        
+        // Update page numbers (simplified)
+        const pageItems = document.querySelectorAll('.pagination .page-item:not(:first-child):not(:last-child)');
+        pageItems.forEach(item => item.remove());
+        
+        const pagination = document.querySelector('.pagination');
+        const nextItem = document.getElementById('next-page');
+        
+        for (let i = 1; i <= totalPages; i++) {
+            const pageItem = document.createElement('li');
+            pageItem.className = `page-item ${i === currentPage ? 'active' : ''}`;
+            pageItem.innerHTML = `<a class="page-link" href="#" onclick="goToPage(${i})">${i}</a>`;
+            pagination.insertBefore(pageItem, nextItem);
+        }
+    }
+
+    function goToPage(page) {
+        if (page >= 1 && page <= totalPages) {
+            currentPage = page;
+            loadWithdrawalsData();
+        }
     }
 </script>
 {% endblock %}
