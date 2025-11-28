@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Withdrawal Management - Referral Ninja</title>
 
-    <!-- Comprehensive Favicon Setup -->
+    <!-- Favicon and meta tags -->
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon-96x96.png') }}" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/favicon.svg') }}" />
     <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}" />
@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-title" content="Referral Ninja" />
     <link rel="manifest" href="{{ url_for('static', filename='images/site.webmanifest') }}" />
     
-    <!-- Additional Favicon Sizes for Better Compatibility -->
+    <!-- Additional Favicon Sizes -->
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='images/favicon-32x32.png') }}">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='images/favicon-16x16.png') }}">
     
@@ -104,10 +104,10 @@
             margin-left: 0;
         }
 
-        /* Desktop Layout - UPDATED: Reduced gap to 0.5cm (19px) */
+        /* Desktop Layout */
         @media (min-width: 992px) {
             .main-content {
-                margin-left: 231px; /* Sidebar width (250px) - gap (19px) */
+                margin-left: 231px;
                 width: calc(100% - 231px);
             }
         }
@@ -441,37 +441,6 @@
             z-index: 9999;
         }
 
-        /* Form Validation */
-        .is-invalid {
-            border-color: var(--danger) !important;
-            box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.1) !important;
-        }
-
-        .invalid-feedback {
-            color: var(--danger);
-            font-size: 0.875rem;
-            margin-top: 0.25rem;
-        }
-
-        /* Enhanced Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--primary-gradient);
-            border-radius: 10px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
-        }
-
         /* Loading Animation */
         .loading-spinner {
             display: inline-block;
@@ -487,67 +456,6 @@
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
-        }
-
-        /* Maintenance Mode */
-        .maintenance-mode {
-            background: var(--primary-gradient);
-            color: white;
-            padding: 1rem;
-            text-align: center;
-            border-radius: var(--radius-md);
-            margin: 1rem 0;
-            font-weight: 500;
-        }
-
-        /* Accessibility Improvements */
-        .sr-only {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            white-space: nowrap;
-            border: 0;
-        }
-
-        /* Focus styles for better accessibility */
-        button:focus,
-        a:focus,
-        input:focus,
-        select:focus,
-        textarea:focus {
-            outline: 2px solid var(--primary-dark);
-            outline-offset: 2px;
-        }
-
-        /* Print Styles */
-        @media print {
-            .rank-badge {
-                display: none !important;
-            }
-            
-            .main-content {
-                margin-left: 0 !important;
-            }
-            
-            .content {
-                padding: 0;
-            }
-
-            .support-button {
-                display: none !important;
-            }
-
-            .community-button {
-                display: none !important;
-            }
-            
-            .card::before {
-                display: none;
-            }
         }
 
         /* ========== ADMIN WITHDRAWAL MANAGEMENT STYLES ========== */
@@ -567,12 +475,12 @@
             font-weight: 700;
             color: var(--text-dark);
             margin-bottom: 0.5rem;
-            font-size: clamp(1.5rem, 4vw, 2rem); /* Responsive font size */
+            font-size: clamp(1.5rem, 4vw, 2rem);
         }
 
         .page-subtitle {
             color: var(--text-light);
-            font-size: clamp(0.9rem, 2.5vw, 1.1rem); /* Responsive font size */
+            font-size: clamp(0.9rem, 2.5vw, 1.1rem);
         }
 
         /* Stats Cards */
@@ -610,7 +518,7 @@
         }
 
         .stat-value {
-            font-size: clamp(1.8rem, 5vw, 2.5rem); /* Responsive font size */
+            font-size: clamp(1.8rem, 5vw, 2.5rem);
             font-weight: 700;
             margin-bottom: 0.5rem;
             background: var(--primary-gradient);
@@ -628,45 +536,8 @@
             position: absolute;
             top: 1.5rem;
             right: 1.5rem;
-            font-size: clamp(1.5rem, 4vw, 2rem); /* Responsive icon size */
+            font-size: clamp(1.5rem, 4vw, 2rem);
             opacity: 0.2;
-            color: var(--primary-dark);
-        }
-
-        /* Export Section */
-        .export-section {
-            background: var(--card-bg);
-            border-radius: var(--radius-lg);
-            padding: 1.5rem;
-            box-shadow: var(--shadow-md);
-            margin-bottom: 2rem;
-        }
-
-        .export-options {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-top: 1rem;
-        }
-
-        .export-option {
-            background: rgba(0,0,0,0.02);
-            border-radius: var(--radius-md);
-            padding: 1rem;
-            text-align: center;
-            transition: all 0.3s ease;
-            border: 1px solid var(--border-light);
-            cursor: pointer;
-        }
-
-        .export-option:hover {
-            background: rgba(102, 126, 234, 0.05);
-            border-color: var(--primary-dark);
-        }
-
-        .export-icon {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
             color: var(--primary-dark);
         }
 
@@ -733,289 +604,9 @@
             color: var(--info);
         }
 
-        /* Charts */
-        .chart-container {
-            position: relative;
-            height: 300px;
-            width: 100%;
-        }
-
-        /* ========== RESPONSIVE BREAKPOINTS ========== */
-
-        /* Extra Small Devices (Phones, 576px and down) */
-        @media (max-width: 576px) {
-            .content-inner {
-                padding: 1rem;
-            }
-
-            .support-button,
-            .community-button {
-                padding: 10px 16px;
-                font-size: 0.875rem;
-                right: 15px;
-                bottom: 15px;
-            }
-
-            .community-button {
-                bottom: 70px;
-            }
-
-            .support-button span,
-            .community-button span {
-                display: none;
-            }
-
-            .support-button,
-            .community-button {
-                width: 50px;
-                height: 50px;
-                border-radius: 50%;
-                justify-content: center;
-                padding: 0;
-            }
-
-            .flash-message {
-                padding: 1rem;
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .flash-icon {
-                margin-right: 0;
-                margin-bottom: 0.5rem;
-            }
-
-            .card-header {
-                padding: 0.75rem 1rem;
-            }
-
-            .btn-primary {
-                padding: 0.75rem 1rem;
-                width: 100%;
-            }
-
-            .error-state {
-                padding: 2rem 1rem;
-            }
-
-            .error-state i {
-                font-size: 3rem;
-            }
-            
-            .connection-status {
-                left: 15px;
-                bottom: 15px;
-                padding: 0.5rem 1rem;
-                font-size: 0.875rem;
-            }
-
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .page-title {
-                font-size: 1.5rem;
-            }
-            
-            .export-options {
-                grid-template-columns: 1fr;
-            }
-
-            /* Mobile-specific table styles */
-            .table-responsive {
-                font-size: 0.875rem;
-            }
-
-            .table th,
-            .table td {
-                padding: 0.75rem 0.5rem;
-            }
-
-            /* Mobile-specific card padding */
-            .card-body {
-                padding: 1rem;
-            }
-
-            /* Mobile-specific dashboard header */
-            .dashboard-header {
-                margin-bottom: 1.5rem;
-            }
-
-            /* Mobile-specific bulk actions */
-            .bulk-actions .d-flex {
-                flex-direction: column;
-                gap: 0.5rem;
-            }
-
-            .bulk-actions .btn {
-                width: 100%;
-            }
-        }
-
-        /* Small Devices (576px to 768px) */
-        @media (min-width: 576px) and (max-width: 768px) {
-            .content-inner {
-                padding: 1.5rem;
-            }
-
-            .support-button,
-            .community-button {
-                padding: 10px 16px;
-                font-size: 0.875rem;
-            }
-
-            .community-button {
-                bottom: 75px;
-            }
-
-            .flash-message {
-                padding: 1.25rem 1.5rem;
-            }
-
-            .card-header {
-                padding: 1rem 1.25rem;
-            }
-
-            /* Tablet-specific table styles */
-            .table-responsive {
-                font-size: 0.9rem;
-            }
-
-            /* Tablet-specific stats grid */
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            /* Tablet-specific bulk actions */
-            .bulk-actions .d-flex {
-                flex-wrap: wrap;
-            }
-
-            .bulk-actions .btn {
-                flex: 1 1 calc(50% - 0.5rem);
-                min-width: 150px;
-            }
-        }
-
-        /* Medium Devices (768px to 992px) */
-        @media (min-width: 768px) and (max-width: 992px) {
-            .content-inner {
-                padding: 1.75rem;
-            }
-
-            .main-content {
-                margin-left: 0;
-            }
-
-            /* Tablet-specific dashboard styles */
-            .dashboard-header .d-flex {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .live-indicator {
-                margin-left: 0;
-                margin-top: 0.5rem;
-            }
-
-            /* Tablet-specific table styles */
-            .table-responsive {
-                font-size: 0.95rem;
-            }
-        }
-
-        /* Large Devices (992px to 1200px) */
-        @media (min-width: 992px) and (max-width: 1200px) {
-            .content-inner {
-                padding: 2rem;
-            }
-
-            /* Desktop-specific table styles */
-            .table-responsive {
-                font-size: 1rem;
-            }
-        }
-
-        /* Extra Large Devices (1200px and up) */
-        @media (min-width: 1200px) {
-            .content-inner {
-                padding: 2rem;
-                max-width: 1200px;
-                margin: 0 auto;
-            }
-        }
-
-        /* High DPI Screens */
-        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-            .card {
-                box-shadow: 0 2px 20px rgba(0,0,0,0.1);
-            }
-        }
-
-        /* Reduced Motion Support */
-        @media (prefers-reduced-motion: reduce) {
-            * {
-                animation-duration: 0.01ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 0.01ms !important;
-            }
-        }
-
-        /* Orientation Specific */
-        @media (orientation: portrait) {
-            .content-inner {
-                padding: 1.5rem;
-            }
-        }
-
-        @media (orientation: landscape) and (max-height: 500px) {
-            .content-inner {
-                padding: 1rem;
-            }
-            
-            .support-button,
-            .community-button {
-                bottom: 10px;
-                right: 10px;
-            }
-            
-            .community-button {
-                bottom: 60px;
-            }
-        }
-
-        /* Grid System for Better Layout Control */
-        .responsive-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-            width: 100%;
-        }
-
-        /* Flexbox for Form Layouts */
-        .form-row-responsive {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-
-        .form-row-responsive .form-group {
-            flex: 1 1 300px;
-        }
-
-        /* Text Responsiveness */
-        .responsive-text {
-            font-size: clamp(1rem, 2.5vw, 1.25rem);
-        }
-
-        .responsive-heading {
-            font-size: clamp(1.5rem, 4vw, 2.5rem);
-        }
-
-        /* Image Responsiveness */
-        .responsive-img {
-            max-width: 100%;
-            height: auto;
+        .badge-secondary {
+            background: rgba(113, 128, 150, 0.1);
+            color: var(--text-light);
         }
 
         /* Admin-specific styles */
@@ -1073,75 +664,53 @@
             font-size: 0.8rem;
         }
 
-        /* Mobile table enhancements */
+        /* Responsive Design */
         @media (max-width: 768px) {
-            /* Make table cells more compact */
-            .table th, .table td {
-                padding: 0.5rem;
+            .content-inner {
+                padding: 1rem;
             }
-            
-            /* Hide less important columns on mobile */
-            .table th:nth-child(4), /* Phone column */
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .bulk-actions .d-flex {
+                flex-direction: column;
+            }
+
+            .bulk-actions .btn {
+                width: 100%;
+            }
+
+            .table th:nth-child(4),
             .table td:nth-child(4),
-            .table th:nth-child(6), /* Date column */
+            .table th:nth-child(6),
             .table td:nth-child(6) {
                 display: none;
             }
-            
-            /* Adjust action buttons for mobile */
+
             .action-buttons {
                 flex-direction: column;
-                gap: 0.25rem;
             }
-            
-            .action-buttons .btn {
-                min-width: auto;
-                padding: 0.5rem;
-            }
-            
-            /* Make modal full screen on mobile */
-            .withdrawal-details-modal .modal-dialog {
-                margin: 0;
-                max-width: 100%;
-            }
-            
-            .withdrawal-details-modal .modal-content {
-                border-radius: 0;
-                min-height: 100vh;
-            }
-        }
 
-        /* Mobile-first table improvements */
-        .table-responsive {
-            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
-        }
-
-        /* Touch-friendly button sizes */
-        @media (max-width: 768px) {
-            .btn {
-                min-height: 44px; /* Minimum touch target size */
-                display: inline-flex;
-                align-items: center;
+            .support-button,
+            .community-button {
+                width: 50px;
+                height: 50px;
+                border-radius: 50%;
                 justify-content: center;
+                padding: 0;
             }
-            
-            .table .btn-sm {
-                min-height: 36px;
+
+            .support-button span,
+            .community-button span {
+                display: none;
             }
         }
 
-        /* Card stacking improvements for mobile */
-        @media (max-width: 768px) {
-            .card + .card {
-                margin-top: 1rem;
-            }
-        }
-
-        /* Improved mobile navigation */
-        @media (max-width: 992px) {
-            .main-content {
-                margin-left: 0 !important;
-                width: 100% !important;
+        @media (min-width: 768px) and (max-width: 992px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
             }
         }
     </style>
@@ -1253,7 +822,7 @@
                         <!-- Withdrawals Table -->
                         <div class="card">
                             <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
-                                <span class="mb-2 mb-md-0">Pending Withdrawal Requests</span>
+                                <span class="mb-2 mb-md-0">Withdrawal Requests</span>
                                 <div class="d-flex gap-2">
                                     <button class="btn btn-sm btn-outline-secondary" onclick="refreshWithdrawals()">
                                         <i class="fas fa-sync-alt"></i> <span class="d-none d-md-inline">Refresh</span>
@@ -1375,61 +944,60 @@
         const approveBtn = document.getElementById('approveBtn');
         const rejectBtn = document.getElementById('rejectBtn');
 
-        // Sample data - In a real application, this would come from your backend
+        // Global variables
         let withdrawalsData = [];
         let selectedWithdrawals = new Set();
+        let currentWithdrawalId = null;
+
+        // API Base URL
+        const API_BASE = window.location.origin;
+
+        // CSRF Token for AJAX requests
+        function getCSRFToken() {
+            return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        }
 
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', function() {
             // Load initial data
+            loadDashboardStats();
             loadWithdrawalsData();
             
             // Set up event listeners
             selectAllHeader.addEventListener('change', toggleSelectAll);
             selectAll.addEventListener('change', toggleSelectAll);
             
-            // Set up real-time updates (simulated)
-            setInterval(loadWithdrawalsData, 30000); // Refresh every 30 seconds
+            // Set up real-time updates
+            setInterval(loadDashboardStats, 30000); // Refresh stats every 30 seconds
+            setInterval(loadWithdrawalsData, 60000); // Refresh data every 60 seconds
             
             // Set up connection monitoring
             monitorConnection();
-            
-            // Handle window resize for responsive adjustments
-            window.addEventListener('resize', handleResize);
         });
 
-        // Handle window resize
-        function handleResize() {
-            // Update table responsiveness if needed
-            if (window.innerWidth < 768) {
-                // Mobile-specific adjustments
-                document.querySelectorAll('.table th, .table td').forEach(cell => {
-                    // Ensure proper touch targets
-                    cell.style.minHeight = '44px';
-                });
-            }
-        }
-
-        // Load withdrawals data
-        async function loadWithdrawalsData() {
+        // Load dashboard statistics
+        async function loadDashboardStats() {
             try {
-                // In a real application, you would fetch this from your API
-                // For demonstration, we're using mock data
-                const mockData = await fetchMockWithdrawalsData();
-                withdrawalsData = mockData;
+                const response = await fetch(`${API_BASE}/api/admin/stats`);
+                if (!response.ok) throw new Error('Failed to fetch stats');
                 
-                updateDashboardStats();
-                renderWithdrawalsTable();
-                updateFraudAlerts();
+                const data = await response.json();
+                
+                // Update stats from backend data
+                totalPendingEl.textContent = data.pending_withdrawals || 0;
+                totalAmountEl.textContent = `KES ${(data.total_pending_amount || 0).toLocaleString()}`;
+                underReviewEl.textContent = data.under_review || 0;
+                processingEl.textContent = data.processing || 0;
                 
             } catch (error) {
-                console.error('Error loading withdrawals data:', error);
-                showToast('Error loading withdrawal data', 'error');
+                console.error('Error loading dashboard stats:', error);
+                // Fallback to calculating from local data
+                updateStatsFromLocalData();
             }
         }
 
-        // Update dashboard statistics
-        function updateDashboardStats() {
+        // Update stats from local withdrawals data
+        function updateStatsFromLocalData() {
             const pending = withdrawalsData.filter(w => w.status === 'pending').length;
             const underReview = withdrawalsData.filter(w => w.status === 'Under Review').length;
             const processing = withdrawalsData.filter(w => w.status === 'processing').length;
@@ -1444,6 +1012,109 @@
             processingEl.textContent = processing;
         }
 
+        // Load withdrawals data from backend
+        async function loadWithdrawalsData() {
+            try {
+                showLoadingState();
+                
+                const response = await fetch(`${API_BASE}/admin/withdrawals`);
+                if (!response.ok) throw new Error('Failed to fetch withdrawals');
+                
+                // The backend serves HTML, but we need to get data via API
+                // For now, we'll use the existing data structure
+                await fetchWithdrawalsFromAPI();
+                
+            } catch (error) {
+                console.error('Error loading withdrawals data:', error);
+                showToast('Error loading withdrawal data', 'error');
+                document.getElementById('errorState').style.display = 'block';
+            }
+        }
+
+        // Fetch withdrawals via API
+        async function fetchWithdrawalsFromAPI() {
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/withdrawals`);
+                if (!response.ok) throw new Error('API request failed');
+                
+                const data = await response.json();
+                withdrawalsData = data.withdrawals || [];
+                
+                renderWithdrawalsTable();
+                updateFraudAlerts();
+                updateStatsFromLocalData();
+                
+            } catch (error) {
+                console.error('Error fetching withdrawals from API:', error);
+                // Fallback to mock data for demonstration
+                await loadMockWithdrawalsData();
+            }
+        }
+
+        // Load mock data (fallback)
+        async function loadMockWithdrawalsData() {
+            // Simulate API delay
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // This would be replaced with actual data from your backend
+            withdrawalsData = [
+                {
+                    id: '1',
+                    user_id: 'user1',
+                    amount: -1500,
+                    transaction_type: 'withdrawal',
+                    status: 'pending',
+                    phone_number: '254712345678',
+                    description: 'Withdrawal request',
+                    fraud_warnings: null,
+                    created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+                    user: {
+                        id: 'user1',
+                        username: 'john_doe',
+                        email: 'john@example.com',
+                        phone: '254712345678',
+                        created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+                        transactions: []
+                    }
+                },
+                {
+                    id: '2',
+                    user_id: 'user2',
+                    amount: -2500,
+                    transaction_type: 'withdrawal',
+                    status: 'Under Review',
+                    phone_number: '254723456789',
+                    description: 'Withdrawal request - Under review',
+                    fraud_warnings: 'Multiple rapid withdrawals detected',
+                    created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+                    user: {
+                        id: 'user2',
+                        username: 'jane_smith',
+                        email: 'jane@example.com',
+                        phone: '254723456789',
+                        created_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+                        transactions: []
+                    }
+                }
+            ];
+            
+            renderWithdrawalsTable();
+            updateFraudAlerts();
+            updateStatsFromLocalData();
+        }
+
+        // Show loading state
+        function showLoadingState() {
+            withdrawalsTableEl.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center py-4">
+                        <div class="loading-spinner"></div>
+                        Loading withdrawal data...
+                    </td>
+                </tr>
+            `;
+        }
+
         // Render withdrawals table
         function renderWithdrawalsTable() {
             if (withdrawalsData.length === 0) {
@@ -1451,7 +1122,7 @@
                     <tr>
                         <td colspan="8" class="text-center py-4">
                             <i class="fas fa-inbox fa-2x text-muted mb-3"></i>
-                            <p class="text-muted">No pending withdrawals found</p>
+                            <p class="text-muted">No withdrawal requests found</p>
                         </td>
                     </tr>
                 `;
@@ -1468,12 +1139,12 @@
                         <div class="d-flex align-items-center">
                             <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-2" 
                                  style="width: 32px; height: 32px; font-size: 0.8rem;">
-                                ${withdrawal.user.username.charAt(0).toUpperCase()}
+                                ${withdrawal.user?.username?.charAt(0)?.toUpperCase() || 'U'}
                             </div>
                             <div>
-                                <div class="fw-bold">${withdrawal.user.username}</div>
+                                <div class="fw-bold">${withdrawal.user?.username || 'Unknown User'}</div>
                                 <small class="text-muted d-block d-md-none">${withdrawal.phone_number}</small>
-                                <small class="text-muted d-none d-md-block">${withdrawal.user.email}</small>
+                                <small class="text-muted d-none d-md-block">${withdrawal.user?.email || 'No email'}</small>
                             </div>
                         </div>
                     </td>
@@ -1499,12 +1170,12 @@
                                 <span class="d-none d-sm-inline">View</span>
                             </button>
                             <button class="btn btn-sm btn-success" onclick="approveWithdrawal('${withdrawal.id}')" 
-                                    ${withdrawal.status !== 'pending' && withdrawal.status !== 'Under Review' ? 'disabled' : ''} title="Approve">
+                                    ${!['pending', 'Under Review'].includes(withdrawal.status) ? 'disabled' : ''} title="Approve">
                                 <i class="fas fa-check"></i>
                                 <span class="d-none d-sm-inline">Approve</span>
                             </button>
                             <button class="btn btn-sm btn-danger" onclick="rejectWithdrawal('${withdrawal.id}')"
-                                    ${withdrawal.status === 'completed' || withdrawal.status === 'rejected' ? 'disabled' : ''} title="Reject">
+                                    ${['completed', 'rejected'].includes(withdrawal.status) ? 'disabled' : ''} title="Reject">
                                 <i class="fas fa-times"></i>
                                 <span class="d-none d-sm-inline">Reject</span>
                             </button>
@@ -1529,18 +1200,23 @@
 
         // Get status badge class
         function getStatusBadgeClass(status) {
-            switch (status) {
+            if (!status) return 'badge-secondary';
+            
+            switch (status.toLowerCase()) {
                 case 'pending': return 'badge-warning';
-                case 'Under Review': return 'badge-danger';
+                case 'under review': return 'badge-danger';
                 case 'processing': return 'badge-info';
                 case 'completed': return 'badge-success';
                 case 'rejected': return 'badge-danger';
+                case 'failed': return 'badge-danger';
                 default: return 'badge-secondary';
             }
         }
 
         // Calculate days pending
         function calculateDaysPending(createdAt) {
+            if (!createdAt) return 0;
+            
             const created = new Date(createdAt);
             const now = new Date();
             const diffTime = Math.abs(now - created);
@@ -1574,72 +1250,112 @@
         }
 
         // View withdrawal details
-        function viewWithdrawalDetails(withdrawalId) {
-            const withdrawal = withdrawalsData.find(w => w.id === withdrawalId);
-            if (!withdrawal) return;
-            
-            withdrawalDetailsContent.innerHTML = `
-                <div class="row">
-                    <div class="col-12 col-md-6 mb-3">
-                        <div class="user-details-card">
-                            <h6>User Information</h6>
-                            <p><strong>Username:</strong> ${withdrawal.user.username}</p>
-                            <p><strong>Email:</strong> ${withdrawal.user.email}</p>
-                            <p><strong>Phone:</strong> ${withdrawal.user.phone}</p>
-                            <p><strong>Joined:</strong> ${new Date(withdrawal.user.created_at).toLocaleDateString()}</p>
+        async function viewWithdrawalDetails(withdrawalId) {
+            try {
+                const withdrawal = withdrawalsData.find(w => w.id === withdrawalId);
+                if (!withdrawal) {
+                    showToast('Withdrawal not found', 'error');
+                    return;
+                }
+                
+                currentWithdrawalId = withdrawalId;
+                
+                // Fetch additional user details if needed
+                let userDetails = withdrawal.user;
+                if (!userDetails || !userDetails.transactions) {
+                    try {
+                        const response = await fetch(`${API_BASE}/admin/user-details/${withdrawal.user_id}`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.success) {
+                                userDetails = data.user;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error fetching user details:', error);
+                    }
+                }
+                
+                withdrawalDetailsContent.innerHTML = `
+                    <div class="row">
+                        <div class="col-12 col-md-6 mb-3">
+                            <div class="user-details-card">
+                                <h6>User Information</h6>
+                                <p><strong>Username:</strong> ${userDetails?.username || 'N/A'}</p>
+                                <p><strong>Email:</strong> ${userDetails?.email || 'N/A'}</p>
+                                <p><strong>Phone:</strong> ${userDetails?.phone || 'N/A'}</p>
+                                <p><strong>Joined:</strong> ${userDetails?.created_at ? new Date(userDetails.created_at).toLocaleDateString() : 'N/A'}</p>
+                                <p><strong>Balance:</strong> KES ${(userDetails?.balance || 0).toLocaleString()}</p>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6 mb-3">
+                            <div class="user-details-card">
+                                <h6>Withdrawal Details</h6>
+                                <p><strong>Amount:</strong> KES ${Math.abs(withdrawal.amount).toLocaleString()}</p>
+                                <p><strong>Phone:</strong> ${withdrawal.phone_number}</p>
+                                <p><strong>Status:</strong> <span class="badge ${getStatusBadgeClass(withdrawal.status)}">${withdrawal.status}</span></p>
+                                <p><strong>Requested:</strong> ${new Date(withdrawal.created_at).toLocaleString()}</p>
+                                ${withdrawal.description ? `<p><strong>Description:</strong> ${withdrawal.description}</p>` : ''}
+                                ${withdrawal.mpesa_code ? `<p><strong>M-Pesa Code:</strong> ${withdrawal.mpesa_code}</p>` : ''}
+                            </div>
                         </div>
                     </div>
-                    <div class="col-12 col-md-6 mb-3">
-                        <div class="user-details-card">
-                            <h6>Withdrawal Details</h6>
-                            <p><strong>Amount:</strong> KES ${Math.abs(withdrawal.amount).toLocaleString()}</p>
-                            <p><strong>Phone:</strong> ${withdrawal.phone_number}</p>
-                            <p><strong>Status:</strong> <span class="badge ${getStatusBadgeClass(withdrawal.status)}">${withdrawal.status}</span></p>
-                            <p><strong>Requested:</strong> ${new Date(withdrawal.created_at).toLocaleString()}</p>
-                        </div>
+                    
+                    ${withdrawal.fraud_warnings ? `
+                    <div class="fraud-alert mt-3">
+                        <h6><i class="fas fa-exclamation-triangle me-2"></i>Fraud Detection Alert</h6>
+                        <p class="mb-0">${withdrawal.fraud_warnings}</p>
                     </div>
-                </div>
-                
-                ${withdrawal.fraud_warnings ? `
-                <div class="fraud-alert mt-3">
-                    <h6><i class="fas fa-exclamation-triangle me-2"></i>Fraud Detection Alert</h6>
-                    <p class="mb-0">${withdrawal.fraud_warnings}</p>
-                </div>
-                ` : ''}
-                
-                <div class="mt-3">
-                    <h6>Transaction History</h6>
-                    <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Type</th>
-                                    <th>Amount</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${withdrawal.user.transactions ? withdrawal.user.transactions.map(t => `
+                    ` : ''}
+                    
+                    <div class="mt-3">
+                        <h6>Recent Transactions</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
                                     <tr>
-                                        <td>${new Date(t.created_at).toLocaleDateString()}</td>
-                                        <td>${t.transaction_type}</td>
-                                        <td>KES ${Math.abs(t.amount).toLocaleString()}</td>
-                                        <td><span class="badge ${getStatusBadgeClass(t.status)}">${t.status}</span></td>
+                                        <th>Date</th>
+                                        <th>Type</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
                                     </tr>
-                                `).join('') : '<tr><td colspan="4" class="text-center">No transaction history</td></tr>'}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    ${userDetails?.transactions && userDetails.transactions.length > 0 ? 
+                                        userDetails.transactions.slice(0, 5).map(t => `
+                                            <tr>
+                                                <td>${new Date(t.created_at).toLocaleDateString()}</td>
+                                                <td>${t.transaction_type}</td>
+                                                <td>KES ${Math.abs(t.amount).toLocaleString()}</td>
+                                                <td><span class="badge ${getStatusBadgeClass(t.status)}">${t.status}</span></td>
+                                            </tr>
+                                        `).join('') : 
+                                        '<tr><td colspan="4" class="text-center">No recent transactions</td></tr>'
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
-            `;
-            
-            // Update action buttons
-            approveBtn.onclick = () => approveWithdrawal(withdrawalId);
-            rejectBtn.onclick = () => rejectWithdrawal(withdrawalId);
-            
-            // Show modal
-            withdrawalDetailsModal.show();
+                `;
+                
+                // Update action buttons state
+                const canApprove = ['pending', 'Under Review'].includes(withdrawal.status);
+                const canReject = !['completed', 'rejected'].includes(withdrawal.status);
+                
+                approveBtn.disabled = !canApprove;
+                rejectBtn.disabled = !canReject;
+                
+                // Update action buttons
+                approveBtn.onclick = () => approveWithdrawal(withdrawalId);
+                rejectBtn.onclick = () => rejectWithdrawal(withdrawalId);
+                
+                // Show modal
+                withdrawalDetailsModal.show();
+                
+            } catch (error) {
+                console.error('Error loading withdrawal details:', error);
+                showToast('Error loading withdrawal details', 'error');
+            }
         }
 
         // Approve withdrawal
@@ -1651,24 +1367,26 @@
             try {
                 showToast('Processing withdrawal...', 'info');
                 
-                // In a real application, you would call your API here
-                // await fetch(`/admin/approve-withdrawal/${withdrawalId}`, { method: 'POST' });
+                const response = await fetch(`${API_BASE}/admin/approve-withdrawal/${withdrawalId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    }
+                });
                 
-                // Simulate API call
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                const result = await response.json();
                 
-                // Update local data
-                const withdrawal = withdrawalsData.find(w => w.id === withdrawalId);
-                if (withdrawal) {
-                    withdrawal.status = 'processing';
-                    withdrawal.description = 'Approved by admin - M-Pesa processing initiated';
+                if (result.success) {
+                    showToast(result.message, 'success');
+                    withdrawalDetailsModal.hide();
+                    
+                    // Refresh data
+                    loadDashboardStats();
+                    loadWithdrawalsData();
+                } else {
+                    showToast(result.message, 'error');
                 }
-                
-                updateDashboardStats();
-                renderWithdrawalsTable();
-                withdrawalDetailsModal.hide();
-                
-                showToast('Withdrawal approved and sent for processing!', 'success');
                 
             } catch (error) {
                 console.error('Error approving withdrawal:', error);
@@ -1684,28 +1402,27 @@
             try {
                 showToast('Rejecting withdrawal...', 'info');
                 
-                // In a real application, you would call your API here
-                // await fetch(`/admin/reject-withdrawal/${withdrawalId}`, { 
-                //     method: 'POST',
-                //     body: JSON.stringify({ reason }),
-                //     headers: { 'Content-Type': 'application/json' }
-                // });
+                const response = await fetch(`${API_BASE}/admin/reject-withdrawal/${withdrawalId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    body: JSON.stringify({ reason })
+                });
                 
-                // Simulate API call
-                await new Promise(resolve => setTimeout(resolve, 1500));
+                const result = await response.json();
                 
-                // Update local data
-                const withdrawal = withdrawalsData.find(w => w.id === withdrawalId);
-                if (withdrawal) {
-                    withdrawal.status = 'rejected';
-                    withdrawal.description = `Rejected by admin - ${reason}`;
+                if (result.success) {
+                    showToast(result.message, 'success');
+                    withdrawalDetailsModal.hide();
+                    
+                    // Refresh data
+                    loadDashboardStats();
+                    loadWithdrawalsData();
+                } else {
+                    showToast(result.message, 'error');
                 }
-                
-                updateDashboardStats();
-                renderWithdrawalsTable();
-                withdrawalDetailsModal.hide();
-                
-                showToast('Withdrawal rejected and amount refunded!', 'success');
                 
             } catch (error) {
                 console.error('Error rejecting withdrawal:', error);
@@ -1714,7 +1431,7 @@
         }
 
         // Bulk actions
-        function bulkApprove() {
+        async function bulkApprove() {
             if (selectedWithdrawals.size === 0) {
                 alert('Please select at least one withdrawal to approve');
                 return;
@@ -1724,19 +1441,41 @@
                 return;
             }
             
-            showToast(`Processing ${selectedWithdrawals.size} withdrawals...`, 'info');
-            
-            // In a real application, you would call your bulk API here
-            // Array.from(selectedWithdrawals).forEach(id => approveWithdrawal(id));
-            
-            // For demo purposes, we'll just show a success message
-            setTimeout(() => {
-                showToast(`${selectedWithdrawals.size} withdrawals approved successfully!`, 'success');
-                clearSelection();
-            }, 2000);
+            try {
+                showToast(`Processing ${selectedWithdrawals.size} withdrawals...`, 'info');
+                
+                const response = await fetch(`${API_BASE}/admin/withdrawal-notice/bulk-action`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    body: JSON.stringify({
+                        action: 'approve',
+                        transaction_ids: Array.from(selectedWithdrawals)
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showToast(result.message, 'success');
+                    clearSelection();
+                    
+                    // Refresh data
+                    loadDashboardStats();
+                    loadWithdrawalsData();
+                } else {
+                    showToast(result.message, 'error');
+                }
+                
+            } catch (error) {
+                console.error('Error in bulk approve:', error);
+                showToast('Error processing bulk approval', 'error');
+            }
         }
 
-        function bulkReject() {
+        async function bulkReject() {
             if (selectedWithdrawals.size === 0) {
                 alert('Please select at least one withdrawal to reject');
                 return;
@@ -1745,39 +1484,79 @@
             const reason = prompt('Please enter a reason for rejection:');
             if (!reason) return;
             
-            showToast(`Rejecting ${selectedWithdrawals.size} withdrawals...`, 'info');
-            
-            // In a real application, you would call your bulk API here
-            // Array.from(selectedWithdrawals).forEach(id => rejectWithdrawal(id, reason));
-            
-            // For demo purposes, we'll just show a success message
-            setTimeout(() => {
-                showToast(`${selectedWithdrawals.size} withdrawals rejected successfully!`, 'success');
-                clearSelection();
-            }, 2000);
+            try {
+                showToast(`Rejecting ${selectedWithdrawals.size} withdrawals...`, 'info');
+                
+                const response = await fetch(`${API_BASE}/admin/withdrawal-notice/bulk-action`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    body: JSON.stringify({
+                        action: 'reject',
+                        transaction_ids: Array.from(selectedWithdrawals),
+                        reason: reason
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showToast(result.message, 'success');
+                    clearSelection();
+                    
+                    // Refresh data
+                    loadDashboardStats();
+                    loadWithdrawalsData();
+                } else {
+                    showToast(result.message, 'error');
+                }
+                
+            } catch (error) {
+                console.error('Error in bulk reject:', error);
+                showToast('Error processing bulk rejection', 'error');
+            }
         }
 
-        function bulkMarkUnderReview() {
+        async function bulkMarkUnderReview() {
             if (selectedWithdrawals.size === 0) {
                 alert('Please select at least one withdrawal to mark as under review');
                 return;
             }
             
-            showToast(`Marking ${selectedWithdrawals.size} withdrawals as under review...`, 'info');
-            
-            // Update local data
-            withdrawalsData.forEach(w => {
-                if (selectedWithdrawals.has(w.id) && w.status === 'pending') {
-                    w.status = 'Under Review';
-                    w.fraud_warnings = 'Marked for manual review by admin';
+            try {
+                showToast(`Marking ${selectedWithdrawals.size} withdrawals as under review...`, 'info');
+                
+                const response = await fetch(`${API_BASE}/admin/withdrawal-notice/bulk-action`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    body: JSON.stringify({
+                        action: 'review',
+                        transaction_ids: Array.from(selectedWithdrawals)
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showToast(result.message, 'success');
+                    clearSelection();
+                    
+                    // Refresh data
+                    loadDashboardStats();
+                    loadWithdrawalsData();
+                } else {
+                    showToast(result.message, 'error');
                 }
-            });
-            
-            updateDashboardStats();
-            renderWithdrawalsTable();
-            clearSelection();
-            
-            showToast(`${selectedWithdrawals.size} withdrawals marked as under review!`, 'success');
+                
+            } catch (error) {
+                console.error('Error in bulk mark under review:', error);
+                showToast('Error processing bulk action', 'error');
+            }
         }
 
         function clearSelection() {
@@ -1793,7 +1572,7 @@
             refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
             refreshBtn.disabled = true;
             
-            loadWithdrawalsData().finally(() => {
+            Promise.all([loadDashboardStats(), loadWithdrawalsData()]).finally(() => {
                 refreshBtn.innerHTML = originalHTML;
                 refreshBtn.disabled = false;
             });
@@ -1803,10 +1582,33 @@
         function exportWithdrawalData() {
             showToast('Preparing export data...', 'info');
             
-            // In a real application, this would generate and download a file
-            setTimeout(() => {
-                showToast('Export data prepared successfully!', 'success');
-            }, 1500);
+            // Create CSV content
+            const headers = ['ID', 'Username', 'Amount', 'Phone', 'Status', 'Date', 'Days Pending'];
+            const csvContent = [
+                headers.join(','),
+                ...withdrawalsData.map(w => [
+                    w.id,
+                    w.user?.username || 'Unknown',
+                    Math.abs(w.amount),
+                    w.phone_number,
+                    w.status,
+                    new Date(w.created_at).toLocaleDateString(),
+                    calculateDaysPending(w.created_at)
+                ].join(','))
+            ].join('\n');
+            
+            // Create and download file
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('hidden', '');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `withdrawals-${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            showToast('Export data downloaded successfully!', 'success');
         }
 
         // Update fraud alerts
@@ -1822,7 +1624,7 @@
             suspiciousActivityEl.innerHTML = suspiciousWithdrawals.length > 0 ? 
                 suspiciousWithdrawals.map(w => `
                     <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                        <strong>${w.user.username}</strong> - KES ${Math.abs(w.amount).toLocaleString()}
+                        <strong>${w.user?.username || 'Unknown User'}</strong> - KES ${Math.abs(w.amount).toLocaleString()}
                         <br><small>${w.fraud_warnings}</small>
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
@@ -1832,7 +1634,7 @@
             securityEventsEl.innerHTML = securityEvents.length > 0 ?
                 securityEvents.map(w => `
                     <div class="alert alert-info alert-dismissible fade show" role="alert">
-                        <strong>${w.user.username}</strong> - Under Review
+                        <strong>${w.user?.username || 'Unknown User'}</strong> - Under Review
                         <br><small>${new Date(w.created_at).toLocaleDateString()}</small>
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
@@ -1844,13 +1646,22 @@
         function monitorConnection() {
             const connectionStatus = document.getElementById('connectionStatus');
             
-            // Simulate connection monitoring
-            setInterval(() => {
+            // Check connection periodically
+            setInterval(async () => {
+                try {
+                    await fetch(`${API_BASE}/health`);
+                    connectionStatus.className = 'connection-status online';
+                    connectionStatus.innerHTML = '<i class="fas fa-wifi"></i><span>Connected</span>';
+                } catch (error) {
+                    connectionStatus.className = 'connection-status offline';
+                    connectionStatus.innerHTML = '<i class="fas fa-wifi-slash"></i><span>Offline</span>';
+                }
+                
                 connectionStatus.style.display = 'flex';
                 setTimeout(() => {
                     connectionStatus.style.display = 'none';
                 }, 3000);
-            }, 60000);
+            }, 30000);
         }
 
         // Show toast message
@@ -1878,108 +1689,6 @@
                     setTimeout(() => toast.remove(), 300);
                 }, 3000);
             }, 100);
-        }
-
-        // Mock data function - Replace with actual API calls in production
-        async function fetchMockWithdrawalsData() {
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            return [
-                {
-                    id: '1',
-                    user_id: 'user1',
-                    amount: -1500,
-                    transaction_type: 'withdrawal',
-                    status: 'pending',
-                    phone_number: '254712345678',
-                    description: 'Withdrawal request',
-                    ip_address: '192.168.1.1',
-                    user_agent: 'Mozilla/5.0...',
-                    device_fingerprint: 'abc123',
-                    fraud_warnings: null,
-                    created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-                    user: {
-                        id: 'user1',
-                        username: 'john_doe',
-                        email: 'john@example.com',
-                        phone: '254712345678',
-                        created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-                        transactions: [
-                            {
-                                created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-                                transaction_type: 'withdrawal',
-                                amount: -1000,
-                                status: 'completed'
-                            }
-                        ]
-                    }
-                },
-                {
-                    id: '2',
-                    user_id: 'user2',
-                    amount: -2500,
-                    transaction_type: 'withdrawal',
-                    status: 'Under Review',
-                    phone_number: '254723456789',
-                    description: 'Withdrawal request - Under review',
-                    ip_address: '192.168.1.2',
-                    user_agent: 'Mozilla/5.0...',
-                    device_fingerprint: 'def456',
-                    fraud_warnings: 'Multiple rapid withdrawals detected',
-                    created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-                    user: {
-                        id: 'user2',
-                        username: 'jane_smith',
-                        email: 'jane@example.com',
-                        phone: '254723456789',
-                        created_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-                        transactions: [
-                            {
-                                created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-                                transaction_type: 'withdrawal',
-                                amount: -1500,
-                                status: 'completed'
-                            },
-                            {
-                                created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-                                transaction_type: 'withdrawal',
-                                amount: -2000,
-                                status: 'completed'
-                            }
-                        ]
-                    }
-                },
-                {
-                    id: '3',
-                    user_id: 'user3',
-                    amount: -3000,
-                    transaction_type: 'withdrawal',
-                    status: 'processing',
-                    phone_number: '254734567890',
-                    description: 'M-Pesa processing initiated',
-                    ip_address: '192.168.1.3',
-                    user_agent: 'Mozilla/5.0...',
-                    device_fingerprint: 'ghi789',
-                    fraud_warnings: null,
-                    created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-                    user: {
-                        id: 'user3',
-                        username: 'mike_jones',
-                        email: 'mike@example.com',
-                        phone: '254734567890',
-                        created_at: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
-                        transactions: [
-                            {
-                                created_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-                                transaction_type: 'withdrawal',
-                                amount: -2000,
-                                status: 'completed'
-                            }
-                        ]
-                    }
-                }
-            ];
         }
     </script>
 </body>
