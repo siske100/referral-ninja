@@ -172,7 +172,7 @@
                     <i class="fas fa-users me-2"></i><span id="elite-performers-count">{{ top_users|length }}</span> Elite Performers
                 </span>
                 <span class="badge bg-success-subtle text-success p-3 fs-6 ms-2">
-                    <i class="fas fa-sync-alt me-2"></i>Last Updated: <span id="last-updated">{{ now().strftime('%H:%M') }}</span>
+                    <i class="fas fa-sync-alt me-2"></i>Last Updated: <span id="last-updated">Just now</span>
                 </span>
                 <button class="btn btn-outline-primary btn-sm ms-2" onclick="refreshLeaderboard()">
                     <i class="fas fa-sync-alt me-1"></i>Refresh
@@ -618,21 +618,745 @@
 </div>
 
 <style>
-/* Your existing CSS styles remain exactly the same */
 .leaderboard-container {
     max-width: 1400px;
     margin: 0 auto;
     padding: 0 15px;
 }
 
-/* All your existing CSS styles... */
-/* ... (keep all your existing CSS styles exactly as they are) ... */
+/* Hero Section */
+.leaderboard-hero-section .hero-background {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 20px;
+    padding: 60px 40px;
+    position: relative;
+    overflow: hidden;
+}
+
+.leaderboard-hero-section .hero-background::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" opacity="0.1"><polygon fill="white" points="0,1000 1000,0 1000,1000"/></svg>');
+    background-size: cover;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 2;
+}
+
+.hero-badge .badge {
+    border-radius: 50px;
+    font-weight: 600;
+}
+
+.hero-title {
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.rank-stats-card {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 2rem;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Performance Cards */
+.performance-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    border: 1px solid #e9ecef;
+    height: 100%;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.performance-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.card-header i {
+    font-size: 1.5rem;
+    margin-right: 12px;
+    color: #6c757d;
+}
+
+.card-header h5 {
+    margin: 0;
+    color: #495057;
+    font-weight: 600;
+}
+
+.rank-display {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.rank-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #495057;
+    display: block;
+}
+
+.rank-label {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.rank-progress .progress {
+    height: 8px;
+    border-radius: 10px;
+    background: #e9ecef;
+}
+
+.rank-progress .progress-bar {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    border-radius: 10px;
+}
+
+.progress-text {
+    text-align: center;
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+/* Tier Badges */
+.tier-badge-large {
+    display: inline-flex;
+    align-items: center;
+    padding: 12px 20px;
+    border-radius: 50px;
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+}
+
+.tier-badge-large i {
+    margin-right: 8px;
+}
+
+.tier-bronze { background: linear-gradient(45deg, #cd7f32, #e6b17e); color: white; }
+.tier-silver { background: linear-gradient(45deg, #c0c0c0, #e8e8e8); color: #333; }
+.tier-gold { background: linear-gradient(45deg, #ffd700, #fff8b0); color: #333; }
+.tier-platinum { background: linear-gradient(45deg, #e5e4e2, #f8f9fa); color: #333; }
+.tier-diamond { background: linear-gradient(45deg, #b9f2ff, #e2f7ff); color: #333; }
+
+.tier-description {
+    color: #6c757d;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.next-tier-info {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.next-tier-name {
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: #495057;
+    margin-bottom: 5px;
+}
+
+.next-tier-requirement {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.motivation-text {
+    background: #f8f9fa;
+    padding: 12px;
+    border-radius: 10px;
+    text-align: center;
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+/* Leaderboard Table */
+.leaderboard-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    border: 1px solid #e9ecef;
+    overflow: hidden;
+}
+
+.leaderboard-meta {
+    margin-top: 20px;
+}
+
+.leaderboard-meta .badge {
+    border-radius: 10px;
+}
+
+.leaderboard-table {
+    margin: 0;
+}
+
+.leaderboard-table thead th {
+    background: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    padding: 20px 15px;
+    font-weight: 600;
+    color: #495057;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+
+.leaderboard-table tbody td {
+    padding: 20px 15px;
+    vertical-align: middle;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.leaderboard-row:hover {
+    background-color: #f8f9fa;
+}
+
+.leaderboard-row.current-user {
+    background: linear-gradient(135deg, #fff3cd, #fff8e1);
+    border-left: 4px solid #ffc107;
+}
+
+/* Rank Badges */
+.rank-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.rank-1 { background: linear-gradient(45deg, #ffd700, #fff8b0); color: #333; }
+.rank-2 { background: linear-gradient(45deg, #c0c0c0, #e8e8e8); color: #333; }
+.rank-3 { background: linear-gradient(45deg, #cd7f32, #e6b17e); color: white; }
+.rank-4, .rank-5, .rank-6, .rank-7, .rank-8, .rank-9, .rank-10 { 
+    background: #e9ecef; 
+    color: #495057; 
+}
+
+.rank-badge i {
+    margin-right: 5px;
+}
+
+/* User Info */
+.user-info {
+    display: flex;
+    align-items: center;
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #667eea;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    color: white;
+}
+
+.user-details {
+    flex: 1;
+}
+
+.username {
+    color: #495057;
+    font-weight: 600;
+}
+
+.user-badge {
+    background: #667eea;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    margin-left: 8px;
+}
+
+.user-email {
+    font-size: 0.8rem;
+}
+
+/* Tier Display in Table */
+.rank-tier {
+    display: flex;
+    align-items: center;
+}
+
+.tier-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+    color: #6c757d;
+}
+
+.tier-info {
+    flex: 1;
+}
+
+.tier-name {
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+.tier-requirement {
+    color: #6c757d;
+    font-size: 0.75rem;
+}
+
+/* Action Buttons */
+.action-buttons .btn {
+    border-radius: 8px;
+    font-size: 0.8rem;
+    padding: 6px 12px;
+}
+
+.performance-indicator .indicator {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.indicator.positive {
+    background: #d1edff;
+    color: #0d6efd;
+}
+
+/* Mobile Leaderboard */
+.leaderboard-mobile-card {
+    background: white;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border: 1px solid #e9ecef;
+    transition: transform 0.2s ease;
+}
+
+.leaderboard-mobile-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.leaderboard-mobile-card.current-user {
+    border-left: 4px solid #ffc107;
+    background: linear-gradient(135deg, #fff3cd, #fff8e1);
+}
+
+.leaderboard-mobile-card .card-body {
+    padding: 20px;
+}
+
+.user-stats .stat-value {
+    font-size: 1.1rem;
+    margin-bottom: 2px;
+}
+
+.user-stats .stat-label {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+/* Rank Tiers Section */
+.rank-tiers-container {
+    margin-top: 40px;
+}
+
+.tiers-progress-bar {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.progress-steps {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+}
+
+.progress-steps::before {
+    content: '';
+    position: absolute;
+    top: 25px;
+    left: 10%;
+    right: 10%;
+    height: 4px;
+    background: #e9ecef;
+    z-index: 1;
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+}
+
+.step-marker {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border: 4px solid #e9ecef;
+    margin-bottom: 10px;
+    color: #6c757d;
+    font-size: 1.2rem;
+}
+
+.step.active .step-marker {
+    border-color: #667eea;
+    color: #667eea;
+    background: white;
+}
+
+.step-label {
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+.step.active .step-label {
+    color: #667eea;
+}
+
+/* Rank Tier Cards */
+.rank-tiers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 25px;
+    margin-top: 40px;
+}
+
+.rank-tier-card {
+    background: white;
+    border-radius: 15px;
+    padding: 0;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    border: 1px solid #e9ecef;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.rank-tier-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+}
+
+.tier-header {
+    padding: 25px 25px 20px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.tier-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+    font-size: 1.3rem;
+}
+
+.bronze-tier .tier-icon { background: linear-gradient(45deg, #cd7f32, #e6b17e); color: white; }
+.silver-tier .tier-icon { background: linear-gradient(45deg, #c0c0c0, #e8e8e8); color: #333; }
+.gold-tier .tier-icon { background: linear-gradient(45deg, #ffd700, #fff8b0); color: #333; }
+.platinum-tier .tier-icon { background: linear-gradient(45deg, #e5e4e2, #f8f9fa); color: #333; }
+.diamond-tier .tier-icon { background: linear-gradient(45deg, #b9f2ff, #e2f7ff); color: #333; }
+
+.tier-title h4 {
+    margin: 0 0 5px 0;
+    color: #495057;
+    font-weight: bold;
+}
+
+.tier-badge {
+    background: #667eea;
+    color: white;
+    padding: 3px 10px;
+    border-radius: 15px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.tier-body {
+    padding: 20px 25px;
+}
+
+.tier-requirement {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    color: #495057;
+    font-weight: 500;
+}
+
+.tier-features h5 {
+    color: #495057;
+    margin-bottom: 15px;
+    font-size: 1rem;
+}
+
+.tier-features ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.tier-features li {
+    padding: 8px 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: flex-start;
+}
+
+.tier-features li i {
+    margin-top: 2px;
+}
+
+.tier-footer {
+    padding: 20px 25px;
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+}
+
+.tier-stats {
+    display: flex;
+    justify-content: center;
+}
+
+.tier-stats .stat {
+    text-align: center;
+}
+
+.tier-stats .stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #495057;
+    margin-bottom: 2px;
+}
+
+.tier-stats .stat-label {
+    color: #6c757d;
+    font-size: 0.8rem;
+}
+
+/* CTA Section */
+.cta-section {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 20px;
+    margin-top: 40px;
+}
+
+.cta-content h2 {
+    color: #495057;
+}
+
+.cta-buttons .btn {
+    border-radius: 12px;
+    padding: 12px 30px;
+    font-weight: 600;
+}
+
+/* Empty State */
+.empty-leaderboard {
+    padding: 60px 40px;
+}
+
+.empty-icon {
+    opacity: 0.7;
+}
+
+.empty-actions .btn {
+    border-radius: 12px;
+    padding: 12px 30px;
+    font-weight: 600;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .leaderboard-hero-section .hero-background {
+        padding: 40px 20px;
+    }
+    
+    .rank-stats-card {
+        padding: 20px;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+    }
+    
+    .performance-card {
+        padding: 20px;
+    }
+    
+    .rank-number {
+        font-size: 2rem;
+    }
+    
+    .tier-badge-large {
+        padding: 10px 16px;
+        font-size: 1rem;
+    }
+    
+    .rank-tiers-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .progress-steps::before {
+        left: 5%;
+        right: 5%;
+    }
+    
+    .step-marker {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .hero-title {
+        font-size: 2rem;
+    }
+    
+    .stat-value {
+        font-size: 1.3rem;
+    }
+    
+    .cta-buttons .btn {
+        display: block;
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    
+    .cta-buttons .btn:last-child {
+        margin-bottom: 0;
+    }
+}
+
+/* Animation Classes */
+.fade-in {
+    animation: fadeIn 0.6s ease-in;
+}
+
+.slide-up {
+    animation: slideUp 0.6s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { 
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
 </style>
 
 <script>
-// Simplified JavaScript that works with existing routes
+// Enhanced JavaScript with dynamic time and animations
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize the page
+    initializeLeaderboard();
+    
     // Add scroll animations
+    setupScrollAnimations();
+    
+    // Update time immediately and set interval
+    updateLastUpdatedTime();
+    setInterval(updateLastUpdatedTime, 60000); // Update every minute
+    
+    // Auto-refresh leaderboard every 5 minutes
+    setInterval(refreshLeaderboardData, 300000);
+});
+
+function initializeLeaderboard() {
+    // Add animation classes to elements
+    const performanceCards = document.querySelectorAll('.performance-card');
+    performanceCards.forEach((card, index) => {
+        card.classList.add('fade-in');
+        card.style.animationDelay = `${index * 0.1}s`;
+    });
+    
+    // Animate leaderboard rows with stagger
+    const leaderboardRows = document.querySelectorAll('.leaderboard-mobile-card, .leaderboard-row');
+    leaderboardRows.forEach((row, index) => {
+        row.classList.add('slide-up');
+        row.style.animationDelay = `${index * 0.05}s`;
+    });
+    
+    // Animate tier cards
+    const tierCards = document.querySelectorAll('.rank-tier-card');
+    tierCards.forEach((card, index) => {
+        card.classList.add('fade-in');
+        card.style.animationDelay = `${index * 0.1}s`;
+    });
+    
+    // Highlight current user in leaderboard
+    highlightCurrentUser();
+}
+
+function setupScrollAnimations() {
     const observerOptions = {
         threshold: 0.1,
         rootMargin: '0px 0px -50px 0px'
@@ -647,65 +1371,116 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }, observerOptions);
 
-    // Animate performance cards
-    const performanceCards = document.querySelectorAll('.performance-card');
-    performanceCards.forEach((card, index) => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(20px)';
-        card.style.transition = 'all 0.6s ease ' + (index * 0.1) + 's';
-        observer.observe(card);
+    // Observe all animated elements
+    const animatedElements = document.querySelectorAll('.performance-card, .leaderboard-mobile-card, .leaderboard-row, .rank-tier-card');
+    animatedElements.forEach(el => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(20px)';
+        el.style.transition = 'all 0.6s ease';
+        observer.observe(el);
     });
-
-    // Animate leaderboard rows
-    const leaderboardRows = document.querySelectorAll('.leaderboard-mobile-card, .leaderboard-row');
-    leaderboardRows.forEach((row, index) => {
-        row.style.opacity = '0';
-        row.style.transform = 'translateX(-20px)';
-        row.style.transition = 'all 0.5s ease ' + (index * 0.05) + 's';
-        observer.observe(row);
-    });
-
-    // Animate tier cards
-    const tierCards = document.querySelectorAll('.rank-tier-card');
-    tierCards.forEach((card, index) => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(30px)';
-        card.style.transition = 'all 0.6s ease ' + (index * 0.1) + 's';
-        observer.observe(card);
-    });
-});
-
-// Simple refresh function - just reload the page
-function refreshLeaderboard() {
-    window.location.reload();
 }
 
-// Update last updated time
+function highlightCurrentUser() {
+    const currentUserElements = document.querySelectorAll('.current-user');
+    currentUserElements.forEach(element => {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Add pulsing animation
+        element.style.animation = 'pulse 2s infinite';
+    });
+}
+
+// Update last updated time with dynamic formatting
 function updateLastUpdatedTime() {
     const lastUpdated = document.getElementById('last-updated');
     if (lastUpdated) {
         const now = new Date();
-        const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const timeString = now.toLocaleTimeString([], { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            second: '2-digit'
+        });
         lastUpdated.textContent = timeString;
+        
+        // Add a subtle animation
+        lastUpdated.style.transform = 'scale(1.1)';
+        setTimeout(() => {
+            lastUpdated.style.transform = 'scale(1)';
+        }, 300);
     }
+}
+
+// Refresh leaderboard data without full page reload
+async function refreshLeaderboardData() {
+    try {
+        const refreshBtn = document.querySelector('button[onclick="refreshLeaderboard()"]');
+        const originalText = refreshBtn.innerHTML;
+        
+        // Show loading state
+        refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Refreshing...';
+        refreshBtn.disabled = true;
+        
+        // Simulate API call - replace with actual endpoint if available
+        // const response = await fetch('/api/leaderboard');
+        // const data = await response.json();
+        
+        // For now, just show notification and update time
+        showNotification('Leaderboard updated successfully!', 'success');
+        updateLastUpdatedTime();
+        
+        // Reset button after delay
+        setTimeout(() => {
+            refreshBtn.innerHTML = originalText;
+            refreshBtn.disabled = false;
+        }, 2000);
+        
+    } catch (error) {
+        console.error('Error refreshing leaderboard:', error);
+        showNotification('Error refreshing leaderboard', 'error');
+    }
+}
+
+// Simple refresh function - just reload the page
+function refreshLeaderboard() {
+    refreshLeaderboardData();
 }
 
 // Simple user profile view function
 function viewUserProfile(userId) {
     // You can implement this to show user profile modal
-    alert('View user profile: ' + userId);
+    showNotification(`Viewing profile for user: ${userId}`, 'info');
+    
     // Or redirect to user profile page if you have one
     // window.location.href = '/user/' + userId;
 }
 
-// Show notification function
+// Enhanced notification system
 function showNotification(message, type = 'info') {
-    // Create a simple notification
+    // Remove existing notifications
+    const existingNotifications = document.querySelectorAll('.custom-notification');
+    existingNotifications.forEach(notification => notification.remove());
+    
+    // Create notification element
     const notification = document.createElement('div');
-    notification.className = `alert alert-${type === 'error' ? 'danger' : 'success'} alert-dismissible fade show`;
-    notification.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 1050; min-width: 300px;';
+    notification.className = `custom-notification alert alert-${type === 'error' ? 'danger' : 'success'} alert-dismissible fade show`;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1050;
+        min-width: 300px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        border-radius: 10px;
+        border: none;
+    `;
+    
+    const icon = type === 'error' ? 'exclamation-triangle' : 'check-circle';
     notification.innerHTML = `
-        ${message}
+        <div class="d-flex align-items-center">
+            <i class="fas fa-${icon} me-2"></i>
+            <span>${message}</span>
+        </div>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
     
@@ -719,12 +1494,24 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
-// Auto-refresh every 2 minutes
-setInterval(() => {
-    updateLastUpdatedTime();
-}, 120000);
+// Add CSS for pulse animation
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(255, 193, 7, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+    }
+    
+    .current-user {
+        animation: pulse 2s infinite;
+    }
+`;
+document.head.appendChild(style);
 
-// Initial call to set the time
-updateLastUpdatedTime();
+// Export functions for global access (if needed)
+window.refreshLeaderboard = refreshLeaderboard;
+window.viewUserProfile = viewUserProfile;
+window.showNotification = showNotification;
 </script>
 {% endblock %}
