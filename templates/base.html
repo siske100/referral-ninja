@@ -376,10 +376,65 @@
             color: var(--text-dark);
         }
 
-        /* ===== SUPPORT / COMMUNITY BUTTONS - UPDATED ===== */
-        .support-button, .community-button {
+        /* ===== WHATSAPP TOGGLE SYSTEM ===== */
+        .whatsapp-toggle-container {
             position: fixed;
             right: 20px;
+            bottom: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+        }
+
+        /* Toggle Button */
+        .whatsapp-toggle-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--primary-gradient);
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            box-shadow: var(--shadow-lg);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1002;
+        }
+
+        .whatsapp-toggle-btn:hover {
+            transform: scale(1.1);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .whatsapp-toggle-btn.active {
+            background: var(--secondary-gradient);
+            transform: rotate(45deg);
+        }
+
+        /* WhatsApp Buttons Container */
+        .whatsapp-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: all 0.3s ease;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(20px) scale(0.9);
+        }
+
+        .whatsapp-buttons.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0) scale(1);
+        }
+
+        /* Individual WhatsApp Buttons */
+        .whatsapp-button {
             background: var(--secondary-gradient);
             color: white;
             border: none;
@@ -388,7 +443,6 @@
             text-decoration: none;
             box-shadow: var(--shadow-lg);
             transition: all 0.3s ease;
-            z-index: 1000;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -397,20 +451,29 @@
             padding: 12px 20px;
             font-size: 0.875rem;
             min-width: auto;
+            opacity: 0;
+            transform: translateX(20px);
         }
 
-        .support-button {
-            bottom: 20px;
-            background: var(--secondary-gradient);
-        }
-
-        .community-button {
-            bottom: 80px;
+        .whatsapp-button.community {
             background: var(--primary-gradient);
         }
 
-        .support-button:hover, .community-button:hover {
-            transform: translateY(-2px);
+        .whatsapp-buttons.show .whatsapp-button {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .whatsapp-button:nth-child(1) {
+            transition-delay: 0.1s;
+        }
+
+        .whatsapp-button:nth-child(2) {
+            transition-delay: 0.2s;
+        }
+
+        .whatsapp-button:hover {
+            transform: translateY(-2px) !important;
             box-shadow: var(--shadow-xl);
             color: white;
             text-decoration: none;
@@ -418,7 +481,7 @@
 
         /* Always show full button with text on larger screens */
         @media (min-width: 768px) {
-            .support-button, .community-button {
+            .whatsapp-button {
                 width: auto;
                 height: auto;
                 padding: 12px 24px;
@@ -426,38 +489,32 @@
                 border-radius: 50px;
             }
             
-            .support-button span, 
-            .community-button span {
+            .whatsapp-button span {
                 display: inline !important;
                 opacity: 1 !important;
             }
         }
 
-        /* Mobile: show as circular icons only */
+        /* Mobile: show as circular icons only when toggled */
         @media (max-width: 767.98px) {
-            .support-button, .community-button {
+            .whatsapp-toggle-btn {
+                width: 50px;
+                height: 50px;
+                font-size: 1.2rem;
+            }
+
+            .whatsapp-button {
                 width: 50px;
                 height: 50px;
                 padding: 0;
                 border-radius: 50%;
-                right: 15px;
             }
             
-            .support-button {
-                bottom: 15px;
-            }
-            
-            .community-button {
-                bottom: 75px;
-            }
-            
-            .support-button span, 
-            .community-button span {
+            .whatsapp-button span {
                 display: none;
             }
             
-            .support-button i, 
-            .community-button i {
+            .whatsapp-button i {
                 margin: 0;
                 font-size: 1.2rem;
             }
@@ -465,52 +522,60 @@
 
         /* Extra small mobile devices */
         @media (max-width: 375px) {
-            .support-button, .community-button {
+            .whatsapp-toggle-container {
+                right: 15px;
+                bottom: 15px;
+            }
+
+            .whatsapp-toggle-btn {
                 width: 45px;
                 height: 45px;
-                right: 10px;
+                font-size: 1.1rem;
             }
-            
-            .support-button {
-                bottom: 10px;
-            }
-            
-            .community-button {
-                bottom: 65px;
+
+            .whatsapp-button {
+                width: 45px;
+                height: 45px;
             }
         }
 
-        /* Large desktop screens - ensure buttons are clearly visible */
+        /* Large desktop screens */
         @media (min-width: 1200px) {
-            .support-button, .community-button {
-                padding: 14px 28px;
-                font-size: 1rem;
+            .whatsapp-toggle-container {
                 right: 25px;
-            }
-            
-            .support-button {
                 bottom: 25px;
             }
-            
-            .community-button {
-                bottom: 90px;
+
+            .whatsapp-toggle-btn {
+                width: 65px;
+                height: 65px;
+                font-size: 1.6rem;
+            }
+
+            .whatsapp-button {
+                padding: 14px 28px;
+                font-size: 1rem;
             }
         }
 
         /* High contrast mode support */
         @media (prefers-contrast: high) {
-            .support-button, .community-button {
+            .whatsapp-toggle-btn,
+            .whatsapp-button {
                 border: 2px solid white;
             }
         }
 
         /* Reduced motion support */
         @media (prefers-reduced-motion: reduce) {
-            .support-button, .community-button {
+            .whatsapp-toggle-btn,
+            .whatsapp-button,
+            .whatsapp-buttons {
                 transition: none;
             }
             
-            .support-button:hover, .community-button:hover {
+            .whatsapp-toggle-btn:hover,
+            .whatsapp-button:hover {
                 transform: none;
             }
         }
@@ -785,11 +850,7 @@
                 padding: 0;
             }
 
-            .support-button {
-                display: none !important;
-            }
-
-            .community-button {
+            .whatsapp-toggle-container {
                 display: none !important;
             }
             
@@ -1009,25 +1070,35 @@
                     {% block content %}{% endblock %}
                 </div>
 
-                <!-- Join Community Button -->
-                <a href="https://chat.whatsapp.com/I1iZi0WjYjF0EDV0Byq7IW" 
-                   class="community-button" 
-                   target="_blank" 
-                   rel="noopener noreferrer"
-                   aria-label="Join our WhatsApp Community for updates and discussions">
-                    <i class="fab fa-whatsapp" aria-hidden="true"></i>
-                    <span>Join Community</span>
-                </a>
+                <!-- WhatsApp Toggle System -->
+                <div class="whatsapp-toggle-container">
+                    <div class="whatsapp-buttons" id="whatsappButtons">
+                        <!-- Join Community Button -->
+                        <a href="https://chat.whatsapp.com/I1iZi0WjYjF0EDV0Byq7IW" 
+                           class="whatsapp-button community" 
+                           target="_blank" 
+                           rel="noopener noreferrer"
+                           aria-label="Join our WhatsApp Community for updates and discussions">
+                            <i class="fab fa-whatsapp" aria-hidden="true"></i>
+                            <span>Join Community</span>
+                        </a>
 
-                <!-- WhatsApp Support Button -->
-                <a href="https://wa.me/254799326074" 
-                   class="support-button" 
-                   target="_blank" 
-                   rel="noopener noreferrer"
-                   aria-label="Contact Support on WhatsApp for immediate assistance">
-                    <i class="fab fa-whatsapp" aria-hidden="true"></i>
-                    <span>Contact Support</span>
-                </a>
+                        <!-- WhatsApp Support Button -->
+                        <a href="https://wa.me/254799326074" 
+                           class="whatsapp-button" 
+                           target="_blank" 
+                           rel="noopener noreferrer"
+                           aria-label="Contact Support on WhatsApp for immediate assistance">
+                            <i class="fab fa-whatsapp" aria-hidden="true"></i>
+                            <span>Contact Support</span>
+                        </a>
+                    </div>
+                    
+                    <!-- Toggle Button -->
+                    <button class="whatsapp-toggle-btn" id="whatsappToggle" aria-label="Toggle WhatsApp buttons">
+                        <i class="fab fa-whatsapp"></i>
+                    </button>
+                </div>
             </main>
         </div>
     </div>
@@ -1040,6 +1111,47 @@
             const connectionStatus = document.getElementById('connectionStatus');
             const errorState = document.getElementById('errorState');
             const appContainer = document.getElementById('appContainer');
+            
+            // WhatsApp Toggle Functionality
+            const whatsappToggle = document.getElementById('whatsappToggle');
+            const whatsappButtons = document.getElementById('whatsappButtons');
+            let isWhatsAppOpen = false;
+
+            function toggleWhatsAppButtons() {
+                isWhatsAppOpen = !isWhatsAppOpen;
+                
+                if (isWhatsAppOpen) {
+                    whatsappButtons.classList.add('show');
+                    whatsappToggle.classList.add('active');
+                    whatsappToggle.setAttribute('aria-expanded', 'true');
+                } else {
+                    whatsappButtons.classList.remove('show');
+                    whatsappToggle.classList.remove('active');
+                    whatsappToggle.setAttribute('aria-expanded', 'false');
+                }
+            }
+
+            // Close WhatsApp buttons when clicking outside
+            function handleClickOutside(event) {
+                if (isWhatsAppOpen && 
+                    !whatsappToggle.contains(event.target) && 
+                    !whatsappButtons.contains(event.target)) {
+                    toggleWhatsAppButtons();
+                }
+            }
+
+            // Initialize WhatsApp toggle
+            if (whatsappToggle && whatsappButtons) {
+                whatsappToggle.addEventListener('click', toggleWhatsAppButtons);
+                document.addEventListener('click', handleClickOutside);
+                
+                // Close on escape key
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape' && isWhatsAppOpen) {
+                        toggleWhatsAppButtons();
+                    }
+                });
+            }
 
             // Responsive initialization
             function initializeResponsiveBehavior() {
