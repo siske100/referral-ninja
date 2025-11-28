@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Referral Ninja - Professional Referral Platform</title>
+    <title>Admin Withdrawal Management - Referral Ninja</title>
 
     <!-- Comprehensive Favicon Setup -->
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon-96x96.png') }}" sizes="96x96" />
@@ -21,65 +21,20 @@
     <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}" type="image/x-icon">
     <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}" type="image/x-icon">
 
-    <!-- Organization Logo for SEO -->
-    <link rel="logo" type="image/png" href="{{ url_for('static', filename='images/logo-120x120.png') }}">
-    <meta itemprop="logo" content="{{ url_for('static', filename='images/logo-120x120.png') }}">
-    <meta property="og:logo" content="{{ url_for('static', filename='images/logo-120x120.png') }}">
-
-    <!-- Enhanced Structured Data -->
-    <script type="application/ld+json">
-    {
-        "@context": "https://schema.org",
-        "@type": "Organization",
-        "name": "Referral Ninja",
-        "url": "https://www.referralninja.co.ke",
-        "logo": "https://www.referralninja.co.ke/static/images/logo-120x120.png",
-        "description": "Referral Ninja - Kenya's premier platform for earning money through referrals and discovering job opportunities. Join our professional network for student referrals and job placements.",
-        "address": {
-            "@type": "PostalAddress",
-            "addressCountry": "KE",
-            "addressRegion": "Nairobi"
-        },
-        "contactPoint": {
-            "@type": "ContactPoint",
-            "telephone": "+254799326074",
-            "contactType": "customer service",
-            "areaServed": "KE",
-            "availableLanguage": "English"
-        },
-        "sameAs": [
-            "https://chat.whatsapp.com/I1iZi0WjYjF0EDV0Byq7IW"
-        ]
-    }
-    </script>
-
     <!-- SEO Meta Tags -->
-    <meta name="description" content="Referral Ninja - Kenya's premier platform for earning money through referrals and discovering job opportunities. Join our professional network for student referrals and job placements.">
-    <meta name="keywords" content="referral, earn money, jobs Kenya, student jobs, referrals, mobile money, M-Pesa, professional network">
+    <meta name="description" content="Admin Withdrawal Management - Monitor and process user withdrawal requests with fraud detection and M-Pesa integration.">
+    <meta name="keywords" content="admin, withdrawal management, M-Pesa, fraud detection, user management">
     <meta name="author" content="Referral Ninja">
-    <meta property="og:title" content="Referral Ninja - Professional Referral Platform">
-    <meta property="og:description" content="Join Referral Ninja to earn money by referring friends and discover professional job opportunities in Kenya.">
+    <meta property="og:title" content="Admin Withdrawal Management - Referral Ninja">
+    <meta property="og:description" content="Monitor and process user withdrawal requests with comprehensive fraud detection.">
     <meta property="og:url" content="https://www.referralninja.co.ke">
     <meta property="og:type" content="website">
     <meta property="og:image" content="{{ url_for('static', filename='images/og-image.png') }}">
     <meta property="og:site_name" content="Referral Ninja">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Referral Ninja - Professional Referral Platform">
-    <meta name="twitter:description" content="Join Referral Ninja to earn money by referring friends and discover professional job opportunities in Kenya.">
+    <meta name="twitter:title" content="Admin Withdrawal Management - Referral Ninja">
+    <meta name="twitter:description" content="Monitor and process user withdrawal requests with comprehensive fraud detection.">
     <meta name="twitter:image" content="{{ url_for('static', filename='images/logo-120x120.png') }}">
-
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-
-    <!-- Performance Optimizations -->
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
-    <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
-    <link rel="dns-prefetch" href="//fonts.googleapis.com">
-    
-    <noscript>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
-    </noscript>
 
     <!-- External Resources -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -595,7 +550,7 @@
             }
         }
 
-        /* ========== DASHBOARD SPECIFIC STYLES ========== */
+        /* ========== ADMIN WITHDRAWAL MANAGEMENT STYLES ========== */
         .dashboard-container {
             max-width: 1400px;
             margin: 0 auto;
@@ -991,8 +946,62 @@
             max-width: 100%;
             height: auto;
         }
+
+        /* Admin-specific styles */
+        .bulk-actions {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 2rem;
+        }
+
+        .withdrawal-details-modal .modal-content {
+            border-radius: var(--radius-lg);
+            border: none;
+            box-shadow: var(--shadow-xl);
+        }
+
+        .fraud-alert {
+            background: linear-gradient(135deg, #fed7d7, #feb2b2);
+            border-left: 4px solid var(--danger);
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            margin-bottom: 1rem;
+        }
+
+        .user-details-card {
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: var(--radius-md);
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .bulk-checkbox {
+            width: 20px;
+            height: 20px;
+        }
+
+        .table th:first-child,
+        .table td:first-child {
+            width: 40px;
+        }
+
+        .fraud-warning {
+            background: rgba(229, 62, 62, 0.1);
+            border-left: 3px solid var(--danger);
+            padding: 0.5rem;
+            border-radius: var(--radius-sm);
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+        }
     </style>
-    {% block styles %}{% endblock %}
 </head>
 <body>
     <!-- Skip to main content for accessibility -->
@@ -1032,14 +1041,14 @@
                         </button>
                     </div>
 
-                    <!-- DASHBOARD CONTENT -->
+                    <!-- ADMIN WITHDRAWAL MANAGEMENT CONTENT -->
                     <div class="dashboard-container">
                         <!-- Dashboard Header -->
                         <div class="dashboard-header">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
-                                    <h1 class="page-title">Earnings Dashboard</h1>
-                                    <p class="page-subtitle">Track your referral earnings and manage KRA records</p>
+                                    <h1 class="page-title">Withdrawal Management</h1>
+                                    <p class="page-subtitle">Monitor and process user withdrawal requests with fraud detection</p>
                                 </div>
                                 <div>
                                     <span class="live-indicator">Live Updates</span>
@@ -1050,108 +1059,64 @@
                         <!-- Stats Overview -->
                         <div class="stats-grid">
                             <div class="stat-card">
-                                <div class="stat-value" id="total-earnings">KES 0</div>
-                                <div class="stat-label">Total Earnings</div>
-                                <i class="fas fa-wallet stat-icon"></i>
-                            </div>
-                            <div class="stat-card">
-                                <div class="stat-value" id="pending-earnings">KES 0</div>
-                                <div class="stat-label">Pending Earnings</div>
+                                <div class="stat-value" id="total-pending">0</div>
+                                <div class="stat-label">Pending Withdrawals</div>
                                 <i class="fas fa-clock stat-icon"></i>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-value" id="total-referrals">0</div>
-                                <div class="stat-label">Total Referrals</div>
-                                <i class="fas fa-users stat-icon"></i>
+                                <div class="stat-value" id="total-amount">KES 0</div>
+                                <div class="stat-label">Total Pending Amount</div>
+                                <i class="fas fa-wallet stat-icon"></i>
                             </div>
                             <div class="stat-card">
-                                <div class="stat-value" id="success-rate">0%</div>
-                                <div class="stat-label">Success Rate</div>
-                                <i class="fas fa-chart-line stat-icon"></i>
+                                <div class="stat-value" id="under-review">0</div>
+                                <div class="stat-label">Under Review</div>
+                                <i class="fas fa-search stat-icon"></i>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="processing">0</div>
+                                <div class="stat-label">Processing</div>
+                                <i class="fas fa-cog stat-icon"></i>
                             </div>
                         </div>
 
-                        <!-- Export Section -->
-                        <div class="export-section">
-                            <h3>Export Records for KRA</h3>
-                            <p class="text-muted">Download your earnings data in formats compatible with KRA requirements</p>
+                        <!-- Bulk Actions Section -->
+                        <div class="bulk-actions">
+                            <h3>Bulk Actions</h3>
+                            <p class="text-muted">Select multiple withdrawals and process them in bulk</p>
                             
-                            <div class="export-options">
-                                <div class="export-option" onclick="exportToPDF()">
-                                    <i class="fas fa-file-pdf export-icon"></i>
-                                    <h5>PDF Report</h5>
-                                    <p class="text-muted">Formatted for printing</p>
-                                </div>
-                                <div class="export-option" onclick="exportToExcel()">
-                                    <i class="fas fa-file-excel export-icon"></i>
-                                    <h5>Excel Spreadsheet</h5>
-                                    <p class="text-muted">For further analysis</p>
-                                </div>
-                                <div class="export-option" onclick="exportToCSV()">
-                                    <i class="fas fa-file-csv export-icon"></i>
-                                    <h5>CSV Format</h5>
-                                    <p class="text-muted">KRA compatible format</p>
-                                </div>
+                            <div class="d-flex gap-2 mb-3">
+                                <button class="btn btn-success" onclick="bulkApprove()">
+                                    <i class="fas fa-check-circle me-2"></i>Approve Selected
+                                </button>
+                                <button class="btn btn-danger" onclick="bulkReject()">
+                                    <i class="fas fa-times-circle me-2"></i>Reject Selected
+                                </button>
+                                <button class="btn btn-warning" onclick="bulkMarkUnderReview()">
+                                    <i class="fas fa-search me-2"></i>Mark as Under Review
+                                </button>
+                                <button class="btn btn-outline-secondary" onclick="clearSelection()">
+                                    <i class="fas fa-times me-2"></i>Clear Selection
+                                </button>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="selectAll">
+                                <label class="form-check-label" for="selectAll">
+                                    Select all withdrawals on this page
+                                </label>
                             </div>
                         </div>
 
-                        <!-- Earnings Chart and Transactions -->
-                        <div class="row">
-                            <div class="col-lg-8">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <span>Earnings Overview</span>
-                                        <div>
-                                            <select class="form-select form-select-sm" style="width: auto; display: inline-block;" id="timeRange">
-                                                <option value="7d">Last 7 Days</option>
-                                                <option value="30d" selected>Last 30 Days</option>
-                                                <option value="90d">Last 90 Days</option>
-                                                <option value="1y">Last Year</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="chart-container">
-                                            <canvas id="earningsChart"></canvas>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-lg-4">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <span>Recent Transactions</span>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="table-responsive">
-                                            <table class="table table-hover">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Date</th>
-                                                        <th>Amount</th>
-                                                        <th>Status</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="recent-transactions">
-                                                    <!-- Transactions will be populated via Supabase -->
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Referral History -->
+                        <!-- Withdrawals Table -->
                         <div class="card">
-                            <div class="card-header">
-                                <span>Referral History</span>
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span>Pending Withdrawal Requests</span>
                                 <div>
-                                    <button class="btn btn-sm btn-outline-secondary me-2" onclick="refreshData()">
+                                    <button class="btn btn-sm btn-outline-secondary me-2" onclick="refreshWithdrawals()">
                                         <i class="fas fa-sync-alt"></i> Refresh
                                     </button>
-                                    <button class="btn btn-sm btn-primary" onclick="exportToKRA()">
-                                        <i class="fas fa-download"></i> Export for KRA
+                                    <button class="btn btn-sm btn-primary" onclick="exportWithdrawalData()">
+                                        <i class="fas fa-download"></i> Export Data
                                     </button>
                                 </div>
                             </div>
@@ -1160,23 +1125,57 @@
                                     <table class="table table-hover">
                                         <thead>
                                             <tr>
-                                                <th>Date</th>
-                                                <th>Referral Name</th>
-                                                <th>Service</th>
+                                                <th>
+                                                    <input type="checkbox" class="bulk-checkbox" id="selectAllHeader">
+                                                </th>
+                                                <th>User</th>
+                                                <th>Amount</th>
+                                                <th>Phone</th>
                                                 <th>Status</th>
-                                                <th>Earnings</th>
-                                                <th>KRA Ready</th>
+                                                <th>Date</th>
+                                                <th>Days Pending</th>
+                                                <th>Actions</th>
                                             </tr>
                                         </thead>
-                                        <tbody id="referral-history">
-                                            <!-- Referral history will be populated via Supabase -->
+                                        <tbody id="withdrawals-table">
+                                            <!-- Withdrawals will be populated via JavaScript -->
+                                            <tr>
+                                                <td colspan="8" class="text-center py-4">
+                                                    <div class="loading-spinner"></div>
+                                                    Loading withdrawal data...
+                                                </td>
+                                            </tr>
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Fraud Monitoring Section -->
+                        <div class="card mt-4">
+                            <div class="card-header">
+                                <span>Fraud Detection & Security Alerts</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h5>Suspicious Activity</h5>
+                                        <div id="suspicious-activity">
+                                            <!-- Suspicious activity alerts will be populated here -->
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h5>Security Events</h5>
+                                        <div id="security-events">
+                                            <!-- Security events will be populated here -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
-                    <!-- END DASHBOARD CONTENT -->
+                    <!-- END ADMIN WITHDRAWAL MANAGEMENT CONTENT -->
 
                 </div>
 
@@ -1195,353 +1194,504 @@
         </div>
     </div>
 
+    <!-- Withdrawal Details Modal -->
+    <div class="modal fade withdrawal-details-modal" id="withdrawalDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Withdrawal Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="withdrawalDetailsContent">
+                    <!-- Content will be populated by JavaScript -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="approveBtn">Approve & Process</button>
+                    <button type="button" class="btn btn-danger" id="rejectBtn">Reject & Refund</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Bootstrap & Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <!-- Supabase Client -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
     <script>
-        // Initialize Supabase client - Replace with your actual credentials
-        const supabaseUrl = 'YOUR_SUPABASE_URL_HERE';
-        const supabaseKey = 'YOUR_SUPABASE_ANON_KEY_HERE';
-        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-
         // DOM Elements
-        const totalEarningsEl = document.getElementById('total-earnings');
-        const pendingEarningsEl = document.getElementById('pending-earnings');
-        const totalReferralsEl = document.getElementById('total-referrals');
-        const successRateEl = document.getElementById('success-rate');
-        const recentTransactionsEl = document.getElementById('recent-transactions');
-        const referralHistoryEl = document.getElementById('referral-history');
-        const timeRangeEl = document.getElementById('timeRange');
+        const totalPendingEl = document.getElementById('total-pending');
+        const totalAmountEl = document.getElementById('total-amount');
+        const underReviewEl = document.getElementById('under-review');
+        const processingEl = document.getElementById('processing');
+        const withdrawalsTableEl = document.getElementById('withdrawals-table');
+        const selectAllHeader = document.getElementById('selectAllHeader');
+        const selectAll = document.getElementById('selectAll');
+        const withdrawalDetailsModal = new bootstrap.Modal(document.getElementById('withdrawalDetailsModal'));
+        const withdrawalDetailsContent = document.getElementById('withdrawalDetailsContent');
+        const approveBtn = document.getElementById('approveBtn');
+        const rejectBtn = document.getElementById('rejectBtn');
 
-        // Chart initialization
-        let earningsChart;
-        function initializeChart(earningsData = []) {
-            const ctx = document.getElementById('earningsChart').getContext('2d');
-            earningsChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: earningsData.map(d => d.date),
-                    datasets: [{
-                        label: 'Earnings (KES)',
-                        data: earningsData.map(d => d.amount),
-                        borderColor: '#667eea',
-                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                drawBorder: false
-                            },
-                            ticks: {
-                                callback: function(value) {
-                                    return 'KES ' + value;
-                                }
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false
-                            }
-                        }
-                    }
-                }
-            });
-        }
+        // Sample data - In a real application, this would come from your backend
+        let withdrawalsData = [];
+        let selectedWithdrawals = new Set();
 
-        // Fetch initial data from Supabase
-        async function fetchInitialData() {
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load initial data
+            loadWithdrawalsData();
+            
+            // Set up event listeners
+            selectAllHeader.addEventListener('change', toggleSelectAll);
+            selectAll.addEventListener('change', toggleSelectAll);
+            
+            // Set up real-time updates (simulated)
+            setInterval(loadWithdrawalsData, 30000); // Refresh every 30 seconds
+            
+            // Set up connection monitoring
+            monitorConnection();
+        });
+
+        // Load withdrawals data
+        async function loadWithdrawalsData() {
             try {
-                // Fetch user's referral data
-                const { data: referrals, error: referralsError } = await supabase
-                    .from('referrals')
-                    .select('*')
-                    .order('created_at', { ascending: false });
-
-                if (referralsError) throw referralsError;
-
-                // Fetch user's transaction data
-                const { data: transactions, error: transactionsError } = await supabase
-                    .from('transactions')
-                    .select('*')
-                    .order('created_at', { ascending: false })
-                    .limit(5);
-
-                if (transactionsError) throw transactionsError;
-
-                // Process and display data
-                updateDashboardStats(referrals);
-                updateRecentTransactions(transactions);
-                updateReferralHistory(referrals);
-                updateChartData(referrals);
-
-                // Set up real-time subscriptions
-                setupRealtimeSubscriptions();
-
+                // In a real application, you would fetch this from your API
+                // For demonstration, we're using mock data
+                const mockData = await fetchMockWithdrawalsData();
+                withdrawalsData = mockData;
+                
+                updateDashboardStats();
+                renderWithdrawalsTable();
+                updateFraudAlerts();
+                
             } catch (error) {
-                console.error('Error fetching initial data:', error);
-                showToast('Error loading data. Please refresh the page.', 'error');
+                console.error('Error loading withdrawals data:', error);
+                showToast('Error loading withdrawal data', 'error');
             }
         }
 
         // Update dashboard statistics
-        function updateDashboardStats(referrals) {
-            const totalEarnings = referrals
-                .filter(ref => ref.status === 'approved')
-                .reduce((sum, ref) => sum + (ref.earnings || 0), 0);
+        function updateDashboardStats() {
+            const pending = withdrawalsData.filter(w => w.status === 'pending').length;
+            const underReview = withdrawalsData.filter(w => w.status === 'Under Review').length;
+            const processing = withdrawalsData.filter(w => w.status === 'processing').length;
             
-            const pendingEarnings = referrals
-                .filter(ref => ref.status === 'pending')
-                .reduce((sum, ref) => sum + (ref.earnings || 0), 0);
+            const totalAmount = withdrawalsData
+                .filter(w => ['pending', 'Under Review', 'processing'].includes(w.status))
+                .reduce((sum, w) => sum + Math.abs(w.amount), 0);
             
-            const totalReferrals = referrals.length;
-            const successfulReferrals = referrals.filter(ref => ref.status === 'approved').length;
-            const successRate = totalReferrals > 0 ? (successfulReferrals / totalReferrals) * 100 : 0;
-
-            totalEarningsEl.textContent = `KES ${totalEarnings.toLocaleString()}`;
-            pendingEarningsEl.textContent = `KES ${pendingEarnings.toLocaleString()}`;
-            totalReferralsEl.textContent = totalReferrals;
-            successRateEl.textContent = `${successRate.toFixed(1)}%`;
+            totalPendingEl.textContent = pending;
+            totalAmountEl.textContent = `KES ${totalAmount.toLocaleString()}`;
+            underReviewEl.textContent = underReview;
+            processingEl.textContent = processing;
         }
 
-        // Update recent transactions table
-        function updateRecentTransactions(transactions) {
-            recentTransactionsEl.innerHTML = '';
-            
-            transactions.forEach(transaction => {
-                const statusClass = transaction.status === 'completed' ? 'badge-success' : 
-                                  transaction.status === 'pending' ? 'badge-warning' : 'badge-danger';
-                
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${new Date(transaction.created_at).toLocaleDateString()}</td>
-                    <td>KES ${transaction.amount?.toLocaleString() || '0'}</td>
-                    <td><span class="badge ${statusClass}">${transaction.status}</span></td>
+        // Render withdrawals table
+        function renderWithdrawalsTable() {
+            if (withdrawalsData.length === 0) {
+                withdrawalsTableEl.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center py-4">
+                            <i class="fas fa-inbox fa-2x text-muted mb-3"></i>
+                            <p class="text-muted">No pending withdrawals found</p>
+                        </td>
+                    </tr>
                 `;
-                recentTransactionsEl.appendChild(row);
-            });
-        }
-
-        // Update referral history table
-        function updateReferralHistory(referrals) {
-            referralHistoryEl.innerHTML = '';
+                return;
+            }
             
-            referrals.forEach(referral => {
-                let statusClass;
-                if (referral.status === 'approved') statusClass = 'badge-success';
-                else if (referral.status === 'pending') statusClass = 'badge-warning';
-                else statusClass = 'badge-danger';
-
-                const kraBadge = referral.kra_ready ? 
-                    '<span class="badge badge-success"><i class="fas fa-check"></i> Ready</span>' : 
-                    '<span class="badge badge-warning"><i class="fas fa-clock"></i> Processing</span>';
-
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${new Date(referral.created_at).toLocaleDateString()}</td>
-                    <td>${referral.referral_name || 'N/A'}</td>
-                    <td>${referral.service || 'N/A'}</td>
-                    <td><span class="badge ${statusClass}">${referral.status}</span></td>
-                    <td>KES ${referral.earnings?.toLocaleString() || '0'}</td>
-                    <td>${kraBadge}</td>
-                `;
-                referralHistoryEl.appendChild(row);
+            withdrawalsTableEl.innerHTML = withdrawalsData.map(withdrawal => `
+                <tr data-withdrawal-id="${withdrawal.id}">
+                    <td>
+                        <input type="checkbox" class="bulk-checkbox withdrawal-checkbox" 
+                               value="${withdrawal.id}" ${selectedWithdrawals.has(withdrawal.id) ? 'checked' : ''}>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-2" 
+                                 style="width: 32px; height: 32px; font-size: 0.8rem;">
+                                ${withdrawal.user.username.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <div class="fw-bold">${withdrawal.user.username}</div>
+                                <small class="text-muted">${withdrawal.user.email}</small>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="fw-bold">KES ${Math.abs(withdrawal.amount).toLocaleString()}</td>
+                    <td>${withdrawal.phone_number}</td>
+                    <td>
+                        <span class="badge ${getStatusBadgeClass(withdrawal.status)}">
+                            ${withdrawal.status}
+                        </span>
+                        ${withdrawal.fraud_warnings ? `
+                            <div class="fraud-warning mt-1">
+                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                Fraud detected
+                            </div>
+                        ` : ''}
+                    </td>
+                    <td>${new Date(withdrawal.created_at).toLocaleDateString()}</td>
+                    <td>${calculateDaysPending(withdrawal.created_at)}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn btn-sm btn-outline-primary" onclick="viewWithdrawalDetails('${withdrawal.id}')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-sm btn-success" onclick="approveWithdrawal('${withdrawal.id}')" 
+                                    ${withdrawal.status !== 'pending' && withdrawal.status !== 'Under Review' ? 'disabled' : ''}>
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="rejectWithdrawal('${withdrawal.id}')"
+                                    ${withdrawal.status === 'completed' || withdrawal.status === 'rejected' ? 'disabled' : ''}>
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+            
+            // Add event listeners to checkboxes
+            document.querySelectorAll('.withdrawal-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const withdrawalId = this.value;
+                    if (this.checked) {
+                        selectedWithdrawals.add(withdrawalId);
+                    } else {
+                        selectedWithdrawals.delete(withdrawalId);
+                    }
+                    updateSelectAllState();
+                });
             });
         }
 
-        // Update chart with earnings data
-        function updateChartData(referrals) {
-            // Group earnings by date (last 30 days)
-            const last30Days = [...Array(30)].map((_, i) => {
-                const date = new Date();
-                date.setDate(date.getDate() - i);
-                return date.toISOString().split('T')[0];
-            }).reverse();
+        // Get status badge class
+        function getStatusBadgeClass(status) {
+            switch (status) {
+                case 'pending': return 'badge-warning';
+                case 'Under Review': return 'badge-danger';
+                case 'processing': return 'badge-info';
+                case 'completed': return 'badge-success';
+                case 'rejected': return 'badge-danger';
+                default: return 'badge-secondary';
+            }
+        }
 
-            const earningsByDate = {};
-            last30Days.forEach(date => {
-                earningsByDate[date] = 0;
-            });
+        // Calculate days pending
+        function calculateDaysPending(createdAt) {
+            const created = new Date(createdAt);
+            const now = new Date();
+            const diffTime = Math.abs(now - created);
+            return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        }
 
-            referrals.forEach(ref => {
-                if (ref.status === 'approved' && ref.earnings) {
-                    const date = new Date(ref.created_at).toISOString().split('T')[0];
-                    if (earningsByDate[date] !== undefined) {
-                        earningsByDate[date] += ref.earnings;
-                    }
+        // Toggle select all
+        function toggleSelectAll() {
+            const isChecked = selectAllHeader.checked || selectAll.checked;
+            document.querySelectorAll('.withdrawal-checkbox').forEach(checkbox => {
+                checkbox.checked = isChecked;
+                const withdrawalId = checkbox.value;
+                if (isChecked) {
+                    selectedWithdrawals.add(withdrawalId);
+                } else {
+                    selectedWithdrawals.delete(withdrawalId);
                 }
             });
-
-            const chartData = last30Days.map(date => ({
-                date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                amount: earningsByDate[date]
-            }));
-
-            if (earningsChart) {
-                earningsChart.destroy();
-            }
-            initializeChart(chartData);
+            
+            // Sync both select all checkboxes
+            selectAllHeader.checked = isChecked;
+            selectAll.checked = isChecked;
         }
 
-        // Set up real-time subscriptions
-        function setupRealtimeSubscriptions() {
-            // Subscribe to referrals table changes
-            const referralsSubscription = supabase
-                .channel('referrals-changes')
-                .on(
-                    'postgres_changes',
-                    {
-                        event: '*',
-                        schema: 'public',
-                        table: 'referrals'
-                    },
-                    (payload) => {
-                        console.log('Referral change received!', payload);
-                        handleRealtimeUpdate(payload);
-                    }
-                )
-                .subscribe();
-
-            // Subscribe to transactions table changes
-            const transactionsSubscription = supabase
-                .channel('transactions-changes')
-                .on(
-                    'postgres_changes',
-                    {
-                        event: '*',
-                        schema: 'public',
-                        table: 'transactions'
-                    },
-                    (payload) => {
-                        console.log('Transaction change received!', payload);
-                        handleRealtimeUpdate(payload);
-                    }
-                )
-                .subscribe();
-
-            // Monitor subscription status
-            referralsSubscription.on('system', { event: 'disconnect' }, () => {
-                console.log('Referrals subscription disconnected');
-                showToast('Live updates disconnected. Reconnecting...', 'warning');
-            });
-
-            transactionsSubscription.on('system', { event: 'disconnect' }, () => {
-                console.log('Transactions subscription disconnected');
-                showToast('Live updates disconnected. Reconnecting...', 'warning');
-            });
+        // Update select all state
+        function updateSelectAllState() {
+            const checkboxes = document.querySelectorAll('.withdrawal-checkbox');
+            const allChecked = checkboxes.length > 0 && Array.from(checkboxes).every(cb => cb.checked);
+            selectAllHeader.checked = allChecked;
+            selectAll.checked = allChecked;
         }
 
-        // Handle real-time updates
-        async function handleRealtimeUpdate(payload) {
-            try {
-                showToast('Data updated in real-time!', 'success');
+        // View withdrawal details
+        function viewWithdrawalDetails(withdrawalId) {
+            const withdrawal = withdrawalsData.find(w => w.id === withdrawalId);
+            if (!withdrawal) return;
+            
+            withdrawalDetailsContent.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="user-details-card">
+                            <h6>User Information</h6>
+                            <p><strong>Username:</strong> ${withdrawal.user.username}</p>
+                            <p><strong>Email:</strong> ${withdrawal.user.email}</p>
+                            <p><strong>Phone:</strong> ${withdrawal.user.phone}</p>
+                            <p><strong>Joined:</strong> ${new Date(withdrawal.user.created_at).toLocaleDateString()}</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="user-details-card">
+                            <h6>Withdrawal Details</h6>
+                            <p><strong>Amount:</strong> KES ${Math.abs(withdrawal.amount).toLocaleString()}</p>
+                            <p><strong>Phone:</strong> ${withdrawal.phone_number}</p>
+                            <p><strong>Status:</strong> <span class="badge ${getStatusBadgeClass(withdrawal.status)}">${withdrawal.status}</span></p>
+                            <p><strong>Requested:</strong> ${new Date(withdrawal.created_at).toLocaleString()}</p>
+                        </div>
+                    </div>
+                </div>
                 
-                // Refetch data to ensure consistency
-                const { data: referrals } = await supabase
-                    .from('referrals')
-                    .select('*')
-                    .order('created_at', { ascending: false });
+                ${withdrawal.fraud_warnings ? `
+                <div class="fraud-alert mt-3">
+                    <h6><i class="fas fa-exclamation-triangle me-2"></i>Fraud Detection Alert</h6>
+                    <p class="mb-0">${withdrawal.fraud_warnings}</p>
+                </div>
+                ` : ''}
+                
+                <div class="mt-3">
+                    <h6>Transaction History</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${withdrawal.user.transactions ? withdrawal.user.transactions.map(t => `
+                                    <tr>
+                                        <td>${new Date(t.created_at).toLocaleDateString()}</td>
+                                        <td>${t.transaction_type}</td>
+                                        <td>KES ${Math.abs(t.amount).toLocaleString()}</td>
+                                        <td><span class="badge ${getStatusBadgeClass(t.status)}">${t.status}</span></td>
+                                    </tr>
+                                `).join('') : '<tr><td colspan="4" class="text-center">No transaction history</td></tr>'}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+            
+            // Update action buttons
+            approveBtn.onclick = () => approveWithdrawal(withdrawalId);
+            rejectBtn.onclick = () => rejectWithdrawal(withdrawalId);
+            
+            // Show modal
+            withdrawalDetailsModal.show();
+        }
 
-                const { data: transactions } = await supabase
-                    .from('transactions')
-                    .select('*')
-                    .order('created_at', { ascending: false })
-                    .limit(5);
-
-                if (referrals) {
-                    updateDashboardStats(referrals);
-                    updateReferralHistory(referrals);
-                    updateChartData(referrals);
+        // Approve withdrawal
+        async function approveWithdrawal(withdrawalId) {
+            if (!confirm('Are you sure you want to approve this withdrawal? This will initiate M-Pesa processing.')) {
+                return;
+            }
+            
+            try {
+                showToast('Processing withdrawal...', 'info');
+                
+                // In a real application, you would call your API here
+                // await fetch(`/admin/approve-withdrawal/${withdrawalId}`, { method: 'POST' });
+                
+                // Simulate API call
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Update local data
+                const withdrawal = withdrawalsData.find(w => w.id === withdrawalId);
+                if (withdrawal) {
+                    withdrawal.status = 'processing';
+                    withdrawal.description = 'Approved by admin - M-Pesa processing initiated';
                 }
+                
+                updateDashboardStats();
+                renderWithdrawalsTable();
+                withdrawalDetailsModal.hide();
+                
+                showToast('Withdrawal approved and sent for processing!', 'success');
+                
+            } catch (error) {
+                console.error('Error approving withdrawal:', error);
+                showToast('Error approving withdrawal', 'error');
+            }
+        }
 
-                if (transactions) {
-                    updateRecentTransactions(transactions);
+        // Reject withdrawal
+        async function rejectWithdrawal(withdrawalId) {
+            const reason = prompt('Please enter a reason for rejection:');
+            if (!reason) return;
+            
+            try {
+                showToast('Rejecting withdrawal...', 'info');
+                
+                // In a real application, you would call your API here
+                // await fetch(`/admin/reject-withdrawal/${withdrawalId}`, { 
+                //     method: 'POST',
+                //     body: JSON.stringify({ reason }),
+                //     headers: { 'Content-Type': 'application/json' }
+                // });
+                
+                // Simulate API call
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                // Update local data
+                const withdrawal = withdrawalsData.find(w => w.id === withdrawalId);
+                if (withdrawal) {
+                    withdrawal.status = 'rejected';
+                    withdrawal.description = `Rejected by admin - ${reason}`;
                 }
-
+                
+                updateDashboardStats();
+                renderWithdrawalsTable();
+                withdrawalDetailsModal.hide();
+                
+                showToast('Withdrawal rejected and amount refunded!', 'success');
+                
             } catch (error) {
-                console.error('Error handling real-time update:', error);
+                console.error('Error rejecting withdrawal:', error);
+                showToast('Error rejecting withdrawal', 'error');
             }
         }
 
-        // Export functions
-        async function exportToPDF() {
-            try {
-                showToast('Generating PDF report...', 'info');
-                // Implementation for PDF export
-                // This would typically call a backend endpoint
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                showToast('PDF report generated successfully!', 'success');
-            } catch (error) {
-                showToast('Error generating PDF report', 'error');
+        // Bulk actions
+        function bulkApprove() {
+            if (selectedWithdrawals.size === 0) {
+                alert('Please select at least one withdrawal to approve');
+                return;
             }
+            
+            if (!confirm(`Are you sure you want to approve ${selectedWithdrawals.size} withdrawal(s)?`)) {
+                return;
+            }
+            
+            showToast(`Processing ${selectedWithdrawals.size} withdrawals...`, 'info');
+            
+            // In a real application, you would call your bulk API here
+            // Array.from(selectedWithdrawals).forEach(id => approveWithdrawal(id));
+            
+            // For demo purposes, we'll just show a success message
+            setTimeout(() => {
+                showToast(`${selectedWithdrawals.size} withdrawals approved successfully!`, 'success');
+                clearSelection();
+            }, 2000);
         }
 
-        async function exportToExcel() {
-            try {
-                showToast('Generating Excel spreadsheet...', 'info');
-                // Implementation for Excel export
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                showToast('Excel spreadsheet generated successfully!', 'success');
-            } catch (error) {
-                showToast('Error generating Excel spreadsheet', 'error');
+        function bulkReject() {
+            if (selectedWithdrawals.size === 0) {
+                alert('Please select at least one withdrawal to reject');
+                return;
             }
+            
+            const reason = prompt('Please enter a reason for rejection:');
+            if (!reason) return;
+            
+            showToast(`Rejecting ${selectedWithdrawals.size} withdrawals...`, 'info');
+            
+            // In a real application, you would call your bulk API here
+            // Array.from(selectedWithdrawals).forEach(id => rejectWithdrawal(id, reason));
+            
+            // For demo purposes, we'll just show a success message
+            setTimeout(() => {
+                showToast(`${selectedWithdrawals.size} withdrawals rejected successfully!`, 'success');
+                clearSelection();
+            }, 2000);
         }
 
-        async function exportToCSV() {
-            try {
-                showToast('Generating CSV file...', 'info');
-                // Implementation for CSV export
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                showToast('CSV file generated successfully!', 'success');
-            } catch (error) {
-                showToast('Error generating CSV file', 'error');
+        function bulkMarkUnderReview() {
+            if (selectedWithdrawals.size === 0) {
+                alert('Please select at least one withdrawal to mark as under review');
+                return;
             }
+            
+            showToast(`Marking ${selectedWithdrawals.size} withdrawals as under review...`, 'info');
+            
+            // Update local data
+            withdrawalsData.forEach(w => {
+                if (selectedWithdrawals.has(w.id) && w.status === 'pending') {
+                    w.status = 'Under Review';
+                    w.fraud_warnings = 'Marked for manual review by admin';
+                }
+            });
+            
+            updateDashboardStats();
+            renderWithdrawalsTable();
+            clearSelection();
+            
+            showToast(`${selectedWithdrawals.size} withdrawals marked as under review!`, 'success');
         }
 
-        async function exportToKRA() {
-            try {
-                showToast('Preparing KRA-compliant export...', 'info');
-                // Implementation for KRA export
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                showToast('KRA export prepared successfully!', 'success');
-            } catch (error) {
-                showToast('Error preparing KRA export', 'error');
-            }
+        function clearSelection() {
+            selectedWithdrawals.clear();
+            document.querySelectorAll('.withdrawal-checkbox').forEach(cb => cb.checked = false);
+            updateSelectAllState();
         }
 
-        async function refreshData() {
+        // Refresh withdrawals
+        function refreshWithdrawals() {
             const refreshBtn = document.querySelector('.btn-outline-secondary');
             const originalHTML = refreshBtn.innerHTML;
             refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
             refreshBtn.disabled = true;
             
-            try {
-                await fetchInitialData();
-                showToast('Data refreshed successfully!', 'success');
-            } catch (error) {
-                showToast('Error refreshing data', 'error');
-            } finally {
+            loadWithdrawalsData().finally(() => {
                 refreshBtn.innerHTML = originalHTML;
                 refreshBtn.disabled = false;
-            }
+            });
         }
 
+        // Export withdrawal data
+        function exportWithdrawalData() {
+            showToast('Preparing export data...', 'info');
+            
+            // In a real application, this would generate and download a file
+            setTimeout(() => {
+                showToast('Export data prepared successfully!', 'success');
+            }, 1500);
+        }
+
+        // Update fraud alerts
+        function updateFraudAlerts() {
+            const suspiciousActivityEl = document.getElementById('suspicious-activity');
+            const securityEventsEl = document.getElementById('security-events');
+            
+            const suspiciousWithdrawals = withdrawalsData.filter(w => w.fraud_warnings);
+            const securityEvents = withdrawalsData
+                .filter(w => w.status === 'Under Review')
+                .slice(0, 5);
+            
+            suspiciousActivityEl.innerHTML = suspiciousWithdrawals.length > 0 ? 
+                suspiciousWithdrawals.map(w => `
+                    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                        <strong>${w.user.username}</strong> - KES ${Math.abs(w.amount).toLocaleString()}
+                        <br><small>${w.fraud_warnings}</small>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `).join('') : 
+                '<p class="text-muted">No suspicious activity detected</p>';
+            
+            securityEventsEl.innerHTML = securityEvents.length > 0 ?
+                securityEvents.map(w => `
+                    <div class="alert alert-info alert-dismissible fade show" role="alert">
+                        <strong>${w.user.username}</strong> - Under Review
+                        <br><small>${new Date(w.created_at).toLocaleDateString()}</small>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `).join('') :
+                '<p class="text-muted">No security events</p>';
+        }
+
+        // Monitor connection
+        function monitorConnection() {
+            const connectionStatus = document.getElementById('connectionStatus');
+            
+            // Simulate connection monitoring
+            setInterval(() => {
+                connectionStatus.style.display = 'flex';
+                setTimeout(() => {
+                    connectionStatus.style.display = 'none';
+                }, 3000);
+            }, 60000);
+        }
+
+        // Show toast message
         function showToast(message, type) {
             // Create toast element
             const toast = document.createElement('div');
@@ -1568,80 +1718,107 @@
             }, 100);
         }
 
-        // Initialize dashboard when DOM is loaded
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize with empty chart
-            initializeChart();
+        // Mock data function - Replace with actual API calls in production
+        async function fetchMockWithdrawalsData() {
+            // Simulate API delay
+            await new Promise(resolve => setTimeout(resolve, 1000));
             
-            // Fetch initial data
-            fetchInitialData();
-            
-            // Set up time range change listener
-            timeRangeEl.addEventListener('change', function() {
-                showToast(`Loading data for ${this.options[this.selectedIndex].text}...`, 'info');
-                // In a real implementation, this would refetch data for the selected range
-                refreshData();
-            });
-
-            // ORIGINAL JAVASCRIPT FUNCTIONALITY (unchanged)
-            const mainContent = document.getElementById('mainContent');
-            const connectionStatus = document.getElementById('connectionStatus');
-            const errorState = document.getElementById('errorState');
-            const appContainer = document.getElementById('appContainer');
-
-            // ... (rest of the original JavaScript functionality remains the same)
-            // This includes all the responsive behavior, error handling, etc.
-
-            // Connection monitoring for Supabase
-            function monitorSupabaseConnection() {
-                const checkConnection = async () => {
-                    try {
-                        const { error } = await supabase.from('referrals').select('count', { count: 'exact', head: true });
-                        if (error) throw error;
-                        
-                        connectionStatus.classList.remove('offline');
-                        connectionStatus.classList.add('online');
-                        connectionStatus.innerHTML = '<i class="fas fa-wifi"></i><span>Connected to Database</span>';
-                        connectionStatus.style.display = 'flex';
-                        
-                        setTimeout(() => {
-                            connectionStatus.style.display = 'none';
-                        }, 3000);
-                    } catch (error) {
-                        connectionStatus.classList.remove('online');
-                        connectionStatus.classList.add('offline');
-                        connectionStatus.innerHTML = '<i class="fas fa-wifi-slash"></i><span>Database Connection Lost</span>';
-                        connectionStatus.style.display = 'flex';
+            return [
+                {
+                    id: '1',
+                    user_id: 'user1',
+                    amount: -1500,
+                    transaction_type: 'withdrawal',
+                    status: 'pending',
+                    phone_number: '254712345678',
+                    description: 'Withdrawal request',
+                    ip_address: '192.168.1.1',
+                    user_agent: 'Mozilla/5.0...',
+                    device_fingerprint: 'abc123',
+                    fraud_warnings: null,
+                    created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+                    user: {
+                        id: 'user1',
+                        username: 'john_doe',
+                        email: 'john@example.com',
+                        phone: '254712345678',
+                        created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+                        transactions: [
+                            {
+                                created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+                                transaction_type: 'withdrawal',
+                                amount: -1000,
+                                status: 'completed'
+                            }
+                        ]
                     }
-                };
-
-                // Check connection every 30 seconds
-                setInterval(checkConnection, 30000);
-                checkConnection(); // Initial check
-            }
-
-            monitorSupabaseConnection();
-        });
-
-        // Utility functions (unchanged)
-        window.makeRequest = function(url, options = {}) {
-            // ... existing implementation
-        };
-
-        window.retryRequest = async function(url, options = {}, maxRetries = 3) {
-            // ... existing implementation
-        };
-
-        window.validateForm = function(form) {
-            // ... existing implementation
-        };
-
-        // Global error handler
-        window.addEventListener('unhandledrejection', function(event) {
-            console.error('Unhandled promise rejection:', event.reason);
-        });
+                },
+                {
+                    id: '2',
+                    user_id: 'user2',
+                    amount: -2500,
+                    transaction_type: 'withdrawal',
+                    status: 'Under Review',
+                    phone_number: '254723456789',
+                    description: 'Withdrawal request - Under review',
+                    ip_address: '192.168.1.2',
+                    user_agent: 'Mozilla/5.0...',
+                    device_fingerprint: 'def456',
+                    fraud_warnings: 'Multiple rapid withdrawals detected',
+                    created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+                    user: {
+                        id: 'user2',
+                        username: 'jane_smith',
+                        email: 'jane@example.com',
+                        phone: '254723456789',
+                        created_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+                        transactions: [
+                            {
+                                created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+                                transaction_type: 'withdrawal',
+                                amount: -1500,
+                                status: 'completed'
+                            },
+                            {
+                                created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+                                transaction_type: 'withdrawal',
+                                amount: -2000,
+                                status: 'completed'
+                            }
+                        ]
+                    }
+                },
+                {
+                    id: '3',
+                    user_id: 'user3',
+                    amount: -3000,
+                    transaction_type: 'withdrawal',
+                    status: 'processing',
+                    phone_number: '254734567890',
+                    description: 'M-Pesa processing initiated',
+                    ip_address: '192.168.1.3',
+                    user_agent: 'Mozilla/5.0...',
+                    device_fingerprint: 'ghi789',
+                    fraud_warnings: null,
+                    created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+                    user: {
+                        id: 'user3',
+                        username: 'mike_jones',
+                        email: 'mike@example.com',
+                        phone: '254734567890',
+                        created_at: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
+                        transactions: [
+                            {
+                                created_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+                                transaction_type: 'withdrawal',
+                                amount: -2000,
+                                status: 'completed'
+                            }
+                        ]
+                    }
+                }
+            ];
+        }
     </script>
-    
-    {% block scripts %}{% endblock %}
 </body>
 </html>
