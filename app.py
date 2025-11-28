@@ -121,9 +121,9 @@ app = Flask(__name__)
 class Config:
     
     # reCAPTCHA Configuration
-    RECAPTCHA_SITE_KEY = "6Lc3PQ8sAAAAAHwj5vJDoq7ZModKAkOiLyM7xxV2"
-    RECAPTCHA_SECRET_KEY = "6Lc3PQ8sAAAAAKpcoRfnnF69s2gAg-9UJAYFR0cR"
-    RECAPTCHA_VERIFY_URL = "https://www.google.com/recaptcha/api/siteverify"
+    RECAPTCHA_SITE_KEY = os.environ['RECAPTCHA_SITE_KEY']
+    RECAPTCHA_SECRET_KEY = os.environ['RECAPTCHA_SECRET_KEY']
+    RECAPTCHA_VERIFY_URL = os.environ['RECAPTCHA_VERIFY_URL']
     
     # REQUIRED - No defaults for secrets
     SECRET_KEY = os.environ['SECRET_KEY']  # Will raise error if missing
