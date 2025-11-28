@@ -22,25 +22,33 @@
                         <div class="row g-4">
                             <div class="col-md-3">
                                 <div class="stat-item">
-                                    <div class="stat-value text-primary fw-bold" id="user-global-rank">#{{ user_ranking.position }}</div>
+                                    <div class="stat-value text-primary fw-bold" id="user-global-rank">
+                                        #{{ user_ranking.position | default('N/A') }}
+                                    </div>
                                     <div class="stat-label">Global Rank</div>
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="stat-item">
-                                    <div class="stat-value text-success fw-bold" id="total-competitors">{{ user_ranking.total_users }}</div>
+                                    <div class="stat-value text-success fw-bold" id="total-competitors">
+                                        {{ user_ranking.total_users | default(0) }}
+                                    </div>
                                     <div class="stat-label">Total Competitors</div>
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="stat-item">
-                                    <div class="stat-value text-warning fw-bold" id="user-percentile">Top {{ user_ranking.percentile }}%</div>
+                                    <div class="stat-value text-warning fw-bold" id="user-percentile">
+                                        Top {{ user_ranking.percentile | default(0) }}%
+                                    </div>
                                     <div class="stat-label">Performance Percentile</div>
                                 </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="stat-item">
-                                    <div class="stat-value text-info fw-bold" id="user-tier">{{ user_ranking.user_rank }}</div>
+                                    <div class="stat-value text-info fw-bold" id="user-tier">
+                                        {{ user_ranking.user_rank | default('Bronze') }}
+                                    </div>
                                     <div class="stat-label">Current Tier</div>
                                 </div>
                             </div>
@@ -70,32 +78,43 @@
                         </div>
                         <div class="card-body">
                             <div class="rank-display">
-                                <span class="rank-number" id="current-rank">#{{ user_ranking.position }}</span>
-                                <span class="rank-label">Out of <span id="total-users">{{ user_ranking.total_users }}</span> users</span>
+                                <span class="rank-number" id="current-rank">#{{ user_ranking.position | default('N/A') }}</span>
+                                <span class="rank-label">Out of <span id="total-users">{{ user_ranking.total_users | default(0) }}</span> users</span>
                             </div>
                             <div class="rank-progress">
+                                {% set total_users_safe = user_ranking.total_users | default(1) %}
+                                {% set position_safe = user_ranking.position | default(total_users_safe) %}
+                                {% if total_users_safe > 0 %}
+                                    {% set rank_progress = ((total_users_safe - position_safe) / total_users_safe * 100) %}
+                                {% else %}
+                                    {% set rank_progress = 0 %}
+                                {% endif %}
                                 <div class="progress">
                                     <div class="progress-bar" id="rank-progress-bar" 
-                                         style="width: {{ ((user_ranking.total_users - user_ranking.position) / user_ranking.total_users * 100) if user_ranking.total_users > 0 else 0 }}%"
+                                         style="width: {{ rank_progress }}%"
                                          data-bs-toggle="tooltip" 
                                          title="Your position relative to all users">
                                     </div>
                                 </div>
                                 <div class="progress-text">
-                                    <span id="rank-percentile">Top {{ user_ranking.percentile }}% of performers</span>
+                                    <span id="rank-percentile">Top {{ user_ranking.percentile | default(0) }}% of performers</span>
                                 </div>
                             </div>
                             <div class="performance-metrics mt-3">
                                 <div class="row text-center">
                                     <div class="col-6">
                                         <div class="metric">
-                                            <div class="metric-value">KES {{ "%.2f"|format(user_ranking.total_commission or 0) }}</div>
+                                            <div class="metric-value">
+                                                KES {{ "%.2f"|format(user_ranking.total_commission | default(0) | float) }}
+                                            </div>
                                             <div class="metric-label">Total Earnings</div>
                                         </div>
                                     </div>
                                     <div class="col-6">
                                         <div class="metric">
-                                            <div class="metric-value">{{ user_ranking.referral_count or 0 }}</div>
+                                            <div class="metric-value">
+                                                {{ user_ranking.referral_count | default(0) }}
+                                            </div>
                                             <div class="metric-label">Successful Referrals</div>
                                         </div>
                                     </div>
@@ -113,18 +132,19 @@
                         </div>
                         <div class="card-body">
                             <div class="tier-display">
-                                <div class="tier-badge-large tier-{{ user_ranking.user_rank|lower }}" id="current-tier-badge">
+                                {% set user_rank_safe = user_ranking.user_rank | default('Bronze') %}
+                                <div class="tier-badge-large tier-{{ user_rank_safe | lower }}" id="current-tier-badge">
                                     <i class="fas fa-gem"></i>
-                                    <span id="current-tier">{{ user_ranking.user_rank }}</span>
+                                    <span id="current-tier">{{ user_rank_safe }}</span>
                                 </div>
                                 <div class="tier-description" id="tier-description">
-                                    {% if user_ranking.user_rank == 'Bronze' %}
+                                    {% if user_rank_safe == 'Bronze' %}
                                     Building foundation - Focus on consistent referral activity
-                                    {% elif user_ranking.user_rank == 'Silver' %}
+                                    {% elif user_rank_safe == 'Silver' %}
                                     Strong performer - Demonstrating effective referral strategies
-                                    {% elif user_ranking.user_rank == 'Gold' %}
+                                    {% elif user_rank_safe == 'Gold' %}
                                     Elite performer - Consistently high performance levels
-                                    {% elif user_ranking.user_rank == 'Platinum' %}
+                                    {% elif user_rank_safe == 'Platinum' %}
                                     Top tier - Exceptional referral performance
                                     {% else %}
                                     Legendary status - Industry-leading performance metrics
@@ -134,19 +154,19 @@
                             <div class="tier-benefits mt-3">
                                 <h6>Current Benefits:</h6>
                                 <ul class="benefits-list">
-                                    {% if user_ranking.user_rank == 'Bronze' %}
+                                    {% if user_rank_safe == 'Bronze' %}
                                     <li>Standard commission rates</li>
                                     <li>Basic analytics dashboard</li>
                                     <li>Email support</li>
-                                    {% elif user_ranking.user_rank == 'Silver' %}
+                                    {% elif user_rank_safe == 'Silver' %}
                                     <li>Enhanced commission structure</li>
                                     <li>Advanced performance analytics</li>
                                     <li>Priority support</li>
-                                    {% elif user_ranking.user_rank == 'Gold' %}
+                                    {% elif user_rank_safe == 'Gold' %}
                                     <li>Premium commission rates</li>
                                     <li>Real-time performance tracking</li>
                                     <li>Dedicated account manager</li>
-                                    {% elif user_ranking.user_rank == 'Platinum' %}
+                                    {% elif user_rank_safe == 'Platinum' %}
                                     <li>Maximum commission rates</li>
                                     <li>Custom analytics reports</li>
                                     <li>VIP support channel</li>
@@ -169,27 +189,28 @@
                         </div>
                         <div class="card-body">
                             <div class="next-tier-info">
+                                {% set user_rank_safe = user_ranking.user_rank | default('Bronze') %}
                                 <div id="next-tier-name" class="next-tier-name">
-                                    {% if user_ranking.user_rank == 'Bronze' %}
+                                    {% if user_rank_safe == 'Bronze' %}
                                     Silver Tier Target
-                                    {% elif user_ranking.user_rank == 'Silver' %}
+                                    {% elif user_rank_safe == 'Silver' %}
                                     Gold Tier Target
-                                    {% elif user_ranking.user_rank == 'Gold' %}
+                                    {% elif user_rank_safe == 'Gold' %}
                                     Platinum Tier Target
-                                    {% elif user_ranking.user_rank == 'Platinum' %}
+                                    {% elif user_rank_safe == 'Platinum' %}
                                     Diamond Tier Target
                                     {% else %}
                                     Maximum Achievement
                                     {% endif %}
                                 </div>
                                 <div id="next-tier-requirement" class="next-tier-requirement">
-                                    {% if user_ranking.user_rank == 'Bronze' %}
+                                    {% if user_rank_safe == 'Bronze' %}
                                     KES 1,000+ total earnings required
-                                    {% elif user_ranking.user_rank == 'Silver' %}
+                                    {% elif user_rank_safe == 'Silver' %}
                                     KES 2,000+ total earnings required
-                                    {% elif user_ranking.user_rank == 'Gold' %}
+                                    {% elif user_rank_safe == 'Gold' %}
                                     KES 5,000+ total earnings required
-                                    {% elif user_ranking.user_rank == 'Platinum' %}
+                                    {% elif user_rank_safe == 'Platinum' %}
                                     KES 10,000+ total earnings required
                                     {% else %}
                                     Peak performance achieved
@@ -197,15 +218,26 @@
                                 </div>
                             </div>
                             <div class="progress-to-next">
-                                {% if user_ranking.user_rank != 'Diamond' %}
-                                <div class="progress mb-2">
-                                    <div class="progress-bar bg-success" id="tier-progress-bar" 
-                                         style="width: {{ (user_ranking.total_commission / [1000, 2000, 5000, 10000, 10000][['Bronze','Silver','Gold','Platinum','Diamond'].index(user_ranking.user_rank)] * 100) | min(100) }}%">
+                                {% if user_rank_safe != 'Diamond' %}
+                                    {% set tier_requirements = {'Bronze': 1000, 'Silver': 2000, 'Gold': 5000, 'Platinum': 10000} %}
+                                    {% set next_tier_requirement = tier_requirements.get(user_rank_safe, 10000) %}
+                                    {% set user_commission = user_ranking.total_commission | default(0) | float %}
+                                    
+                                    {% if next_tier_requirement > 0 %}
+                                        {% set progress_percentage = (user_commission / next_tier_requirement * 100) %}
+                                        {% set progress_percentage = progress_percentage | min(100) %}
+                                    {% else %}
+                                        {% set progress_percentage = 0 %}
+                                    {% endif %}
+                                    
+                                    <div class="progress mb-2">
+                                        <div class="progress-bar bg-success" id="tier-progress-bar" 
+                                             style="width: {{ progress_percentage }}%">
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="progress-text small">
-                                    <span>Progress to next tier: {{ (user_ranking.total_commission / [1000, 2000, 5000, 10000, 10000][['Bronze','Silver','Gold','Platinum','Diamond'].index(user_ranking.user_rank)] * 100) | round | int }}%</span>
-                                </div>
+                                    <div class="progress-text small">
+                                        <span>Progress to next tier: {{ progress_percentage | round | int }}%</span>
+                                    </div>
                                 {% endif %}
                             </div>
                             <div class="growth-tips mt-3">
@@ -232,7 +264,7 @@
             <p class="text-muted">Live ranking of top performing referral partners</p>
             <div class="leaderboard-meta">
                 <span class="badge bg-primary-subtle text-primary p-3 fs-6">
-                    <i class="fas fa-users me-2"></i><span id="elite-performers-count">{{ top_users|length }}</span> Active Performers
+                    <i class="fas fa-users me-2"></i><span id="elite-performers-count">{{ top_users | length | default(0) }}</span> Active Performers
                 </span>
                 <span class="badge bg-success-subtle text-success p-3 fs-6 ms-2">
                     <i class="fas fa-sync-alt me-2"></i>Last Updated: <span id="last-updated">Just now</span>
@@ -250,7 +282,7 @@
             <!-- Enhanced Mobile Card View -->
             <div class="d-md-none" id="mobile-leaderboard">
                 {% for user in top_users %}
-                <div class="leaderboard-mobile-card {% if user.id == current_user.id %}current-user{% endif %}" data-user-id="{{ user.id }}">
+                <div class="leaderboard-mobile-card {% if user.id == current_user.id %}current-user{% endif %}" data-user-id="{{ user.id | default('') }}">
                     <div class="card-body">
                         <div class="row align-items-center">
                             <!-- Rank -->
@@ -280,13 +312,14 @@
                                         </div>
                                         <div class="user-details">
                                             <div class="d-flex align-items-center">
-                                                <span class="username fw-bold">{{ user.username }}</span>
+                                                <span class="username fw-bold">{{ user.username | default('Unknown User') }}</span>
                                                 {% if user.id == current_user.id %}
                                                 <span class="user-badge ms-2">You</span>
                                                 {% endif %}
                                             </div>
                                             <div class="user-tier">
-                                                <span class="tier-badge tier-{{ user.user_rank|lower }}">{{ user.user_rank }}</span>
+                                                {% set user_rank_safe = user.user_rank | default('Bronze') %}
+                                                <span class="tier-badge tier-{{ user_rank_safe | lower }}">{{ user_rank_safe }}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -297,13 +330,17 @@
                                     <div class="row text-center">
                                         <div class="col-6">
                                             <div class="stat">
-                                                <div class="stat-value text-warning fw-bold user-earnings">KES {{ "%.2f"|format(user.total_commission or 0) }}</div>
+                                                <div class="stat-value text-warning fw-bold user-earnings">
+                                                    KES {{ "%.2f"|format(user.total_commission | default(0) | float) }}
+                                                </div>
                                                 <div class="stat-label">Total Earnings</div>
                                             </div>
                                         </div>
                                         <div class="col-6">
                                             <div class="stat">
-                                                <div class="stat-value text-info fw-bold user-referrals">{{ user.referral_count or 0 }}</div>
+                                                <div class="stat-value text-info fw-bold user-referrals">
+                                                    {{ user.referral_count | default(0) }}
+                                                </div>
                                                 <div class="stat-label">Referrals</div>
                                             </div>
                                         </div>
@@ -332,7 +369,7 @@
                         </thead>
                         <tbody id="desktop-leaderboard">
                             {% for user in top_users %}
-                            <tr class="leaderboard-row {% if user.id == current_user.id %}current-user{% endif %}" data-user-id="{{ user.id }}">
+                            <tr class="leaderboard-row {% if user.id == current_user.id %}current-user{% endif %}" data-user-id="{{ user.id | default('') }}">
                                 <td class="rank-cell text-center">
                                     <div class="rank-badge rank-{{ loop.index }}">
                                         {% if loop.index == 1 %}
@@ -356,20 +393,22 @@
                                         </div>
                                         <div class="user-details">
                                             <div class="d-flex align-items-center">
-                                                <span class="username fw-bold">{{ user.username }}</span>
+                                                <span class="username fw-bold">{{ user.username | default('Unknown User') }}</span>
                                                 {% if user.id == current_user.id %}
                                                 <span class="user-badge ms-2">Your Position</span>
                                                 {% endif %}
                                             </div>
                                             <div class="user-contact text-muted small">
-                                                {{ user.email|default('', true)|truncate(25) }}
+                                                {{ user.email | default('', true) | truncate(25) }}
                                             </div>
                                         </div>
                                     </div>
                                 </td>
                                 <td class="earnings-cell text-end">
                                     <div class="earnings-amount fw-bold">
-                                        <span class="amount user-earnings">KES {{ "%.2f"|format(user.total_commission or 0) }}</span>
+                                        <span class="amount user-earnings">
+                                            KES {{ "%.2f"|format(user.total_commission | default(0) | float) }}
+                                        </span>
                                     </div>
                                     <div class="earnings-growth small text-muted">
                                         <i class="fas fa-chart-line text-success me-1"></i>
@@ -378,7 +417,7 @@
                                 </td>
                                 <td class="referrals-cell text-center">
                                     <div class="referrals-count fw-bold">
-                                        <span class="user-referrals">{{ user.referral_count or 0 }}</span>
+                                        <span class="user-referrals">{{ user.referral_count | default(0) }}</span>
                                     </div>
                                     <div class="referrals-rate small text-muted">
                                         <i class="fas fa-bolt text-warning me-1"></i>
@@ -386,17 +425,18 @@
                                     </div>
                                 </td>
                                 <td class="level-cell">
-                                    <div class="rank-tier rank-tier-{{ user.user_rank|lower }}">
+                                    {% set user_rank_safe = user.user_rank | default('Bronze') %}
+                                    <div class="rank-tier rank-tier-{{ user_rank_safe | lower }}">
                                         <div class="tier-icon">
                                             <i class="fas fa-gem"></i>
                                         </div>
                                         <div class="tier-info">
-                                            <span class="tier-name fw-bold">{{ user.user_rank }}</span>
+                                            <span class="tier-name fw-bold">{{ user_rank_safe }}</span>
                                             <small class="tier-requirement">
-                                                {% if user.user_rank == 'Bronze' %}Entry Level
-                                                {% elif user.user_rank == 'Silver' %}KES 1,000+
-                                                {% elif user.user_rank == 'Gold' %}KES 2,000+
-                                                {% elif user.user_rank == 'Platinum' %}KES 5,000+
+                                                {% if user_rank_safe == 'Bronze' %}Entry Level
+                                                {% elif user_rank_safe == 'Silver' %}KES 1,000+
+                                                {% elif user_rank_safe == 'Gold' %}KES 2,000+
+                                                {% elif user_rank_safe == 'Platinum' %}KES 5,000+
                                                 {% else %}KES 10,000+
                                                 {% endif %}
                                             </small>
@@ -413,7 +453,7 @@
                                     </div>
                                     {% else %}
                                     <div class="action-buttons">
-                                        <button class="btn btn-outline-primary btn-sm" onclick="analyzeUserPerformance('{{ user.id }}')" data-bs-toggle="tooltip" title="View Performance Analysis">
+                                        <button class="btn btn-outline-primary btn-sm" onclick="analyzeUserPerformance('{{ user.id | default('') }}')" data-bs-toggle="tooltip" title="View Performance Analysis">
                                             <i class="fas fa-chart-bar me-1"></i>Analyze
                                         </button>
                                     </div>
@@ -450,7 +490,7 @@
             <div class="row align-items-center">
                 <div class="col-md-6">
                     <div class="results-info">
-                        Showing <strong>{{ top_users|length }}</strong> top performers
+                        Showing <strong>{{ top_users | length | default(0) }}</strong> top performers
                     </div>
                 </div>
                 <div class="col-md-6 text-md-end">
@@ -483,35 +523,36 @@
             <!-- Progress Visualization -->
             <div class="tiers-progress-bar mb-5">
                 <div class="progress-steps">
-                    <div class="step bronze {% if user_ranking and user_ranking.user_rank in ['Bronze','Silver','Gold','Platinum','Diamond'] %}active{% endif %}">
+                    {% set user_rank_safe = user_ranking.user_rank | default('Bronze') if user_ranking else 'Bronze' %}
+                    <div class="step bronze {% if user_rank_safe in ['Bronze','Silver','Gold','Platinum','Diamond'] %}active{% endif %}">
                         <div class="step-marker">
                             <i class="fas fa-gem"></i>
                         </div>
                         <div class="step-label">Bronze</div>
                         <div class="step-requirement">KES 0+</div>
                     </div>
-                    <div class="step silver {% if user_ranking and user_ranking.user_rank in ['Silver','Gold','Platinum','Diamond'] %}active{% endif %}">
+                    <div class="step silver {% if user_rank_safe in ['Silver','Gold','Platinum','Diamond'] %}active{% endif %}">
                         <div class="step-marker">
                             <i class="fas fa-gem"></i>
                         </div>
                         <div class="step-label">Silver</div>
                         <div class="step-requirement">KES 1,000+</div>
                     </div>
-                    <div class="step gold {% if user_ranking and user_ranking.user_rank in ['Gold','Platinum','Diamond'] %}active{% endif %}">
+                    <div class="step gold {% if user_rank_safe in ['Gold','Platinum','Diamond'] %}active{% endif %}">
                         <div class="step-marker">
                             <i class="fas fa-gem"></i>
                         </div>
                         <div class="step-label">Gold</div>
                         <div class="step-requirement">KES 2,000+</div>
                     </div>
-                    <div class="step platinum {% if user_ranking and user_ranking.user_rank in ['Platinum','Diamond'] %}active{% endif %}">
+                    <div class="step platinum {% if user_rank_safe in ['Platinum','Diamond'] %}active{% endif %}">
                         <div class="step-marker">
                             <i class="fas fa-gem"></i>
                         </div>
                         <div class="step-label">Platinum</div>
                         <div class="step-requirement">KES 5,000+</div>
                     </div>
-                    <div class="step diamond {% if user_ranking and user_ranking.user_rank == 'Diamond' %}active{% endif %}">
+                    <div class="step diamond {% if user_rank_safe == 'Diamond' %}active{% endif %}">
                         <div class="step-marker">
                             <i class="fas fa-gem"></i>
                         </div>
@@ -524,7 +565,8 @@
             <!-- Enhanced Tier Cards -->
             <div class="rank-tiers-grid">
                 <!-- Bronze Tier -->
-                <div class="rank-tier-card bronze-tier {% if user_ranking and user_ranking.user_rank == 'Bronze' %}current-tier{% endif %}">
+                {% set user_rank_safe = user_ranking.user_rank | default('Bronze') if user_ranking else 'Bronze' %}
+                <div class="rank-tier-card bronze-tier {% if user_rank_safe == 'Bronze' %}current-tier{% endif %}">
                     <div class="tier-header">
                         <div class="tier-icon">
                             <i class="fas fa-gem"></i>
@@ -561,7 +603,7 @@
                     </div>
                     <div class="tier-footer">
                         <div class="tier-action">
-                            {% if user_ranking and user_ranking.user_rank == 'Bronze' %}
+                            {% if user_rank_safe == 'Bronze' %}
                             <span class="badge bg-primary">Current Tier</span>
                             {% else %}
                             <small class="text-muted">Entry level performance tier</small>
@@ -571,7 +613,7 @@
                 </div>
 
                 <!-- Silver Tier -->
-                <div class="rank-tier-card silver-tier {% if user_ranking and user_ranking.user_rank == 'Silver' %}current-tier{% endif %}">
+                <div class="rank-tier-card silver-tier {% if user_rank_safe == 'Silver' %}current-tier{% endif %}">
                     <div class="tier-header">
                         <div class="tier-icon">
                             <i class="fas fa-gem"></i>
@@ -608,7 +650,7 @@
                     </div>
                     <div class="tier-footer">
                         <div class="tier-action">
-                            {% if user_ranking and user_ranking.user_rank == 'Silver' %}
+                            {% if user_rank_safe == 'Silver' %}
                             <span class="badge bg-primary">Current Tier</span>
                             {% else %}
                             <small class="text-muted">Enhanced performance tier</small>
@@ -618,7 +660,7 @@
                 </div>
 
                 <!-- Gold Tier -->
-                <div class="rank-tier-card gold-tier {% if user_ranking and user_ranking.user_rank == 'Gold' %}current-tier{% endif %}">
+                <div class="rank-tier-card gold-tier {% if user_rank_safe == 'Gold' %}current-tier{% endif %}">
                     <div class="tier-header">
                         <div class="tier-icon">
                             <i class="fas fa-gem"></i>
@@ -655,7 +697,7 @@
                     </div>
                     <div class="tier-footer">
                         <div class="tier-action">
-                            {% if user_ranking and user_ranking.user_rank == 'Gold' %}
+                            {% if user_rank_safe == 'Gold' %}
                             <span class="badge bg-primary">Current Tier</span>
                             {% else %}
                             <small class="text-muted">Premium performance tier</small>
@@ -665,7 +707,7 @@
                 </div>
 
                 <!-- Platinum Tier -->
-                <div class="rank-tier-card platinum-tier {% if user_ranking and user_ranking.user_rank == 'Platinum' %}current-tier{% endif %}">
+                <div class="rank-tier-card platinum-tier {% if user_rank_safe == 'Platinum' %}current-tier{% endif %}">
                     <div class="tier-header">
                         <div class="tier-icon">
                             <i class="fas fa-gem"></i>
@@ -702,7 +744,7 @@
                     </div>
                     <div class="tier-footer">
                         <div class="tier-action">
-                            {% if user_ranking and user_ranking.user_rank == 'Platinum' %}
+                            {% if user_rank_safe == 'Platinum' %}
                             <span class="badge bg-primary">Current Tier</span>
                             {% else %}
                             <small class="text-muted">Executive performance tier</small>
@@ -712,7 +754,7 @@
                 </div>
 
                 <!-- Diamond Tier -->
-                <div class="rank-tier-card diamond-tier {% if user_ranking and user_ranking.user_rank == 'Diamond' %}current-tier{% endif %}">
+                <div class="rank-tier-card diamond-tier {% if user_rank_safe == 'Diamond' %}current-tier{% endif %}">
                     <div class="tier-header">
                         <div class="tier-icon">
                             <i class="fas fa-gem"></i>
@@ -749,7 +791,7 @@
                     </div>
                     <div class="tier-footer">
                         <div class="tier-action">
-                            {% if user_ranking and user_ranking.user_rank == 'Diamond' %}
+                            {% if user_rank_safe == 'Diamond' %}
                             <span class="badge bg-primary">Current Tier</span>
                             {% else %}
                             <small class="text-muted">Legendary performance tier</small>
@@ -796,6 +838,7 @@
 </div>
 
 <style>
+/* All your existing CSS styles remain exactly the same */
 .leaderboard-container {
     max-width: 1400px;
     margin: 0 auto;
@@ -1358,19 +1401,24 @@ class ProfessionalLeaderboard {
         rows.forEach(row => {
             switch(view) {
                 case 'top10':
-                    if (parseInt(row.querySelector('.rank-badge').textContent) > 10) {
-                        row.style.display = 'none';
-                    } else {
-                        row.style.display = '';
+                    const rankElement = row.querySelector('.rank-badge');
+                    if (rankElement) {
+                        const rankText = rankElement.textContent || '';
+                        const rankMatch = rankText.match(/\d+/);
+                        if (rankMatch && parseInt(rankMatch[0]) > 10) {
+                            row.style.display = 'none';
+                        } else {
+                            row.style.display = '';
+                        }
                     }
                     break;
                 case 'same-tier':
                     const userTier = '{{ user_ranking.user_rank if user_ranking else "Bronze" }}'.toLowerCase();
-                    const rowTier = row.querySelector('.tier-badge, .rank-tier').className.includes(userTier);
-                    if (!rowTier) {
-                        row.style.display = 'none';
-                    } else {
+                    const rowTierElement = row.querySelector('.tier-badge, .rank-tier');
+                    if (rowTierElement && rowTierElement.className.toLowerCase().includes(userTier)) {
                         row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
                     }
                     break;
                 default:
@@ -1539,16 +1587,16 @@ class ProfessionalLeaderboard {
     updateUserRanking(rankingData) {
         if (!rankingData) return;
 
-        // Update all elements that display user ranking
+        // Safely update all elements that display user ranking
         const elements = {
-            'user-global-rank': `#${rankingData.position}`,
-            'total-competitors': rankingData.total_users,
-            'user-percentile': `Top ${rankingData.percentile}%`,
-            'user-tier': rankingData.user_rank,
-            'current-rank': `#${rankingData.position}`,
-            'total-users': rankingData.total_users,
-            'rank-percentile': `Top ${rankingData.percentile}%`,
-            'current-tier': rankingData.user_rank
+            'user-global-rank': `#${rankingData.position || 'N/A'}`,
+            'total-competitors': rankingData.total_users || 0,
+            'user-percentile': `Top ${rankingData.percentile || 0}%`,
+            'user-tier': rankingData.user_rank || 'Bronze',
+            'current-rank': `#${rankingData.position || 'N/A'}`,
+            'total-users': rankingData.total_users || 0,
+            'rank-percentile': `Top ${rankingData.percentile || 0}%`,
+            'current-tier': rankingData.user_rank || 'Bronze'
         };
 
         Object.entries(elements).forEach(([id, value]) => {
@@ -1560,8 +1608,8 @@ class ProfessionalLeaderboard {
 
         // Update tier badge
         const tierBadge = document.getElementById('current-tier-badge');
-        if (tierBadge) {
-            tierBadge.className = `tier-badge-large tier-${rankingData.user_rank.toLowerCase()}`;
+        if (tierBadge && rankingData.user_rank) {
+            tierBadge.className = `tier-badge-large tier-${(rankingData.user_rank || 'Bronze').toLowerCase()}`;
         }
 
         // Update progress bars
@@ -1569,11 +1617,14 @@ class ProfessionalLeaderboard {
     }
 
     updateProgressBars(rankingData) {
+        if (!rankingData) return;
+
         // Update rank progress bar
         const rankProgressBar = document.getElementById('rank-progress-bar');
         if (rankProgressBar && rankingData.total_users > 0) {
-            const progress = ((rankingData.total_users - rankingData.position) / rankingData.total_users) * 100;
-            rankProgressBar.style.width = `${progress}%`;
+            const position = rankingData.position || rankingData.total_users;
+            const progress = ((rankingData.total_users - position) / rankingData.total_users) * 100;
+            rankProgressBar.style.width = `${Math.max(0, Math.min(100, progress))}%`;
         }
 
         // Update tier progress bar
@@ -1586,11 +1637,12 @@ class ProfessionalLeaderboard {
                 'Platinum': 10000
             };
             
-            const currentTier = rankingData.user_rank;
-            const nextTierRequirement = tierRequirements[currentTier];
-            const progress = (rankingData.total_commission / nextTierRequirement) * 100;
+            const currentTier = rankingData.user_rank || 'Bronze';
+            const nextTierRequirement = tierRequirements[currentTier] || 1000;
+            const currentCommission = rankingData.total_commission || 0;
+            const progress = (currentCommission / nextTierRequirement) * 100;
             
-            tierProgressBar.style.width = `${Math.min(progress, 100)}%`;
+            tierProgressBar.style.width = `${Math.min(100, Math.max(0, progress))}%`;
         }
     }
 
