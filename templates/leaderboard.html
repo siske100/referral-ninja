@@ -205,13 +205,13 @@
                                 </div>
                                 <div id="next-tier-requirement" class="next-tier-requirement">
                                     {% if user_rank_safe == 'Bronze' %}
-                                    KES 1,000+ total earnings required
-                                    {% elif user_rank_safe == 'Silver' %}
-                                    KES 2,000+ total earnings required
-                                    {% elif user_rank_safe == 'Gold' %}
                                     KES 5,000+ total earnings required
+                                    {% elif user_rank_safe == 'Silver' %}
+                                    KES 15,000+ total earnings required
+                                    {% elif user_rank_safe == 'Gold' %}
+                                    KES 30,000+ total earnings required
                                     {% elif user_rank_safe == 'Platinum' %}
-                                    KES 10,000+ total earnings required
+                                    KES 70,000+ total earnings required
                                     {% else %}
                                     Peak performance achieved
                                     {% endif %}
@@ -219,8 +219,8 @@
                             </div>
                             <div class="progress-to-next">
                                 {% if user_rank_safe != 'Diamond' %}
-                                    {% set tier_requirements = {'Bronze': 1000, 'Silver': 2000, 'Gold': 5000, 'Platinum': 10000} %}
-                                    {% set next_tier_requirement = tier_requirements.get(user_rank_safe, 10000) %}
+                                    {% set tier_requirements = {'Bronze': 5000, 'Silver': 15000, 'Gold': 30000, 'Platinum': 70000} %}
+                                    {% set next_tier_requirement = tier_requirements.get(user_rank_safe, 70000) %}
                                     {% set user_commission = user_ranking.get('total_commission', 0) | float %}
                                     
                                     {% if next_tier_requirement > 0 %}
@@ -272,9 +272,6 @@
                 <span class="badge bg-info-subtle text-info p-3 fs-6 ms-2">
                     <i class="fas fa-database me-2"></i>Real-time Data
                 </span>
-                <button class="btn btn-outline-primary btn-sm ms-2" id="refresh-leaderboard-btn" onclick="refreshLeaderboard()">
-                    <i class="fas fa-sync-alt me-1"></i>Refresh
-                </button>
             </div>
         </div>
 
@@ -437,10 +434,10 @@
                                                 <span class="tier-name fw-bold">{{ user_rank_safe }}</span>
                                                 <small class="tier-requirement">
                                                     {% if user_rank_safe == 'Bronze' %}Entry Level
-                                                    {% elif user_rank_safe == 'Silver' %}KES 1,000+
-                                                    {% elif user_rank_safe == 'Gold' %}KES 2,000+
-                                                    {% elif user_rank_safe == 'Platinum' %}KES 5,000+
-                                                    {% else %}KES 10,000+
+                                                    {% elif user_rank_safe == 'Silver' %}KES 5,000+
+                                                    {% elif user_rank_safe == 'Gold' %}KES 15,000+
+                                                    {% elif user_rank_safe == 'Platinum' %}KES 30,000+
+                                                    {% else %}KES 70,000+
                                                     {% endif %}
                                                 </small>
                                             </div>
@@ -480,9 +477,6 @@
                 <div class="empty-actions">
                     <a href="{{ url_for('referral_system') }}" class="btn btn-primary btn-lg me-3">
                         <i class="fas fa-share-alt me-2"></i>Begin Referring
-                    </a>
-                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary btn-lg">
-                        <i class="fas fa-chart-line me-2"></i>View Analytics
                     </a>
                 </div>
             </div>
@@ -540,28 +534,28 @@
                             <i class="fas fa-gem"></i>
                         </div>
                         <div class="step-label">Silver</div>
-                        <div class="step-requirement">KES 1,000+</div>
+                        <div class="step-requirement">KES 5,000+</div>
                     </div>
                     <div class="step gold {% if user_rank_safe in ['Gold','Platinum','Diamond'] %}active{% endif %}">
                         <div class="step-marker">
                             <i class="fas fa-gem"></i>
                         </div>
                         <div class="step-label">Gold</div>
-                        <div class="step-requirement">KES 2,000+</div>
+                        <div class="step-requirement">KES 15,000+</div>
                     </div>
                     <div class="step platinum {% if user_rank_safe in ['Platinum','Diamond'] %}active{% endif %}">
                         <div class="step-marker">
                             <i class="fas fa-gem"></i>
                         </div>
                         <div class="step-label">Platinum</div>
-                        <div class="step-requirement">KES 5,000+</div>
+                        <div class="step-requirement">KES 30,000+</div>
                     </div>
                     <div class="step diamond {% if user_rank_safe == 'Diamond' %}active{% endif %}">
                         <div class="step-marker">
                             <i class="fas fa-gem"></i>
                         </div>
                         <div class="step-label">Diamond</div>
-                        <div class="step-requirement">KES 10,000+</div>
+                        <div class="step-requirement">KES 70,000+</div>
                     </div>
                 </div>
             </div>
@@ -591,7 +585,7 @@
                                 <div class="stat-label">of Users</div>
                             </div>
                             <div class="stat">
-                                <div class="stat-value">20%</div>
+                                <div class="stat-value">25%</div>
                                 <div class="stat-label">Commission</div>
                             </div>
                         </div>
@@ -630,7 +624,7 @@
                     <div class="tier-body">
                         <div class="tier-requirement">
                             <i class="fas fa-target me-2"></i>
-                            <span>KES 1,000+ Total Earnings</span>
+                            <span>KES 5,000+ Total Earnings</span>
                         </div>
                         <div class="tier-stats">
                             <div class="stat">
@@ -677,7 +671,7 @@
                     <div class="tier-body">
                         <div class="tier-requirement">
                             <i class="fas fa-target me-2"></i>
-                            <span>KES 2,000+ Total Earnings</span>
+                            <span>KES 15,000+ Total Earnings</span>
                         </div>
                         <div class="tier-stats">
                             <div class="stat">
@@ -724,7 +718,7 @@
                     <div class="tier-body">
                         <div class="tier-requirement">
                             <i class="fas fa-target me-2"></i>
-                            <span>KES 5,000+ Total Earnings</span>
+                            <span>KES 30,000+ Total Earnings</span>
                         </div>
                         <div class="tier-stats">
                             <div class="stat">
@@ -771,7 +765,7 @@
                     <div class="tier-body">
                         <div class="tier-requirement">
                             <i class="fas fa-target me-2"></i>
-                            <span>KES 10,000+ Total Earnings</span>
+                            <span>KES 70,000+ Total Earnings</span>
                         </div>
                         <div class="tier-stats">
                             <div class="stat">
@@ -815,9 +809,6 @@
             <div class="cta-buttons">
                 <a href="{{ url_for('referral_system') }}" class="btn btn-primary btn-lg me-3">
                     <i class="fas fa-rocket me-2"></i>Optimize Referral Strategy
-                </a>
-                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary btn-lg">
-                    <i class="fas fa-analytics me-2"></i>View Performance Analytics
                 </a>
             </div>
         </div>
@@ -1351,12 +1342,6 @@ class ProfessionalLeaderboard {
             });
         });
 
-        // Refresh button
-        const refreshBtn = document.getElementById('refresh-leaderboard-btn');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => this.refreshLeaderboard());
-        }
-
         // Performance analysis buttons
         document.addEventListener('click', (e) => {
             if (e.target.closest('[onclick*="analyzeUserPerformance"]')) {
@@ -1435,16 +1420,8 @@ class ProfessionalLeaderboard {
         if (this.isRefreshing) return;
 
         this.isRefreshing = true;
-        const refreshBtn = document.getElementById('refresh-leaderboard-btn');
         
         try {
-            // Show loading state
-            if (refreshBtn) {
-                refreshBtn.classList.add('loading');
-                refreshBtn.disabled = true;
-                refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Refreshing...';
-            }
-
             // Simulate API call - replace with actual endpoint
             await this.fetchLeaderboardData();
             
@@ -1460,11 +1437,6 @@ class ProfessionalLeaderboard {
             this.showNotification('Error refreshing leaderboard', 'error');
         } finally {
             this.isRefreshing = false;
-            if (refreshBtn) {
-                refreshBtn.classList.remove('loading');
-                refreshBtn.disabled = false;
-                refreshBtn.innerHTML = '<i class="fas fa-sync-alt me-1"></i>Refresh';
-            }
         }
     }
 
@@ -1635,14 +1607,14 @@ class ProfessionalLeaderboard {
         const tierProgressBar = document.getElementById('tier-progress-bar');
         if (tierProgressBar && rankingData.user_rank !== 'Diamond') {
             const tierRequirements = {
-                'Bronze': 1000,
-                'Silver': 2000,
-                'Gold': 5000,
-                'Platinum': 10000
+                'Bronze': 5000,
+                'Silver': 15000,
+                'Gold': 30000,
+                'Platinum': 70000
             };
             
             const currentTier = rankingData.user_rank || 'Bronze';
-            const nextTierRequirement = tierRequirements[currentTier] || 1000;
+            const nextTierRequirement = tierRequirements[currentTier] || 70000;
             const currentCommission = rankingData.total_commission || 0;
             const progress = (currentCommission / nextTierRequirement) * 100;
             
@@ -1659,12 +1631,6 @@ class ProfessionalLeaderboard {
 }
 
 // Global functions for onclick handlers
-function refreshLeaderboard() {
-    if (window.leaderboard) {
-        window.leaderboard.refreshLeaderboard();
-    }
-}
-
 function analyzeUserPerformance(userId) {
     if (window.leaderboard) {
         window.leaderboard.analyzeUserPerformance(userId);
