@@ -16,14 +16,14 @@
                 <h1 class="hero-title display-5 fw-bold text-white mb-3">Elite Referral Leaderboard</h1>
                 <p class="hero-subtitle text-white-50 fs-5 mb-4">Track your performance against top performers in real-time</p>
                 
-                {% if user_ranking and user_ranking is mapping %}
+                {% if user_ranking %}
                 <div class="user-rank-hero">
                     <div class="rank-stats-card">
                         <div class="row g-4">
                             <div class="col-md-3">
                                 <div class="stat-item">
                                     <div class="stat-value text-primary fw-bold" id="user-global-rank">
-                                        #{{ user_ranking.position | default('N/A') }}
+                                        #{{ user_ranking.get('position', 'N/A') }}
                                     </div>
                                     <div class="stat-label">Global Rank</div>
                                 </div>
@@ -31,7 +31,7 @@
                             <div class="col-md-3">
                                 <div class="stat-item">
                                     <div class="stat-value text-success fw-bold" id="total-competitors">
-                                        {{ user_ranking.total_users | default(0) }}
+                                        {{ user_ranking.get('total_users', 0) }}
                                     </div>
                                     <div class="stat-label">Total Competitors</div>
                                 </div>
@@ -39,7 +39,7 @@
                             <div class="col-md-3">
                                 <div class="stat-item">
                                     <div class="stat-value text-warning fw-bold" id="user-percentile">
-                                        Top {{ user_ranking.percentile | default(0) }}%
+                                        Top {{ user_ranking.get('percentile', 0) }}%
                                     </div>
                                     <div class="stat-label">Performance Percentile</div>
                                 </div>
@@ -47,7 +47,7 @@
                             <div class="col-md-3">
                                 <div class="stat-item">
                                     <div class="stat-value text-info fw-bold" id="user-tier">
-                                        {{ user_ranking.user_rank | default('Bronze') }}
+                                        {{ user_ranking.get('user_rank', 'Bronze') }}
                                     </div>
                                     <div class="stat-label">Current Tier</div>
                                 </div>
@@ -61,7 +61,7 @@
     </div>
 
     <!-- Performance Analytics Dashboard -->
-    {% if user_ranking and user_ranking is mapping %}
+    {% if user_ranking %}
     <div class="user-performance-section mb-5">
         <div class="section-header text-center mb-4">
             <h2 class="fw-bold">Performance Analytics</h2>
@@ -78,14 +78,14 @@
                         </div>
                         <div class="card-body">
                             <div class="rank-display">
-                                <span class="rank-number" id="current-rank">#{{ user_ranking.position | default('N/A') }}</span>
-                                <span class="rank-label">Out of <span id="total-users">{{ user_ranking.total_users | default(0) }}</span> users</span>
+                                <span class="rank-number" id="current-rank">#{{ user_ranking.get('position', 'N/A') }}</span>
+                                <span class="rank-label">Out of <span id="total-users">{{ user_ranking.get('total_users', 0) }}</span> users</span>
                             </div>
                             <div class="rank-progress">
-                                {% set total_users_safe = user_ranking.total_users | default(1) %}
-                                {% set position_safe = user_ranking.position | default(total_users_safe) %}
+                                {% set total_users_safe = user_ranking.get('total_users', 1) | int %}
+                                {% set position_safe = user_ranking.get('position', total_users_safe) | int %}
                                 {% if total_users_safe > 0 %}
-                                    {% set rank_progress = ((total_users_safe - position_safe) / total_users_safe * 100) %}
+                                    {% set rank_progress = ((total_users_safe - position_safe) / total_users_safe * 100) | round(1) %}
                                 {% else %}
                                     {% set rank_progress = 0 %}
                                 {% endif %}
@@ -97,7 +97,7 @@
                                     </div>
                                 </div>
                                 <div class="progress-text">
-                                    <span id="rank-percentile">Top {{ user_ranking.percentile | default(0) }}% of performers</span>
+                                    <span id="rank-percentile">Top {{ user_ranking.get('percentile', 0) }}% of performers</span>
                                 </div>
                             </div>
                             <div class="performance-metrics mt-3">
@@ -105,7 +105,7 @@
                                     <div class="col-6">
                                         <div class="metric">
                                             <div class="metric-value">
-                                                KES {{ "%.2f"|format(user_ranking.total_commission | default(0) | float) }}
+                                                KES {{ "%.2f"|format(user_ranking.get('total_commission', 0) | float) }}
                                             </div>
                                             <div class="metric-label">Total Earnings</div>
                                         </div>
@@ -113,7 +113,7 @@
                                     <div class="col-6">
                                         <div class="metric">
                                             <div class="metric-value">
-                                                {{ user_ranking.referral_count | default(0) }}
+                                                {{ user_ranking.get('referral_count', 0) }}
                                             </div>
                                             <div class="metric-label">Successful Referrals</div>
                                         </div>
@@ -132,7 +132,7 @@
                         </div>
                         <div class="card-body">
                             <div class="tier-display">
-                                {% set user_rank_safe = user_ranking.user_rank | default('Bronze') %}
+                                {% set user_rank_safe = user_ranking.get('user_rank', 'Bronze') %}
                                 <div class="tier-badge-large tier-{{ user_rank_safe | lower }}" id="current-tier-badge">
                                     <i class="fas fa-gem"></i>
                                     <span id="current-tier">{{ user_rank_safe }}</span>
@@ -189,7 +189,7 @@
                         </div>
                         <div class="card-body">
                             <div class="next-tier-info">
-                                {% set user_rank_safe = user_ranking.user_rank | default('Bronze') %}
+                                {% set user_rank_safe = user_ranking.get('user_rank', 'Bronze') %}
                                 <div id="next-tier-name" class="next-tier-name">
                                     {% if user_rank_safe == 'Bronze' %}
                                     Silver Tier Target
@@ -221,10 +221,10 @@
                                 {% if user_rank_safe != 'Diamond' %}
                                     {% set tier_requirements = {'Bronze': 1000, 'Silver': 2000, 'Gold': 5000, 'Platinum': 10000} %}
                                     {% set next_tier_requirement = tier_requirements.get(user_rank_safe, 10000) %}
-                                    {% set user_commission = user_ranking.total_commission | default(0) | float %}
+                                    {% set user_commission = user_ranking.get('total_commission', 0) | float %}
                                     
                                     {% if next_tier_requirement > 0 %}
-                                        {% set progress_percentage = (user_commission / next_tier_requirement * 100) %}
+                                        {% set progress_percentage = (user_commission / next_tier_requirement * 100) | round(1) %}
                                         {% set progress_percentage = progress_percentage | min(100) %}
                                     {% else %}
                                         {% set progress_percentage = 0 %}
@@ -281,7 +281,7 @@
         <div class="leaderboard-card">
             <!-- Enhanced Mobile Card View -->
             <div class="d-md-none" id="mobile-leaderboard">
-                {% if top_users and top_users is iterable %}
+                {% if top_users %}
                     {% for user in top_users %}
                     <div class="leaderboard-mobile-card {% if user.id == current_user.id %}current-user{% endif %}" data-user-id="{{ user.id | default('') }}">
                         <div class="card-body">
@@ -370,7 +370,7 @@
                             </tr>
                         </thead>
                         <tbody id="desktop-leaderboard">
-                            {% if top_users and top_users is iterable %}
+                            {% if top_users %}
                                 {% for user in top_users %}
                                 <tr class="leaderboard-row {% if user.id == current_user.id %}current-user{% endif %}" data-user-id="{{ user.id | default('') }}">
                                     <td class="rank-cell text-center">
@@ -470,7 +470,7 @@
                 </div>
             </div>
 
-            {% if not top_users or top_users is not iterable %}
+            {% if not top_users %}
             <div class="empty-leaderboard text-center py-5">
                 <div class="empty-icon mb-4">
                     <i class="fas fa-trophy fa-4x text-muted opacity-50"></i>
@@ -527,7 +527,7 @@
             <!-- Progress Visualization -->
             <div class="tiers-progress-bar mb-5">
                 <div class="progress-steps">
-                    {% set user_rank_safe = user_ranking.user_rank | default('Bronze') if user_ranking and user_ranking is mapping else 'Bronze' %}
+                    {% set user_rank_safe = user_ranking.user_rank | default('Bronze') if user_ranking else 'Bronze' %}
                     <div class="step bronze {% if user_rank_safe in ['Bronze','Silver','Gold','Platinum','Diamond'] %}active{% endif %}">
                         <div class="step-marker">
                             <i class="fas fa-gem"></i>
@@ -569,7 +569,7 @@
             <!-- Enhanced Tier Cards -->
             <div class="rank-tiers-grid">
                 <!-- Bronze Tier -->
-                {% set user_rank_safe = user_ranking.user_rank | default('Bronze') if user_ranking and user_ranking is mapping else 'Bronze' %}
+                {% set user_rank_safe = user_ranking.user_rank | default('Bronze') if user_ranking else 'Bronze' %}
                 <div class="rank-tier-card bronze-tier {% if user_rank_safe == 'Bronze' %}current-tier{% endif %}">
                     <div class="tier-header">
                         <div class="tier-icon">
@@ -1417,7 +1417,7 @@ class ProfessionalLeaderboard {
                     }
                     break;
                 case 'same-tier':
-                    const userTier = '{{ user_ranking.user_rank if user_ranking and user_ranking is mapping else "Bronze" }}'.toLowerCase();
+                    const userTier = '{{ user_ranking.user_rank if user_ranking else "Bronze" }}'.toLowerCase();
                     const rowTierElement = row.querySelector('.tier-badge, .rank-tier');
                     if (rowTierElement && rowTierElement.className.toLowerCase().includes(userTier)) {
                         row.style.display = '';
