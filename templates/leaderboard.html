@@ -581,10 +581,10 @@
                         <div class="tier-stats">
                             <div class="stat">
                                 <div class="stat-value">
-                                    {% if tier_distribution %}
+                                    {% if tier_distribution and tier_distribution.Bronze is defined %}
                                         {{ "%.1f"|format(tier_distribution.Bronze) }}%
                                     {% else %}
-                                        40%
+                                        0%
                                     {% endif %}
                                 </div>
                                 <div class="stat-label">of Users</div>
@@ -634,10 +634,10 @@
                         <div class="tier-stats">
                             <div class="stat">
                                 <div class="stat-value">
-                                    {% if tier_distribution %}
+                                    {% if tier_distribution and tier_distribution.Silver is defined %}
                                         {{ "%.1f"|format(tier_distribution.Silver) }}%
                                     {% else %}
-                                        25%
+                                        0%
                                     {% endif %}
                                 </div>
                                 <div class="stat-label">of Users</div>
@@ -687,10 +687,10 @@
                         <div class="tier-stats">
                             <div class="stat">
                                 <div class="stat-value">
-                                    {% if tier_distribution %}
+                                    {% if tier_distribution and tier_distribution.Gold is defined %}
                                         {{ "%.1f"|format(tier_distribution.Gold) }}%
                                     {% else %}
-                                        20%
+                                        0%
                                     {% endif %}
                                 </div>
                                 <div class="stat-label">of Users</div>
@@ -740,10 +740,10 @@
                         <div class="tier-stats">
                             <div class="stat">
                                 <div class="stat-value">
-                                    {% if tier_distribution %}
+                                    {% if tier_distribution and tier_distribution.Platinum is defined %}
                                         {{ "%.1f"|format(tier_distribution.Platinum) }}%
                                     {% else %}
-                                        10%
+                                        0%
                                     {% endif %}
                                 </div>
                                 <div class="stat-label">of Users</div>
@@ -793,10 +793,10 @@
                         <div class="tier-stats">
                             <div class="stat">
                                 <div class="stat-value">
-                                    {% if tier_distribution %}
+                                    {% if tier_distribution and tier_distribution.Diamond is defined %}
                                         {{ "%.1f"|format(tier_distribution.Diamond) }}%
                                     {% else %}
-                                        5%
+                                        0%
                                     {% endif %}
                                 </div>
                                 <div class="stat-label">of Users</div>
