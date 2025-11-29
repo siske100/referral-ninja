@@ -622,6 +622,63 @@ class SupabaseDB:
             return SupabaseDB.handle_db_error("create_job", e, False)
 
     @staticmethod
+    def get_tier_distribution():
+        """Calculate the percentage of users in each performance tier"""
+        try:
+            # Get all users with their tiers and commission
+            response = supabase.table('users')\
+                .select('id, user_rank, total_commission')\
+                .execute()
+            
+            if not response.data:
+                return {
+                    'Bronze': 40,
+                    'Silver': 25, 
+                    'Gold': 20,
+                    'Platinum': 10,
+                    'Diamond': 5
+                }
+            
+            users = response.data
+            total_users = len(users)
+            
+            # Count users in each tier
+            tier_counts = {
+                'Bronze': 0,
+                'Silver': 0,
+                'Gold': 0,
+                'Platinum': 0,
+                'Diamond': 0
+            }
+            
+            for user in users:
+                tier = user.get('user_rank', 'Bronze')
+                if tier in tier_counts:
+                    tier_counts[tier] += 1
+            
+            # Calculate percentages
+            tier_percentages = {}
+            for tier, count in tier_counts.items():
+                if total_users > 0:
+                    percentage = (count / total_users) * 100
+                    tier_percentages[tier] = round(percentage, 1)
+                else:
+                    tier_percentages[tier] = 0
+            
+            return tier_percentages
+            
+        except Exception as e:
+            logger.error(f"Error calculating tier distribution: {e}")
+            # Return default distribution if calculation fails
+            return {
+                'Bronze': 40,
+                'Silver': 25,
+                'Gold': 20,
+                'Platinum': 10,
+                'Diamond': 5
+            }
+        
+    @staticmethod
     def get_all_jobs(user_id=None):
         """
         Get all jobs from the database
@@ -4650,7 +4707,7 @@ def leaderboard():
     
     try:
         # Get top 50 users for the leaderboard
-        top_users_data = SupabaseDB.get_top_users(limit=50)  # Increased to 50 as per template
+        top_users_data = SupabaseDB.get_top_users(limit=50)
         top_users = []
         
         # Safely create User objects and ensure numeric types
@@ -4681,10 +4738,14 @@ def leaderboard():
                 'percentile': float(user_ranking.get('percentile', 0))
             }
         
+        # Get tier distribution
+        tier_distribution = SupabaseDB.get_tier_distribution()
+        
         return render_template('leaderboard.html',
                             top_users=top_users,
                             user_ranking=user_ranking,
-                            current_user=current_user)
+                            current_user=current_user,
+                            tier_distribution=tier_distribution)
     
     except Exception as e:
         logger.error(f"Error in leaderboard route: {e}")
@@ -4692,7 +4753,8 @@ def leaderboard():
         return render_template('leaderboard.html',
                             top_users=[],
                             user_ranking=None,
-                            current_user=current_user)
+                            current_user=current_user,
+                            tier_distribution=None)
 
 @app.route('/statistics')
 @login_required
