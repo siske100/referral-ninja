@@ -1010,7 +1010,20 @@ class SupabaseDB:
                 .select('id, username, email, phone, name, balance, total_commission, total_withdrawn, referral_code, referred_by, referral_balance, referral_count, is_verified, is_active, user_rank, created_at, last_login')\
                 .order('created_at', desc=True)\
                 .execute()
-            return response.data if response.data else []
+            
+            if response.data:
+                # Ensure all users have required fields with proper defaults
+                for user in response.data:
+                    user.setdefault('total_commission', 0.0)
+                    user.setdefault('referral_count', 0)
+                    user.setdefault('balance', 0.0)
+                    user.setdefault('user_rank', 'Bronze')
+                    user.setdefault('username', 'Unknown User')
+                    user.setdefault('email', '')
+                
+                return response.data
+            return []
+        
         except Exception as e:
             logger.error(f"Error getting all users: {e}")
             return []
@@ -3054,12 +3067,28 @@ def get_user_ranking(user_id):
             except (TypeError, ValueError):
                 return 0.0
         
-        sorted_users = sorted(all_users_data, key=get_commission, reverse=True)
+        # Filter out invalid user data and ensure all users have required fields
+        valid_users = []
+        for user_data in all_users_data:
+            if isinstance(user_data, dict) and user_data.get('id'):
+                # Ensure the user_data has all required fields with safe defaults
+                user_data.setdefault('total_commission', 0.0)
+                user_data.setdefault('referral_count', 0)
+                user_data.setdefault('user_rank', 'Bronze')
+                valid_users.append(user_data)
         
-        # Find user's position
+        if not valid_users:
+            return None
+            
+        sorted_users = sorted(valid_users, key=get_commission, reverse=True)
+        
+        # Find user's position - safely convert user_id to string for comparison
+        user_id_str = str(user_id)
         position = None
         for index, user_data in enumerate(sorted_users):
-            if user_data['id'] == user_id:
+            # Safely get the id and convert to string for comparison
+            current_user_id = str(user_data.get('id', ''))
+            if current_user_id == user_id_str:
                 position = index + 1
                 break
         
@@ -3070,7 +3099,7 @@ def get_user_ranking(user_id):
         total_users = len(sorted_users)
         if total_users > 0:
             percentile = ((total_users - position) / total_users * 100)
-            percentile = round(percentile)
+            percentile = round(percentile, 1)  # Round to 1 decimal place
         else:
             percentile = 0
         
@@ -4727,7 +4756,7 @@ def leaderboard():
         # Get current user's ranking with proper error handling
         user_ranking = get_user_ranking(current_user.id)
         
-        # Ensure user_ranking has proper types
+        # Ensure user_ranking has proper types and handle None case
         if user_ranking:
             user_ranking = {
                 'position': int(user_ranking.get('position', 0)),
@@ -4737,6 +4766,8 @@ def leaderboard():
                 'referral_count': int(user_ranking.get('referral_count', 0)),
                 'percentile': float(user_ranking.get('percentile', 0))
             }
+        else:
+            user_ranking = None
         
         # Get tier distribution
         tier_distribution = SupabaseDB.get_tier_distribution()
