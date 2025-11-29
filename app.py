@@ -1,3 +1,6 @@
+# =============================================================================
+# STANDARD LIBRARY IMPORTS
+# =============================================================================
 import os
 import sys
 import time
@@ -18,6 +21,9 @@ from urllib.parse import urlparse
 from functools import wraps
 from typing import Dict, List, Any, Tuple, Optional
 
+# =============================================================================
+# THIRD-PARTY IMPORTS
+# =============================================================================
 import requests
 import httpx
 import psutil
@@ -44,6 +50,10 @@ from logging.handlers import RotatingFileHandler
 from supabase import create_client
 from telegram import Bot
 
+# =============================================================================
+# APPLICATION SETUP AND CONFIGURATION
+# =============================================================================
+
 # Emergency recursion limit and logging fixes
 sys.setrecursionlimit(5000)
 
@@ -51,7 +61,7 @@ sys.setrecursionlimit(5000)
 load_dotenv()
 
 # =============================================================================
-# SAFE LOGGING SETUP (NO RECURSION)
+# LOGGING CONFIGURATION
 # =============================================================================
 
 def setup_safe_logging():
@@ -187,7 +197,7 @@ class Config:
     MAX_ACCOUNTS_PER_DEVICE = 2
     MAX_WITHDRAWALS_PER_HOUR = 3
     MAX_LOGIN_ATTEMPTS_PER_HOUR = 10
-    SUSPICIOUS_AMOUNT_THRESHOLD = 2000
+    SUSPICIOUS_AMOUNT_THRESHOLD = 5001
     NEW_USER_WITHDRAWAL_LIMIT = 1000
     FRAUD_BLOCK_DURATION_HOURS = 24
     
@@ -217,7 +227,14 @@ else:
     logger.info("Production configuration loaded")
 
 # =============================================================================
-# IMPROVED SAFE REDIS INITIALIZATION
+# DATABASE AND EXTERNAL SERVICES SETUP
+# =============================================================================
+
+# Initialize Supabase client
+supabase = create_client(app.config.get('SUPABASE_URL'), app.config.get('SUPABASE_KEY'))
+
+# =============================================================================
+# REDIS SETUP WITH SAFE WRAPPER
 # =============================================================================
 
 class SafeRedis:
@@ -406,14 +423,7 @@ except Exception as e:
     logger.error(f"❌ Redis connection test failed: {e}")
 
 # =============================================================================
-# DATABASE INITIALIZATION
-# =============================================================================
-
-# Initialize Supabase client
-supabase = create_client(app.config.get('SUPABASE_URL'), app.config.get('SUPABASE_KEY'))
-
-# =============================================================================
-# EXTENSIONS INITIALIZATION
+# FLASK EXTENSIONS INITIALIZATION
 # =============================================================================
 
 # Initialize extensions
@@ -424,7 +434,7 @@ login_manager.login_view = 'login'
 login_manager.login_message_category = 'info'
 
 # =============================================================================
-# ENHANCED RATE LIMITING CONFIGURATION - FIXED
+# RATE LIMITING CONFIGURATION
 # =============================================================================
 
 def get_limiter_key():
@@ -454,7 +464,7 @@ def get_limiter_key():
         current_app.logger.error(f"Rate limit IP fallback failed: {e}")
         return f"unknown:{int(time.time())}"
 
-# Safe rate limiter initialization with fallbacks - REMOVED exempt_when
+# Safe rate limiter initialization with fallbacks
 try:
     rate_limiter = Limiter(
         app=app,
@@ -465,7 +475,6 @@ try:
         on_breach=lambda limit: current_app.logger.warning(f"Rate limit breached: {limit}"),
         headers_enabled=True,
         fail_on_first_breach=False  # Don't crash if Redis fails
-        # REMOVED: exempt_when parameter causing the error
     )
     logger.info("Rate limiter initialized successfully")
 except Exception as e:
@@ -477,7 +486,6 @@ except Exception as e:
         storage_uri="memory://",
         default_limits=["1000 per day", "200 per hour", "20 per minute"],  # Conservative memory limits
         strategy="moving-window"
-        # REMOVED: exempt_when parameter causing the error
     )
     logger.info("Rate limiter fallback to memory storage")
 
@@ -485,7 +493,6 @@ except Exception as e:
 # DATABASE MODELS
 # =============================================================================
 
-# Database Models as Python Classes (for type hinting and structure)
 class User(UserMixin):
     def __init__(self, data=None):
         if data:
@@ -603,7 +610,6 @@ class User(UserMixin):
 # DATABASE UTILITIES
 # =============================================================================
 
-# Enhanced SupabaseDB class with error handling
 class SupabaseDB:
     @staticmethod
     def create_job(job_data):
@@ -986,16 +992,29 @@ class SupabaseDB:
 
     @staticmethod
     def get_top_users(limit=50):
-       try:
-          response = supabase.table('users')\
-            .select('*')\
-            .order('total_commission', desc=True)\
-            .limit(limit)\
-            .execute()
-          return response.data if response.data else []
-       except Exception as e:
-          logger.error(f"Error getting top users: {e}")
-          return []
+        try:
+            response = supabase.table('users')\
+                .select('*')\
+                .order('total_commission', desc=True)\
+                .limit(limit)\
+                .execute()
+            
+            if response.data:
+                # Ensure all users have required fields with proper defaults
+                for user in response.data:
+                    user.setdefault('total_commission', 0.0)
+                    user.setdefault('referral_count', 0)
+                    user.setdefault('balance', 0.0)
+                    user.setdefault('user_rank', 'Bronze')
+                    user.setdefault('username', 'Unknown User')
+                    user.setdefault('email', '')
+                
+                return response.data
+            return []
+        
+        except Exception as e:
+            logger.error(f"Error getting top users: {e}")
+            return []
 
     @staticmethod
     def get_users_count():
@@ -1049,7 +1068,7 @@ class SupabaseDB:
             return SupabaseDB.handle_db_error("get_total_balance", e, False)
 
 # =============================================================================
-# ENHANCED FRAUD DETECTION SYSTEM
+# SECURITY AND FRAUD DETECTION
 # =============================================================================
 
 class EnhancedFraudDetector:
@@ -1332,7 +1351,7 @@ class EnhancedFraudDetector:
 fraud_detector = EnhancedFraudDetector(redis_client, supabase)
 
 # =============================================================================
-# SAFE SECURITY MIDDLEWARE (NO RECURSION) - FIXED
+# SECURITY MIDDLEWARE
 # =============================================================================
 
 class FixedSecurityMiddleware:
@@ -1525,7 +1544,7 @@ class FraudDetector:
         return " | ".join(checks) if checks else None
 
 # =============================================================================
-# CELCOM SMS IMPLEMENTATION
+# EXTERNAL SERVICE INTEGRATIONS
 # =============================================================================
 
 class CelcomSMS:
@@ -2060,7 +2079,7 @@ Please process this withdrawal in the admin dashboard.
         return False
 
 # =============================================================================
-# DATABASE SCHEMA MANAGER
+# DATABASE MANAGEMENT AND HEALTH MONITORING
 # =============================================================================
 
 def supabase_check(table_name: str, limit: int = 1, retries: int = 3, timeout: int = 5):
@@ -2957,7 +2976,7 @@ def extract_mpesa_code(message):
     return 'PENDING'
 
 def get_user_ranking(user_id):
-    """Get user's position in leaderboard and statistics"""
+    """Get user's position in leaderboard and statistics - FIXED VERSION"""
     try:
         user = SupabaseDB.get_user_by_id(user_id)
         if not user:
@@ -2968,8 +2987,17 @@ def get_user_ranking(user_id):
         if not all_users_data:
             return None
         
-        # Sort by total_commission descending
-        sorted_users = sorted(all_users_data, key=lambda x: x.get('total_commission', 0) or 0, reverse=True)
+        # Sort by total_commission descending, safely handling None values
+        def get_commission(user_data):
+            commission = user_data.get('total_commission')
+            if commission is None:
+                return 0.0
+            try:
+                return float(commission)
+            except (TypeError, ValueError):
+                return 0.0
+        
+        sorted_users = sorted(all_users_data, key=get_commission, reverse=True)
         
         # Find user's position
         position = None
@@ -2981,17 +3009,26 @@ def get_user_ranking(user_id):
         if position is None:
             return None
         
-        # Calculate percentile
+        # Calculate percentile safely
         total_users = len(sorted_users)
-        percentile = ((total_users - position) / total_users * 100) if total_users > 0 else 0
+        if total_users > 0:
+            percentile = ((total_users - position) / total_users * 100)
+            percentile = round(percentile)
+        else:
+            percentile = 0
+        
+        # Safely get user attributes with defaults
+        user_rank = getattr(user, 'user_rank', 'Bronze')
+        total_commission = float(getattr(user, 'total_commission', 0))
+        referral_count = int(getattr(user, 'referral_count', 0))
         
         return {
             'position': position,
             'total_users': total_users,
-            'user_rank': getattr(user, 'user_rank', 'Bronze'),
-            'total_commission': getattr(user, 'total_commission', 0),
-            'referral_count': getattr(user, 'referral_count', 0),
-            'percentile': round(percentile)
+            'user_rank': user_rank,
+            'total_commission': total_commission,
+            'referral_count': referral_count,
+            'percentile': percentile
         }
         
     except Exception as e:
@@ -3120,7 +3157,10 @@ auth_bp = Blueprint("auth_api", __name__)
 mpesa_bp = Blueprint("mpesa_api", __name__)
 withdraw_bp = Blueprint("withdraw_api", __name__)
 
-# API Authentication Routes with Security - MODIFIED FOR PAYMENT-ONLY STORAGE
+# =============================================================================
+# API AUTHENTICATION ROUTES
+# =============================================================================
+
 @auth_bp.route("/register", methods=["POST"])
 @rate_limiter.limit("10 per hour")
 def api_register():
@@ -3339,7 +3379,10 @@ def verify_2fa():
         logger.error(f"2FA verification error: {str(e)}")
         return jsonify({"error": "Verification failed"}), 500
 
-# M-Pesa Callback Handlers
+# =============================================================================
+# M-PESA CALLBACK HANDLERS
+# =============================================================================
+
 def is_safaricom_ip(ip):
     """Verify callback is from Safaricom IP"""
     return ip in current_app.config['SAFARICOM_IPS']
@@ -3458,7 +3501,10 @@ def mpesa_withdraw_callback():
         )
         return jsonify({"ResultCode": 1, "ResultDesc": "System error"}), 500
 
-# Secure Withdrawal API Routes
+# =============================================================================
+# SECURE WITHDRAWAL API ROUTES
+# =============================================================================
+
 @withdraw_bp.route("/withdraw", methods=["POST"])
 @jwt_required()
 @rate_limiter.limit("10 per hour", key_func=lambda: get_jwt_identity())
@@ -3679,7 +3725,7 @@ app.register_blueprint(mpesa_bp, url_prefix='/api')
 app.register_blueprint(withdraw_bp, url_prefix='/api')
 
 # =============================================================================
-# FLASK ROUTES - MODIFIED FOR PAYMENT-ONLY STORAGE
+# FLASK ROUTES
 # =============================================================================
 
 @app.context_processor
@@ -3778,8 +3824,10 @@ def sitemap():
     
     return app.response_class(sitemap_xml, mimetype='application/xml')
 
+# =============================================================================
+# HEALTH CHECK ROUTES - EXEMPT FROM RATE LIMITING
+# =============================================================================
 
-# Health Check Routes - EXEMPT FROM RATE LIMITING
 @app.route('/health')
 @rate_limiter.exempt
 def health_check():
@@ -3852,7 +3900,10 @@ def emergency_health_check():
     
     return jsonify(health_info)
 
-# Rate limiting test routes
+# =============================================================================
+# RATE LIMITING TEST ROUTES
+# =============================================================================
+
 @app.route('/rate-limit-test')
 def rate_limit_test():
     """Test endpoint to check rate limiting"""
@@ -3904,7 +3955,10 @@ def rate_limit_status():
             "timestamp": datetime.now(timezone.utc).isoformat()
         })
 
-# Health monitoring background task
+# =============================================================================
+# HEALTH MONITORING BACKGROUND TASK
+# =============================================================================
+
 def start_health_monitoring():
     """Start background health monitoring safely in a thread."""
     
@@ -3948,6 +4002,10 @@ def start_health_monitoring():
     # Start monitoring in a daemon thread
     thread = threading.Thread(target=monitor_health, daemon=True)
     thread.start()
+
+# =============================================================================
+# MAIN APPLICATION ROUTES
+# =============================================================================
 
 @app.route('/')
 def index():
@@ -4590,17 +4648,51 @@ def leaderboard():
         flash('Please complete payment verification to view leaderboard.', 'warning')
         return redirect(url_for('account_activation'))
     
-    # Get top 50 users for the leaderboard
-    top_users_data = SupabaseDB.get_top_users(limit=5)
-    top_users = [User(user_data) for user_data in top_users_data] if top_users_data else []
+    try:
+        # Get top 50 users for the leaderboard
+        top_users_data = SupabaseDB.get_top_users(limit=50)  # Increased to 50 as per template
+        top_users = []
+        
+        # Safely create User objects and ensure numeric types
+        for user_data in top_users_data:
+            try:
+                # Ensure numeric fields are properly typed
+                user_data['total_commission'] = float(user_data.get('total_commission', 0))
+                user_data['referral_count'] = int(user_data.get('referral_count', 0))
+                user_data['balance'] = float(user_data.get('balance', 0))
+                
+                user = User(user_data)
+                top_users.append(user)
+            except Exception as e:
+                logger.error(f"Error creating user object: {e}")
+                continue
+        
+        # Get current user's ranking with proper error handling
+        user_ranking = get_user_ranking(current_user.id)
+        
+        # Ensure user_ranking has proper types
+        if user_ranking:
+            user_ranking = {
+                'position': int(user_ranking.get('position', 0)),
+                'total_users': int(user_ranking.get('total_users', 0)),
+                'user_rank': user_ranking.get('user_rank', 'Bronze'),
+                'total_commission': float(user_ranking.get('total_commission', 0)),
+                'referral_count': int(user_ranking.get('referral_count', 0)),
+                'percentile': float(user_ranking.get('percentile', 0))
+            }
+        
+        return render_template('leaderboard.html',
+                            top_users=top_users,
+                            user_ranking=user_ranking,
+                            current_user=current_user)
     
-    # Get current user's ranking with proper data
-    user_ranking = get_user_ranking(current_user.id)
-    
-    return render_template('leaderboard.html',
-                         top_users=top_users,
-                         user_ranking=user_ranking,
-                         current_user=current_user)
+    except Exception as e:
+        logger.error(f"Error in leaderboard route: {e}")
+        flash('Error loading leaderboard. Please try again.', 'error')
+        return render_template('leaderboard.html',
+                            top_users=[],
+                            user_ranking=None,
+                            current_user=current_user)
 
 @app.route('/statistics')
 @login_required
@@ -4750,7 +4842,10 @@ def withdraw():
     
     return render_template('withdraw.html', transactions=transactions)
 
-# UPDATED JOBS ROUTE - Fixed the missing method error
+# =============================================================================
+# JOBS MANAGEMENT ROUTES
+# =============================================================================
+
 @app.route('/jobs')
 @login_required
 def jobs():
@@ -4956,6 +5051,10 @@ def toggle_job_status(job_id):
     except Exception as e:
         logger.error(f"Error toggling job status: {str(e)}")
         return jsonify({'success': False, 'message': str(e)})
+
+# =============================================================================
+# USER PROFILE AND SETTINGS ROUTES
+# =============================================================================
 
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
@@ -5422,8 +5521,10 @@ def debug_settings():
     }
     return jsonify(debug_info)
 
+# =============================================================================
+# ADMIN ROUTES
+# =============================================================================
 
-# Admin Dashboard Route
 @app.route('/admin/database')
 @login_required
 @admin_required
