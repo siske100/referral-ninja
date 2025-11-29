@@ -16,7 +16,7 @@
                 <h1 class="hero-title display-5 fw-bold text-white mb-3">Elite Referral Leaderboard</h1>
                 <p class="hero-subtitle text-white-50 fs-5 mb-4">Track your performance against top performers in real-time</p>
                 
-                {% if user_ranking %}
+                {% if user_ranking and user_ranking is mapping %}
                 <div class="user-rank-hero">
                     <div class="rank-stats-card">
                         <div class="row g-4">
@@ -61,7 +61,7 @@
     </div>
 
     <!-- Performance Analytics Dashboard -->
-    {% if user_ranking %}
+    {% if user_ranking and user_ranking is mapping %}
     <div class="user-performance-section mb-5">
         <div class="section-header text-center mb-4">
             <h2 class="fw-bold">Performance Analytics</h2>
@@ -281,67 +281,69 @@
         <div class="leaderboard-card">
             <!-- Enhanced Mobile Card View -->
             <div class="d-md-none" id="mobile-leaderboard">
-                {% for user in top_users %}
-                <div class="leaderboard-mobile-card {% if user.id == current_user.id %}current-user{% endif %}" data-user-id="{{ user.id | default('') }}">
-                    <div class="card-body">
-                        <div class="row align-items-center">
-                            <!-- Rank -->
-                            <div class="col-3 text-center">
-                                <div class="rank-badge rank-{{ loop.index }}">
-                                    {% if loop.index == 1 %}
-                                    <i class="fas fa-crown text-warning"></i>
-                                    <span class="rank-number">1st</span>
-                                    {% elif loop.index == 2 %}
-                                    <i class="fas fa-medal text-secondary"></i>
-                                    <span class="rank-number">2nd</span>
-                                    {% elif loop.index == 3 %}
-                                    <i class="fas fa-award text-bronze"></i>
-                                    <span class="rank-number">3rd</span>
-                                    {% else %}
-                                    <span class="rank-number">#{{ loop.index }}</span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            
-                            <!-- User Info -->
-                            <div class="col-9">
-                                <div class="user-info mb-2">
-                                    <div class="d-flex align-items-center">
-                                        <div class="user-avatar me-3">
-                                            <i class="fas fa-user"></i>
-                                        </div>
-                                        <div class="user-details">
-                                            <div class="d-flex align-items-center">
-                                                <span class="username fw-bold">{{ user.username | default('Unknown User') }}</span>
-                                                {% if user.id == current_user.id %}
-                                                <span class="user-badge ms-2">You</span>
-                                                {% endif %}
-                                            </div>
-                                            <div class="user-tier">
-                                                {% set user_rank_safe = user.user_rank | default('Bronze') %}
-                                                <span class="tier-badge tier-{{ user_rank_safe | lower }}">{{ user_rank_safe }}</span>
-                                            </div>
-                                        </div>
+                {% if top_users and top_users is iterable %}
+                    {% for user in top_users %}
+                    <div class="leaderboard-mobile-card {% if user.id == current_user.id %}current-user{% endif %}" data-user-id="{{ user.id | default('') }}">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <!-- Rank -->
+                                <div class="col-3 text-center">
+                                    <div class="rank-badge rank-{{ loop.index }}">
+                                        {% if loop.index == 1 %}
+                                        <i class="fas fa-crown text-warning"></i>
+                                        <span class="rank-number">1st</span>
+                                        {% elif loop.index == 2 %}
+                                        <i class="fas fa-medal text-secondary"></i>
+                                        <span class="rank-number">2nd</span>
+                                        {% elif loop.index == 3 %}
+                                        <i class="fas fa-award text-bronze"></i>
+                                        <span class="rank-number">3rd</span>
+                                        {% else %}
+                                        <span class="rank-number">#{{ loop.index }}</span>
+                                        {% endif %}
                                     </div>
                                 </div>
                                 
-                                <!-- Stats -->
-                                <div class="user-stats">
-                                    <div class="row text-center">
-                                        <div class="col-6">
-                                            <div class="stat">
-                                                <div class="stat-value text-warning fw-bold user-earnings">
-                                                    KES {{ "%.2f"|format(user.total_commission | default(0) | float) }}
+                                <!-- User Info -->
+                                <div class="col-9">
+                                    <div class="user-info mb-2">
+                                        <div class="d-flex align-items-center">
+                                            <div class="user-avatar me-3">
+                                                <i class="fas fa-user"></i>
+                                            </div>
+                                            <div class="user-details">
+                                                <div class="d-flex align-items-center">
+                                                    <span class="username fw-bold">{{ user.username | default('Unknown User') }}</span>
+                                                    {% if user.id == current_user.id %}
+                                                    <span class="user-badge ms-2">You</span>
+                                                    {% endif %}
                                                 </div>
-                                                <div class="stat-label">Total Earnings</div>
+                                                <div class="user-tier">
+                                                    {% set user_rank_safe = user.user_rank | default('Bronze') %}
+                                                    <span class="tier-badge tier-{{ user_rank_safe | lower }}">{{ user_rank_safe }}</span>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div class="col-6">
-                                            <div class="stat">
-                                                <div class="stat-value text-info fw-bold user-referrals">
-                                                    {{ user.referral_count | default(0) }}
+                                    </div>
+                                    
+                                    <!-- Stats -->
+                                    <div class="user-stats">
+                                        <div class="row text-center">
+                                            <div class="col-6">
+                                                <div class="stat">
+                                                    <div class="stat-value text-warning fw-bold user-earnings">
+                                                        KES {{ "%.2f"|format(user.total_commission | default(0) | float) }}
+                                                    </div>
+                                                    <div class="stat-label">Total Earnings</div>
                                                 </div>
-                                                <div class="stat-label">Referrals</div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="stat">
+                                                    <div class="stat-value text-info fw-bold user-referrals">
+                                                        {{ user.referral_count | default(0) }}
+                                                    </div>
+                                                    <div class="stat-label">Referrals</div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -349,8 +351,8 @@
                             </div>
                         </div>
                     </div>
-                </div>
-                {% endfor %}
+                    {% endfor %}
+                {% endif %}
             </div>
 
             <!-- Enhanced Desktop Table View -->
@@ -368,105 +370,107 @@
                             </tr>
                         </thead>
                         <tbody id="desktop-leaderboard">
-                            {% for user in top_users %}
-                            <tr class="leaderboard-row {% if user.id == current_user.id %}current-user{% endif %}" data-user-id="{{ user.id | default('') }}">
-                                <td class="rank-cell text-center">
-                                    <div class="rank-badge rank-{{ loop.index }}">
-                                        {% if loop.index == 1 %}
-                                        <i class="fas fa-crown me-1"></i>
-                                        <span>1</span>
-                                        {% elif loop.index == 2 %}
-                                        <i class="fas fa-medal me-1"></i>
-                                        <span>2</span>
-                                        {% elif loop.index == 3 %}
-                                        <i class="fas fa-award me-1"></i>
-                                        <span>3</span>
+                            {% if top_users and top_users is iterable %}
+                                {% for user in top_users %}
+                                <tr class="leaderboard-row {% if user.id == current_user.id %}current-user{% endif %}" data-user-id="{{ user.id | default('') }}">
+                                    <td class="rank-cell text-center">
+                                        <div class="rank-badge rank-{{ loop.index }}">
+                                            {% if loop.index == 1 %}
+                                            <i class="fas fa-crown me-1"></i>
+                                            <span>1</span>
+                                            {% elif loop.index == 2 %}
+                                            <i class="fas fa-medal me-1"></i>
+                                            <span>2</span>
+                                            {% elif loop.index == 3 %}
+                                            <i class="fas fa-award me-1"></i>
+                                            <span>3</span>
+                                            {% else %}
+                                            <span>{{ loop.index }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="user-cell">
+                                        <div class="user-info">
+                                            <div class="user-avatar">
+                                                <i class="fas fa-user"></i>
+                                            </div>
+                                            <div class="user-details">
+                                                <div class="d-flex align-items-center">
+                                                    <span class="username fw-bold">{{ user.username | default('Unknown User') }}</span>
+                                                    {% if user.id == current_user.id %}
+                                                    <span class="user-badge ms-2">Your Position</span>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="user-contact text-muted small">
+                                                    {{ user.email | default('', true) | truncate(25) }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="earnings-cell text-end">
+                                        <div class="earnings-amount fw-bold">
+                                            <span class="amount user-earnings">
+                                                KES {{ "%.2f"|format(user.total_commission | default(0) | float) }}
+                                            </span>
+                                        </div>
+                                        <div class="earnings-growth small text-muted">
+                                            <i class="fas fa-chart-line text-success me-1"></i>
+                                            <span>Active earner</span>
+                                        </div>
+                                    </td>
+                                    <td class="referrals-cell text-center">
+                                        <div class="referrals-count fw-bold">
+                                            <span class="user-referrals">{{ user.referral_count | default(0) }}</span>
+                                        </div>
+                                        <div class="referrals-rate small text-muted">
+                                            <i class="fas fa-bolt text-warning me-1"></i>
+                                            <span>High performer</span>
+                                        </div>
+                                    </td>
+                                    <td class="level-cell">
+                                        {% set user_rank_safe = user.user_rank | default('Bronze') %}
+                                        <div class="rank-tier rank-tier-{{ user_rank_safe | lower }}">
+                                            <div class="tier-icon">
+                                                <i class="fas fa-gem"></i>
+                                            </div>
+                                            <div class="tier-info">
+                                                <span class="tier-name fw-bold">{{ user_rank_safe }}</span>
+                                                <small class="tier-requirement">
+                                                    {% if user_rank_safe == 'Bronze' %}Entry Level
+                                                    {% elif user_rank_safe == 'Silver' %}KES 1,000+
+                                                    {% elif user_rank_safe == 'Gold' %}KES 2,000+
+                                                    {% elif user_rank_safe == 'Platinum' %}KES 5,000+
+                                                    {% else %}KES 10,000+
+                                                    {% endif %}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="action-cell text-center">
+                                        {% if user.id == current_user.id %}
+                                        <div class="performance-indicator">
+                                            <div class="indicator positive">
+                                                <i class="fas fa-user me-1"></i>
+                                                <span>Your Profile</span>
+                                            </div>
+                                        </div>
                                         {% else %}
-                                        <span>{{ loop.index }}</span>
+                                        <div class="action-buttons">
+                                            <button class="btn btn-outline-primary btn-sm" onclick="analyzeUserPerformance('{{ user.id | default('') }}')" data-bs-toggle="tooltip" title="View Performance Analysis">
+                                                <i class="fas fa-chart-bar me-1"></i>Analyze
+                                            </button>
+                                        </div>
                                         {% endif %}
-                                    </div>
-                                </td>
-                                <td class="user-cell">
-                                    <div class="user-info">
-                                        <div class="user-avatar">
-                                            <i class="fas fa-user"></i>
-                                        </div>
-                                        <div class="user-details">
-                                            <div class="d-flex align-items-center">
-                                                <span class="username fw-bold">{{ user.username | default('Unknown User') }}</span>
-                                                {% if user.id == current_user.id %}
-                                                <span class="user-badge ms-2">Your Position</span>
-                                                {% endif %}
-                                            </div>
-                                            <div class="user-contact text-muted small">
-                                                {{ user.email | default('', true) | truncate(25) }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="earnings-cell text-end">
-                                    <div class="earnings-amount fw-bold">
-                                        <span class="amount user-earnings">
-                                            KES {{ "%.2f"|format(user.total_commission | default(0) | float) }}
-                                        </span>
-                                    </div>
-                                    <div class="earnings-growth small text-muted">
-                                        <i class="fas fa-chart-line text-success me-1"></i>
-                                        <span>Active earner</span>
-                                    </div>
-                                </td>
-                                <td class="referrals-cell text-center">
-                                    <div class="referrals-count fw-bold">
-                                        <span class="user-referrals">{{ user.referral_count | default(0) }}</span>
-                                    </div>
-                                    <div class="referrals-rate small text-muted">
-                                        <i class="fas fa-bolt text-warning me-1"></i>
-                                        <span>High performer</span>
-                                    </div>
-                                </td>
-                                <td class="level-cell">
-                                    {% set user_rank_safe = user.user_rank | default('Bronze') %}
-                                    <div class="rank-tier rank-tier-{{ user_rank_safe | lower }}">
-                                        <div class="tier-icon">
-                                            <i class="fas fa-gem"></i>
-                                        </div>
-                                        <div class="tier-info">
-                                            <span class="tier-name fw-bold">{{ user_rank_safe }}</span>
-                                            <small class="tier-requirement">
-                                                {% if user_rank_safe == 'Bronze' %}Entry Level
-                                                {% elif user_rank_safe == 'Silver' %}KES 1,000+
-                                                {% elif user_rank_safe == 'Gold' %}KES 2,000+
-                                                {% elif user_rank_safe == 'Platinum' %}KES 5,000+
-                                                {% else %}KES 10,000+
-                                                {% endif %}
-                                            </small>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="action-cell text-center">
-                                    {% if user.id == current_user.id %}
-                                    <div class="performance-indicator">
-                                        <div class="indicator positive">
-                                            <i class="fas fa-user me-1"></i>
-                                            <span>Your Profile</span>
-                                        </div>
-                                    </div>
-                                    {% else %}
-                                    <div class="action-buttons">
-                                        <button class="btn btn-outline-primary btn-sm" onclick="analyzeUserPerformance('{{ user.id | default('') }}')" data-bs-toggle="tooltip" title="View Performance Analysis">
-                                            <i class="fas fa-chart-bar me-1"></i>Analyze
-                                        </button>
-                                    </div>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% endif %}
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            {% if not top_users %}
+            {% if not top_users or top_users is not iterable %}
             <div class="empty-leaderboard text-center py-5">
                 <div class="empty-icon mb-4">
                     <i class="fas fa-trophy fa-4x text-muted opacity-50"></i>
@@ -523,7 +527,7 @@
             <!-- Progress Visualization -->
             <div class="tiers-progress-bar mb-5">
                 <div class="progress-steps">
-                    {% set user_rank_safe = user_ranking.user_rank | default('Bronze') if user_ranking else 'Bronze' %}
+                    {% set user_rank_safe = user_ranking.user_rank | default('Bronze') if user_ranking and user_ranking is mapping else 'Bronze' %}
                     <div class="step bronze {% if user_rank_safe in ['Bronze','Silver','Gold','Platinum','Diamond'] %}active{% endif %}">
                         <div class="step-marker">
                             <i class="fas fa-gem"></i>
@@ -565,7 +569,7 @@
             <!-- Enhanced Tier Cards -->
             <div class="rank-tiers-grid">
                 <!-- Bronze Tier -->
-                {% set user_rank_safe = user_ranking.user_rank | default('Bronze') if user_ranking else 'Bronze' %}
+                {% set user_rank_safe = user_ranking.user_rank | default('Bronze') if user_ranking and user_ranking is mapping else 'Bronze' %}
                 <div class="rank-tier-card bronze-tier {% if user_rank_safe == 'Bronze' %}current-tier{% endif %}">
                     <div class="tier-header">
                         <div class="tier-icon">
@@ -1413,7 +1417,7 @@ class ProfessionalLeaderboard {
                     }
                     break;
                 case 'same-tier':
-                    const userTier = '{{ user_ranking.user_rank if user_ranking else "Bronze" }}'.toLowerCase();
+                    const userTier = '{{ user_ranking.user_rank if user_ranking and user_ranking is mapping else "Bronze" }}'.toLowerCase();
                     const rowTierElement = row.querySelector('.tier-badge, .rank-tier');
                     if (rowTierElement && rowTierElement.className.toLowerCase().includes(userTier)) {
                         row.style.display = '';
