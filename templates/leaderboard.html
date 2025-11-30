@@ -22,8 +22,8 @@
                         <div class="col-md-4 text-md-end">
                             <div class="header-stats">
                                 <div class="stat-card">
-                                    <div class="stat-value text-white fw-bold">{{ user_ranking.get('total_users', 0) | default(0, true) }}</div>
-                                    <div class="stat-label">Network Size</div>
+                                    <div class="stat-value text-white fw-bold">{{ current_user.referral_count | default(0) }}</div>
+                                    <div class="stat-label">Direct Referrals</div>
                                 </div>
                             </div>
                         </div>
@@ -50,12 +50,12 @@
                         </div>
                         <div class="card-content">
                             <div class="kpi-value">
-                                KES {{ "%.2f"|format(user_ranking.get('total_commission', 0) | float | default(0, true)) }}
+                                KES {{ "%.2f"|format(current_user.total_commission | float | default(0)) }}
                             </div>
-                            <div class="kpi-label">Total Revenue</div>
-                            <div class="kpi-trend positive">
-                                <i class="fas fa-arrow-up me-1"></i>
-                                <span>12.5% growth</span>
+                            <div class="kpi-label">Total Commission</div>
+                            <div class="kpi-trend {% if current_user.total_commission and current_user.total_commission > 0 %}positive{% else %}neutral{% endif %}">
+                                <i class="fas fa-{% if current_user.total_commission and current_user.total_commission > 0 %}arrow-up{% else %}minus{% endif %} me-1"></i>
+                                <span>{{ "%.1f"|format((current_user.total_commission / 1000) | default(0)) }}K earned</span>
                             </div>
                         </div>
                     </div>
@@ -69,32 +69,31 @@
                         </div>
                         <div class="card-content">
                             <div class="kpi-value">
-                                {{ user_ranking.get('referral_count', 0) | default(0, true) }}
+                                {{ current_user.referral_count | default(0) }}
                             </div>
                             <div class="kpi-label">Successful Referrals</div>
-                            <div class="kpi-trend positive">
-                                <i class="fas fa-arrow-up me-1"></i>
-                                <span>8.2% increase</span>
+                            <div class="kpi-trend {% if current_user.referral_count and current_user.referral_count > 0 %}positive{% else %}neutral{% endif %}">
+                                <i class="fas fa-{% if current_user.referral_count and current_user.referral_count > 0 %}arrow-up{% else %}minus{% endif %} me-1"></i>
+                                <span>{{ current_user.referral_count | default(0) }} active</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Conversion Rate -->
+                <!-- Current Balance -->
                 <div class="col-xl-3 col-md-6">
                     <div class="kpi-card conversion-card">
                         <div class="card-icon">
-                            <i class="fas fa-percentage"></i>
+                            <i class="fas fa-wallet"></i>
                         </div>
                         <div class="card-content">
                             <div class="kpi-value">
-                                {% set conversion_rate = (user_ranking.get('referral_count', 0) / user_ranking.get('total_referrals_sent', 1) * 100) | round(1) if user_ranking.get('total_referrals_sent', 0) > 0 else 0 %}
-                                {{ conversion_rate }}%
+                                KES {{ "%.2f"|format(current_user.balance | float | default(0)) }}
                             </div>
-                            <div class="kpi-label">Conversion Rate</div>
-                            <div class="kpi-trend neutral">
-                                <i class="fas fa-minus me-1"></i>
-                                <span>Stable</span>
+                            <div class="kpi-label">Available Balance</div>
+                            <div class="kpi-trend {% if current_user.balance and current_user.balance > 0 %}positive{% else %}neutral{% endif %}">
+                                <i class="fas fa-{% if current_user.balance and current_user.balance > 0 %}arrow-up{% else %}minus{% endif %} me-1"></i>
+                                <span>Ready to withdraw</span>
                             </div>
                         </div>
                     </div>
@@ -108,12 +107,18 @@
                         </div>
                         <div class="card-content">
                             <div class="kpi-value">
-                                #{{ user_ranking.get('position', 'N/A') | default('N/A', true) }}
+                                {{ current_user.user_rank | default('Bronze') }}
                             </div>
-                            <div class="kpi-label">Network Rank</div>
+                            <div class="kpi-label">Performance Tier</div>
                             <div class="kpi-trend positive">
-                                <i class="fas fa-arrow-up me-1"></i>
-                                <span>Top {{ "%.1f"|format(user_ranking.get('percentile', 0) | float | default(0, true)) }}%</span>
+                                <i class="fas fa-award me-1"></i>
+                                <span> 
+                                    {% if user_ranking %}
+                                        Top {{ "%.1f"|format(user_ranking.percentile | default(0)) }}%
+                                    {% else %}
+                                        Ranking
+                                    {% endif %}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -137,13 +142,10 @@
                     <button class="btn btn-outline-primary btn-sm" data-filter="active">
                         <i class="fas fa-bolt me-2"></i>Active
                     </button>
-                    <button class="btn btn-outline-primary btn-sm" data-filter="completed">
-                        <i class="fas fa-check me-2"></i>Completed
-                    </button>
                 </div>
-                <button class="btn btn-primary btn-sm ms-3" id="export-data">
-                    <i class="fas fa-download me-2"></i>Export
-                </button>
+                <a href="{{ url_for('referral_system') }}" class="btn btn-primary btn-sm ms-3">
+                    <i class="fas fa-share-alt me-2"></i>Share Referral
+                </a>
             </div>
         </div>
 
@@ -154,7 +156,7 @@
                         <tr>
                             <th class="referral-col">
                                 <div class="table-header-content">
-                                    <span>Referral Contact</span>
+                                    <span>Referred User</span>
                                     <i class="fas fa-sort ms-1"></i>
                                 </div>
                             </th>
@@ -171,213 +173,129 @@
                             </th>
                             <th class="value-col text-end">
                                 <div class="table-header-content">
-                                    <span>Commission Value</span>
+                                    <span>Commission Earned</span>
                                     <i class="fas fa-sort ms-1"></i>
                                 </div>
                             </th>
                             <th class="progress-col">
                                 <div class="table-header-content">
-                                    <span>Progress</span>
-                                </div>
-                            </th>
-                            <th class="actions-col text-center">
-                                <div class="table-header-content">
-                                    <span>Actions</span>
+                                    <span>User Status</span>
                                 </div>
                             </th>
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- Sample Referral Data - Replace with actual data -->
-                        <tr class="referral-row active-referral">
-                            <td class="referral-cell">
-                                <div class="referral-info">
-                                    <div class="referral-avatar">
-                                        <i class="fas fa-user"></i>
-                                    </div>
-                                    <div class="referral-details">
-                                        <div class="referral-name fw-bold">John Smith</div>
-                                        <div class="referral-contact text-muted small">
-                                            <i class="fas fa-envelope me-1"></i>john.smith@email.com
+                        {% if referrals %}
+                            {% for referral in referrals %}
+                            <tr class="referral-row active-referral">
+                                <td class="referral-cell">
+                                    <div class="referral-info">
+                                        <div class="referral-avatar">
+                                            <i class="fas fa-user"></i>
                                         </div>
-                                        <div class="referral-source">
-                                            <span class="badge bg-light text-dark">Website Signup</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="status-cell text-center">
-                                <span class="status-badge status-active">
-                                    <i class="fas fa-check-circle me-1"></i>Active
-                                </span>
-                            </td>
-                            <td class="date-cell">
-                                <div class="date-value">2024-01-15</div>
-                                <div class="date-relative small text-muted">2 days ago</div>
-                            </td>
-                            <td class="value-cell text-end">
-                                <div class="commission-value fw-bold text-success">KES 2,500.00</div>
-                                <div class="commission-pending small text-muted">Pending: KES 1,200.00</div>
-                            </td>
-                            <td class="progress-cell">
-                                <div class="progress-container">
-                                    <div class="progress-labels d-flex justify-content-between mb-1">
-                                        <span class="progress-text small">Conversion Progress</span>
-                                        <span class="progress-percent small">75%</span>
-                                    </div>
-                                    <div class="progress">
-                                        <div class="progress-bar bg-success" style="width: 75%"></div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="actions-cell text-center">
-                                <div class="action-buttons">
-                                    <button class="btn btn-outline-primary btn-sm me-1" title="View Details">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-outline-secondary btn-sm" title="Send Reminder">
-                                        <i class="fas fa-bell"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <tr class="referral-row completed-referral">
-                            <td class="referral-cell">
-                                <div class="referral-info">
-                                    <div class="referral-avatar">
-                                        <i class="fas fa-user"></i>
-                                    </div>
-                                    <div class="referral-details">
-                                        <div class="referral-name fw-bold">Sarah Johnson</div>
-                                        <div class="referral-contact text-muted small">
-                                            <i class="fas fa-phone me-1"></i>+254 712 345 678
-                                        </div>
-                                        <div class="referral-source">
-                                            <span class="badge bg-light text-dark">Social Media</span>
+                                        <div class="referral-details">
+                                            <div class="referral-name fw-bold">
+                                                {% if referral.referred_user %}
+                                                    {{ referral.referred_user.name | default('Unknown User') }}
+                                                {% else %}
+                                                    User #{{ referral.referred_id[:8] }}
+                                                {% endif %}
+                                            </div>
+                                            <div class="referral-contact text-muted small">
+                                                <i class="fas fa-user-plus me-1"></i>
+                                                {% if referral.referred_user %}
+                                                    Joined via referral
+                                                {% else %}
+                                                    Referred user
+                                                {% endif %}
+                                            </div>
+                                            <div class="referral-source">
+                                                <span class="badge bg-light text-dark">Direct Referral</span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </td>
-                            <td class="status-cell text-center">
-                                <span class="status-badge status-completed">
-                                    <i class="fas fa-award me-1"></i>Completed
-                                </span>
-                            </td>
-                            <td class="date-cell">
-                                <div class="date-value">2024-01-10</div>
-                                <div class="date-relative small text-muted">1 week ago</div>
-                            </td>
-                            <td class="value-cell text-end">
-                                <div class="commission-value fw-bold text-success">KES 5,000.00</div>
-                                <div class="commission-paid small text-success">
-                                    <i class="fas fa-check me-1"></i>Paid
-                                </div>
-                            </td>
-                            <td class="progress-cell">
-                                <div class="progress-container">
-                                    <div class="progress-labels d-flex justify-content-between mb-1">
-                                        <span class="progress-text small">Conversion Progress</span>
-                                        <span class="progress-percent small">100%</span>
-                                    </div>
-                                    <div class="progress">
-                                        <div class="progress-bar bg-success" style="width: 100%"></div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="actions-cell text-center">
-                                <div class="action-buttons">
-                                    <button class="btn btn-outline-primary btn-sm me-1" title="View Details">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-outline-success btn-sm" title="Refer Again">
-                                        <i class="fas fa-redo"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <tr class="referral-row pending-referral">
-                            <td class="referral-cell">
-                                <div class="referral-info">
-                                    <div class="referral-avatar">
-                                        <i class="fas fa-user"></i>
-                                    </div>
-                                    <div class="referral-details">
-                                        <div class="referral-name fw-bold">Mike Williams</div>
-                                        <div class="referral-contact text-muted small">
-                                            <i class="fas fa-envelope me-1"></i>mike.w@company.com
+                                </td>
+                                <td class="status-cell text-center">
+                                    <span class="status-badge status-active">
+                                        <i class="fas fa-check-circle me-1"></i>Active
+                                    </span>
+                                </td>
+                                <td class="date-cell">
+                                    {% if referral.created_at %}
+                                        <div class="date-value">
+                                            {% if referral.created_at is string %}
+                                                {{ referral.created_at[:10] }}
+                                            {% else %}
+                                                {{ referral.created_at.strftime('%Y-%m-%d') }}
+                                            {% endif %}
                                         </div>
-                                        <div class="referral-source">
-                                            <span class="badge bg-light text-dark">Email Campaign</span>
+                                        <div class="date-relative small text-muted">
+                                            {% if referral.created_at %}
+                                                {% if referral.created_at is string %}
+                                                    {{ referral.created_at[:10] }}
+                                                {% else %}
+                                                    {{ referral.created_at.strftime('%b %d, %Y') }}
+                                                {% endif %}
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td class="value-cell text-end">
+                                    <div class="commission-value fw-bold text-success">
+                                        KES {{ "%.2f"|format(referral.commission_earned | float | default(50.00)) }}
+                                    </div>
+                                    <div class="commission-paid small text-success">
+                                        <i class="fas fa-check me-1"></i>Commission Earned
+                                    </div>
+                                </td>
+                                <td class="progress-cell">
+                                    <div class="progress-container">
+                                        <div class="progress-labels d-flex justify-content-between mb-1">
+                                            <span class="progress-text small">Account Status</span>
+                                            <span class="progress-percent small">Verified</span>
+                                        </div>
+                                        <div class="progress">
+                                            <div class="progress-bar bg-success" style="width: 100%"></div>
                                         </div>
                                     </div>
-                                </div>
-                            </td>
-                            <td class="status-cell text-center">
-                                <span class="status-badge status-pending">
-                                    <i class="fas fa-clock me-1"></i>Pending
-                                </span>
-                            </td>
-                            <td class="date-cell">
-                                <div class="date-value">2024-01-18</div>
-                                <div class="date-relative small text-muted">Today</div>
-                            </td>
-                            <td class="value-cell text-end">
-                                <div class="commission-value fw-bold text-muted">KES 0.00</div>
-                                <div class="commission-potential small text-warning">Potential: KES 3,000.00</div>
-                            </td>
-                            <td class="progress-cell">
-                                <div class="progress-container">
-                                    <div class="progress-labels d-flex justify-content-between mb-1">
-                                        <span class="progress-text small">Conversion Progress</span>
-                                        <span class="progress-percent small">25%</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4">
+                                    <div class="empty-state">
+                                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                                        <h5 class="text-muted">No Referrals Yet</h5>
+                                        <p class="text-muted">Start sharing your referral link to earn commissions</p>
+                                        <a href="{{ url_for('referral_system') }}" class="btn btn-primary">
+                                            <i class="fas fa-share-alt me-2"></i>Share Referral Link
+                                        </a>
                                     </div>
-                                    <div class="progress">
-                                        <div class="progress-bar bg-warning" style="width: 25%"></div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="actions-cell text-center">
-                                <div class="action-buttons">
-                                    <button class="btn btn-outline-primary btn-sm me-1" title="View Details">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button class="btn btn-outline-warning btn-sm" title="Follow Up">
-                                        <i class="fas fa-comment"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
+                                </td>
+                            </tr>
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
 
             <!-- Table Footer with Summary -->
+            {% if referrals %}
             <div class="table-footer">
                 <div class="row align-items-center">
                     <div class="col-md-6">
                         <div class="table-summary">
-                            Showing <strong>3</strong> of <strong>{{ user_ranking.get('referral_count', 0) | default(0, true) }}</strong> referrals
+                            Showing <strong>{{ referrals | length }}</strong> of <strong>{{ referrals | length }}</strong> referrals
                         </div>
                     </div>
                     <div class="col-md-6 text-md-end">
-                        <nav>
-                            <ul class="pagination justify-content-end mb-0">
-                                <li class="page-item disabled">
-                                    <a class="page-link" href="#">Previous</a>
-                                </li>
-                                <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                                <li class="page-item"><a class="page-link" href="#">2</a></li>
-                                <li class="page-item"><a class="page-link" href="#">3</a></li>
-                                <li class="page-item">
-                                    <a class="page-link" href="#">Next</a>
-                                </li>
-                            </ul>
-                        </nav>
+                        <div class="total-commission">
+                            <strong>Total Commission Earned: KES {{ "%.2f"|format(current_user.total_commission | float | default(0)) }}</strong>
+                        </div>
                     </div>
                 </div>
             </div>
+            {% endif %}
         </div>
     </div>
 
@@ -388,23 +306,95 @@
             <div class="col-lg-8">
                 <div class="analytics-card">
                     <div class="card-header">
-                        <h5 class="fw-bold">Performance Trends</h5>
-                        <div class="time-filters">
-                            <select class="form-select form-select-sm">
-                                <option>Last 7 days</option>
-                                <option selected>Last 30 days</option>
-                                <option>Last 90 days</option>
-                                <option>Year to date</option>
-                            </select>
-                        </div>
+                        <h5 class="fw-bold">Referral Performance Summary</h5>
                     </div>
                     <div class="card-body">
-                        <div class="chart-placeholder">
-                            <div class="chart-container">
-                                <div class="text-center py-5">
-                                    <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
-                                    <h6 class="text-muted">Performance Trend Chart</h6>
-                                    <p class="text-muted small">Referral performance analytics visualization</p>
+                        <div class="performance-stats">
+                            <div class="row text-center">
+                                <div class="col-md-4">
+                                    <div class="stat-item">
+                                        <div class="stat-number text-primary">{{ current_user.referral_count | default(0) }}</div>
+                                        <div class="stat-label">Total Referrals</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="stat-item">
+                                        <div class="stat-number text-success">KES {{ "%.2f"|format(current_user.total_commission | float | default(0)) }}</div>
+                                        <div class="stat-label">Total Commission</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="stat-item">
+                                        <div class="stat-number text-info">{{ current_user.user_rank | default('Bronze') }}</div>
+                                        <div class="stat-label">Current Tier</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Tier Progress -->
+                            <div class="tier-progress mt-4">
+                                <h6 class="fw-bold mb-3">Tier Progression</h6>
+                                <div class="progress-bars">
+                                    {% set commission = current_user.total_commission | float | default(0) %}
+                                    <div class="tier-item mb-2">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span class="tier-name">Bronze</span>
+                                            <span class="tier-amount">KES 0 - 1,000</span>
+                                        </div>
+                                        <div class="progress">
+                                            <div class="progress-bar {% if commission >= 1000 %}bg-success{% else %}bg-warning{% endif %}" 
+                                                 style="width: {{ (commission / 1000 * 100) | clamp(0, 100) }}%">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="tier-item mb-2">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span class="tier-name">Silver</span>
+                                            <span class="tier-amount">KES 1,000 - 2,000</span>
+                                        </div>
+                                        <div class="progress">
+                                            <div class="progress-bar {% if commission >= 2000 %}bg-success{% else %}bg-info{% endif %}" 
+                                                 style="width: {{ ((commission - 1000) / 1000 * 100) | clamp(0, 100) }}%">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="tier-item mb-2">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span class="tier-name">Gold</span>
+                                            <span class="tier-amount">KES 2,000 - 5,000</span>
+                                        </div>
+                                        <div class="progress">
+                                            <div class="progress-bar {% if commission >= 5000 %}bg-success{% else %}bg-warning{% endif %}" 
+                                                 style="width: {{ ((commission - 2000) / 3000 * 100) | clamp(0, 100) }}%">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="tier-item mb-2">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span class="tier-name">Platinum</span>
+                                            <span class="tier-amount">KES 5,000 - 10,000</span>
+                                        </div>
+                                        <div class="progress">
+                                            <div class="progress-bar {% if commission >= 10000 %}bg-success{% else %}bg-danger{% endif %}" 
+                                                 style="width: {{ ((commission - 5000) / 5000 * 100) | clamp(0, 100) }}%">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="tier-item">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span class="tier-name">Diamond</span>
+                                            <span class="tier-amount">KES 10,000+</span>
+                                        </div>
+                                        <div class="progress">
+                                            <div class="progress-bar bg-success" 
+                                                 style="width: {{ ((commission - 10000) / 1000 * 100) | clamp(0, 100) }}%">
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -420,42 +410,104 @@
                     </div>
                     <div class="card-body">
                         <div class="insights-list">
-                            <div class="insight-item positive">
+                            {% set commission = current_user.total_commission | float | default(0) %}
+                            {% set ref_count = current_user.referral_count | default(0) %}
+                            
+                            <div class="insight-item {% if commission >= 1000 %}positive{% else %}info{% endif %}">
                                 <div class="insight-icon">
-                                    <i class="fas fa-trend-up"></i>
+                                    <i class="fas fa-{% if commission >= 1000 %}trophy{% else %}bullseye{% endif %}"></i>
                                 </div>
                                 <div class="insight-content">
-                                    <div class="insight-title">Strong Conversion Rate</div>
-                                    <div class="insight-desc">Your referral conversion is 15% above network average</div>
+                                    <div class="insight-title">
+                                        {% if commission >= 10000 %}
+                                            Diamond Tier Achieved!
+                                        {% elif commission >= 5000 %}
+                                            Platinum Tier Achieved!
+                                        {% elif commission >= 2000 %}
+                                            Gold Tier Achieved!
+                                        {% elif commission >= 1000 %}
+                                            Silver Tier Achieved!
+                                        {% else %}
+                                            Bronze Tier
+                                        {% endif %}
+                                    </div>
+                                    <div class="insight-desc">
+                                        {% if commission < 1000 %}
+                                            KES {{ "%.0f"|format(1000 - commission) }} to next tier
+                                        {% elif commission < 2000 %}
+                                            KES {{ "%.0f"|format(2000 - commission) }} to Gold tier
+                                        {% elif commission < 5000 %}
+                                            KES {{ "%.0f"|format(5000 - commission) }} to Platinum tier
+                                        {% elif commission < 10000 %}
+                                            KES {{ "%.0f"|format(10000 - commission) }} to Diamond tier
+                                        {% else %}
+                                            Top performance tier reached!
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
-                            <div class="insight-item warning">
+                            
+                            <div class="insight-item {% if ref_count > 0 %}positive{% else %}warning{% endif %}">
                                 <div class="insight-icon">
-                                    <i class="fas fa-clock"></i>
+                                    <i class="fas fa-{% if ref_count > 0 %}users{% else %}user-plus{% endif %}"></i>
                                 </div>
                                 <div class="insight-content">
-                                    <div class="insight-title">Follow-up Required</div>
-                                    <div class="insight-desc">3 pending referrals need immediate follow-up</div>
+                                    <div class="insight-title">
+                                        {% if ref_count > 0 %}
+                                            {{ ref_count }} Successful Referrals
+                                        {% else %}
+                                            No Referrals Yet
+                                        {% endif %}
+                                    </div>
+                                    <div class="insight-desc">
+                                        {% if ref_count > 0 %}
+                                            You've earned KES {{ "%.2f"|format(commission) }} from referrals
+                                        {% else %}
+                                            Start sharing to earn KES 50 per referral
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
-                            <div class="insight-item info">
+                            
+                            <div class="insight-item {% if current_user.balance and current_user.balance >= 400 %}success{% else %}info{% endif %}">
                                 <div class="insight-icon">
-                                    <i class="fas fa-bullseye"></i>
+                                    <i class="fas fa-{% if current_user.balance and current_user.balance >= 400 %}money-bill-wave{% else %}wallet{% endif %}"></i>
                                 </div>
                                 <div class="insight-content">
-                                    <div class="insight-title">Tier Progression</div>
-                                    <div class="insight-desc">You're 65% towards next performance tier</div>
+                                    <div class="insight-title">
+                                        {% if current_user.balance and current_user.balance >= 400 %}
+                                            Ready to Withdraw
+                                        {% else %}
+                                            Build Your Balance
+                                        {% endif %}
+                                    </div>
+                                    <div class="insight-desc">
+                                        {% if current_user.balance and current_user.balance >= 400 %}
+                                            KES {{ "%.2f"|format(current_user.balance) }} available for withdrawal
+                                        {% else %}
+                                            Minimum KES 400 required for withdrawal
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
+                            
+                            {% if user_ranking %}
                             <div class="insight-item success">
                                 <div class="insight-icon">
-                                    <i class="fas fa-award"></i>
+                                    <i class="fas fa-chart-line"></i>
                                 </div>
                                 <div class="insight-content">
-                                    <div class="insight-title">Top Performer</div>
-                                    <div class="insight-desc">Ranked in top 15% of all referral partners</div>
+                                    <div class="insight-title">Network Ranking</div>
+                                    <div class="insight-desc">
+                                        {% if user_ranking.position %}
+                                            Ranked #{{ user_ranking.position }} out of {{ user_ranking.total_users }} users
+                                        {% else %}
+                                            Top {{ "%.1f"|format(user_ranking.percentile | default(0)) }}% performer
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -467,14 +519,16 @@
     <div class="cta-section text-center py-5">
         <div class="cta-content">
             <h2 class="fw-bold mb-3">Optimize Your Referral Strategy</h2>
-            <p class="text-muted mb-4">Leverage advanced analytics and tools to maximize your referral performance</p>
+            <p class="text-muted mb-4">Leverage your referral network to maximize earnings and reach higher performance tiers</p>
             <div class="cta-buttons">
                 <a href="{{ url_for('referral_system') }}" class="btn btn-primary btn-lg me-3">
-                    <i class="fas fa-rocket me-2"></i>Enhance Referral Strategy
+                    <i class="fas fa-share-alt me-2"></i>Share Referral Link
                 </a>
-                <button class="btn btn-outline-primary btn-lg">
-                    <i class="fas fa-chart-bar me-2"></i>View Detailed Analytics
-                </button>
+                {% if current_user.balance and current_user.balance >= 400 %}
+                <a href="{{ url_for('withdraw') }}" class="btn btn-outline-primary btn-lg">
+                    <i class="fas fa-money-bill-wave me-2"></i>Withdraw Earnings
+                </a>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -705,13 +759,6 @@
     border-radius: 3px;
 }
 
-/* Action Buttons */
-.action-buttons .btn {
-    padding: 5px 8px;
-    border-radius: 6px;
-    font-size: 0.8rem;
-}
-
 /* Table Footer */
 .table-footer {
     background: #f8fafc;
@@ -741,6 +788,37 @@
 .analytics-card .card-body,
 .insights-card .card-body {
     padding: 20px;
+}
+
+/* Performance Stats */
+.performance-stats .stat-item {
+    padding: 20px 0;
+}
+
+.performance-stats .stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.performance-stats .stat-label {
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+/* Tier Progress */
+.tier-progress .tier-name {
+    font-weight: 500;
+    color: #374151;
+}
+
+.tier-progress .tier-amount {
+    font-size: 0.8rem;
+    color: #6b7280;
+}
+
+.tier-progress .progress {
+    height: 8px;
 }
 
 /* Insights List */
@@ -795,6 +873,12 @@
 .cta-section {
     background: linear-gradient(135deg, #f8fafc 0%, #e5e7eb 100%);
     border-radius: 12px;
+}
+
+/* Empty State */
+.empty-state {
+    padding: 40px 20px;
+    text-align: center;
 }
 
 /* Responsive Design */
@@ -852,31 +936,6 @@
         transform: translateY(0);
     }
 }
-
-/* Loading States */
-.loading {
-    opacity: 0.6;
-    pointer-events: none;
-}
-
-.loading::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 20px;
-    height: 20px;
-    margin: -10px 0 0 -10px;
-    border: 2px solid #f3f3f3;
-    border-top: 2px solid #3b82f6;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
 </style>
 
 <script>
@@ -888,8 +947,6 @@ class ProfessionalReferralDashboard {
 
     init() {
         this.initializeEventListeners();
-        this.initializeDataTable();
-        this.initializeCharts();
     }
 
     initializeEventListeners() {
@@ -900,27 +957,12 @@ class ProfessionalReferralDashboard {
             });
         });
 
-        // Export button
-        document.getElementById('export-data').addEventListener('click', () => {
-            this.exportData();
-        });
-
         // Sortable headers
         document.querySelectorAll('.table-header-content').forEach(header => {
             header.addEventListener('click', (e) => {
                 this.handleSort(e.currentTarget);
             });
         });
-    }
-
-    initializeDataTable() {
-        // Initialize any data table functionality
-        console.log('Data table initialized');
-    }
-
-    initializeCharts() {
-        // Initialize performance charts
-        console.log('Charts initialized');
     }
 
     handleFilterChange(filter) {
@@ -1007,15 +1049,6 @@ class ProfessionalReferralDashboard {
 
         // Clear and re-append sorted rows
         rows.forEach(row => tbody.appendChild(row));
-    }
-
-    exportData() {
-        // Simulate data export
-        this.showNotification('Exporting referral data...', 'info');
-        
-        setTimeout(() => {
-            this.showNotification('Data exported successfully!', 'success');
-        }, 1500);
     }
 
     showNotification(message, type = 'info') {
