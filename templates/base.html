@@ -50,118 +50,13 @@
     <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}" type="image/x-icon">
     <link rel="shortcut icon" href="{{ url_for('static', filename='images/favicon.ico') }}" type="image/x-icon">
 
-    <!-- Organization Logo for SEO -->
-    <link rel="logo" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
-    <meta itemprop="logo" content="{{ url_for('static', filename='images/logo.png') }}">
-    <meta property="og:logo" content="{{ url_for('static', filename='images/logo.png') }}">
-
-    <!-- Enhanced Structured Data for Search Engines -->
-    <script type="application/ld+json">
-    {
-        "@context": "https://schema.org",
-        "@type": "Organization",
-        "name": "Referral Ninja",
-        "url": "https://www.referralninja.co.ke",
-        "logo": "https://www.referralninja.co.ke/static/images/logo.png",
-        "description": "Referral Ninja - Kenya's premier platform for earning money through referrals and discovering job opportunities. Join our professional network for student referrals and job placements.",
-        "foundingDate": "2024",
-        "address": {
-            "@type": "PostalAddress",
-            "addressCountry": "KE",
-            "addressRegion": "Nairobi",
-            "addressLocality": "Nairobi"
-        },
-        "contactPoint": {
-            "@type": "ContactPoint",
-            "telephone": "+254799326074",
-            "contactType": "customer service",
-            "areaServed": "KE",
-            "availableLanguage": ["English", "Swahili"]
-        },
-        "sameAs": [
-            "https://chat.whatsapp.com/I1iZi0WjYjF0EDV0Byq7IW"
-        ],
-        "keywords": "referral program, earn money, jobs Kenya, student referrals"
-    }
-    </script>
-
-    <!-- Website Structured Data -->
-    <script type="application/ld+json">
-    {
-        "@context": "https://schema.org",
-        "@type": "WebSite",
-        "name": "Referral Ninja",
-        "url": "https://www.referralninja.co.ke",
-        "potentialAction": {
-            "@type": "SearchAction",
-            "target": "https://www.referralninja.co.ke/search?q={search_term_string}",
-            "query-input": "required name=search_term_string"
-        },
-        "publisher": {
-            "@type": "Organization",
-            "name": "Referral Ninja",
-            "logo": "https://www.referralninja.co.ke/static/images/logo.png"
-        }
-    }
-    </script>
-
-    <!-- Local Business Structured Data -->
-    <script type="application/ld+json">
-    {
-        "@context": "https://schema.org",
-        "@type": "LocalBusiness",
-        "name": "Referral Ninja",
-        "description": "Professional referral platform for earning money and finding job opportunities in Kenya",
-        "url": "https://www.referralninja.co.ke",
-        "telephone": "+254799326074",
-        "address": {
-            "@type": "PostalAddress",
-            "addressCountry": "KE",
-            "addressRegion": "Nairobi"
-        },
-        "geo": {
-            "@type": "GeoCoordinates",
-            "latitude": "-1.286389",
-            "longitude": "36.817223"
-        },
-        "openingHours": "Mo-Su 00:00-23:59",
-        "priceRange": "Free to join",
-        "image": "https://www.referralninja.co.ke/static/images/logo.png"
-    }
-    </script>
-
-    <!-- Additional SEO Meta Tags -->
-    <meta name="theme-color" content="#667eea">
-    <meta name="msapplication-TileColor" content="#667eea">
-    <meta name="msapplication-config" content="{{ url_for('static', filename='images/browserconfig.xml') }}">
-    
-    <!-- Canonical URL -->
-    <link rel="canonical" href="https://www.referralninja.co.ke">
-
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-
-    <!-- Performance Optimizations -->
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <link rel="dns-prefetch" href="//cdnjs.cloudflare.com">
-    <link rel="dns-prefetch" href="//cdn.jsdelivr.net">
-    <link rel="dns-prefetch" href="//fonts.googleapis.com">
-    
-    <noscript>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
-    </noscript>
-
     <!-- External Resources -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
-        /* ===== GLOBAL RESPONSIVE FONT BASE ===== */
-        html {
-            font-size: clamp(14px, 2vw, 16px); /* scales with viewport */
-        }
-
+        /* ===== ENHANCED RESPONSIVE DESIGN ===== */
         :root {
             --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             --primary-dark: #5a67d8;
@@ -199,45 +94,130 @@
             scroll-behavior: smooth;
         }
 
-        /* ===== BODY & TEXT ===== */
+        /* ===== RESPONSIVE FONT SCALING ===== */
+        html {
+            font-size: 14px; /* Base for mobile */
+        }
+
+        /* Tablet */
+        @media (min-width: 768px) {
+            html {
+                font-size: 15px;
+            }
+        }
+
+        /* Desktop */
+        @media (min-width: 1024px) {
+            html {
+                font-size: 16px;
+            }
+        }
+
+        /* Large Desktop */
+        @media (min-width: 1440px) {
+            html {
+                font-size: 17px;
+            }
+        }
+
         body {
-            font-size: 1rem; /* 1rem = responsive root font */
+            font-size: 1rem;
             line-height: 1.6;
             background: var(--light-bg);
             color: var(--text-dark);
             min-height: 100vh;
         }
 
+        /* ===== ENHANCED LAYOUT SYSTEM ===== */
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background: var(--light-bg);
+        }
+
+        /* Mobile-first: full width */
+        .main-content {
+            width: 100%;
+            min-height: 100vh;
+            transition: all 0.3s ease;
+        }
+
+        /* Tablet adjustments */
+        @media (min-width: 768px) {
+            .app-container {
+                flex-direction: row;
+            }
+            
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+        }
+
+        /* Desktop adjustments */
+        @media (min-width: 992px) {
+            .main-content {
+                margin-left: 250px;
+                width: calc(100% - 250px);
+            }
+        }
+
+        /* Large desktop optimization */
+        @media (min-width: 1200px) {
+            .main-content {
+                margin-left: 260px;
+                width: calc(100% - 260px);
+            }
+        }
+
+        .content {
+            background: var(--light-bg);
+            min-height: 100vh;
+            width: 100%;
+        }
+
+        /* ===== RESPONSIVE CONTENT CONTAINER ===== */
+        .content-inner {
+            padding: 1rem;
+        }
+
+        /* Tablet */
+        @media (min-width: 768px) {
+            .content-inner {
+                padding: 1.5rem;
+            }
+        }
+
+        /* Desktop */
+        @media (min-width: 992px) {
+            .content-inner {
+                padding: 2rem;
+                max-width: 1200px;
+                margin: 0 auto;
+            }
+        }
+
+        /* ===== RESPONSIVE TYPOGRAPHY ===== */
         h1, .page-title {
-            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            font-size: clamp(1.5rem, 5vw, 2.5rem);
             font-weight: 700;
             color: var(--text-dark);
-            margin-bottom: 0.5rem;
+            margin-bottom: 1rem;
         }
 
         h2 {
-            font-size: clamp(1.25rem, 3.5vw, 2rem);
+            font-size: clamp(1.25rem, 4vw, 2rem);
         }
 
         h3, .card-header {
-            font-size: clamp(1.1rem, 3vw, 1.5rem);
+            font-size: clamp(1.1rem, 3.5vw, 1.5rem);
         }
 
         p, span, .form-label, .stat-label {
             font-size: clamp(0.9rem, 2.5vw, 1rem);
         }
 
-        .stat-label {
-            color: var(--text-light);
-            font-weight: 500;
-        }
-
-        /* ===== ICONS ===== */
-        i, .flash-icon, .stat-value i {
-            font-size: clamp(1rem, 4vw, 2rem);
-        }
-
-        /* ===== STAT VALUES ===== */
         .stat-value {
             font-size: clamp(1.5rem, 8vw, 2.5rem);
             font-weight: 700;
@@ -247,109 +227,92 @@
             -webkit-text-fill-color: transparent;
         }
 
-        /* Enhanced App Layout with Sidebar */
-        .app-container {
-            display: flex;
-            min-height: 100vh;
-            background: var(--light-bg);
-            position: relative;
-        }
-
-        /* Main Content */
-        .main-content {
-            flex: 1;
-            transition: all 0.3s ease;
-            position: relative;
-            min-height: 100vh;
-            width: 100%;
-            margin-left: 0;
-        }
-
-        /* Desktop Layout - UPDATED: Reduced gap by 90% */
-        @media (min-width: 992px) {
-            .main-content {
-                margin-left: 255px;
-                width: calc(100% - 255px);
-            }
-        }
-
-        .content {
-            background: var(--light-bg);
-            min-height: 100vh;
-            width: 100%;
-            overflow-x: hidden;
-            position: relative;
-        }
-
-        /* ===== CARDS ===== */
-        .card, .stat-card, .error-state {
-            padding: clamp(1rem, 3vw, 1.5rem);
+        /* ===== ENHANCED CARD SYSTEM ===== */
+        .card, .stat-card {
+            padding: 1rem;
             border: none;
             border-radius: var(--radius-lg);
             box-shadow: var(--shadow-md);
             transition: all 0.3s ease;
             background: var(--card-bg);
             width: 100%;
-            overflow: hidden;
-            position: relative;
+            margin-bottom: 1.5rem;
         }
 
-        .card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
-            background: var(--primary-gradient);
+        /* Tablet card improvements */
+        @media (min-width: 768px) {
+            .card, .stat-card {
+                padding: 1.25rem;
+                margin-bottom: 2rem;
+            }
         }
 
-        .card:hover {
-            transform: translateY(-3px);
-            box-shadow: var(--shadow-xl);
-        }
-
-        .card-header {
-            font-size: clamp(1rem, 3vw, 1.2rem);
-            background: rgba(0,0,0,0.02);
-            border-bottom: 1px solid var(--border-light);
-            font-weight: 600;
-            color: var(--text-dark);
-            padding: 1rem 1.5rem;
+        /* Desktop card enhancements */
+        @media (min-width: 992px) {
+            .card, .stat-card {
+                padding: 1.5rem;
+            }
+            
+            .card:hover {
+                transform: translateY(-3px);
+                box-shadow: var(--shadow-xl);
+            }
         }
 
         .stat-card {
             text-align: center;
-            border-radius: var(--radius-lg);
-            background: var(--card-bg);
-            box-shadow: var(--shadow-md);
-            transition: all 0.3s ease;
-        }
-        
-        .stat-card:hover {
-            transform: translateY(-3px);
-            box-shadow: var(--shadow-lg);
         }
 
-        /* ===== BUTTONS ===== */
-        .btn-primary, .btn-secondary, .btn-outline-secondary {
-            font-size: clamp(0.85rem, 2.5vw, 1rem);
-            padding: clamp(0.4rem, 1.5vw, 0.75rem) clamp(0.75rem, 3vw, 1.5rem);
+        .card-header {
+            background: rgba(0,0,0,0.02);
+            border-bottom: 1px solid var(--border-light);
+            font-weight: 600;
+            color: var(--text-dark);
+            padding: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .card-header {
+                padding: 1.25rem 1.5rem;
+            }
+        }
+
+        /* ===== RESPONSIVE BUTTON SYSTEM ===== */
+        .btn-primary, .btn-secondary {
+            font-size: 0.9rem;
+            padding: 0.75rem 1.5rem;
             border-radius: var(--radius-md);
             font-weight: 600;
             transition: all 0.3s ease;
-            width: auto;
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Tablet button adjustments */
+        @media (min-width: 768px) {
+            .btn-primary, .btn-secondary {
+                width: auto;
+                margin-bottom: 0;
+                margin-right: 0.5rem;
+            }
+        }
+
+        /* Desktop button enhancements */
+        @media (min-width: 992px) {
+            .btn-primary, .btn-secondary {
+                font-size: 1rem;
+                padding: 0.875rem 1.75rem;
+            }
+            
+            .btn-primary:hover, .btn-secondary:hover {
+                transform: translateY(-2px);
+                box-shadow: var(--shadow-lg);
+            }
         }
 
         .btn-primary {
             background: var(--primary-gradient);
             border: none;
-            box-shadow: var(--shadow-sm);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
         }
 
         .btn-secondary {
@@ -358,45 +321,115 @@
             color: white;
         }
 
-        .btn-secondary:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
-            color: white;
+        /* ===== ENHANCED GRID SYSTEM ===== */
+        .responsive-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            width: 100%;
         }
 
-        .btn-outline-secondary {
-            border: 1px solid var(--border-light);
-            color: var(--text-light);
-            background: transparent;
+        /* Tablet grid */
+        @media (min-width: 768px) {
+            .responsive-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1.5rem;
+            }
         }
 
-        .btn-outline-secondary:hover {
-            background: rgba(0,0,0,0.05);
-            border-color: var(--border-light);
+        /* Desktop grid */
+        @media (min-width: 992px) {
+            .responsive-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 2rem;
+            }
+        }
+
+        /* ===== ENHANCED TABLE SYSTEM ===== */
+        .table-responsive {
+            overflow-x: auto;
+            width: 100%;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 1.5rem;
+        }
+
+        .table {
             color: var(--text-dark);
+            background: var(--card-bg);
+            width: 100%;
+            min-width: 600px;
         }
 
-        /* ===== WHATSAPP TOGGLE SYSTEM ===== */
+        .table th, .table td {
+            padding: 0.75rem;
+            border-color: var(--border-light);
+        }
+
+        /* Desktop table improvements */
+        @media (min-width: 992px) {
+            .table th, .table td {
+                padding: 1rem;
+            }
+        }
+
+        /* ===== ENHANCED FORM SYSTEM ===== */
+        .form-row-responsive {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        /* Tablet form layout */
+        @media (min-width: 768px) {
+            .form-row-responsive {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+            
+            .form-row-responsive .form-group {
+                flex: 1 1 calc(50% - 0.5rem);
+            }
+        }
+
+        /* Desktop form layout */
+        @media (min-width: 992px) {
+            .form-row-responsive .form-group {
+                flex: 1 1 calc(33.333% - 0.67rem);
+            }
+        }
+
+        .form-control {
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            padding: 0.75rem 1rem;
+            background: var(--card-bg);
+            color: var(--text-dark);
+            transition: all 0.3s ease;
+            width: 100%;
+            font-size: 0.95rem;
+        }
+
+        /* ===== ENHANCED WHATSAPP SYSTEM ===== */
         .whatsapp-toggle-container {
             position: fixed;
-            right: 20px;
-            bottom: 20px;
+            right: 1rem;
+            bottom: 1rem;
             z-index: 1000;
             display: flex;
             flex-direction: column;
             align-items: flex-end;
-            gap: 10px;
+            gap: 0.75rem;
         }
 
-        /* Toggle Button */
         .whatsapp-toggle-btn {
-            width: 60px;
-            height: 60px;
+            width: 3.5rem;
+            height: 3.5rem;
             border-radius: 50%;
             background: var(--primary-gradient);
             border: none;
             color: white;
-            font-size: 1.5rem;
+            font-size: 1.25rem;
             box-shadow: var(--shadow-lg);
             cursor: pointer;
             transition: all 0.3s ease;
@@ -406,25 +439,41 @@
             z-index: 1002;
         }
 
-        .whatsapp-toggle-btn:hover {
-            transform: scale(1.1);
-            box-shadow: var(--shadow-xl);
+        /* Tablet WhatsApp adjustments */
+        @media (min-width: 768px) {
+            .whatsapp-toggle-container {
+                right: 1.5rem;
+                bottom: 1.5rem;
+            }
+            
+            .whatsapp-toggle-btn {
+                width: 4rem;
+                height: 4rem;
+                font-size: 1.5rem;
+            }
         }
 
-        .whatsapp-toggle-btn.active {
-            background: var(--secondary-gradient);
-            transform: rotate(45deg);
+        /* Desktop WhatsApp enhancements */
+        @media (min-width: 992px) {
+            .whatsapp-toggle-container {
+                right: 2rem;
+                bottom: 2rem;
+            }
+            
+            .whatsapp-toggle-btn:hover {
+                transform: scale(1.1);
+                box-shadow: var(--shadow-xl);
+            }
         }
 
-        /* WhatsApp Buttons Container */
         .whatsapp-buttons {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 0.75rem;
             transition: all 0.3s ease;
             opacity: 0;
             visibility: hidden;
-            transform: translateY(20px) scale(0.9);
+            transform: translateY(1rem) scale(0.9);
         }
 
         .whatsapp-buttons.show {
@@ -433,12 +482,11 @@
             transform: translateY(0) scale(1);
         }
 
-        /* Individual WhatsApp Buttons */
         .whatsapp-button {
             background: var(--secondary-gradient);
             color: white;
             border: none;
-            border-radius: 50px;
+            border-radius: 2rem;
             font-weight: 600;
             text-decoration: none;
             box-shadow: var(--shadow-lg);
@@ -446,13 +494,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
+            gap: 0.5rem;
             white-space: nowrap;
-            padding: 12px 20px;
+            padding: 0.75rem 1.25rem;
             font-size: 0.875rem;
-            min-width: auto;
             opacity: 0;
-            transform: translateX(20px);
+            transform: translateX(1rem);
         }
 
         .whatsapp-button.community {
@@ -464,142 +511,47 @@
             transform: translateX(0);
         }
 
-        .whatsapp-button:nth-child(1) {
-            transition-delay: 0.1s;
-        }
-
-        .whatsapp-button:nth-child(2) {
-            transition-delay: 0.2s;
-        }
-
-        .whatsapp-button:hover {
-            transform: translateY(-2px) !important;
-            box-shadow: var(--shadow-xl);
-            color: white;
-            text-decoration: none;
-        }
-
-        /* Always show full button with text on larger screens */
-        @media (min-width: 768px) {
-            .whatsapp-button {
-                width: auto;
-                height: auto;
-                padding: 12px 24px;
-                font-size: 0.9rem;
-                border-radius: 50px;
-            }
-            
-            .whatsapp-button span {
-                display: inline !important;
-                opacity: 1 !important;
-            }
-        }
-
-        /* Mobile: show as circular icons only when toggled */
+        /* Mobile: compact WhatsApp buttons */
         @media (max-width: 767.98px) {
-            .whatsapp-toggle-btn {
-                width: 50px;
-                height: 50px;
-                font-size: 1.2rem;
-            }
-
-            .whatsapp-button {
-                width: 50px;
-                height: 50px;
-                padding: 0;
-                border-radius: 50%;
-            }
-            
             .whatsapp-button span {
                 display: none;
             }
             
-            .whatsapp-button i {
-                margin: 0;
-                font-size: 1.2rem;
-            }
-        }
-
-        /* Extra small mobile devices */
-        @media (max-width: 375px) {
-            .whatsapp-toggle-container {
-                right: 15px;
-                bottom: 15px;
-            }
-
-            .whatsapp-toggle-btn {
-                width: 45px;
-                height: 45px;
-                font-size: 1.1rem;
-            }
-
             .whatsapp-button {
-                width: 45px;
-                height: 45px;
+                width: 3rem;
+                height: 3rem;
+                padding: 0;
+                border-radius: 50%;
             }
         }
 
-        /* Large desktop screens */
-        @media (min-width: 1200px) {
-            .whatsapp-toggle-container {
-                right: 25px;
-                bottom: 25px;
-            }
-
-            .whatsapp-toggle-btn {
-                width: 65px;
-                height: 65px;
-                font-size: 1.6rem;
-            }
-
-            .whatsapp-button {
-                padding: 14px 28px;
-                font-size: 1rem;
-            }
-        }
-
-        /* High contrast mode support */
-        @media (prefers-contrast: high) {
-            .whatsapp-toggle-btn,
-            .whatsapp-button {
-                border: 2px solid white;
-            }
-        }
-
-        /* Reduced motion support */
-        @media (prefers-reduced-motion: reduce) {
-            .whatsapp-toggle-btn,
-            .whatsapp-button,
-            .whatsapp-buttons {
-                transition: none;
-            }
-            
-            .whatsapp-toggle-btn:hover,
-            .whatsapp-button:hover {
-                transform: none;
-            }
-        }
-
-        /* ===== FLASH MESSAGES ===== */
+        /* ===== ENHANCED FLASH MESSAGES ===== */
         .flash-message {
-            padding: clamp(0.75rem, 2vw, 1.25rem);
-            margin-bottom: 1.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
             border-radius: var(--radius-lg);
             font-weight: 500;
             display: flex;
             align-items: center;
             border: none;
             box-shadow: var(--shadow-md);
-            backdrop-filter: blur(10px);
             transition: all 0.3s ease;
-            position: relative;
-            width: 100%;
-            overflow: hidden;
         }
 
-        .flash-message:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
+        /* Tablet flash message improvements */
+        @media (min-width: 768px) {
+            .flash-message {
+                padding: 1.25rem 1.5rem;
+                margin-bottom: 1.5rem;
+            }
+        }
+
+        /* Desktop flash message enhancements */
+        @media (min-width: 992px) {
+            .flash-message:hover {
+                transform: translateY(-2px);
+                box-shadow: var(--shadow-lg);
+            }
         }
 
         .flash-message.success {
@@ -614,122 +566,13 @@
             border-left: 4px solid var(--danger);
         }
 
-        .flash-message.warning {
-            background: linear-gradient(135deg, #fffaf0, #feebc8);
-            color: #744210;
-            border-left: 4px solid var(--warning);
-        }
-
-        .flash-message.info {
-            background: linear-gradient(135deg, #ebf8ff, #bee3f8);
-            color: #1a365d;
-            border-left: 4px solid var(--info);
-        }
-
-        .flash-icon {
-            font-size: clamp(1rem, 3vw, 1.2rem);
-            margin-right: 0.75rem;
-            flex-shrink: 0;
-        }
-
-        /* Form Controls */
-        .form-control {
-            border: 1px solid var(--border-light);
-            border-radius: var(--radius-md);
-            padding: 0.75rem 1rem;
-            background: var(--card-bg);
-            color: var(--text-dark);
-            transition: all 0.3s ease;
-            width: 100%;
-            font-size: 0.95rem;
-        }
-
-        .form-control:focus {
-            border-color: var(--primary-dark);
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-            background: var(--card-bg);
-        }
-
-        .form-label {
-            color: var(--text-dark);
-            font-weight: 500;
-            margin-bottom: 0.5rem;
-        }
-
-        /* Table Styling - Responsive */
-        .table-responsive {
-            overflow-x: auto;
-            width: 100%;
-            border-radius: var(--radius-md);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .table {
-            color: var(--text-dark);
-            background: var(--card-bg);
-            width: 100%;
-            min-width: 600px;
-            border-collapse: separate;
-            border-spacing: 0;
-        }
-
-        .table th {
-            border-color: var(--border-light);
-            background: rgba(0,0,0,0.02);
-            font-weight: 600;
-            color: var(--text-dark);
-            white-space: nowrap;
-            padding: 1rem;
-            border-bottom: 1px solid var(--border-light);
-        }
-
-        .table td {
-            border-color: var(--border-light);
-            word-break: break-word;
-            padding: 1rem;
-            border-bottom: 1px solid var(--border-light);
-        }
-
-        .table-hover tbody tr:hover {
-            background: rgba(0,0,0,0.03);
-        }
-
-        /* Error State Styles */
-        .error-state {
-            text-align: center;
-            background: var(--card-bg);
-            border-radius: var(--radius-xl);
-            box-shadow: var(--shadow-lg);
-            margin: 2rem 0;
-            width: 100%;
-        }
-
-        .error-state i {
-            color: var(--danger);
-            margin-bottom: 1.5rem;
-        }
-
-        .error-state h3 {
-            color: var(--text-dark);
-            margin-bottom: 1rem;
-            font-weight: 600;
-        }
-
-        .error-state p {
-            color: var(--text-light);
-            margin-bottom: 2rem;
-            max-width: 500px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        /* Connection Status */
+        /* ===== CONNECTION STATUS ===== */
         .connection-status {
             position: fixed;
-            bottom: 20px;
-            left: 20px;
-            padding: 0.75rem 1.5rem;
-            border-radius: 25px;
+            bottom: 1rem;
+            left: 1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 1.5rem;
             font-weight: 600;
             z-index: 1000;
             box-shadow: var(--shadow-md);
@@ -737,6 +580,17 @@
             display: flex;
             align-items: center;
             gap: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        /* Tablet connection status */
+        @media (min-width: 768px) {
+            .connection-status {
+                bottom: 1.5rem;
+                left: 1.5rem;
+                padding: 0.75rem 1.5rem;
+                font-size: 1rem;
+            }
         }
 
         .connection-status.online {
@@ -749,71 +603,26 @@
             color: white;
         }
 
-        /* Toast Container */
-        .toast-container {
-            z-index: 9999;
-        }
-
-        /* Form Validation */
-        .is-invalid {
-            border-color: var(--danger) !important;
-            box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.1) !important;
-        }
-
-        .invalid-feedback {
-            color: var(--danger);
-            font-size: 0.875rem;
-            margin-top: 0.25rem;
-        }
-
-        /* Enhanced Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--primary-gradient);
-            border-radius: 10px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
-        }
-
-        /* Loading Animation */
-        .loading-spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid var(--primary-dark);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-right: 10px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Maintenance Mode */
-        .maintenance-mode {
-            background: var(--primary-gradient);
-            color: white;
-            padding: 1rem;
+        /* ===== ERROR STATE ===== */
+        .error-state {
             text-align: center;
-            border-radius: var(--radius-md);
-            margin: 1rem 0;
-            font-weight: 500;
+            background: var(--card-bg);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-lg);
+            margin: 2rem 0;
+            padding: 2rem 1rem;
+            width: 100%;
         }
 
-        /* Accessibility Improvements */
+        /* Desktop error state */
+        @media (min-width: 992px) {
+            .error-state {
+                padding: 3rem 2rem;
+                margin: 3rem 0;
+            }
+        }
+
+        /* ===== ACCESSIBILITY ENHANCEMENTS ===== */
         .sr-only {
             position: absolute;
             width: 1px;
@@ -826,7 +635,7 @@
             border: 0;
         }
 
-        /* Focus styles for better accessibility */
+        /* Focus styles */
         button:focus,
         a:focus,
         input:focus,
@@ -836,130 +645,7 @@
             outline-offset: 2px;
         }
 
-        /* Print Styles */
-        @media print {
-            .rank-badge {
-                display: none !important;
-            }
-            
-            .main-content {
-                margin-left: 0 !important;
-            }
-            
-            .content {
-                padding: 0;
-            }
-
-            .whatsapp-toggle-container {
-                display: none !important;
-            }
-            
-            .card::before {
-                display: none;
-            }
-        }
-
-        /* ===== RESPONSIVE MEDIA QUERIES ===== */
-        @media (max-width: 576px) {
-            .content-inner {
-                padding: 1rem;
-            }
-
-            .btn-primary, .btn-secondary {
-                width: 100%;
-            }
-
-            .stat-value {
-                font-size: clamp(1.25rem, 10vw, 1.75rem);
-            }
-
-            .error-state i {
-                font-size: 3rem;
-            }
-
-            .flash-message {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .flash-icon {
-                margin: 0 0 0.5rem 0;
-            }
-
-            .card-header {
-                padding: 0.75rem 1rem;
-            }
-
-            .btn-primary {
-                padding: 0.75rem 1rem;
-                width: 100%;
-            }
-
-            .error-state {
-                padding: 2rem 1rem;
-            }
-            
-            .connection-status {
-                left: 15px;
-                bottom: 15px;
-                padding: 0.5rem 1rem;
-                font-size: 0.875rem;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .content-inner {
-                padding: 1.25rem;
-            }
-
-            .stat-value {
-                font-size: clamp(1.5rem, 8vw, 2rem);
-            }
-
-            .flash-message {
-                padding: 1.25rem 1.5rem;
-            }
-
-            .card-header {
-                padding: 1rem 1.25rem;
-            }
-        }
-
-        /* Medium Devices (768px to 992px) */
-        @media (min-width: 768px) and (max-width: 992px) {
-            .content-inner {
-                padding: 1.75rem 0.175rem;
-            }
-
-            .main-content {
-                margin-left: 0;
-            }
-        }
-
-        /* Large Devices (992px to 1200px) */
-        @media (min-width: 992px) and (max-width: 1200px) {
-            .content-inner {
-                padding: 2rem 0.2rem;
-            }
-        }
-
-        /* Extra Large Devices (1200px and up) */
-        @media (min-width: 1200px) {
-            .content-inner {
-                padding: 2rem 0.2rem;
-                max-width: 1200px;
-                margin: 0 auto;
-            }
-        }
-
-        /* High DPI Screens */
-        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-            .card {
-                box-shadow: 0 2px 20px rgba(0,0,0,0.1);
-            }
-        }
-
-        /* Reduced Motion Support */
+        /* ===== PERFORMANCE OPTIMIZATIONS ===== */
         @media (prefers-reduced-motion: reduce) {
             * {
                 animation-duration: 0.01ms !important;
@@ -968,63 +654,45 @@
             }
         }
 
-        /* Orientation Specific */
-        @media (orientation: portrait) {
-            .content-inner {
-                padding: 1.5rem 0.15rem;
+        /* ===== PRINT STYLES ===== */
+        @media print {
+            .whatsapp-toggle-container,
+            .connection-status {
+                display: none !important;
+            }
+            
+            .main-content {
+                margin-left: 0 !important;
+                width: 100% !important;
             }
         }
 
-        @media (orientation: landscape) and (max-height: 500px) {
-            .content-inner {
-                padding: 1rem 0.1rem;
-            }
+        /* ===== UTILITY CLASSES ===== */
+        .text-responsive {
+            font-size: clamp(0.9rem, 2.5vw, 1rem);
         }
 
-        /* Grid System for Better Layout Control */
-        .responsive-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
+        .heading-responsive {
+            font-size: clamp(1.25rem, 4vw, 2rem);
+        }
+
+        .container-responsive {
             width: 100%;
+            padding: 0 1rem;
         }
 
-        /* Flexbox for Form Layouts */
-        .form-row-responsive {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1rem;
+        @media (min-width: 768px) {
+            .container-responsive {
+                padding: 0 1.5rem;
+            }
         }
 
-        .form-row-responsive .form-group {
-            flex: 1 1 300px;
-        }
-
-        /* Text Responsiveness */
-        .responsive-text {
-            font-size: clamp(1rem, 2.5vw, 1.25rem);
-        }
-
-        .responsive-heading {
-            font-size: clamp(1.5rem, 4vw, 2.5rem);
-        }
-
-        /* Image Responsiveness */
-        .responsive-img {
-            max-width: 100%;
-            height: auto;
-        }
-        
-        /* Professional Header */
-        .page-header {
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid var(--border-light);
-        }
-        
-        .page-subtitle {
-            color: var(--text-light);
-            font-size: 1.1rem;
+        @media (min-width: 992px) {
+            .container-responsive {
+                padding: 0 2rem;
+                max-width: 1200px;
+                margin: 0 auto;
+            }
         }
     </style>
     {% block styles %}{% endblock %}
@@ -1105,12 +773,10 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Enhanced JavaScript with responsive behavior
+        // Enhanced JavaScript with device-specific behavior
         document.addEventListener('DOMContentLoaded', function() {
-            const mainContent = document.getElementById('mainContent');
             const connectionStatus = document.getElementById('connectionStatus');
             const errorState = document.getElementById('errorState');
-            const appContainer = document.getElementById('appContainer');
             
             // WhatsApp Toggle Functionality
             const whatsappToggle = document.getElementById('whatsappToggle');
@@ -1153,10 +819,11 @@
                 });
             }
 
-            // Responsive initialization
-            function initializeResponsiveBehavior() {
+            // Device-specific initialization
+            function initializeDeviceSpecificFeatures() {
                 setupResponsiveTables();
                 setupViewportHandling();
+                setupDeviceOptimizations();
             }
 
             // Make tables responsive
@@ -1172,7 +839,7 @@
                 });
             }
 
-            // Handle viewport changes and orientation
+            // Handle viewport changes
             function setupViewportHandling() {
                 let vh = window.innerHeight * 0.01;
                 document.documentElement.style.setProperty('--vh', `${vh}px`);
@@ -1191,16 +858,38 @@
                 });
             }
 
-            // Initialize components safely
+            // Device-specific optimizations
+            function setupDeviceOptimizations() {
+                const isMobile = window.innerWidth < 768;
+                const isTablet = window.innerWidth >= 768 && window.innerWidth < 992;
+                const isDesktop = window.innerWidth >= 992;
+
+                // Mobile optimizations
+                if (isMobile) {
+                    // Add touch-friendly classes
+                    document.body.classList.add('touch-device');
+                }
+
+                // Tablet optimizations
+                if (isTablet) {
+                    // Enhance hover effects
+                    document.body.classList.add('tablet-device');
+                }
+
+                // Desktop optimizations
+                if (isDesktop) {
+                    document.body.classList.add('desktop-device');
+                    // Enable advanced animations and effects
+                }
+            }
+
+            // Initialize components
             function initializeApp() {
                 try {
-                    initializeResponsiveBehavior();
+                    initializeDeviceSpecificFeatures();
                     setupFlashMessages();
-                    setupEnhancedConnectionMonitor();
+                    setupConnectionMonitor();
                     setupErrorHandling();
-                    setupAccessibility();
-                    setupFormValidation();
-                    monitorPerformance();
                 } catch (error) {
                     console.error('Error initializing app:', error);
                     showErrorState();
@@ -1219,9 +908,8 @@
                 });
             }
 
-            function setupEnhancedConnectionMonitor() {
+            function setupConnectionMonitor() {
                 let isOnline = navigator.onLine;
-                let checkInterval;
 
                 function updateConnectionStatus(online) {
                     if (online === isOnline) return;
@@ -1240,11 +928,6 @@
                             setTimeout(() => connectionStatus.style.display = 'none', 3000);
                         }
                     }
-
-                    // Dispatch custom event for other components
-                    window.dispatchEvent(new CustomEvent('connectionChange', { 
-                        detail: { online } 
-                    }));
                 }
 
                 // Initial status
@@ -1253,83 +936,12 @@
                 // Event listeners
                 window.addEventListener('online', () => updateConnectionStatus(true));
                 window.addEventListener('offline', () => updateConnectionStatus(false));
-
-                // Periodic check (every 30 seconds)
-                checkInterval = setInterval(() => {
-                    fetch('/health', { method: 'HEAD', cache: 'no-cache' })
-                        .then(() => updateConnectionStatus(true))
-                        .catch(() => updateConnectionStatus(false));
-                }, 30000);
             }
 
             function setupErrorHandling() {
-                // Global error handler
                 window.addEventListener('error', function(e) {
                     console.error('Global error:', e.error);
-                    // Don't show error state for minor errors
                 });
-
-                // Network request error handling
-                const originalFetch = window.fetch;
-                window.fetch = function(...args) {
-                    return originalFetch.apply(this, args)
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error(`HTTP error! status: ${response.status}`);
-                            }
-                            return response;
-                        })
-                        .catch(error => {
-                            console.error('Fetch error:', error);
-                            throw error;
-                        });
-                };
-            }
-
-            function setupAccessibility() {
-                // Handle focus for modal dialogs
-                document.addEventListener('keydown', function(e) {
-                    if (e.key === 'Escape') {
-                        const openModal = document.querySelector('.modal.show');
-                        if (openModal) {
-                            const closeBtn = openModal.querySelector('[data-bs-dismiss="modal"]');
-                            if (closeBtn) closeBtn.click();
-                        }
-                    }
-                });
-            }
-
-            function setupFormValidation() {
-                // Auto-remove validation styles on input
-                document.addEventListener('input', function(e) {
-                    if (e.target.hasAttribute('required')) {
-                        e.target.classList.remove('is-invalid');
-                    }
-                });
-            }
-
-            function monitorPerformance() {
-                // Report page load time
-                window.addEventListener('load', () => {
-                    const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
-                    console.log(`Page loaded in ${loadTime}ms`);
-                    
-                    if (loadTime > 3000) {
-                        console.warn('Slow page load detected');
-                    }
-                });
-
-                // Monitor long tasks
-                if ('PerformanceObserver' in window) {
-                    const observer = new PerformanceObserver((list) => {
-                        for (const entry of list.getEntries()) {
-                            if (entry.duration > 50) {
-                                console.warn('Long task detected:', entry);
-                            }
-                        }
-                    });
-                    observer.observe({ entryTypes: ['longtask'] });
-                }
             }
 
             function showErrorState() {
@@ -1338,75 +950,56 @@
                 }
             }
 
-            function hideErrorState() {
-                if (errorState) {
-                    errorState.style.display = 'none';
-                }
-            }
-
             // Initialize the application
             initializeApp();
 
-            // Add loading state to buttons
-            document.addEventListener('click', function(e) {
-                const button = e.target.closest('.btn-loading');
-                if (button) {
-                    const originalText = button.innerHTML;
-                    button.innerHTML = '<span class="loading-spinner"></span> Loading...';
-                    button.disabled = true;
-                    
-                    // Revert after 10 seconds if still loading
-                    setTimeout(() => {
-                        if (button.disabled) {
-                            button.innerHTML = originalText;
-                            button.disabled = false;
-                            showToast('Request timed out. Please try again.', 'warning');
-                        }
-                    }, 10000);
-                }
+            // Handle responsive behavior on resize
+            let resizeTimeout;
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    setupDeviceOptimizations();
+                }, 250);
             });
 
-            // Smooth scrolling for anchor links
-            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-                anchor.addEventListener('click', function (e) {
-                    const href = this.getAttribute('href');
-                    if (href !== '#') {
-                        e.preventDefault();
-                        const target = document.querySelector(href);
-                        if (target) {
-                            target.scrollIntoView({
-                                behavior: 'smooth',
-                                block: 'start'
-                            });
-                        }
-                    }
-                });
-            });
-
-            // Handle form submissions with loading states
+            // Enhanced form handling
             document.addEventListener('submit', function(e) {
                 const form = e.target;
                 const submitButton = form.querySelector('button[type="submit"], input[type="submit"]');
                 
-                if (submitButton && !form.classList.contains('no-loading')) {
+                if (submitButton) {
                     const originalText = submitButton.innerHTML;
-                    submitButton.innerHTML = '<span class="loading-spinner"></span> Processing...';
+                    submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Processing...';
                     submitButton.disabled = true;
 
-                    // Revert if form submission fails
-                    form.addEventListener('ajax:error', function() {
-                        submitButton.innerHTML = originalText;
-                        submitButton.disabled = false;
-                    });
+                    // Revert after 10 seconds if still loading
+                    setTimeout(() => {
+                        if (submitButton.disabled) {
+                            submitButton.innerHTML = originalText;
+                            submitButton.disabled = false;
+                        }
+                    }, 10000);
                 }
             });
         });
 
-        // Utility functions
+        // Utility function to check device type
+        window.getDeviceType = function() {
+            const width = window.innerWidth;
+            if (width < 768) return 'mobile';
+            if (width < 992) return 'tablet';
+            return 'desktop';
+        };
+
+        // Enhanced request with device awareness
         window.makeRequest = function(url, options = {}) {
+            const deviceType = window.getDeviceType();
+            
+            // Add device info to headers
             const defaultOptions = {
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-Device-Type': deviceType,
                     'X-Requested-With': 'XMLHttpRequest'
                 }
             };
@@ -1425,95 +1018,6 @@
                     throw error;
                 });
         };
-
-        // Enhanced request with retry logic
-        window.retryRequest = async function(url, options = {}, maxRetries = 3) {
-            for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                try {
-                    const response = await fetch(url, options);
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                    return await response.json();
-                } catch (error) {
-                    if (attempt === maxRetries) throw error;
-                    await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-                }
-            }
-        };
-
-        // Form validation helper
-        window.validateForm = function(form) {
-            const inputs = form.querySelectorAll('input[required], select[required], textarea[required]');
-            let isValid = true;
-
-            inputs.forEach(input => {
-                if (!input.value.trim()) {
-                    input.classList.add('is-invalid');
-                    isValid = false;
-                } else {
-                    input.classList.remove('is-invalid');
-                }
-            });
-
-            return isValid;
-        };
-
-        window.showToast = function(message, type = 'info') {
-            // Create toast element
-            const toast = document.createElement('div');
-            toast.className = `toast align-items-center text-bg-${type} border-0`;
-            toast.innerHTML = `
-                <div class="d-flex">
-                    <div class="toast-body">${message}</div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                </div>
-            `;
-
-            // Add to toast container
-            let container = document.getElementById('toastContainer');
-            if (!container) {
-                container = document.createElement('div');
-                container.id = 'toastContainer';
-                container.className = 'toast-container position-fixed top-0 end-0 p-3';
-                container.style.zIndex = '9999';
-                document.body.appendChild(container);
-            }
-
-            container.appendChild(toast);
-            const bsToast = new bootstrap.Toast(toast);
-            bsToast.show();
-
-            // Remove after hide
-            toast.addEventListener('hidden.bs.toast', () => {
-                toast.remove();
-            });
-        };
-
-        // Global error handler for uncaught errors
-        window.addEventListener('unhandledrejection', function(event) {
-            console.error('Unhandled promise rejection:', event.reason);
-        });
-
-        // Page visibility API for better resource management
-        document.addEventListener('visibilitychange', function() {
-            if (document.hidden) {
-                // Page is hidden - could pause animations or heavy operations
-            } else {
-                // Page is visible
-            }
-        });
-
-        // Service Worker Registration for PWA
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(function(registration) {
-                        console.log('SW registered: ', registration);
-                    })
-                    .catch(function(registrationError) {
-                        console.log('SW registration failed: ', registrationError);
-                    });
-            });
-        }
     </script>
     
     {% block scripts %}{% endblock %}
