@@ -582,7 +582,7 @@
                         </div>
                         <div class="tier-stats">
                             <div class="stat">
-                                <div class="stat-value">{{ tier_stats.get('bronze_percentage', 0) }}%</div>
+                                <div class="stat-value" id="bronze-tier-percentage">{{ tier_stats.get('bronze_percentage', 0) }}%</div>
                                 <div class="stat-label">of Users</div>
                             </div>
                             <div class="stat">
@@ -629,7 +629,7 @@
                         </div>
                         <div class="tier-stats">
                             <div class="stat">
-                                <div class="stat-value">{{ tier_stats.get('silver_percentage', 0) }}%</div>
+                                <div class="stat-value" id="silver-tier-percentage">{{ tier_stats.get('silver_percentage', 0) }}%</div>
                                 <div class="stat-label">of Users</div>
                             </div>
                             <div class="stat">
@@ -676,7 +676,7 @@
                         </div>
                         <div class="tier-stats">
                             <div class="stat">
-                                <div class="stat-value">{{ tier_stats.get('gold_percentage', 0) }}%</div>
+                                <div class="stat-value" id="gold-tier-percentage">{{ tier_stats.get('gold_percentage', 0) }}%</div>
                                 <div class="stat-label">of Users</div>
                             </div>
                             <div class="stat">
@@ -723,7 +723,7 @@
                         </div>
                         <div class="tier-stats">
                             <div class="stat">
-                                <div class="stat-value">{{ tier_stats.get('platinum_percentage', 0) }}%</div>
+                                <div class="stat-value" id="platinum-tier-percentage">{{ tier_stats.get('platinum_percentage', 0) }}%</div>
                                 <div class="stat-label">of Users</div>
                             </div>
                             <div class="stat">
@@ -770,7 +770,7 @@
                         </div>
                         <div class="tier-stats">
                             <div class="stat">
-                                <div class="stat-value">{{ tier_stats.get('diamond_percentage', 0) }}%</div>
+                                <div class="stat-value" id="diamond-tier-percentage">{{ tier_stats.get('diamond_percentage', 0) }}%</div>
                                 <div class="stat-label">of Users</div>
                             </div>
                             <div class="stat">
@@ -1589,8 +1589,9 @@ class ProfessionalLeaderboard {
             tierBadge.className = `tier-badge-large tier-${(rankingData.user_rank || 'Bronze').toLowerCase()}`;
         }
 
-        // Update progress bars
+        // Update progress bars and tier stats
         this.updateProgressBars(rankingData);
+        this.updateTierStats(rankingData);
     }
 
     updateProgressBars(rankingData) {
@@ -1602,6 +1603,12 @@ class ProfessionalLeaderboard {
             const position = rankingData.position || rankingData.total_users;
             const progress = ((rankingData.total_users - position) / rankingData.total_users) * 100;
             rankProgressBar.style.width = `${Math.max(0, Math.min(100, progress))}%`;
+            
+            // Update progress text if it exists
+            const progressText = document.querySelector('.progress-text span');
+            if (progressText) {
+                progressText.textContent = `Top ${rankingData.percentile || 0}% of performers`;
+            }
         }
 
         // Update tier progress bar
@@ -1620,7 +1627,41 @@ class ProfessionalLeaderboard {
             const progress = (currentCommission / nextTierRequirement) * 100;
             
             tierProgressBar.style.width = `${Math.min(100, Math.max(0, progress))}%`;
+            
+            // Update progress text
+            const tierProgressText = tierProgressBar.parentElement?.nextElementSibling;
+            if (tierProgressText) {
+                tierProgressText.querySelector('span').textContent = 
+                    `Progress to next tier: ${Math.min(100, Math.max(0, Math.round(progress)))}%`;
+            }
         }
+    }
+
+    // New method to update tier statistics
+    updateTierStats(rankingData) {
+        if (!rankingData || !rankingData.tier_stats || typeof rankingData.tier_stats !== 'object') return;
+
+        const tierStats = rankingData.tier_stats;
+        const tierElements = {
+            'bronze-tier-percentage': `${tierStats.bronze_percentage || 0}%`,
+            'silver-tier-percentage': `${tierStats.silver_percentage || 0}%`,
+            'gold-tier-percentage': `${tierStats.gold_percentage || 0}%`,
+            'platinum-tier-percentage': `${tierStats.platinum_percentage || 0}%`,
+            'diamond-tier-percentage': `${tierStats.diamond_percentage || 0}%`
+        };
+
+        Object.entries(tierElements).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = value;
+                
+                // Add animation effect
+                element.style.transform = 'scale(1.1)';
+                setTimeout(() => {
+                    element.style.transform = 'scale(1)';
+                }, 300);
+            }
+        });
     }
 
     // Cleanup method
