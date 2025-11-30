@@ -1,124 +1,253 @@
 {% extends "base.html" %}
 
-{% block title %}Referral Performance Dashboard - ReferralNinja{% endblock %}
+{% block title %}Leaderboard - ReferralNinja{% endblock %}
 
 {% block content %}
-<div class="referral-dashboard-container">
-    <!-- Executive Dashboard Header -->
-    <div class="dashboard-header-section mb-5">
-        <div class="executive-header">
-            <div class="header-background">
-                <div class="header-content">
-                    <div class="row align-items-center">
-                        <div class="col-md-8">
-                            <div class="header-badge mb-3">
-                                <span class="badge bg-primary-subtle text-primary fs-6 p-3">
-                                    <i class="fas fa-chart-network me-2"></i>PERFORMANCE DASHBOARD
-                                </span>
+<div class="leaderboard-container">
+    <!-- Professional Header Section -->
+    <div class="leaderboard-hero-section mb-5">
+        <div class="hero-background">
+            <div class="hero-content text-center">
+                <div class="hero-badge mb-3">
+                    <span class="badge bg-warning-subtle text-warning fs-6 p-3">
+                        <i class="fas fa-trophy me-2"></i>LIVE COMPETITION
+                    </span>
+                </div>
+                <h1 class="hero-title display-5 fw-bold text-white mb-3">Elite Referral Leaderboard</h1>
+                <p class="hero-subtitle text-white-50 fs-5 mb-4">Track your performance against top performers in real-time</p>
+                
+                {% if user_ranking %}
+                <div class="user-rank-hero">
+                    <div class="rank-stats-card">
+                        <div class="row g-4">
+                            <div class="col-md-3">
+                                <div class="stat-item">
+                                    <div class="stat-value text-primary fw-bold" id="user-global-rank">
+                                        #{{ user_ranking.get('position', 'N/A') }}
+                                    </div>
+                                    <div class="stat-label">Global Rank</div>
+                                </div>
                             </div>
-                            <h1 class="header-title display-5 fw-bold text-white mb-3">Referral Performance Analytics</h1>
-                            <p class="header-subtitle text-white-50 fs-5 mb-4">Strategic insights and performance metrics for your referral network</p>
-                        </div>
-                        <div class="col-md-4 text-md-end">
-                            <div class="header-stats">
-                                <div class="stat-card">
-                                    <div class="stat-value text-white fw-bold">{{ current_user.referral_count | default(0) }}</div>
-                                    <div class="stat-label">Direct Referrals</div>
+                            <div class="col-md-3">
+                                <div class="stat-item">
+                                    <div class="stat-value text-success fw-bold" id="total-competitors">
+                                        {{ user_ranking.get('total_users', 0) }}
+                                    </div>
+                                    <div class="stat-label">Total Competitors</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-item">
+                                    <div class="stat-value text-warning fw-bold" id="user-percentile">
+                                        Top {{ user_ranking.get('percentile', 0) }}%
+                                    </div>
+                                    <div class="stat-label">Performance Percentile</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stat-item">
+                                    <div class="stat-value text-info fw-bold" id="user-tier">
+                                        {{ user_ranking.get('user_rank', 'Bronze') }}
+                                    </div>
+                                    <div class="stat-label">Current Tier</div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+                {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- Executive Summary KPI Cards -->
-    <div class="kpi-dashboard-section mb-5">
-        <div class="section-header mb-4">
-            <h2 class="fw-bold">Performance Overview</h2>
-            <p class="text-muted">Key performance indicators and referral metrics</p>
+    <!-- Performance Analytics Dashboard -->
+    {% if user_ranking %}
+    <div class="user-performance-section mb-5">
+        <div class="section-header text-center mb-4">
+            <h2 class="fw-bold">Performance Analytics</h2>
+            <p class="text-muted">Comprehensive overview of your referral performance</p>
         </div>
         
-        <div class="kpi-cards-grid">
+        <div class="performance-cards">
             <div class="row g-4">
-                <!-- Total Earnings -->
-                <div class="col-xl-3 col-md-6">
-                    <div class="kpi-card revenue-card">
-                        <div class="card-icon">
-                            <i class="fas fa-money-bill-wave"></i>
+                <div class="col-lg-4">
+                    <div class="performance-card rank-card">
+                        <div class="card-header">
+                            <i class="fas fa-chart-line"></i>
+                            <h5>Rank Analytics</h5>
                         </div>
-                        <div class="card-content">
-                            <div class="kpi-value">
-                                KES {{ "%.2f"|format(current_user.total_commission | float | default(0)) }}
+                        <div class="card-body">
+                            <div class="rank-display">
+                                <span class="rank-number" id="current-rank">#{{ user_ranking.get('position', 'N/A') }}</span>
+                                <span class="rank-label">Out of <span id="total-users">{{ user_ranking.get('total_users', 0) }}</span> users</span>
                             </div>
-                            <div class="kpi-label">Total Commission</div>
-                            <div class="kpi-trend {% if current_user.total_commission and current_user.total_commission > 0 %}positive{% else %}neutral{% endif %}">
-                                <i class="fas fa-{% if current_user.total_commission and current_user.total_commission > 0 %}arrow-up{% else %}minus{% endif %} me-1"></i>
-                                <span>{{ "%.1f"|format((current_user.total_commission / 1000) | default(0)) }}K earned</span>
+                            <div class="rank-progress">
+                                {% set total_users_safe = user_ranking.get('total_users', 1) | int %}
+                                {% set position_safe = user_ranking.get('position', total_users_safe) | int %}
+                                {% if total_users_safe > 0 %}
+                                    {% set rank_progress = ((total_users_safe - position_safe) / total_users_safe * 100) | round(1) %}
+                                {% else %}
+                                    {% set rank_progress = 0 %}
+                                {% endif %}
+                                <div class="progress">
+                                    <div class="progress-bar" id="rank-progress-bar" 
+                                         style="width: {{ rank_progress }}%"
+                                         data-bs-toggle="tooltip" 
+                                         title="Your position relative to all users">
+                                    </div>
+                                </div>
+                                <div class="progress-text">
+                                    <span id="rank-percentile">Top {{ user_ranking.get('percentile', 0) }}% of performers</span>
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Active Referrals -->
-                <div class="col-xl-3 col-md-6">
-                    <div class="kpi-card referrals-card">
-                        <div class="card-icon">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div class="card-content">
-                            <div class="kpi-value">
-                                {{ current_user.referral_count | default(0) }}
-                            </div>
-                            <div class="kpi-label">Successful Referrals</div>
-                            <div class="kpi-trend {% if current_user.referral_count and current_user.referral_count > 0 %}positive{% else %}neutral{% endif %}">
-                                <i class="fas fa-{% if current_user.referral_count and current_user.referral_count > 0 %}arrow-up{% else %}minus{% endif %} me-1"></i>
-                                <span>{{ current_user.referral_count | default(0) }} active</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Current Balance -->
-                <div class="col-xl-3 col-md-6">
-                    <div class="kpi-card conversion-card">
-                        <div class="card-icon">
-                            <i class="fas fa-wallet"></i>
-                        </div>
-                        <div class="card-content">
-                            <div class="kpi-value">
-                                KES {{ "%.2f"|format(current_user.balance | float | default(0)) }}
-                            </div>
-                            <div class="kpi-label">Available Balance</div>
-                            <div class="kpi-trend {% if current_user.balance and current_user.balance > 0 %}positive{% else %}neutral{% endif %}">
-                                <i class="fas fa-{% if current_user.balance and current_user.balance > 0 %}arrow-up{% else %}minus{% endif %} me-1"></i>
-                                <span>Ready to withdraw</span>
+                            <div class="performance-metrics mt-3">
+                                <div class="row text-center">
+                                    <div class="col-6">
+                                        <div class="metric">
+                                            <div class="metric-value">
+                                                KES {{ "%.2f"|format(user_ranking.get('total_commission', 0) | float) }}
+                                            </div>
+                                            <div class="metric-label">Total Earnings</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="metric">
+                                            <div class="metric-value">
+                                                {{ user_ranking.get('referral_count', 0) }}
+                                            </div>
+                                            <div class="metric-label">Successful Referrals</div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-
-                <!-- Performance Rank -->
-                <div class="col-xl-3 col-md-6">
-                    <div class="kpi-card rank-card">
-                        <div class="card-icon">
-                            <i class="fas fa-trophy"></i>
+                
+                <div class="col-lg-4">
+                    <div class="performance-card tier-card">
+                        <div class="card-header">
+                            <i class="fas fa-medal"></i>
+                            <h5>Tier Status</h5>
                         </div>
-                        <div class="card-content">
-                            <div class="kpi-value">
-                                {{ current_user.user_rank | default('Bronze') }}
-                            </div>
-                            <div class="kpi-label">Performance Tier</div>
-                            <div class="kpi-trend positive">
-                                <i class="fas fa-award me-1"></i>
-                                <span> 
-                                    {% if user_ranking %}
-                                        Top {{ "%.1f"|format(user_ranking.percentile | default(0)) }}%
+                        <div class="card-body">
+                            <div class="tier-display">
+                                {% set user_rank_safe = user_ranking.get('user_rank', 'Bronze') %}
+                                <div class="tier-badge-large tier-{{ user_rank_safe | lower }}" id="current-tier-badge">
+                                    <i class="fas fa-gem"></i>
+                                    <span id="current-tier">{{ user_rank_safe }}</span>
+                                </div>
+                                <div class="tier-description" id="tier-description">
+                                    {% if user_rank_safe == 'Bronze' %}
+                                    Building foundation - Focus on consistent referral activity
+                                    {% elif user_rank_safe == 'Silver' %}
+                                    Strong performer - Demonstrating effective referral strategies
+                                    {% elif user_rank_safe == 'Gold' %}
+                                    Elite performer - Consistently high performance levels
+                                    {% elif user_rank_safe == 'Platinum' %}
+                                    Top tier - Exceptional referral performance
                                     {% else %}
-                                        Ranking
+                                    Legendary status - Industry-leading performance metrics
                                     {% endif %}
-                                </span>
+                                </div>
+                            </div>
+                            <div class="tier-benefits mt-3">
+                                <h6>Current Benefits:</h6>
+                                <ul class="benefits-list">
+                                    {% if user_rank_safe == 'Bronze' %}
+                                    <li>Standard commission rates</li>
+                                    <li>Basic analytics dashboard</li>
+                                    <li>Email support</li>
+                                    {% elif user_rank_safe == 'Silver' %}
+                                    <li>Enhanced commission structure</li>
+                                    <li>Advanced performance analytics</li>
+                                    <li>Priority support</li>
+                                    {% elif user_rank_safe == 'Gold' %}
+                                    <li>Premium commission rates</li>
+                                    <li>Real-time performance tracking</li>
+                                    <li>Dedicated account manager</li>
+                                    {% elif user_rank_safe == 'Platinum' %}
+                                    <li>Maximum commission rates</li>
+                                    <li>Custom analytics reports</li>
+                                    <li>VIP support channel</li>
+                                    {% else %}
+                                    <li>Exclusive commission rates</li>
+                                    <li>Enterprise analytics suite</li>
+                                    <li>24/7 dedicated support</li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-4">
+                    <div class="performance-card next-tier-card">
+                        <div class="card-header">
+                            <i class="fas fa-target"></i>
+                            <h5>Growth Strategy</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="next-tier-info">
+                                {% set user_rank_safe = user_ranking.get('user_rank', 'Bronze') %}
+                                <div id="next-tier-name" class="next-tier-name">
+                                    {% if user_rank_safe == 'Bronze' %}
+                                    Silver Tier Target
+                                    {% elif user_rank_safe == 'Silver' %}
+                                    Gold Tier Target
+                                    {% elif user_rank_safe == 'Gold' %}
+                                    Platinum Tier Target
+                                    {% elif user_rank_safe == 'Platinum' %}
+                                    Diamond Tier Target
+                                    {% else %}
+                                    Maximum Achievement
+                                    {% endif %}
+                                </div>
+                                <div id="next-tier-requirement" class="next-tier-requirement">
+                                    {% if user_rank_safe == 'Bronze' %}
+                                    KES 5,000+ total earnings required
+                                    {% elif user_rank_safe == 'Silver' %}
+                                    KES 15,000+ total earnings required
+                                    {% elif user_rank_safe == 'Gold' %}
+                                    KES 30,000+ total earnings required
+                                    {% elif user_rank_safe == 'Platinum' %}
+                                    KES 70,000+ total earnings required
+                                    {% else %}
+                                    Peak performance achieved
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="progress-to-next">
+                                {% if user_rank_safe != 'Diamond' %}
+                                    {% set tier_requirements = {'Bronze': 5000, 'Silver': 15000, 'Gold': 30000, 'Platinum': 70000} %}
+                                    {% set next_tier_requirement = tier_requirements.get(user_rank_safe, 70000) %}
+                                    {% set user_commission = user_ranking.get('total_commission', 0) | float %}
+                                    
+                                    {% if next_tier_requirement > 0 %}
+                                        {% set progress_percentage = (user_commission / next_tier_requirement * 100) | round(1) %}
+                                        {% set progress_percentage = progress_percentage | min(100) %}
+                                    {% else %}
+                                        {% set progress_percentage = 0 %}
+                                    {% endif %}
+                                    
+                                    <div class="progress mb-2">
+                                        <div class="progress-bar bg-success" id="tier-progress-bar" 
+                                             style="width: {{ progress_percentage }}%">
+                                        </div>
+                                    </div>
+                                    <div class="progress-text small">
+                                        <span>Progress to next tier: {{ progress_percentage | round | int }}%</span>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="growth-tips mt-3">
+                                <h6>Growth Recommendations:</h6>
+                                <ul class="tips-list">
+                                    <li>Share your referral link on social media</li>
+                                    <li>Leverage WhatsApp for personal referrals</li>
+                                    <li>Follow up with pending referrals</li>
+                                    <li>Utilize the referral tracking dashboard</li>
+                                </ul>
                             </div>
                         </div>
                     </div>
@@ -126,387 +255,544 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
-    <!-- Professional Referral Performance Table -->
-    <div class="referral-table-section mb-5">
-        <div class="section-header d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h2 class="fw-bold">Referral Performance Analytics</h2>
-                <p class="text-muted">Comprehensive view of your referral network performance</p>
-            </div>
-            <div class="table-controls">
-                <div class="btn-group" role="group">
-                    <button class="btn btn-outline-primary btn-sm active" data-filter="all">
-                        <i class="fas fa-list me-2"></i>All Referrals
-                    </button>
-                    <button class="btn btn-outline-primary btn-sm" data-filter="active">
-                        <i class="fas fa-bolt me-2"></i>Active
-                    </button>
-                </div>
-                <a href="{{ url_for('referral_system') }}" class="btn btn-primary btn-sm ms-3">
-                    <i class="fas fa-share-alt me-2"></i>Share Referral
-                </a>
+    <!-- Real-time Leaderboard Section -->
+    <div class="leaderboard-section mb-5">
+        <div class="section-header text-center mb-4">
+            <h2 class="fw-bold">Performance Leaderboard</h2>
+            <p class="text-muted">Live ranking of top performing referral partners</p>
+            <div class="leaderboard-meta">
+                <span class="badge bg-primary-subtle text-primary p-3 fs-6">
+                    <i class="fas fa-users me-2"></i><span id="elite-performers-count">{{ top_users | length | default(0) }}</span> Active Performers
+                </span>
+                <span class="badge bg-success-subtle text-success p-3 fs-6 ms-2">
+                    <i class="fas fa-sync-alt me-2"></i>Last Updated: <span id="last-updated">Just now</span>
+                </span>
+                <span class="badge bg-info-subtle text-info p-3 fs-6 ms-2">
+                    <i class="fas fa-database me-2"></i>Real-time Data
+                </span>
             </div>
         </div>
 
-        <div class="referral-table-card">
-            <div class="table-responsive">
-                <table class="table referral-performance-table table-hover">
-                    <thead class="table-header">
-                        <tr>
-                            <th class="referral-col">
-                                <div class="table-header-content">
-                                    <span>Referred User</span>
-                                    <i class="fas fa-sort ms-1"></i>
+        <div class="leaderboard-card">
+            <!-- Enhanced Mobile Card View -->
+            <div class="d-md-none" id="mobile-leaderboard">
+                {% if top_users %}
+                    {% for user in top_users %}
+                    <div class="leaderboard-mobile-card {% if user.id == current_user.id %}current-user{% endif %}" data-user-id="{{ user.id | default('') }}">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <!-- Rank -->
+                                <div class="col-3 text-center">
+                                    <div class="rank-badge rank-{{ loop.index }}">
+                                        {% if loop.index == 1 %}
+                                        <i class="fas fa-crown text-warning"></i>
+                                        <span class="rank-number">1st</span>
+                                        {% elif loop.index == 2 %}
+                                        <i class="fas fa-medal text-secondary"></i>
+                                        <span class="rank-number">2nd</span>
+                                        {% elif loop.index == 3 %}
+                                        <i class="fas fa-award text-bronze"></i>
+                                        <span class="rank-number">3rd</span>
+                                        {% else %}
+                                        <span class="rank-number">#{{ loop.index }}</span>
+                                        {% endif %}
+                                    </div>
                                 </div>
-                            </th>
-                            <th class="status-col text-center">
-                                <div class="table-header-content">
-                                    <span>Status</span>
-                                </div>
-                            </th>
-                            <th class="date-col">
-                                <div class="table-header-content">
-                                    <span>Referral Date</span>
-                                    <i class="fas fa-sort ms-1"></i>
-                                </div>
-                            </th>
-                            <th class="value-col text-end">
-                                <div class="table-header-content">
-                                    <span>Commission Earned</span>
-                                    <i class="fas fa-sort ms-1"></i>
-                                </div>
-                            </th>
-                            <th class="progress-col">
-                                <div class="table-header-content">
-                                    <span>User Status</span>
-                                </div>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% if referrals %}
-                            {% for referral in referrals %}
-                            <tr class="referral-row active-referral">
-                                <td class="referral-cell">
-                                    <div class="referral-info">
-                                        <div class="referral-avatar">
-                                            <i class="fas fa-user"></i>
-                                        </div>
-                                        <div class="referral-details">
-                                            <div class="referral-name fw-bold">
-                                                {% if referral.referred_user %}
-                                                    {{ referral.referred_user.name | default('Unknown User') }}
-                                                {% else %}
-                                                    User #{{ referral.referred_id[:8] }}
-                                                {% endif %}
+                                
+                                <!-- User Info -->
+                                <div class="col-9">
+                                    <div class="user-info mb-2">
+                                        <div class="d-flex align-items-center">
+                                            <div class="user-avatar me-3">
+                                                <i class="fas fa-user"></i>
                                             </div>
-                                            <div class="referral-contact text-muted small">
-                                                <i class="fas fa-user-plus me-1"></i>
-                                                {% if referral.referred_user %}
-                                                    Joined via referral
-                                                {% else %}
-                                                    Referred user
-                                                {% endif %}
-                                            </div>
-                                            <div class="referral-source">
-                                                <span class="badge bg-light text-dark">Direct Referral</span>
+                                            <div class="user-details">
+                                                <div class="d-flex align-items-center">
+                                                    <span class="username fw-bold">{{ user.username | default('Unknown User') }}</span>
+                                                    {% if user.id == current_user.id %}
+                                                    <span class="user-badge ms-2">You</span>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="user-tier">
+                                                    {% set user_rank_safe = user.user_rank | default('Bronze') %}
+                                                    <span class="tier-badge tier-{{ user_rank_safe | lower }}">{{ user_rank_safe }}</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </td>
-                                <td class="status-cell text-center">
-                                    <span class="status-badge status-active">
-                                        <i class="fas fa-check-circle me-1"></i>Active
-                                    </span>
-                                </td>
-                                <td class="date-cell">
-                                    {% if referral.created_at %}
-                                        <div class="date-value">
-                                            {% if referral.created_at is string %}
-                                                {{ referral.created_at[:10] }}
-                                            {% else %}
-                                                {{ referral.created_at.strftime('%Y-%m-%d') }}
-                                            {% endif %}
-                                        </div>
-                                        <div class="date-relative small text-muted">
-                                            {% if referral.created_at %}
-                                                {% if referral.created_at is string %}
-                                                    {{ referral.created_at[:10] }}
-                                                {% else %}
-                                                    {{ referral.created_at.strftime('%b %d, %Y') }}
-                                                {% endif %}
-                                            {% endif %}
-                                        </div>
-                                    {% endif %}
-                                </td>
-                                <td class="value-cell text-end">
-                                    <div class="commission-value fw-bold text-success">
-                                        KES {{ "%.2f"|format(referral.commission_earned | float | default(50.00)) }}
-                                    </div>
-                                    <div class="commission-paid small text-success">
-                                        <i class="fas fa-check me-1"></i>Commission Earned
-                                    </div>
-                                </td>
-                                <td class="progress-cell">
-                                    <div class="progress-container">
-                                        <div class="progress-labels d-flex justify-content-between mb-1">
-                                            <span class="progress-text small">Account Status</span>
-                                            <span class="progress-percent small">Verified</span>
-                                        </div>
-                                        <div class="progress">
-                                            <div class="progress-bar bg-success" style="width: 100%"></div>
+                                    
+                                    <!-- Stats -->
+                                    <div class="user-stats">
+                                        <div class="row text-center">
+                                            <div class="col-6">
+                                                <div class="stat">
+                                                    <div class="stat-value text-warning fw-bold user-earnings">
+                                                        KES {{ "%.2f"|format(user.total_commission | default(0) | float) }}
+                                                    </div>
+                                                    <div class="stat-label">Total Earnings</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-6">
+                                                <div class="stat">
+                                                    <div class="stat-value text-info fw-bold user-referrals">
+                                                        {{ user.referral_count | default(0) }}
+                                                    </div>
+                                                    <div class="stat-label">Referrals</div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        {% else %}
-                            <tr>
-                                <td colspan="5" class="text-center py-4">
-                                    <div class="empty-state">
-                                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
-                                        <h5 class="text-muted">No Referrals Yet</h5>
-                                        <p class="text-muted">Start sharing your referral link to earn commissions</p>
-                                        <a href="{{ url_for('referral_system') }}" class="btn btn-primary">
-                                            <i class="fas fa-share-alt me-2"></i>Share Referral Link
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% endif %}
             </div>
 
-            <!-- Table Footer with Summary -->
-            {% if referrals %}
-            <div class="table-footer">
-                <div class="row align-items-center">
-                    <div class="col-md-6">
-                        <div class="table-summary">
-                            Showing <strong>{{ referrals | length }}</strong> of <strong>{{ referrals | length }}</strong> referrals
-                        </div>
-                    </div>
-                    <div class="col-md-6 text-md-end">
-                        <div class="total-commission">
-                            <strong>Total Commission Earned: KES {{ "%.2f"|format(current_user.total_commission | float | default(0)) }}</strong>
-                        </div>
-                    </div>
+            <!-- Enhanced Desktop Table View -->
+            <div class="d-none d-md-block">
+                <div class="table-responsive">
+                    <table class="table leaderboard-table table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th class="rank-col text-center">Rank</th>
+                                <th class="user-col">User Profile</th>
+                                <th class="earnings-col text-end">Total Earnings</th>
+                                <th class="referrals-col text-center">Referrals</th>
+                                <th class="level-col">Performance Tier</th>
+                                <th class="action-col text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="desktop-leaderboard">
+                            {% if top_users %}
+                                {% for user in top_users %}
+                                <tr class="leaderboard-row {% if user.id == current_user.id %}current-user{% endif %}" data-user-id="{{ user.id | default('') }}">
+                                    <td class="rank-cell text-center">
+                                        <div class="rank-badge rank-{{ loop.index }}">
+                                            {% if loop.index == 1 %}
+                                            <i class="fas fa-crown me-1"></i>
+                                            <span>1</span>
+                                            {% elif loop.index == 2 %}
+                                            <i class="fas fa-medal me-1"></i>
+                                            <span>2</span>
+                                            {% elif loop.index == 3 %}
+                                            <i class="fas fa-award me-1"></i>
+                                            <span>3</span>
+                                            {% else %}
+                                            <span>{{ loop.index }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="user-cell">
+                                        <div class="user-info">
+                                            <div class="user-avatar">
+                                                <i class="fas fa-user"></i>
+                                            </div>
+                                            <div class="user-details">
+                                                <div class="d-flex align-items-center">
+                                                    <span class="username fw-bold">{{ user.username | default('Unknown User') }}</span>
+                                                    {% if user.id == current_user.id %}
+                                                    <span class="user-badge ms-2">Your Position</span>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="user-contact text-muted small">
+                                                    {{ user.email | default('', true) | truncate(25) }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="earnings-cell text-end">
+                                        <div class="earnings-amount fw-bold">
+                                            <span class="amount user-earnings">
+                                                KES {{ "%.2f"|format(user.total_commission | default(0) | float) }}
+                                            </span>
+                                        </div>
+                                        <div class="earnings-growth small text-muted">
+                                            <i class="fas fa-chart-line text-success me-1"></i>
+                                            <span>Active earner</span>
+                                        </div>
+                                    </td>
+                                    <td class="referrals-cell text-center">
+                                        <div class="referrals-count fw-bold">
+                                            <span class="user-referrals">{{ user.referral_count | default(0) }}</span>
+                                        </div>
+                                        <div class="referrals-rate small text-muted">
+                                            <i class="fas fa-bolt text-warning me-1"></i>
+                                            <span>High performer</span>
+                                        </div>
+                                    </td>
+                                    <td class="level-cell">
+                                        {% set user_rank_safe = user.user_rank | default('Bronze') %}
+                                        <div class="rank-tier rank-tier-{{ user_rank_safe | lower }}">
+                                            <div class="tier-icon">
+                                                <i class="fas fa-gem"></i>
+                                            </div>
+                                            <div class="tier-info">
+                                                <span class="tier-name fw-bold">{{ user_rank_safe }}</span>
+                                                <small class="tier-requirement">
+                                                    {% if user_rank_safe == 'Bronze' %}Entry Level
+                                                    {% elif user_rank_safe == 'Silver' %}KES 5,000+
+                                                    {% elif user_rank_safe == 'Gold' %}KES 15,000+
+                                                    {% elif user_rank_safe == 'Platinum' %}KES 30,000+
+                                                    {% else %}KES 70,000+
+                                                    {% endif %}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="action-cell text-center">
+                                        {% if user.id == current_user.id %}
+                                        <div class="performance-indicator">
+                                            <div class="indicator positive">
+                                                <i class="fas fa-user me-1"></i>
+                                                <span>Your Profile</span>
+                                            </div>
+                                        </div>
+                                        {% else %}
+                                        <div class="action-buttons">
+                                            <button class="btn btn-outline-primary btn-sm" onclick="analyzeUserPerformance('{{ user.id | default('') }}')" data-bs-toggle="tooltip" title="View Performance Analysis">
+                                                <i class="fas fa-chart-bar me-1"></i>Analyze
+                                            </button>
+                                        </div>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {% if not top_users %}
+            <div class="empty-leaderboard text-center py-5">
+                <div class="empty-icon mb-4">
+                    <i class="fas fa-trophy fa-4x text-muted opacity-50"></i>
+                </div>
+                <h4 class="text-muted mb-3">Leaderboard Not Available</h4>
+                <p class="text-muted mb-4">Performance data is being processed. Start referring to appear on the leaderboard.</p>
+                <div class="empty-actions">
+                    <a href="{{ url_for('referral_system') }}" class="btn btn-primary btn-lg me-3">
+                        <i class="fas fa-share-alt me-2"></i>Begin Referring
+                    </a>
                 </div>
             </div>
             {% endif %}
         </div>
-    </div>
 
-    <!-- Performance Analytics & Insights -->
-    <div class="analytics-insights-section mb-5">
-        <div class="row g-4">
-            <!-- Performance Trends -->
-            <div class="col-lg-8">
-                <div class="analytics-card">
-                    <div class="card-header">
-                        <h5 class="fw-bold">Referral Performance Summary</h5>
+        <!-- Pagination and Controls -->
+        <div class="leaderboard-controls mt-4">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="results-info">
+                        Showing <strong>{{ top_users | length | default(0) }}</strong> top performers
                     </div>
-                    <div class="card-body">
-                        <div class="performance-stats">
-                            <div class="row text-center">
-                                <div class="col-md-4">
-                                    <div class="stat-item">
-                                        <div class="stat-number text-primary">{{ current_user.referral_count | default(0) }}</div>
-                                        <div class="stat-label">Total Referrals</div>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="stat-item">
-                                        <div class="stat-number text-success">KES {{ "%.2f"|format(current_user.total_commission | float | default(0)) }}</div>
-                                        <div class="stat-label">Total Commission</div>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="stat-item">
-                                        <div class="stat-number text-info">{{ current_user.user_rank | default('Bronze') }}</div>
-                                        <div class="stat-label">Current Tier</div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Tier Progress -->
-                            <div class="tier-progress mt-4">
-                                <h6 class="fw-bold mb-3">Tier Progression</h6>
-                                <div class="progress-bars">
-                                    {% set commission = current_user.total_commission | float | default(0) %}
-                                    <div class="tier-item mb-2">
-                                        <div class="d-flex justify-content-between mb-1">
-                                            <span class="tier-name">Bronze</span>
-                                            <span class="tier-amount">KES 0 - 1,000</span>
-                                        </div>
-                                        <div class="progress">
-                                            <div class="progress-bar {% if commission >= 1000 %}bg-success{% else %}bg-warning{% endif %}" 
-                                                 style="width: {{ (commission / 1000 * 100) | clamp(0, 100) }}%">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="tier-item mb-2">
-                                        <div class="d-flex justify-content-between mb-1">
-                                            <span class="tier-name">Silver</span>
-                                            <span class="tier-amount">KES 1,000 - 2,000</span>
-                                        </div>
-                                        <div class="progress">
-                                            <div class="progress-bar {% if commission >= 2000 %}bg-success{% else %}bg-info{% endif %}" 
-                                                 style="width: {{ ((commission - 1000) / 1000 * 100) | clamp(0, 100) }}%">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="tier-item mb-2">
-                                        <div class="d-flex justify-content-between mb-1">
-                                            <span class="tier-name">Gold</span>
-                                            <span class="tier-amount">KES 2,000 - 5,000</span>
-                                        </div>
-                                        <div class="progress">
-                                            <div class="progress-bar {% if commission >= 5000 %}bg-success{% else %}bg-warning{% endif %}" 
-                                                 style="width: {{ ((commission - 2000) / 3000 * 100) | clamp(0, 100) }}%">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="tier-item mb-2">
-                                        <div class="d-flex justify-content-between mb-1">
-                                            <span class="tier-name">Platinum</span>
-                                            <span class="tier-amount">KES 5,000 - 10,000</span>
-                                        </div>
-                                        <div class="progress">
-                                            <div class="progress-bar {% if commission >= 10000 %}bg-success{% else %}bg-danger{% endif %}" 
-                                                 style="width: {{ ((commission - 5000) / 5000 * 100) | clamp(0, 100) }}%">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="tier-item">
-                                        <div class="d-flex justify-content-between mb-1">
-                                            <span class="tier-name">Diamond</span>
-                                            <span class="tier-amount">KES 10,000+</span>
-                                        </div>
-                                        <div class="progress">
-                                            <div class="progress-bar bg-success" 
-                                                 style="width: {{ ((commission - 10000) / 1000 * 100) | clamp(0, 100) }}%">
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <div class="view-options">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-outline-primary btn-sm active" data-view="all">
+                                All Performers
+                            </button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" data-view="top10">
+                                Top 10
+                            </button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" data-view="same-tier">
+                                My Tier
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <!-- Quick Insights -->
-            <div class="col-lg-4">
-                <div class="insights-card">
-                    <div class="card-header">
-                        <h5 class="fw-bold">Performance Insights</h5>
+    <!-- Performance Tiers & Benefits -->
+    <div class="rank-tiers-section mb-5">
+        <div class="section-header text-center mb-4">
+            <h2 class="fw-bold">Performance Tiers & Benefits</h2>
+            <p class="text-muted">Strategic progression through our performance-based tier system</p>
+        </div>
+
+        <div class="rank-tiers-container">
+            <!-- Progress Visualization -->
+            <div class="tiers-progress-bar mb-5">
+                <div class="progress-steps">
+                    {% set user_rank_safe = user_ranking.user_rank | default('Bronze') if user_ranking else 'Bronze' %}
+                    <div class="step bronze {% if user_rank_safe in ['Bronze','Silver','Gold','Platinum','Diamond'] %}active{% endif %}">
+                        <div class="step-marker">
+                            <i class="fas fa-gem"></i>
+                        </div>
+                        <div class="step-label">Bronze</div>
+                        <div class="step-requirement">KES 0+</div>
                     </div>
-                    <div class="card-body">
-                        <div class="insights-list">
-                            {% set commission = current_user.total_commission | float | default(0) %}
-                            {% set ref_count = current_user.referral_count | default(0) %}
-                            
-                            <div class="insight-item {% if commission >= 1000 %}positive{% else %}info{% endif %}">
-                                <div class="insight-icon">
-                                    <i class="fas fa-{% if commission >= 1000 %}trophy{% else %}bullseye{% endif %}"></i>
-                                </div>
-                                <div class="insight-content">
-                                    <div class="insight-title">
-                                        {% if commission >= 10000 %}
-                                            Diamond Tier Achieved!
-                                        {% elif commission >= 5000 %}
-                                            Platinum Tier Achieved!
-                                        {% elif commission >= 2000 %}
-                                            Gold Tier Achieved!
-                                        {% elif commission >= 1000 %}
-                                            Silver Tier Achieved!
-                                        {% else %}
-                                            Bronze Tier
-                                        {% endif %}
-                                    </div>
-                                    <div class="insight-desc">
-                                        {% if commission < 1000 %}
-                                            KES {{ "%.0f"|format(1000 - commission) }} to next tier
-                                        {% elif commission < 2000 %}
-                                            KES {{ "%.0f"|format(2000 - commission) }} to Gold tier
-                                        {% elif commission < 5000 %}
-                                            KES {{ "%.0f"|format(5000 - commission) }} to Platinum tier
-                                        {% elif commission < 10000 %}
-                                            KES {{ "%.0f"|format(10000 - commission) }} to Diamond tier
-                                        {% else %}
-                                            Top performance tier reached!
-                                        {% endif %}
-                                    </div>
-                                </div>
+                    <div class="step silver {% if user_rank_safe in ['Silver','Gold','Platinum','Diamond'] %}active{% endif %}">
+                        <div class="step-marker">
+                            <i class="fas fa-gem"></i>
+                        </div>
+                        <div class="step-label">Silver</div>
+                        <div class="step-requirement">KES 5,000+</div>
+                    </div>
+                    <div class="step gold {% if user_rank_safe in ['Gold','Platinum','Diamond'] %}active{% endif %}">
+                        <div class="step-marker">
+                            <i class="fas fa-gem"></i>
+                        </div>
+                        <div class="step-label">Gold</div>
+                        <div class="step-requirement">KES 15,000+</div>
+                    </div>
+                    <div class="step platinum {% if user_rank_safe in ['Platinum','Diamond'] %}active{% endif %}">
+                        <div class="step-marker">
+                            <i class="fas fa-gem"></i>
+                        </div>
+                        <div class="step-label">Platinum</div>
+                        <div class="step-requirement">KES 30,000+</div>
+                    </div>
+                    <div class="step diamond {% if user_rank_safe == 'Diamond' %}active{% endif %}">
+                        <div class="step-marker">
+                            <i class="fas fa-gem"></i>
+                        </div>
+                        <div class="step-label">Diamond</div>
+                        <div class="step-requirement">KES 70,000+</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Enhanced Tier Cards -->
+            <div class="rank-tiers-grid">
+                <!-- Bronze Tier -->
+                {% set user_rank_safe = user_ranking.user_rank | default('Bronze') if user_ranking else 'Bronze' %}
+                <div class="rank-tier-card bronze-tier {% if user_rank_safe == 'Bronze' %}current-tier{% endif %}">
+                    <div class="tier-header">
+                        <div class="tier-icon">
+                            <i class="fas fa-gem"></i>
+                        </div>
+                        <div class="tier-title">
+                            <h4>Bronze</h4>
+                            <div class="tier-badge">Foundation Tier</div>
+                        </div>
+                    </div>
+                    <div class="tier-body">
+                        <div class="tier-requirement">
+                            <i class="fas fa-target me-2"></i>
+                            <span>KES 0+ Total Earnings</span>
+                        </div>
+                        <div class="tier-stats">
+                            <div class="stat">
+                                <div class="stat-value">40%</div>
+                                <div class="stat-label">of Users</div>
                             </div>
-                            
-                            <div class="insight-item {% if ref_count > 0 %}positive{% else %}warning{% endif %}">
-                                <div class="insight-icon">
-                                    <i class="fas fa-{% if ref_count > 0 %}users{% else %}user-plus{% endif %}"></i>
-                                </div>
-                                <div class="insight-content">
-                                    <div class="insight-title">
-                                        {% if ref_count > 0 %}
-                                            {{ ref_count }} Successful Referrals
-                                        {% else %}
-                                            No Referrals Yet
-                                        {% endif %}
-                                    </div>
-                                    <div class="insight-desc">
-                                        {% if ref_count > 0 %}
-                                            You've earned KES {{ "%.2f"|format(commission) }} from referrals
-                                        {% else %}
-                                            Start sharing to earn KES 50 per referral
-                                        {% endif %}
-                                    </div>
-                                </div>
+                            <div class="stat">
+                                <div class="stat-value">25%</div>
+                                <div class="stat-label">Commission</div>
                             </div>
-                            
-                            <div class="insight-item {% if current_user.balance and current_user.balance >= 400 %}success{% else %}info{% endif %}">
-                                <div class="insight-icon">
-                                    <i class="fas fa-{% if current_user.balance and current_user.balance >= 400 %}money-bill-wave{% else %}wallet{% endif %}"></i>
-                                </div>
-                                <div class="insight-content">
-                                    <div class="insight-title">
-                                        {% if current_user.balance and current_user.balance >= 400 %}
-                                            Ready to Withdraw
-                                        {% else %}
-                                            Build Your Balance
-                                        {% endif %}
-                                    </div>
-                                    <div class="insight-desc">
-                                        {% if current_user.balance and current_user.balance >= 400 %}
-                                            KES {{ "%.2f"|format(current_user.balance) }} available for withdrawal
-                                        {% else %}
-                                            Minimum KES 400 required for withdrawal
-                                        {% endif %}
-                                    </div>
-                                </div>
+                        </div>
+                        <div class="tier-features">
+                            <h6>Core Benefits:</h6>
+                            <ul>
+                                <li><i class="fas fa-check text-success me-2"></i>Standard referral commission</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Basic performance dashboard</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Email support system</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Referral tracking tools</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="tier-footer">
+                        <div class="tier-action">
+                            {% if user_rank_safe == 'Bronze' %}
+                            <span class="badge bg-primary">Current Tier</span>
+                            {% else %}
+                            <small class="text-muted">Entry level performance tier</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Silver Tier -->
+                <div class="rank-tier-card silver-tier {% if user_rank_safe == 'Silver' %}current-tier{% endif %}">
+                    <div class="tier-header">
+                        <div class="tier-icon">
+                            <i class="fas fa-gem"></i>
+                        </div>
+                        <div class="tier-title">
+                            <h4>Silver</h4>
+                            <div class="tier-badge">Growth Tier</div>
+                        </div>
+                    </div>
+                    <div class="tier-body">
+                        <div class="tier-requirement">
+                            <i class="fas fa-target me-2"></i>
+                            <span>KES 5,000+ Total Earnings</span>
+                        </div>
+                        <div class="tier-stats">
+                            <div class="stat">
+                                <div class="stat-value">25%</div>
+                                <div class="stat-label">of Users</div>
                             </div>
-                            
-                            {% if user_ranking %}
-                            <div class="insight-item success">
-                                <div class="insight-icon">
-                                    <i class="fas fa-chart-line"></i>
-                                </div>
-                                <div class="insight-content">
-                                    <div class="insight-title">Network Ranking</div>
-                                    <div class="insight-desc">
-                                        {% if user_ranking.position %}
-                                            Ranked #{{ user_ranking.position }} out of {{ user_ranking.total_users }} users
-                                        {% else %}
-                                            Top {{ "%.1f"|format(user_ranking.percentile | default(0)) }}% performer
-                                        {% endif %}
-                                    </div>
-                                </div>
+                            <div class="stat">
+                                <div class="stat-value">25%</div>
+                                <div class="stat-label">Commission</div>
                             </div>
+                        </div>
+                        <div class="tier-features">
+                            <h6>Enhanced Benefits:</h6>
+                            <ul>
+                                <li><i class="fas fa-check text-success me-2"></i>Increased commission rates</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Advanced analytics dashboard</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Priority email support</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Performance insights</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="tier-footer">
+                        <div class="tier-action">
+                            {% if user_rank_safe == 'Silver' %}
+                            <span class="badge bg-primary">Current Tier</span>
+                            {% else %}
+                            <small class="text-muted">Enhanced performance tier</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gold Tier -->
+                <div class="rank-tier-card gold-tier {% if user_rank_safe == 'Gold' %}current-tier{% endif %}">
+                    <div class="tier-header">
+                        <div class="tier-icon">
+                            <i class="fas fa-gem"></i>
+                        </div>
+                        <div class="tier-title">
+                            <h4>Gold</h4>
+                            <div class="tier-badge">Elite Tier</div>
+                        </div>
+                    </div>
+                    <div class="tier-body">
+                        <div class="tier-requirement">
+                            <i class="fas fa-target me-2"></i>
+                            <span>KES 15,000+ Total Earnings</span>
+                        </div>
+                        <div class="tier-stats">
+                            <div class="stat">
+                                <div class="stat-value">20%</div>
+                                <div class="stat-label">of Users</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value">30%</div>
+                                <div class="stat-label">Commission</div>
+                            </div>
+                        </div>
+                        <div class="tier-features">
+                            <h6>Premium Benefits:</h6>
+                            <ul>
+                                <li><i class="fas fa-check text-success me-2"></i>Premium commission structure</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Real-time performance tracking</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Dedicated account manager</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Strategic growth consulting</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="tier-footer">
+                        <div class="tier-action">
+                            {% if user_rank_safe == 'Gold' %}
+                            <span class="badge bg-primary">Current Tier</span>
+                            {% else %}
+                            <small class="text-muted">Premium performance tier</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Platinum Tier -->
+                <div class="rank-tier-card platinum-tier {% if user_rank_safe == 'Platinum' %}current-tier{% endif %}">
+                    <div class="tier-header">
+                        <div class="tier-icon">
+                            <i class="fas fa-gem"></i>
+                        </div>
+                        <div class="tier-title">
+                            <h4>Platinum</h4>
+                            <div class="tier-badge">Executive Tier</div>
+                        </div>
+                    </div>
+                    <div class="tier-body">
+                        <div class="tier-requirement">
+                            <i class="fas fa-target me-2"></i>
+                            <span>KES 30,000+ Total Earnings</span>
+                        </div>
+                        <div class="tier-stats">
+                            <div class="stat">
+                                <div class="stat-value">10%</div>
+                                <div class="stat-label">of Users</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value">35%</div>
+                                <div class="stat-label">Commission</div>
+                            </div>
+                        </div>
+                        <div class="tier-features">
+                            <h6>Executive Benefits:</h6>
+                            <ul>
+                                <li><i class="fas fa-check text-success me-2"></i>Maximum commission rates</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Custom analytics reporting</li>
+                                <li><i class="fas fa-check text-success me-2"></i>VIP support channel</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Exclusive growth opportunities</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="tier-footer">
+                        <div class="tier-action">
+                            {% if user_rank_safe == 'Platinum' %}
+                            <span class="badge bg-primary">Current Tier</span>
+                            {% else %}
+                            <small class="text-muted">Executive performance tier</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Diamond Tier -->
+                <div class="rank-tier-card diamond-tier {% if user_rank_safe == 'Diamond' %}current-tier{% endif %}">
+                    <div class="tier-header">
+                        <div class="tier-icon">
+                            <i class="fas fa-gem"></i>
+                        </div>
+                        <div class="tier-title">
+                            <h4>Diamond</h4>
+                            <div class="tier-badge">Legend Tier</div>
+                        </div>
+                    </div>
+                    <div class="tier-body">
+                        <div class="tier-requirement">
+                            <i class="fas fa-target me-2"></i>
+                            <span>KES 70,000+ Total Earnings</span>
+                        </div>
+                        <div class="tier-stats">
+                            <div class="stat">
+                                <div class="stat-value">5%</div>
+                                <div class="stat-label">of Users</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value">40%</div>
+                                <div class="stat-label">Commission</div>
+                            </div>
+                        </div>
+                        <div class="tier-features">
+                            <h6>Legend Benefits:</h6>
+                            <ul>
+                                <li><i class="fas fa-check text-success me-2"></i>Exclusive commission rates</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Enterprise analytics suite</li>
+                                <li><i class="fas fa-check text-success me-2"></i>24/7 dedicated support</li>
+                                <li><i class="fas fa-check text-success me-2"></i>Strategic partnership opportunities</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="tier-footer">
+                        <div class="tier-action">
+                            {% if user_rank_safe == 'Diamond' %}
+                            <span class="badge bg-primary">Current Tier</span>
+                            {% else %}
+                            <small class="text-muted">Legendary performance tier</small>
                             {% endif %}
                         </div>
                     </div>
@@ -515,401 +801,461 @@
         </div>
     </div>
 
-    <!-- Call to Action -->
+    <!-- Performance Analytics Call to Action -->
     <div class="cta-section text-center py-5">
         <div class="cta-content">
-            <h2 class="fw-bold mb-3">Optimize Your Referral Strategy</h2>
-            <p class="text-muted mb-4">Leverage your referral network to maximize earnings and reach higher performance tiers</p>
+            <h2 class="fw-bold mb-3">Ready to Advance Your Performance?</h2>
+            <p class="text-muted mb-4">Leverage our analytics and referral tools to maximize your earnings potential</p>
             <div class="cta-buttons">
                 <a href="{{ url_for('referral_system') }}" class="btn btn-primary btn-lg me-3">
-                    <i class="fas fa-share-alt me-2"></i>Share Referral Link
+                    <i class="fas fa-rocket me-2"></i>Optimize Referral Strategy
                 </a>
-                {% if current_user.balance and current_user.balance >= 400 %}
-                <a href="{{ url_for('withdraw') }}" class="btn btn-outline-primary btn-lg">
-                    <i class="fas fa-money-bill-wave me-2"></i>Withdraw Earnings
-                </a>
-                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Performance Analysis Modal -->
+<div class="modal fade" id="performanceModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Performance Analysis</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="performance-analysis-content">
+                    <!-- Dynamic content will be loaded here -->
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <style>
-.referral-dashboard-container {
+/* All your existing CSS styles remain exactly the same */
+.leaderboard-container {
     max-width: 1400px;
     margin: 0 auto;
     padding: 0 15px;
 }
 
-/* Executive Header */
-.dashboard-header-section .header-background {
-    background: linear-gradient(135deg, #1a2b3c 0%, #2c5282 100%);
-    border-radius: 12px;
-    padding: 50px 40px;
+/* Professional Hero Section */
+.leaderboard-hero-section .hero-background {
+    background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+    border-radius: 15px;
+    padding: 60px 40px;
     position: relative;
     overflow: hidden;
 }
 
-.dashboard-header-section .header-background::before {
+.leaderboard-hero-section .hero-background::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" opacity="0.03"><polygon fill="white" points="0,1000 1000,0 1000,1000"/></svg>');
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" opacity="0.05"><polygon fill="white" points="0,1000 1000,0 1000,1000"/></svg>');
     background-size: cover;
 }
 
-.header-content {
+.hero-content {
     position: relative;
     z-index: 2;
 }
 
-.header-stats .stat-card {
+.rank-stats-card {
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
-    border-radius: 10px;
-    padding: 20px;
-    text-align: center;
+    border-radius: 15px;
+    padding: 30px;
     border: 1px solid rgba(255, 255, 255, 0.2);
+    max-width: 800px;
+    margin: 0 auto;
 }
 
-/* KPI Dashboard */
-.kpi-card {
+/* Professional Performance Cards */
+.performance-card {
     background: white;
-    border-radius: 10px;
+    border-radius: 12px;
     padding: 25px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.07);
     border: 1px solid #e3e8f0;
+    height: 100%;
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
 }
 
-.kpi-card::before {
+.performance-card::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    height: 3px;
+    height: 4px;
+    background: linear-gradient(90deg, #3498db, #2c3e50);
 }
 
-.revenue-card::before { background: linear-gradient(90deg, #10b981, #059669); }
-.referrals-card::before { background: linear-gradient(90deg, #3b82f6, #1d4ed8); }
-.conversion-card::before { background: linear-gradient(90deg, #f59e0b, #d97706); }
-.rank-card::before { background: linear-gradient(90deg, #8b5cf6, #7c3aed); }
-
-.kpi-card:hover {
+.performance-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(0,0,0,0.1);
 }
 
-.kpi-card .card-icon {
-    width: 60px;
-    height: 60px;
-    border-radius: 12px;
+.card-header {
     display: flex;
     align-items: center;
-    justify-content: center;
-    margin-bottom: 15px;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e3e8f0;
+}
+
+.card-header i {
     font-size: 1.5rem;
+    margin-right: 12px;
+    color: #3498db;
 }
 
-.revenue-card .card-icon { background: linear-gradient(135deg, #10b981, #059669); color: white; }
-.referrals-card .card-icon { background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; }
-.conversion-card .card-icon { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; }
-.rank-card .card-icon { background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; }
+.card-header h5 {
+    margin: 0;
+    color: #2c3e50;
+    font-weight: 600;
+}
 
-.kpi-value {
-    font-size: 2rem;
+/* Enhanced Metrics */
+.performance-metrics .metric {
+    padding: 10px;
+}
+
+.metric-value {
+    font-size: 1.2rem;
     font-weight: bold;
-    color: #1a2b3c;
-    margin-bottom: 5px;
+    color: #2c3e50;
 }
 
-.kpi-label {
-    color: #6b7280;
-    font-size: 0.9rem;
-    margin-bottom: 10px;
-}
-
-.kpi-trend {
+.metric-label {
     font-size: 0.8rem;
-    font-weight: 500;
+    color: #6c757d;
+    margin-top: 5px;
 }
 
-.kpi-trend.positive { color: #10b981; }
-.kpi-trend.neutral { color: #6b7280; }
-.kpi-trend.negative { color: #ef4444; }
-
-/* Professional Referral Table */
-.referral-table-card {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    border: 1px solid #e3e8f0;
-    overflow: hidden;
+/* Professional Tier System */
+.tier-badge-large {
+    display: inline-flex;
+    align-items: center;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.referral-performance-table {
+.tier-bronze { 
+    background: linear-gradient(135deg, #cd7f32, #b56a24); 
+    color: white; 
+}
+.tier-silver { 
+    background: linear-gradient(135deg, #c0c0c0, #a8a8a8); 
+    color: #2c3e50; 
+}
+.tier-gold { 
+    background: linear-gradient(135deg, #ffd700, #e6c200); 
+    color: #2c3e50; 
+}
+.tier-platinum { 
+    background: linear-gradient(135deg, #e5e4e2, #d4d3d1); 
+    color: #2c3e50; 
+}
+.tier-diamond { 
+    background: linear-gradient(135deg, #b9f2ff, #97e6ff); 
+    color: #2c3e50; 
+}
+
+.benefits-list, .tips-list {
+    list-style: none;
+    padding: 0;
     margin: 0;
 }
 
-.referral-performance-table thead th {
-    background: #f8fafc;
-    border: none;
-    padding: 15px 12px;
-    font-weight: 600;
-    color: #374151;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-bottom: 2px solid #e5e7eb;
+.benefits-list li, .tips-list li {
+    padding: 5px 0;
+    font-size: 0.9rem;
+    color: #555;
 }
 
-.table-header-content {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.referral-performance-table tbody td {
-    padding: 15px 12px;
-    vertical-align: middle;
-    border-bottom: 1px solid #f3f4f6;
-    transition: background-color 0.2s ease;
-}
-
-.referral-row:hover {
-    background-color: #f9fafb;
-}
-
-/* Referral Information */
-.referral-info {
-    display: flex;
-    align-items: center;
-}
-
-.referral-avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 8px;
-    background: #f3f4f6;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 12px;
-    color: #6b7280;
-}
-
-.referral-name {
-    color: #1a2b3c;
-    margin-bottom: 2px;
-}
-
-.referral-contact {
-    font-size: 0.8rem;
-}
-
-.referral-source .badge {
-    font-size: 0.7rem;
-    padding: 3px 8px;
-}
-
-/* Status Badges */
-.status-badge {
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    display: inline-flex;
-    align-items: center;
-}
-
-.status-active {
-    background: #d1fae5;
-    color: #065f46;
-}
-
-.status-completed {
-    background: #dbeafe;
-    color: #1e40af;
-}
-
-.status-pending {
-    background: #fef3c7;
-    color: #92400e;
-}
-
-/* Progress Bars */
-.progress-container {
-    min-width: 120px;
-}
-
-.progress {
-    height: 6px;
-    background: #f3f4f6;
-    border-radius: 3px;
+/* Professional Leaderboard Table */
+.leaderboard-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+    border: 1px solid #e3e8f0;
     overflow: hidden;
 }
 
-.progress-bar {
-    border-radius: 3px;
+.leaderboard-table thead th {
+    background: #2c3e50;
+    border: none;
+    padding: 15px 12px;
+    font-weight: 600;
+    color: white;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
 }
 
-/* Table Footer */
-.table-footer {
-    background: #f8fafc;
-    padding: 15px 20px;
-    border-top: 1px solid #e5e7eb;
+.leaderboard-table tbody td {
+    padding: 15px 12px;
+    vertical-align: middle;
+    border-bottom: 1px solid #e3e8f0;
+    transition: background-color 0.2s ease;
 }
 
-/* Analytics Cards */
-.analytics-card, .insights-card {
+.leaderboard-row:hover {
+    background-color: #f8f9fa;
+}
+
+.leaderboard-row.current-user {
+    background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
+    border-left: 4px solid #3498db;
+}
+
+/* Enhanced Rank Badges */
+.rank-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    min-width: 60px;
+    justify-content: center;
+}
+
+.rank-1 { 
+    background: linear-gradient(135deg, #ffd700, #ffed4e); 
+    color: #2c3e50; 
+    box-shadow: 0 2px 4px rgba(255, 215, 0, 0.3);
+}
+.rank-2 { 
+    background: linear-gradient(135deg, #c0c0c0, #e8e8e8); 
+    color: #2c3e50; 
+    box-shadow: 0 2px 4px rgba(192, 192, 192, 0.3);
+}
+.rank-3 { 
+    background: linear-gradient(135deg, #cd7f32, #e6b17e); 
+    color: white; 
+    box-shadow: 0 2px 4px rgba(205, 127, 50, 0.3);
+}
+.rank-4, .rank-5, .rank-6, .rank-7, .rank-8, .rank-9, .rank-10 { 
+    background: #f8f9fa; 
+    color: #6c757d; 
+    border: 1px solid #e3e8f0;
+}
+
+/* Professional Tier Cards */
+.rank-tiers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-top: 30px;
+}
+
+.rank-tier-card {
     background: white;
     border-radius: 12px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    padding: 0;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.07);
     border: 1px solid #e3e8f0;
-    height: 100%;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    position: relative;
 }
 
-.analytics-card .card-header,
-.insights-card .card-header {
-    background: none;
-    border-bottom: 1px solid #e5e7eb;
+.rank-tier-card.current-tier {
+    border-color: #3498db;
+    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.15);
+    transform: translateY(-2px);
+}
+
+.rank-tier-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+
+.tier-header {
     padding: 20px;
     display: flex;
-    justify-content: between;
     align-items: center;
+    border-bottom: 1px solid #e3e8f0;
 }
 
-.analytics-card .card-body,
-.insights-card .card-body {
-    padding: 20px;
-}
-
-/* Performance Stats */
-.performance-stats .stat-item {
-    padding: 20px 0;
-}
-
-.performance-stats .stat-number {
-    font-size: 2rem;
-    font-weight: bold;
-    margin-bottom: 5px;
-}
-
-.performance-stats .stat-label {
-    color: #6b7280;
-    font-size: 0.9rem;
-}
-
-/* Tier Progress */
-.tier-progress .tier-name {
-    font-weight: 500;
-    color: #374151;
-}
-
-.tier-progress .tier-amount {
-    font-size: 0.8rem;
-    color: #6b7280;
-}
-
-.tier-progress .progress {
-    height: 8px;
-}
-
-/* Insights List */
-.insights-list {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.insight-item {
-    display: flex;
-    align-items: flex-start;
-    padding: 15px;
-    border-radius: 8px;
-    border: 1px solid #f3f4f6;
-}
-
-.insight-item.positive { border-left: 4px solid #10b981; }
-.insight-item.warning { border-left: 4px solid #f59e0b; }
-.insight-item.info { border-left: 4px solid #3b82f6; }
-.insight-item.success { border-left: 4px solid #8b5cf6; }
-
-.insight-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
+.tier-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-right: 12px;
-    font-size: 0.9rem;
+    margin-right: 15px;
+    font-size: 1.3rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.insight-item.positive .insight-icon { background: #d1fae5; color: #065f46; }
-.insight-item.warning .insight-icon { background: #fef3c7; color: #92400e; }
-.insight-item.info .insight-icon { background: #dbeafe; color: #1e40af; }
-.insight-item.success .insight-icon { background: #ede9fe; color: #5b21b6; }
+.bronze-tier .tier-icon { background: linear-gradient(135deg, #cd7f32, #b56a24); color: white; }
+.silver-tier .tier-icon { background: linear-gradient(135deg, #c0c0c0, #a8a8a8); color: #2c3e50; }
+.gold-tier .tier-icon { background: linear-gradient(135deg, #ffd700, #e6c200); color: #2c3e50; }
+.platinum-tier .tier-icon { background: linear-gradient(135deg, #e5e4e2, #d4d3d1); color: #2c3e50; }
+.diamond-tier .tier-icon { background: linear-gradient(135deg, #b9f2ff, #97e6ff); color: #2c3e50; }
 
-.insight-title {
-    font-weight: 600;
-    color: #1a2b3c;
+.tier-body {
+    padding: 20px;
+}
+
+.tier-stats {
+    display: flex;
+    justify-content: space-around;
+    margin: 15px 0;
+    padding: 15px 0;
+    border-top: 1px solid #e3e8f0;
+    border-bottom: 1px solid #e3e8f0;
+}
+
+.tier-stats .stat {
+    text-align: center;
+}
+
+.tier-stats .stat-value {
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: #2c3e50;
     margin-bottom: 2px;
-    font-size: 0.9rem;
 }
 
-.insight-desc {
-    color: #6b7280;
+.tier-stats .stat-label {
+    color: #6c757d;
     font-size: 0.8rem;
 }
 
-/* CTA Section */
-.cta-section {
-    background: linear-gradient(135deg, #f8fafc 0%, #e5e7eb 100%);
-    border-radius: 12px;
+.tier-footer {
+    padding: 15px 20px;
+    background: #f8f9fa;
+    border-top: 1px solid #e3e8f0;
 }
 
-/* Empty State */
-.empty-state {
-    padding: 40px 20px;
+/* Progress Steps */
+.tiers-progress-bar {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.progress-steps {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+    margin: 0 50px;
+}
+
+.progress-steps::before {
+    content: '';
+    position: absolute;
+    top: 25px;
+    left: 50px;
+    right: 50px;
+    height: 3px;
+    background: #e3e8f0;
+    z-index: 1;
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+    flex: 1;
+}
+
+.step-marker {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border: 3px solid #e3e8f0;
+    margin-bottom: 10px;
+    color: #6c757d;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+}
+
+.step.active .step-marker {
+    border-color: #3498db;
+    color: #3498db;
+    background: white;
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+}
+
+.step-label {
+    font-weight: 600;
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+}
+
+.step.active .step-label {
+    color: #2c3e50;
+}
+
+.step-requirement {
+    font-size: 0.8rem;
+    color: #6c757d;
     text-align: center;
+}
+
+/* Professional CTA Section */
+.cta-section {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 15px;
+    margin-top: 40px;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    .dashboard-header-section .header-background {
-        padding: 30px 20px;
+    .leaderboard-hero-section .hero-background {
+        padding: 40px 20px;
     }
     
-    .header-title {
-        font-size: 2rem;
-    }
-    
-    .kpi-card {
+    .rank-stats-card {
         padding: 20px;
     }
     
-    .table-controls {
-        margin-top: 15px;
+    .performance-card {
+        padding: 20px;
     }
     
-    .referral-info {
-        flex-direction: column;
-        align-items: flex-start;
+    .rank-tiers-grid {
+        grid-template-columns: 1fr;
     }
     
-    .referral-avatar {
-        margin-bottom: 8px;
+    .progress-steps {
+        margin: 0 20px;
+    }
+    
+    .progress-steps::before {
+        left: 30px;
+        right: 30px;
     }
 }
 
 @media (max-width: 576px) {
+    .hero-title {
+        font-size: 2rem;
+    }
+    
     .cta-buttons .btn {
         display: block;
         width: 100%;
@@ -936,58 +1282,133 @@
         transform: translateY(0);
     }
 }
+
+/* Loading States */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
 </style>
 
 <script>
-class ProfessionalReferralDashboard {
+// Professional JavaScript for Leaderboard Functionality
+class ProfessionalLeaderboard {
     constructor() {
-        this.currentFilter = 'all';
+        this.lastUpdate = new Date();
+        this.autoRefreshInterval = null;
+        this.isRefreshing = false;
         this.init();
     }
 
     init() {
         this.initializeEventListeners();
+        this.startAutoRefresh();
+        this.initializeAnimations();
+        this.updateLastUpdatedTime();
+        
+        // Initialize tooltips
+        if (typeof bootstrap !== 'undefined') {
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        }
     }
 
     initializeEventListeners() {
-        // Filter buttons
-        document.querySelectorAll('[data-filter]').forEach(btn => {
+        // View options
+        document.querySelectorAll('[data-view]').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                this.handleFilterChange(e.target.dataset.filter);
+                this.handleViewChange(e.target.dataset.view);
             });
         });
 
-        // Sortable headers
-        document.querySelectorAll('.table-header-content').forEach(header => {
-            header.addEventListener('click', (e) => {
-                this.handleSort(e.currentTarget);
-            });
+        // Performance analysis buttons
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('[onclick*="analyzeUserPerformance"]')) {
+                const userId = e.target.closest('button').getAttribute('onclick').match(/'([^']+)'/)[1];
+                this.analyzeUserPerformance(userId);
+            }
         });
     }
 
-    handleFilterChange(filter) {
-        this.currentFilter = filter;
-        
+    initializeAnimations() {
+        // Add entrance animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('fade-in-up');
+                }
+            });
+        }, observerOptions);
+
+        // Observe all cards and rows
+        const elementsToAnimate = document.querySelectorAll('.performance-card, .leaderboard-row, .rank-tier-card');
+        elementsToAnimate.forEach(el => {
+            observer.observe(el);
+        });
+    }
+
+    handleViewChange(view) {
         // Update active button
-        document.querySelectorAll('[data-filter]').forEach(btn => {
+        document.querySelectorAll('[data-view]').forEach(btn => {
             btn.classList.remove('active');
         });
-        document.querySelector(`[data-filter="${filter}"]`).classList.add('active');
+        event.target.classList.add('active');
 
-        // Filter table rows
-        this.filterTableRows(filter);
+        // Implement view filtering logic
+        this.filterLeaderboard(view);
     }
 
-    filterTableRows(filter) {
-        const rows = document.querySelectorAll('.referral-row');
+    filterLeaderboard(view) {
+        const rows = document.querySelectorAll('.leaderboard-row, .leaderboard-mobile-card');
         
         rows.forEach(row => {
-            switch(filter) {
-                case 'active':
-                    row.style.display = row.classList.contains('active-referral') ? '' : 'none';
+            switch(view) {
+                case 'top10':
+                    const rankElement = row.querySelector('.rank-badge');
+                    if (rankElement) {
+                        const rankText = rankElement.textContent || '';
+                        const rankMatch = rankText.match(/\d+/);
+                        if (rankMatch && parseInt(rankMatch[0]) > 10) {
+                            row.style.display = 'none';
+                        } else {
+                            row.style.display = '';
+                        }
+                    }
                     break;
-                case 'completed':
-                    row.style.display = row.classList.contains('completed-referral') ? '' : 'none';
+                case 'same-tier':
+                    const userTier = '{{ user_ranking.user_rank if user_ranking else "Bronze" }}'.toLowerCase();
+                    const rowTierElement = row.querySelector('.tier-badge, .rank-tier');
+                    if (rowTierElement && rowTierElement.className.toLowerCase().includes(userTier)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
                     break;
                 default:
                     row.style.display = '';
@@ -995,60 +1416,109 @@ class ProfessionalReferralDashboard {
         });
     }
 
-    handleSort(header) {
-        const column = header.closest('th');
-        const currentOrder = column.getAttribute('data-sort') || 'none';
-        let newOrder;
+    async refreshLeaderboard(showNotification = true) {
+        if (this.isRefreshing) return;
 
-        switch(currentOrder) {
-            case 'none':
-                newOrder = 'asc';
-                break;
-            case 'asc':
-                newOrder = 'desc';
-                break;
-            case 'desc':
-                newOrder = 'none';
-                break;
+        this.isRefreshing = true;
+        
+        try {
+            // Simulate API call - replace with actual endpoint
+            await this.fetchLeaderboardData();
+            
+            // Update timestamp
+            this.updateLastUpdatedTime();
+            
+            if (showNotification) {
+                this.showNotification('Leaderboard updated successfully', 'success');
+            }
+
+        } catch (error) {
+            console.error('Error refreshing leaderboard:', error);
+            this.showNotification('Error refreshing leaderboard', 'error');
+        } finally {
+            this.isRefreshing = false;
         }
-
-        // Reset all sort indicators
-        document.querySelectorAll('.table-header-content i').forEach(icon => {
-            icon.className = 'fas fa-sort ms-1';
-        });
-
-        // Update current column sort
-        if (newOrder === 'none') {
-            header.querySelector('i').className = 'fas fa-sort ms-1';
-            column.removeAttribute('data-sort');
-        } else {
-            header.querySelector('i').className = `fas fa-sort-${newOrder === 'asc' ? 'up' : 'down'} ms-1`;
-            column.setAttribute('data-sort', newOrder);
-        }
-
-        this.sortTable(column.cellIndex, newOrder);
     }
 
-    sortTable(columnIndex, order) {
-        if (order === 'none') return;
-
-        const table = document.querySelector('.referral-performance-table');
-        const tbody = table.querySelector('tbody');
-        const rows = Array.from(tbody.querySelectorAll('tr'));
-
-        rows.sort((a, b) => {
-            const aValue = a.cells[columnIndex].textContent.trim();
-            const bValue = b.cells[columnIndex].textContent.trim();
-
-            if (order === 'asc') {
-                return aValue.localeCompare(bValue);
-            } else {
-                return bValue.localeCompare(aValue);
-            }
+    async fetchLeaderboardData() {
+        // This would be your actual API call
+        // For now, we'll simulate a network request
+        return new Promise((resolve) => {
+            setTimeout(resolve, 1000);
         });
+    }
 
-        // Clear and re-append sorted rows
-        rows.forEach(row => tbody.appendChild(row));
+    updateLastUpdatedTime() {
+        const lastUpdated = document.getElementById('last-updated');
+        if (lastUpdated) {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString([], { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            lastUpdated.textContent = timeString;
+            
+            // Add visual feedback
+            lastUpdated.style.transform = 'scale(1.1)';
+            setTimeout(() => {
+                lastUpdated.style.transform = 'scale(1)';
+            }, 300);
+        }
+    }
+
+    startAutoRefresh() {
+        // Refresh every 2 minutes
+        this.autoRefreshInterval = setInterval(() => {
+            this.refreshLeaderboard(false);
+        }, 120000);
+    }
+
+    analyzeUserPerformance(userId) {
+        // This would fetch user performance data from your backend
+        console.log('Analyzing user performance:', userId);
+        
+        // For demo purposes, show a modal with placeholder content
+        const modalContent = `
+            <div class="text-center">
+                <i class="fas fa-chart-bar fa-3x text-primary mb-3"></i>
+                <h5>Performance Analysis</h5>
+                <p class="text-muted">Detailed performance analytics for user ${userId}</p>
+                <div class="row mt-4">
+                    <div class="col-6">
+                        <div class="metric">
+                            <div class="metric-value">KES 2,450</div>
+                            <div class="metric-label">Total Earnings</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="metric">
+                            <div class="metric-value">24</div>
+                            <div class="metric-label">Referrals</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <button class="btn btn-primary" onclick="leaderboard.viewDetailedAnalytics('${userId}')">
+                        <i class="fas fa-chart-line me-2"></i>View Detailed Analytics
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('performance-analysis-content').innerHTML = modalContent;
+        
+        // Show modal
+        if (typeof bootstrap !== 'undefined') {
+            const modal = new bootstrap.Modal(document.getElementById('performanceModal'));
+            modal.show();
+        }
+    }
+
+    viewDetailedAnalytics(userId) {
+        // Navigate to detailed analytics page or show more data
+        this.showNotification('Opening detailed analytics dashboard...', 'info');
+        // window.location.href = `/analytics/user/${userId}`;
     }
 
     showNotification(message, type = 'info') {
@@ -1058,7 +1528,7 @@ class ProfessionalReferralDashboard {
         
         // Create notification element
         const notification = document.createElement('div');
-        notification.className = `professional-notification alert alert-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'} alert-dismissible fade show`;
+        notification.className = `professional-notification alert alert-${type === 'error' ? 'danger' : 'success'} alert-dismissible fade show`;
         notification.style.cssText = `
             position: fixed;
             top: 20px;
@@ -1070,7 +1540,7 @@ class ProfessionalReferralDashboard {
             border: none;
         `;
         
-        const icon = type === 'error' ? 'exclamation-triangle' : type === 'success' ? 'check-circle' : 'info-circle';
+        const icon = type === 'error' ? 'exclamation-triangle' : 'check-circle';
         notification.innerHTML = `
             <div class="d-flex align-items-center">
                 <i class="fas fa-${icon} me-2"></i>
@@ -1088,11 +1558,104 @@ class ProfessionalReferralDashboard {
             }
         }, 3000);
     }
+
+    // Method to update user ranking in real-time
+    updateUserRanking(rankingData) {
+        if (!rankingData) return;
+
+        // Safely update all elements that display user ranking
+        const elements = {
+            'user-global-rank': `#${rankingData.position || 'N/A'}`,
+            'total-competitors': rankingData.total_users || 0,
+            'user-percentile': `Top ${rankingData.percentile || 0}%`,
+            'user-tier': rankingData.user_rank || 'Bronze',
+            'current-rank': `#${rankingData.position || 'N/A'}`,
+            'total-users': rankingData.total_users || 0,
+            'rank-percentile': `Top ${rankingData.percentile || 0}%`,
+            'current-tier': rankingData.user_rank || 'Bronze'
+        };
+
+        Object.entries(elements).forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = value;
+            }
+        });
+
+        // Update tier badge
+        const tierBadge = document.getElementById('current-tier-badge');
+        if (tierBadge && rankingData.user_rank) {
+            tierBadge.className = `tier-badge-large tier-${(rankingData.user_rank || 'Bronze').toLowerCase()}`;
+        }
+
+        // Update progress bars
+        this.updateProgressBars(rankingData);
+    }
+
+    updateProgressBars(rankingData) {
+        if (!rankingData) return;
+
+        // Update rank progress bar
+        const rankProgressBar = document.getElementById('rank-progress-bar');
+        if (rankProgressBar && rankingData.total_users > 0) {
+            const position = rankingData.position || rankingData.total_users;
+            const progress = ((rankingData.total_users - position) / rankingData.total_users) * 100;
+            rankProgressBar.style.width = `${Math.max(0, Math.min(100, progress))}%`;
+        }
+
+        // Update tier progress bar
+        const tierProgressBar = document.getElementById('tier-progress-bar');
+        if (tierProgressBar && rankingData.user_rank !== 'Diamond') {
+            const tierRequirements = {
+                'Bronze': 5000,
+                'Silver': 15000,
+                'Gold': 30000,
+                'Platinum': 70000
+            };
+            
+            const currentTier = rankingData.user_rank || 'Bronze';
+            const nextTierRequirement = tierRequirements[currentTier] || 70000;
+            const currentCommission = rankingData.total_commission || 0;
+            const progress = (currentCommission / nextTierRequirement) * 100;
+            
+            tierProgressBar.style.width = `${Math.min(100, Math.max(0, progress))}%`;
+        }
+    }
+
+    // Cleanup method
+    destroy() {
+        if (this.autoRefreshInterval) {
+            clearInterval(this.autoRefreshInterval);
+        }
+    }
 }
 
-// Initialize dashboard
+// Global functions for onclick handlers
+function analyzeUserPerformance(userId) {
+    if (window.leaderboard) {
+        window.leaderboard.analyzeUserPerformance(userId);
+    }
+}
+
+// Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    window.referralDashboard = new ProfessionalReferralDashboard();
+    window.leaderboard = new ProfessionalLeaderboard();
+    
+    // Simulate real-time updates (replace with WebSocket or polling in production)
+    setInterval(() => {
+        // This would be your actual real-time update logic
+        // For demo, we'll just update the timestamp
+        if (window.leaderboard) {
+            window.leaderboard.updateLastUpdatedTime();
+        }
+    }, 30000); // Update every 30 seconds
+});
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', function() {
+    if (window.leaderboard) {
+        window.leaderboard.destroy();
+    }
 });
 </script>
 {% endblock %}
