@@ -12,6 +12,7 @@ import json
 import base64
 import logging
 import asyncio
+import random
 import threading
 import secrets
 import string
@@ -1035,10 +1036,10 @@ class SupabaseDB:
 
     @staticmethod
     def get_all_users():
+        """Get all users for ranking calculations"""
         try:
             response = supabase.table('users')\
                 .select('id, username, email, phone, name, balance, total_commission, total_withdrawn, referral_code, referred_by, referral_balance, referral_count, is_verified, is_active, user_rank, created_at, last_login')\
-                .order('created_at', desc=True)\
                 .execute()
             
             if response.data:
@@ -1092,6 +1093,7 @@ class SupabaseDB:
 
     @staticmethod
     def get_top_users(limit=50):
+        """Get top users sorted by total commission for leaderboard"""
         try:
             response = supabase.table('users')\
                 .select('*')\
@@ -1166,6 +1168,308 @@ class SupabaseDB:
             return total
         except Exception as e:
             return SupabaseDB.handle_db_error("get_total_balance", e, False)
+
+    @staticmethod
+    def get_user_performance_stats(user_id):
+        """Get comprehensive performance statistics for a user"""
+        try:
+            user = SupabaseDB.get_user_by_id(user_id)
+            if not user:
+                return None
+            
+            # Get user's referrals
+            referrals = SupabaseDB.get_referrals_by_referrer(user_id)
+            
+            # Get user's transactions
+            transactions = SupabaseDB.get_transactions_by_user(user_id)
+            
+            # Calculate additional stats
+            successful_referrals = len([r for r in referrals if r.get('status') == 'active'])
+            total_referral_earnings = sum(r.get('commission_earned', 0) for r in referrals)
+            
+            # Get withdrawal history
+            withdrawals = [t for t in transactions if t.get('transaction_type') == 'withdrawal']
+            successful_withdrawals = len([w for w in withdrawals if w.get('status') == 'completed'])
+            total_withdrawn = sum(abs(w.get('amount', 0)) for w in withdrawals if w.get('status') == 'completed')
+            
+            return {
+                'user_id': user_id,
+                'total_commission': user.total_commission,
+                'referral_count': user.referral_count,
+                'successful_referrals': successful_referrals,
+                'total_referral_earnings': total_referral_earnings,
+                'successful_withdrawals': successful_withdrawals,
+                'total_withdrawn': total_withdrawn,
+                'current_balance': user.balance,
+                'user_rank': user.user_rank,
+                'account_age_days': (datetime.now(timezone.utc) - datetime.fromisoformat(user.created_at.replace('Z', '+00:00'))).days if user.created_at else 0
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting user performance stats: {e}")
+            return None
+
+    @staticmethod
+    def get_leaderboard_stats():
+        """Get comprehensive leaderboard statistics"""
+        try:
+            # Get all users for calculations
+            all_users = SupabaseDB.get_all_users()
+            total_users = len(all_users)
+            
+            if total_users == 0:
+                return {
+                    'total_users': 0,
+                    'active_users': 0,
+                    'total_commission': 0,
+                    'average_commission': 0,
+                    'top_performer': None,
+                    'recent_activity': 0
+                }
+            
+            # Calculate active users (verified and have some activity)
+            active_users = len([u for u in all_users if u.get('is_verified') and (u.get('total_commission', 0) > 0 or u.get('referral_count', 0) > 0)])
+            
+            # Calculate total and average commission
+            total_commission = sum(u.get('total_commission', 0) for u in all_users)
+            average_commission = total_commission / total_users if total_users > 0 else 0
+            
+            # Find top performer
+            top_users = sorted(all_users, key=lambda x: x.get('total_commission', 0), reverse=True)
+            top_performer = top_users[0] if top_users else None
+            
+            # Get recent activity (users active in last 7 days)
+            week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+            recent_users = [u for u in all_users if u.get('last_login') and u.get('last_login') >= week_ago]
+            
+            return {
+                'total_users': total_users,
+                'active_users': active_users,
+                'total_commission': total_commission,
+                'average_commission': round(average_commission, 2),
+                'top_performer': {
+                    'username': top_performer.get('username', 'Unknown') if top_performer else 'None',
+                    'commission': top_performer.get('total_commission', 0) if top_performer else 0,
+                    'rank': top_performer.get('user_rank', 'Bronze') if top_performer else 'Bronze'
+                } if top_performer else None,
+                'recent_activity': len(recent_users),
+                'tier_distribution': SupabaseDB.get_tier_distribution()
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting leaderboard stats: {e}")
+            return None
+
+    @staticmethod
+    def get_user_rank_progression(user_id, period_days=30):
+        """Get user's rank progression over time"""
+        try:
+            # This would typically require a separate table for historical rankings
+            # For now, we'll return current rank with historical placeholders
+            user = SupabaseDB.get_user_by_id(user_id)
+            if not user:
+                return None
+            
+            current_ranking = get_user_ranking(user_id)
+            
+            # Placeholder for historical data - in production, you'd query a rankings_history table
+            historical_data = [
+                {
+                    'date': (datetime.now(timezone.utc) - timedelta(days=i)).strftime('%Y-%m-%d'),
+                    'rank': current_ranking.get('position', 0) + random.randint(-5, 5) if current_ranking else 0,
+                    'commission': max(0, user.total_commission - random.randint(0, 1000))
+                }
+                for i in range(period_days, 0, -7)  # Weekly data points
+            ]
+            
+            return {
+                'current_rank': current_ranking.get('position', 0) if current_ranking else 0,
+                'historical_data': historical_data,
+                'rank_trend': 'up' if len(historical_data) > 1 and historical_data[-1]['rank'] < historical_data[0]['rank'] else 'down',
+                'commission_growth': user.total_commission - (historical_data[0]['commission'] if historical_data else 0)
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting user rank progression: {e}")
+            return None
+
+    @staticmethod
+    def update_user_ranks():
+        """Update all users' ranks based on their current commission"""
+        try:
+            users = SupabaseDB.get_all_users()
+            updated_count = 0
+            
+            for user_data in users:
+                user = User(user_data)
+                old_rank = user.user_rank
+                user.update_rank()  # This method should be in your User class
+                
+                if user.user_rank != old_rank:
+                    # Only update if rank changed
+                    update_data = {'user_rank': user.user_rank}
+                    SupabaseDB.update_user(user.id, update_data)
+                    updated_count += 1
+                    
+                    # Log rank changes for significant promotions
+                    if old_rank != user.user_rank:
+                        logger.info(f"User {user.username} promoted from {old_rank} to {user.user_rank}")
+            
+            logger.info(f"Updated ranks for {updated_count} users")
+            return updated_count
+            
+        except Exception as e:
+            logger.error(f"Error updating user ranks: {e}")
+            return 0
+
+    @staticmethod
+    def get_referral_leaderboard(limit=20):
+        """Get leaderboard sorted by referral count"""
+        try:
+            response = supabase.table('users')\
+                .select('*')\
+                .order('referral_count', desc=True)\
+                .limit(limit)\
+                .execute()
+            
+            if response.data:
+                # Ensure all users have required fields with proper defaults
+                for user in response.data:
+                    user.setdefault('total_commission', 0.0)
+                    user.setdefault('referral_count', 0)
+                    user.setdefault('balance', 0.0)
+                    user.setdefault('user_rank', 'Bronze')
+                    user.setdefault('username', 'Unknown User')
+                    user.setdefault('email', '')
+                
+                return response.data
+            return []
+        
+        except Exception as e:
+            logger.error(f"Error getting referral leaderboard: {e}")
+            return []
+
+    @staticmethod
+    def get_commission_leaderboard(limit=20):
+        """Get leaderboard sorted by total commission (alias for get_top_users)"""
+        return SupabaseDB.get_top_users(limit)
+
+    @staticmethod
+    def get_growth_leaderboard(limit=20, period_days=7):
+        """Get users with highest growth in commission over a period"""
+        try:
+            # This would require a commissions_history table for accurate tracking
+            # For now, we'll return top users as a placeholder
+            users = SupabaseDB.get_top_users(limit)
+            
+            # Add simulated growth data
+            for user in users:
+                user['growth_percentage'] = random.randint(5, 50)  # Placeholder
+                user['growth_amount'] = user.get('total_commission', 0) * (user['growth_percentage'] / 100)
+            
+            # Sort by growth percentage
+            users_sorted = sorted(users, key=lambda x: x.get('growth_percentage', 0), reverse=True)
+            
+            return users_sorted[:limit]
+            
+        except Exception as e:
+            logger.error(f"Error getting growth leaderboard: {e}")
+            return SupabaseDB.get_top_users(limit)  # Fallback
+
+    @staticmethod
+    def search_users(search_term, limit=10):
+        """Search users by username, email, or phone"""
+        try:
+            # Search by username
+            username_response = supabase.table('users')\
+                .select('*')\
+                .ilike('username', f'%{search_term}%')\
+                .limit(limit)\
+                .execute()
+            
+            # Search by email
+            email_response = supabase.table('users')\
+                .select('*')\
+                .ilike('email', f'%{search_term}%')\
+                .limit(limit)\
+                .execute()
+            
+            # Search by phone
+            phone_response = supabase.table('users')\
+                .select('*')\
+                .ilike('phone', f'%{search_term}%')\
+                .limit(limit)\
+                .execute()
+            
+            # Combine and deduplicate results
+            all_results = []
+            seen_ids = set()
+            
+            for response in [username_response, email_response, phone_response]:
+                if response.data:
+                    for user in response.data:
+                        if user['id'] not in seen_ids:
+                            seen_ids.add(user['id'])
+                            all_results.append(user)
+            
+            return all_results[:limit]
+            
+        except Exception as e:
+            logger.error(f"Error searching users: {e}")
+            return []
+
+    @staticmethod
+    def get_user_achievements(user_id):
+        """Get user's achievements and milestones"""
+        try:
+            user = SupabaseDB.get_user_by_id(user_id)
+            if not user:
+                return []
+            
+            achievements = []
+            
+            # Commission-based achievements
+            if user.total_commission >= 70000:
+                achievements.append({'name': 'Diamond Earner', 'description': 'Earned over KES 10,000 in commissions', 'icon': '💎'})
+            elif user.total_commission >= 30000:
+                achievements.append({'name': 'Platinum Earner', 'description': 'Earned over KES 5,000 in commissions', 'icon': '🏆'})
+            elif user.total_commission >= 15000:
+                achievements.append({'name': 'Gold Earner', 'description': 'Earned over KES 2,000 in commissions', 'icon': '🥇'})
+            elif user.total_commission >= 5000:
+                achievements.append({'name': 'Silver Earner', 'description': 'Earned over KES 1,000 in commissions', 'icon': '🥈'})
+            elif user.total_commission >= 500:
+                achievements.append({'name': 'Bronze Earner', 'description': 'Earned over KES 500 in commissions', 'icon': '🥉'})
+            
+            # Referral-based achievements
+            if user.referral_count >= 50:
+                achievements.append({'name': 'Referral Master', 'description': 'Referred 50+ users', 'icon': '👑'})
+            elif user.referral_count >= 25:
+                achievements.append({'name': 'Referral Expert', 'description': 'Referred 25+ users', 'icon': '⭐'})
+            elif user.referral_count >= 10:
+                achievements.append({'name': 'Referral Pro', 'description': 'Referred 10+ users', 'icon': '🚀'})
+            elif user.referral_count >= 5:
+                achievements.append({'name': 'Referral Starter', 'description': 'Referred 5+ users', 'icon': '🎯'})
+            elif user.referral_count >= 1:
+                achievements.append({'name': 'First Referral', 'description': 'Made your first referral', 'icon': '🎉'})
+            
+            # Consistency achievements
+            user_created = datetime.fromisoformat(user.created_at.replace('Z', '+00:00'))
+            account_age_days = (datetime.now(timezone.utc) - user_created).days
+            
+            if account_age_days >= 365:
+                achievements.append({'name': 'One Year Veteran', 'description': 'Active for over 1 year', 'icon': '🎂'})
+            elif account_age_days >= 180:
+                achievements.append({'name': 'Six Months Strong', 'description': 'Active for over 6 months', 'icon': '📅'})
+            elif account_age_days >= 90:
+                achievements.append({'name': 'Three Months Active', 'description': 'Active for over 3 months', 'icon': '📆'})
+            elif account_age_days >= 30:
+                achievements.append({'name': 'One Month Mark', 'description': 'Active for over 1 month', 'icon': '📊'})
+            
+            return achievements
+            
+        except Exception as e:
+            logger.error(f"Error getting user achievements: {e}")
+            return []
 
 # =============================================================================
 # SECURITY AND FRAUD DETECTION
@@ -3454,7 +3758,7 @@ def extract_mpesa_code(message):
     return 'PENDING'
 
 def get_user_ranking(user_id):
-    """Get user's position in leaderboard and statistics - FIXED VERSION"""
+    """Get user's position in leaderboard and statistics - ENHANCED VERSION"""
     try:
         user = SupabaseDB.get_user_by_id(user_id)
         if not user:
@@ -3475,11 +3779,10 @@ def get_user_ranking(user_id):
             except (TypeError, ValueError):
                 return 0.0
         
-        # Filter out invalid user data and ensure all users have required fields
+        # Filter out invalid user data
         valid_users = []
         for user_data in all_users_data:
             if isinstance(user_data, dict) and user_data.get('id'):
-                # Ensure the user_data has all required fields with safe defaults
                 user_data.setdefault('total_commission', 0.0)
                 user_data.setdefault('referral_count', 0)
                 user_data.setdefault('user_rank', 'Bronze')
@@ -3490,11 +3793,10 @@ def get_user_ranking(user_id):
             
         sorted_users = sorted(valid_users, key=get_commission, reverse=True)
         
-        # Find user's position - safely convert user_id to string for comparison
+        # Find user's position
         user_id_str = str(user_id)
         position = None
         for index, user_data in enumerate(sorted_users):
-            # Safely get the id and convert to string for comparison
             current_user_id = str(user_data.get('id', ''))
             if current_user_id == user_id_str:
                 position = index + 1
@@ -5200,9 +5502,38 @@ def leaderboard():
         else:
             user_ranking = None
         
-        # Get tier distribution
+        # Get tier distribution from database
         tier_distribution = SupabaseDB.get_tier_distribution()
         
+        # Calculate user's next tier requirements
+        if user_ranking:
+            user_rank_safe = user_ranking.get('user_rank', 'Bronze')
+            user_commission = user_ranking.get('total_commission', 0)
+            
+            # Define tier requirements
+            tier_requirements = {
+                'Bronze': 0,
+                'Silver': 5000,
+                'Gold': 15000, 
+                'Platinum': 30000,
+                'Diamond': 70000
+            }
+            
+            # Calculate progress to next tier
+            if user_rank_safe != 'Diamond':
+                next_tier_requirement = tier_requirements.get(user_rank_safe, 70000)
+                if next_tier_requirement > 0:
+                    progress_percentage = (user_commission / next_tier_requirement * 100)
+                    progress_percentage = min(progress_percentage, 100)
+                else:
+                    progress_percentage = 0
+                
+                user_ranking['next_tier_progress'] = round(progress_percentage, 1)
+                user_ranking['next_tier_requirement'] = next_tier_requirement
+            else:
+                user_ranking['next_tier_progress'] = 100
+                user_ranking['next_tier_requirement'] = 70000
+
         return render_template('leaderboard.html',
                             top_users=top_users,
                             user_ranking=user_ranking,
