@@ -155,6 +155,27 @@ logger.info(f"SUPABASE_KEY loaded: {bool(os.environ.get('SUPABASE_SERVICE_ROLE_K
 
 app = Flask(__name__)
 
+# =============================================================================
+# CUSTOM JINJA2 FILTERS
+# =============================================================================
+
+@app.template_filter('clamp')
+def clamp_filter(value, min_value, max_value):
+    """
+    Custom Jinja2 filter to clamp a value between min and max
+    Usage: {{ value | clamp(0, 100) }}
+    """
+    try:
+        value = float(value)
+        min_value = float(min_value)
+        max_value = float(max_value)
+        return max(min_value, min(value, max_value))
+    except (TypeError, ValueError):
+        return value
+
+# Register the filter
+app.jinja_env.filters['clamp'] = clamp_filter
+
 # PRODUCTION CONFIGURATION
 class Config:
     
