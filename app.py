@@ -3046,7 +3046,7 @@ def extract_mpesa_code(message):
     return 'PENDING'
 
 def get_user_ranking(user_id):
-    """Get user's position in leaderboard and statistics - FIXED VERSION"""
+    """Get user's position in leaderboard and statistics - ENHANCED VERSION"""
     try:
         user = SupabaseDB.get_user_by_id(user_id)
         if not user:
@@ -3054,11 +3054,13 @@ def get_user_ranking(user_id):
         
         # Get all users for ranking calculation
         all_users_data = SupabaseDB.get_all_users()
-        if not all_users_data:
+        if not all_users_data or not isinstance(all_users_data, list):
             return None
         
         # Sort by total_commission descending, safely handling None values
         def get_commission(user_data):
+            if not isinstance(user_data, dict):
+                return 0.0
             commission = user_data.get('total_commission')
             if commission is None:
                 return 0.0
@@ -3067,11 +3069,11 @@ def get_user_ranking(user_id):
             except (TypeError, ValueError):
                 return 0.0
         
-        # Filter out invalid user data and ensure all users have required fields
+        # Filter out invalid user data
         valid_users = []
         for user_data in all_users_data:
             if isinstance(user_data, dict) and user_data.get('id'):
-                # Ensure the user_data has all required fields with safe defaults
+                # Ensure all required fields exist with safe defaults
                 user_data.setdefault('total_commission', 0.0)
                 user_data.setdefault('referral_count', 0)
                 user_data.setdefault('user_rank', 'Bronze')
@@ -3082,11 +3084,12 @@ def get_user_ranking(user_id):
             
         sorted_users = sorted(valid_users, key=get_commission, reverse=True)
         
-        # Find user's position - safely convert user_id to string for comparison
+        # Find user's position
         user_id_str = str(user_id)
         position = None
         for index, user_data in enumerate(sorted_users):
-            # Safely get the id and convert to string for comparison
+            if not isinstance(user_data, dict):
+                continue
             current_user_id = str(user_data.get('id', ''))
             if current_user_id == user_id_str:
                 position = index + 1
@@ -4740,24 +4743,33 @@ def leaderboard():
         top_users = []
         
         # Safely create User objects and ensure numeric types
-        for user_data in top_users_data:
-            try:
-                # Ensure numeric fields are properly typed
-                user_data['total_commission'] = float(user_data.get('total_commission', 0))
-                user_data['referral_count'] = int(user_data.get('referral_count', 0))
-                user_data['balance'] = float(user_data.get('balance', 0))
-                
-                user = User(user_data)
-                top_users.append(user)
-            except Exception as e:
-                logger.error(f"Error creating user object: {e}")
-                continue
+        if top_users_data and isinstance(top_users_data, list):
+            for user_data in top_users_data:
+                try:
+                    if not isinstance(user_data, dict):
+                        continue
+                        
+                    # Ensure numeric fields are properly typed and safe
+                    user_data['total_commission'] = float(user_data.get('total_commission', 0))
+                    user_data['referral_count'] = int(user_data.get('referral_count', 0))
+                    user_data['balance'] = float(user_data.get('balance', 0))
+                    
+                    # Ensure string fields have defaults
+                    user_data.setdefault('username', 'Unknown User')
+                    user_data.setdefault('email', '')
+                    user_data.setdefault('user_rank', 'Bronze')
+                    
+                    user = User(user_data)
+                    top_users.append(user)
+                except Exception as e:
+                    logger.error(f"Error creating user object: {e}")
+                    continue
         
         # Get current user's ranking with proper error handling
         user_ranking = get_user_ranking(current_user.id)
         
         # Ensure user_ranking has proper types and handle None case
-        if user_ranking:
+        if user_ranking and isinstance(user_ranking, dict):
             user_ranking = {
                 'position': int(user_ranking.get('position', 0)),
                 'total_users': int(user_ranking.get('total_users', 0)),
@@ -4769,9 +4781,38 @@ def leaderboard():
         else:
             user_ranking = None
         
-        # Get tier distribution
+        # Get tier distribution from database
         tier_distribution = SupabaseDB.get_tier_distribution()
         
+        # Calculate user's next tier requirements
+        if user_ranking and isinstance(user_ranking, dict):
+            user_rank_safe = user_ranking.get('user_rank', 'Bronze')
+            user_commission = user_ranking.get('total_commission', 0)
+            
+            # Define tier requirements
+            tier_requirements = {
+                'Bronze': 0,
+                'Silver': 5000,
+                'Gold': 15000, 
+                'Platinum': 30000,
+                'Diamond': 70000
+            }
+            
+            # Calculate progress to next tier
+            if user_rank_safe != 'Diamond':
+                next_tier_requirement = tier_requirements.get(user_rank_safe, 70000)
+                if next_tier_requirement > 0:
+                    progress_percentage = (user_commission / next_tier_requirement * 100)
+                    progress_percentage = min(progress_percentage, 100)
+                else:
+                    progress_percentage = 0
+                
+                user_ranking['next_tier_progress'] = round(progress_percentage, 1)
+                user_ranking['next_tier_requirement'] = next_tier_requirement
+            else:
+                user_ranking['next_tier_progress'] = 100
+                user_ranking['next_tier_requirement'] = 70000
+
         return render_template('leaderboard.html',
                             top_users=top_users,
                             user_ranking=user_ranking,
