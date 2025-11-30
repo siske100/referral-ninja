@@ -16,14 +16,14 @@
                 <h1 class="hero-title display-5 fw-bold text-white mb-3">Elite Referral Leaderboard</h1>
                 <p class="hero-subtitle text-white-50 fs-5 mb-4">Track your performance against top performers in real-time</p>
                 
-                {% if user_ranking %}
+                {% if user_ranking and user_ranking is mapping %}
                 <div class="user-rank-hero">
                     <div class="rank-stats-card">
                         <div class="row g-4">
                             <div class="col-md-3">
                                 <div class="stat-item">
                                     <div class="stat-value text-primary fw-bold" id="user-global-rank">
-                                        #{{ user_ranking.get('position', 'N/A') }}
+                                        #{{ user_ranking.get('position', 'N/A') | default('N/A', true) }}
                                     </div>
                                     <div class="stat-label">Global Rank</div>
                                 </div>
@@ -31,7 +31,7 @@
                             <div class="col-md-3">
                                 <div class="stat-item">
                                     <div class="stat-value text-success fw-bold" id="total-competitors">
-                                        {{ user_ranking.get('total_users', 0) }}
+                                        {{ user_ranking.get('total_users', 0) | default(0, true) }}
                                     </div>
                                     <div class="stat-label">Total Competitors</div>
                                 </div>
@@ -39,7 +39,8 @@
                             <div class="col-md-3">
                                 <div class="stat-item">
                                     <div class="stat-value text-warning fw-bold" id="user-percentile">
-                                        Top {{ user_ranking.get('percentile', 0) }}%
+                                        {% set percentile = user_ranking.get('percentile', 0) | float | default(0, true) %}
+                                        Top {{ "%.1f"|format(percentile) }}%
                                     </div>
                                     <div class="stat-label">Performance Percentile</div>
                                 </div>
@@ -47,7 +48,7 @@
                             <div class="col-md-3">
                                 <div class="stat-item">
                                     <div class="stat-value text-info fw-bold" id="user-tier">
-                                        {{ user_ranking.get('user_rank', 'Bronze') }}
+                                        {{ user_ranking.get('user_rank', 'Bronze') | default('Bronze', true) }}
                                     </div>
                                     <div class="stat-label">Current Tier</div>
                                 </div>
@@ -61,7 +62,7 @@
     </div>
 
     <!-- Performance Analytics Dashboard -->
-    {% if user_ranking %}
+    {% if user_ranking and user_ranking is mapping %}
     <div class="user-performance-section mb-5">
         <div class="section-header text-center mb-4">
             <h2 class="fw-bold">Performance Analytics</h2>
@@ -78,12 +79,12 @@
                         </div>
                         <div class="card-body">
                             <div class="rank-display">
-                                <span class="rank-number" id="current-rank">#{{ user_ranking.get('position', 'N/A') }}</span>
-                                <span class="rank-label">Out of <span id="total-users">{{ user_ranking.get('total_users', 0) }}</span> users</span>
+                                <span class="rank-number" id="current-rank">#{{ user_ranking.get('position', 'N/A') | default('N/A', true) }}</span>
+                                <span class="rank-label">Out of <span id="total-users">{{ user_ranking.get('total_users', 0) | default(0, true) }}</span> users</span>
                             </div>
                             <div class="rank-progress">
-                                {% set total_users_safe = user_ranking.get('total_users', 1) | int %}
-                                {% set position_safe = user_ranking.get('position', total_users_safe) | int %}
+                                {% set total_users_safe = (user_ranking.get('total_users', 1) | int) | default(1, true) %}
+                                {% set position_safe = (user_ranking.get('position', total_users_safe) | int) | default(total_users_safe, true) %}
                                 {% if total_users_safe > 0 %}
                                     {% set rank_progress = ((total_users_safe - position_safe) / total_users_safe * 100) | round(1) %}
                                 {% else %}
@@ -97,7 +98,8 @@
                                     </div>
                                 </div>
                                 <div class="progress-text">
-                                    <span id="rank-percentile">Top {{ user_ranking.get('percentile', 0) }}% of performers</span>
+                                    {% set percentile = user_ranking.get('percentile', 0) | float | default(0, true) %}
+                                    <span id="rank-percentile">Top {{ "%.1f"|format(percentile) }}% of performers</span>
                                 </div>
                             </div>
                             <div class="performance-metrics mt-3">
@@ -105,7 +107,8 @@
                                     <div class="col-6">
                                         <div class="metric">
                                             <div class="metric-value">
-                                                KES {{ "%.2f"|format(user_ranking.get('total_commission', 0) | float) }}
+                                                {% set total_commission = user_ranking.get('total_commission', 0) | float | default(0, true) %}
+                                                KES {{ "%.2f"|format(total_commission) }}
                                             </div>
                                             <div class="metric-label">Total Earnings</div>
                                         </div>
@@ -113,7 +116,7 @@
                                     <div class="col-6">
                                         <div class="metric">
                                             <div class="metric-value">
-                                                {{ user_ranking.get('referral_count', 0) }}
+                                                {{ user_ranking.get('referral_count', 0) | default(0, true) }}
                                             </div>
                                             <div class="metric-label">Successful Referrals</div>
                                         </div>
@@ -132,7 +135,7 @@
                         </div>
                         <div class="card-body">
                             <div class="tier-display">
-                                {% set user_rank_safe = user_ranking.get('user_rank', 'Bronze') %}
+                                {% set user_rank_safe = user_ranking.get('user_rank', 'Bronze') | default('Bronze', true) %}
                                 <div class="tier-badge-large tier-{{ user_rank_safe | lower }}" id="current-tier-badge">
                                     <i class="fas fa-gem"></i>
                                     <span id="current-tier">{{ user_rank_safe }}</span>
@@ -189,7 +192,7 @@
                         </div>
                         <div class="card-body">
                             <div class="next-tier-info">
-                                {% set user_rank_safe = user_ranking.get('user_rank', 'Bronze') %}
+                                {% set user_rank_safe = user_ranking.get('user_rank', 'Bronze') | default('Bronze', true) %}
                                 <div id="next-tier-name" class="next-tier-name">
                                     {% if user_rank_safe == 'Bronze' %}
                                     Silver Tier Target
@@ -221,11 +224,11 @@
                                 {% if user_rank_safe != 'Diamond' %}
                                     {% set tier_requirements = {'Bronze': 5000, 'Silver': 15000, 'Gold': 30000, 'Platinum': 70000} %}
                                     {% set next_tier_requirement = tier_requirements.get(user_rank_safe, 70000) %}
-                                    {% set user_commission = user_ranking.get('total_commission', 0) | float %}
+                                    {% set user_commission = (user_ranking.get('total_commission', 0) | float) | default(0, true) %}
                                     
                                     {% if next_tier_requirement > 0 %}
                                         {% set progress_percentage = (user_commission / next_tier_requirement * 100) | round(1) %}
-                                        {% set progress_percentage = progress_percentage | min(100) %}
+                                        {% set progress_percentage = [progress_percentage, 100] | min %}
                                     {% else %}
                                         {% set progress_percentage = 0 %}
                                     {% endif %}
@@ -264,7 +267,14 @@
             <p class="text-muted">Live ranking of top performing referral partners</p>
             <div class="leaderboard-meta">
                 <span class="badge bg-primary-subtle text-primary p-3 fs-6">
-                    <i class="fas fa-users me-2"></i><span id="elite-performers-count">{{ top_users | length | default(0) }}</span> Active Performers
+                    <i class="fas fa-users me-2"></i>
+                    <span id="elite-performers-count">
+                        {% if top_users and top_users is iterable %}
+                            {{ top_users | length }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </span> Active Performers
                 </span>
                 <span class="badge bg-success-subtle text-success p-3 fs-6 ms-2">
                     <i class="fas fa-sync-alt me-2"></i>Last Updated: <span id="last-updated">Just now</span>
@@ -278,7 +288,7 @@
         <div class="leaderboard-card">
             <!-- Enhanced Mobile Card View -->
             <div class="d-md-none" id="mobile-leaderboard">
-                {% if top_users %}
+                {% if top_users and top_users is iterable %}
                     {% for user in top_users %}
                     <div class="leaderboard-mobile-card {% if user.id == current_user.id %}current-user{% endif %}" data-user-id="{{ user.id | default('') }}">
                         <div class="card-body">
@@ -329,7 +339,8 @@
                                             <div class="col-6">
                                                 <div class="stat">
                                                     <div class="stat-value text-warning fw-bold user-earnings">
-                                                        KES {{ "%.2f"|format(user.total_commission | default(0) | float) }}
+                                                        {% set user_commission = user.total_commission | default(0) | float %}
+                                                        KES {{ "%.2f"|format(user_commission) }}
                                                     </div>
                                                     <div class="stat-label">Total Earnings</div>
                                                 </div>
@@ -349,6 +360,14 @@
                         </div>
                     </div>
                     {% endfor %}
+                {% else %}
+                <div class="empty-leaderboard text-center py-5">
+                    <div class="empty-icon mb-4">
+                        <i class="fas fa-trophy fa-4x text-muted opacity-50"></i>
+                    </div>
+                    <h4 class="text-muted mb-3">No Performance Data Available</h4>
+                    <p class="text-muted mb-4">Leaderboard data is currently being processed or unavailable.</p>
+                </div>
                 {% endif %}
             </div>
 
@@ -367,7 +386,7 @@
                             </tr>
                         </thead>
                         <tbody id="desktop-leaderboard">
-                            {% if top_users %}
+                            {% if top_users and top_users is iterable %}
                                 {% for user in top_users %}
                                 <tr class="leaderboard-row {% if user.id == current_user.id %}current-user{% endif %}" data-user-id="{{ user.id | default('') }}">
                                     <td class="rank-cell text-center">
@@ -407,7 +426,8 @@
                                     <td class="earnings-cell text-end">
                                         <div class="earnings-amount fw-bold">
                                             <span class="amount user-earnings">
-                                                KES {{ "%.2f"|format(user.total_commission | default(0) | float) }}
+                                                {% set user_commission = user.total_commission | default(0) | float %}
+                                                KES {{ "%.2f"|format(user_commission) }}
                                             </span>
                                         </div>
                                         <div class="earnings-growth small text-muted">
@@ -453,7 +473,11 @@
                                         </div>
                                         {% else %}
                                         <div class="action-buttons">
-                                            <button class="btn btn-outline-primary btn-sm" onclick="analyzeUserPerformance('{{ user.id | default('') }}')" data-bs-toggle="tooltip" title="View Performance Analysis">
+                                            <button class="btn btn-outline-primary btn-sm analyze-user-btn" 
+                                                    data-user-id="{{ user.id | default('') }}"
+                                                    data-user-name="{{ user.username | default('Unknown User') }}"
+                                                    data-bs-toggle="tooltip" 
+                                                    title="View Performance Analysis">
                                                 <i class="fas fa-chart-bar me-1"></i>Analyze
                                             </button>
                                         </div>
@@ -461,13 +485,30 @@
                                     </td>
                                 </tr>
                                 {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td colspan="6">
+                                    <div class="empty-leaderboard text-center py-5">
+                                        <div class="empty-icon mb-4">
+                                            <i class="fas fa-trophy fa-4x text-muted opacity-50"></i>
+                                        </div>
+                                        <h4 class="text-muted mb-3">Leaderboard Not Available</h4>
+                                        <p class="text-muted mb-4">Performance data is being processed. Start referring to appear on the leaderboard.</p>
+                                        <div class="empty-actions">
+                                            <a href="{{ url_for('referral_system') }}" class="btn btn-primary btn-lg me-3">
+                                                <i class="fas fa-share-alt me-2"></i>Begin Referring
+                                            </a>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
                             {% endif %}
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            {% if not top_users %}
+            {% if not top_users or top_users is not iterable %}
             <div class="empty-leaderboard text-center py-5">
                 <div class="empty-icon mb-4">
                     <i class="fas fa-trophy fa-4x text-muted opacity-50"></i>
@@ -488,7 +529,13 @@
             <div class="row align-items-center">
                 <div class="col-md-6">
                     <div class="results-info">
-                        Showing <strong>{{ top_users | length | default(0) }}</strong> top performers
+                        Showing <strong>
+                            {% if top_users and top_users is iterable %}
+                                {{ top_users | length }}
+                            {% else %}
+                                0
+                            {% endif %}
+                        </strong> top performers
                     </div>
                 </div>
                 <div class="col-md-6 text-md-end">
@@ -521,7 +568,7 @@
             <!-- Progress Visualization -->
             <div class="tiers-progress-bar mb-5">
                 <div class="progress-steps">
-                    {% set user_rank_safe = user_ranking.user_rank | default('Bronze') if user_ranking else 'Bronze' %}
+                    {% set user_rank_safe = (user_ranking.user_rank if user_ranking else 'Bronze') | default('Bronze', true) %}
                     <div class="step bronze {% if user_rank_safe in ['Bronze','Silver','Gold','Platinum','Diamond'] %}active{% endif %}">
                         <div class="step-marker">
                             <i class="fas fa-gem"></i>
@@ -1372,11 +1419,12 @@ class ProfessionalLeaderboard {
         });
 
         // Performance analysis buttons
-        document.addEventListener('click', (e) => {
-            if (e.target.closest('[onclick*="analyzeUserPerformance"]')) {
-                const userId = e.target.closest('button').getAttribute('onclick').match(/'([^']+)'/)[1];
-                this.analyzeUserPerformance(userId);
-            }
+        document.querySelectorAll('.analyze-user-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const userId = e.target.closest('.analyze-user-btn').dataset.userId;
+                const userName = e.target.closest('.analyze-user-btn').dataset.userName;
+                this.analyzeUserPerformance(userId, userName);
+            });
         });
     }
 
@@ -1503,16 +1551,16 @@ class ProfessionalLeaderboard {
         }, 120000);
     }
 
-    analyzeUserPerformance(userId) {
+    analyzeUserPerformance(userId, userName) {
         // This would fetch user performance data from your backend
-        console.log('Analyzing user performance:', userId);
+        console.log('Analyzing user performance:', userId, userName);
         
         // For demo purposes, show a modal with placeholder content
         const modalContent = `
             <div class="text-center">
                 <i class="fas fa-chart-bar fa-3x text-primary mb-3"></i>
-                <h5>Performance Analysis</h5>
-                <p class="text-muted">Detailed performance analytics for user ${userId}</p>
+                <h5>Performance Analysis - ${userName}</h5>
+                <p class="text-muted">Detailed performance analytics for ${userName}</p>
                 <div class="row mt-4">
                     <div class="col-6">
                         <div class="metric">
@@ -1656,13 +1704,6 @@ class ProfessionalLeaderboard {
         if (this.autoRefreshInterval) {
             clearInterval(this.autoRefreshInterval);
         }
-    }
-}
-
-// Global functions for onclick handlers
-function analyzeUserPerformance(userId) {
-    if (window.leaderboard) {
-        window.leaderboard.analyzeUserPerformance(userId);
     }
 }
 
