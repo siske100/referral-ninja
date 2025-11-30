@@ -16,7 +16,7 @@
                 <h1 class="hero-title display-5 fw-bold text-white mb-3">Elite Referral Leaderboard</h1>
                 <p class="hero-subtitle text-white-50 fs-5 mb-4">Track your performance against top performers in real-time</p>
                 
-                {% if user_ranking %}
+                {% if user_ranking and user_ranking is mapping %}
                 <div class="user-rank-hero">
                     <div class="rank-stats-card">
                         <div class="row g-4">
@@ -61,7 +61,7 @@
     </div>
 
     <!-- Performance Analytics Dashboard -->
-    {% if user_ranking %}
+    {% if user_ranking and user_ranking is mapping %}
     <div class="user-performance-section mb-5">
         <div class="section-header text-center mb-4">
             <h2 class="fw-bold">Performance Analytics</h2>
@@ -278,7 +278,7 @@
         <div class="leaderboard-card">
             <!-- Enhanced Mobile Card View -->
             <div class="d-md-none" id="mobile-leaderboard">
-                {% if top_users %}
+                {% if top_users and top_users is iterable and top_users is not string %}
                     {% for user in top_users %}
                     <div class="leaderboard-mobile-card {% if user.id == current_user.id %}current-user{% endif %}" data-user-id="{{ user.id | default('') }}">
                         <div class="card-body">
@@ -367,7 +367,7 @@
                             </tr>
                         </thead>
                         <tbody id="desktop-leaderboard">
-                            {% if top_users %}
+                            {% if top_users and top_users is iterable and top_users is not string %}
                                 {% for user in top_users %}
                                 <tr class="leaderboard-row {% if user.id == current_user.id %}current-user{% endif %}" data-user-id="{{ user.id | default('') }}">
                                     <td class="rank-cell text-center">
@@ -467,7 +467,7 @@
                 </div>
             </div>
 
-            {% if not top_users %}
+            {% if not top_users or top_users is not iterable or top_users is string %}
             <div class="empty-leaderboard text-center py-5">
                 <div class="empty-icon mb-4">
                     <i class="fas fa-trophy fa-4x text-muted opacity-50"></i>
@@ -521,7 +521,7 @@
             <!-- Progress Visualization -->
             <div class="tiers-progress-bar mb-5">
                 <div class="progress-steps">
-                    {% set user_rank_safe = user_ranking.user_rank | default('Bronze') if user_ranking else 'Bronze' %}
+                    {% set user_rank_safe = user_ranking.user_rank | default('Bronze') if user_ranking and user_ranking is mapping else 'Bronze' %}
                     <div class="step bronze {% if user_rank_safe in ['Bronze','Silver','Gold','Platinum','Diamond'] %}active{% endif %}">
                         <div class="step-marker">
                             <i class="fas fa-gem"></i>
@@ -563,7 +563,8 @@
             <!-- Enhanced Tier Cards -->
             <div class="rank-tiers-grid">
                 <!-- Bronze Tier -->
-                {% set user_rank_safe = user_ranking.user_rank | default('Bronze') if user_ranking else 'Bronze' %}
+                {% set user_rank_safe = user_ranking.user_rank | default('Bronze') if user_ranking and user_ranking is mapping else 'Bronze' %}
+                {% set tier_stats = tier_stats or {} %}
                 <div class="rank-tier-card bronze-tier {% if user_rank_safe == 'Bronze' %}current-tier{% endif %}">
                     <div class="tier-header">
                         <div class="tier-icon">
@@ -581,7 +582,7 @@
                         </div>
                         <div class="tier-stats">
                             <div class="stat">
-                                <div class="stat-value">40%</div>
+                                <div class="stat-value">{{ tier_stats.get('bronze_percentage', 0) }}%</div>
                                 <div class="stat-label">of Users</div>
                             </div>
                             <div class="stat">
@@ -628,7 +629,7 @@
                         </div>
                         <div class="tier-stats">
                             <div class="stat">
-                                <div class="stat-value">25%</div>
+                                <div class="stat-value">{{ tier_stats.get('silver_percentage', 0) }}%</div>
                                 <div class="stat-label">of Users</div>
                             </div>
                             <div class="stat">
@@ -675,7 +676,7 @@
                         </div>
                         <div class="tier-stats">
                             <div class="stat">
-                                <div class="stat-value">20%</div>
+                                <div class="stat-value">{{ tier_stats.get('gold_percentage', 0) }}%</div>
                                 <div class="stat-label">of Users</div>
                             </div>
                             <div class="stat">
@@ -722,7 +723,7 @@
                         </div>
                         <div class="tier-stats">
                             <div class="stat">
-                                <div class="stat-value">10%</div>
+                                <div class="stat-value">{{ tier_stats.get('platinum_percentage', 0) }}%</div>
                                 <div class="stat-label">of Users</div>
                             </div>
                             <div class="stat">
@@ -769,7 +770,7 @@
                         </div>
                         <div class="tier-stats">
                             <div class="stat">
-                                <div class="stat-value">5%</div>
+                                <div class="stat-value">{{ tier_stats.get('diamond_percentage', 0) }}%</div>
                                 <div class="stat-label">of Users</div>
                             </div>
                             <div class="stat">
@@ -1402,7 +1403,7 @@ class ProfessionalLeaderboard {
                     }
                     break;
                 case 'same-tier':
-                    const userTier = '{{ user_ranking.user_rank if user_ranking else "Bronze" }}'.toLowerCase();
+                    const userTier = '{{ user_ranking.user_rank if user_ranking and user_ranking is mapping else "Bronze" }}'.toLowerCase();
                     const rowTierElement = row.querySelector('.tier-badge, .rank-tier');
                     if (rowTierElement && rowTierElement.className.toLowerCase().includes(userTier)) {
                         row.style.display = '';
@@ -1561,7 +1562,7 @@ class ProfessionalLeaderboard {
 
     // Method to update user ranking in real-time
     updateUserRanking(rankingData) {
-        if (!rankingData) return;
+        if (!rankingData || typeof rankingData !== 'object') return;
 
         // Safely update all elements that display user ranking
         const elements = {
@@ -1593,7 +1594,7 @@ class ProfessionalLeaderboard {
     }
 
     updateProgressBars(rankingData) {
-        if (!rankingData) return;
+        if (!rankingData || typeof rankingData !== 'object') return;
 
         // Update rank progress bar
         const rankProgressBar = document.getElementById('rank-progress-bar');
