@@ -82,6 +82,55 @@
             --radius-xl: 1rem;
         }
 
+        /* ===== BOOTSTRAP COMPATIBILITY FIXES ===== */
+        .container-fluid {
+            padding: 0 !important;
+            max-width: 100% !important;
+        }
+
+        @media (min-width: 576px) {
+            .container-fluid {
+                max-width: 540px !important;
+                margin: 0 auto !important;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .container-fluid {
+                max-width: 720px !important;
+                margin: 0 auto !important;
+            }
+        }
+
+        @media (min-width: 992px) {
+            .container-fluid {
+                max-width: 960px !important;
+                margin: 0 auto !important;
+            }
+        }
+
+        @media (min-width: 1200px) {
+            .container-fluid {
+                max-width: 1140px !important;
+                margin: 0 auto !important;
+            }
+        }
+
+        @media (min-width: 1400px) {
+            .container-fluid {
+                max-width: 1320px !important;
+                margin: 0 auto !important;
+            }
+        }
+
+        .row {
+            margin: 0 !important;
+        }
+
+        .col-12 {
+            padding: 0 !important;
+        }
+
         * {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             box-sizing: border-box;
@@ -193,8 +242,6 @@
         @media (min-width: 992px) {
             .content-inner {
                 padding: 2rem;
-                max-width: 1200px;
-                margin: 0 auto;
             }
         }
 
@@ -706,36 +753,45 @@
         
         <div class="main-content" id="mainContent">
             <main class="content">
+                <!-- FIXED: Proper Bootstrap container structure -->
                 <div class="content-inner">
-                    <!-- Connection Status Indicator -->
-                    <div class="connection-status online" id="connectionStatus" style="display: none;">
-                        <i class="fas fa-wifi"></i>
-                        <span>Connected</span>
-                    </div>
-
-                    {% with messages = get_flashed_messages(with_categories=true) %}
-                        {% if messages %}
-                            {% for category, message in messages %}
-                                <div class="flash-message {{ category }}" role="alert">
-                                    <i class="flash-icon fas fa-{% if category == 'success' %}check-circle{% elif category == 'error' %}exclamation-triangle{% elif category == 'warning' %}exclamation-circle{% else %}info-circle{% endif %}"></i>
-                                    <span>{{ message }}</span>
-                                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <div class="container-fluid">
+                        <div class="row">
+                            <div class="col-12">
+                                
+                                <!-- Connection Status Indicator -->
+                                <div class="connection-status online" id="connectionStatus" style="display: none;">
+                                    <i class="fas fa-wifi"></i>
+                                    <span>Connected</span>
                                 </div>
-                            {% endfor %}
-                        {% endif %}
-                    {% endwith %}
 
-                    <!-- Error State Fallback -->
-                    <div class="error-state" id="errorState" style="display: none;">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>We're experiencing an issue</h3>
-                        <p>Please try again later. If the problem persists, contact support.</p>
-                        <button class="btn btn-primary" onclick="location.reload()">
-                            <i class="fas fa-redo me-2"></i>Reload Page
-                        </button>
+                                {% with messages = get_flashed_messages(with_categories=true) %}
+                                    {% if messages %}
+                                        {% for category, message in messages %}
+                                            <div class="alert alert-{{ category }} alert-dismissible fade show mb-4" role="alert">
+                                                <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'danger' %}exclamation-triangle{% elif category == 'warning' %}exclamation-circle{% else %}info-circle{% endif %} me-2"></i>
+                                                {{ message }}
+                                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                            </div>
+                                        {% endfor %}
+                                    {% endif %}
+                                {% endwith %}
+
+                                <!-- Error State Fallback -->
+                                <div class="alert alert-warning text-center" id="errorState" style="display: none;">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    <strong>We're experiencing an issue</strong>
+                                    <p class="mb-2">Please try again later. If the problem persists, contact support.</p>
+                                    <button class="btn btn-primary btn-sm" onclick="location.reload()">
+                                        <i class="fas fa-redo me-1"></i>Reload Page
+                                    </button>
+                                </div>
+
+                                {% block content %}{% endblock %}
+                                
+                            </div>
+                        </div>
                     </div>
-
-                    {% block content %}{% endblock %}
                 </div>
 
                 <!-- WhatsApp Toggle System -->
@@ -897,7 +953,7 @@
             }
 
             function setupFlashMessages() {
-                const flashMessages = document.querySelectorAll('.flash-message');
+                const flashMessages = document.querySelectorAll('.alert');
                 flashMessages.forEach(message => {
                     setTimeout(() => {
                         const closeButton = message.querySelector('.btn-close');
