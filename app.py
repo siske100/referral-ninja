@@ -1,5 +1,5 @@
 # =============================================================================
-# STANDARD LIBRARY IMPORTS 
+# STANDARD LIBRARY IMPORTS
 # =============================================================================
 import os
 import sys
@@ -1098,67 +1098,67 @@ class SupabaseDB:
             return SupabaseDB.handle_db_error("get_recent_activity", e, False)
 
     @staticmethod
-def get_top_users(limit=50):
-    """Get top users ranked by total_commission and referral_count."""
-    try:
-        # Fetch all users
-        response = supabase.table('users') \
-            .select(
-                'id, username, email, phone, name, total_commission, referral_count, '
-                'user_rank, balance, is_verified'
-            ).execute()
+    def get_top_users(limit=50):
+        """Get top users ranked by total_commission and referral_count."""
+        try:
+            # Fetch all users
+            response = supabase.table('users') \
+                .select(
+                    'id, username, email, phone, name, total_commission, referral_count, '
+                    'user_rank, balance, is_verified'
+                ).execute()
 
-        data = getattr(response, "data", None)
+            data = getattr(response, "data", None)
 
-        if not isinstance(data, list):
-            logger.error(f"Supabase returned invalid user list: {data}")
+            if not isinstance(data, list):
+                logger.error(f"Supabase returned invalid user list: {data}")
+                return []
+
+            ranked_users = []
+
+            for user in data:
+                if not isinstance(user, dict):
+                    continue
+
+                # Safe numeric extraction
+                def safe_float(value, default=0.0):
+                    try:
+                        return float(value) if value not in (None, "") else default
+                    except (ValueError, TypeError):
+                        return default
+
+                def safe_int(value, default=0):
+                    try:
+                        return int(value) if value not in (None, "") else default
+                    except (ValueError, TypeError):
+                        return default
+
+                ranked_users.append({
+                    'id': user.get('id'),
+                    'username': user.get('username') or 'Unknown User',
+                    'email': user.get('email', '') or '',
+                    'phone': user.get('phone', '') or '',
+                    'name': user.get('name', '') or '',
+                    'total_commission': safe_float(user.get('total_commission')),
+                    'referral_count': safe_int(user.get('referral_count')),
+                    'user_rank': user.get('user_rank', 'Bronze'),
+                    'balance': safe_float(user.get('balance')),
+                    'is_verified': bool(user.get('is_verified', False))
+                })
+
+            # Sort by: commission DESC, referrals DESC
+            ranked_users.sort(
+                key=lambda x: (x['total_commission'], x['referral_count']),
+                reverse=True
+            )
+
+            # Return limited list
+            return ranked_users[:limit]
+
+        except Exception as e:
+            logger.error(f"Error in get_top_users: {e}")
             return []
-
-        ranked_users = []
-
-        for user in data:
-            if not isinstance(user, dict):
-                continue
-
-            # Safe numeric extraction
-            def safe_float(value, default=0.0):
-                try:
-                    return float(value) if value not in (None, "") else default
-                except (ValueError, TypeError):
-                    return default
-
-            def safe_int(value, default=0):
-                try:
-                    return int(value) if value not in (None, "") else default
-                except (ValueError, TypeError):
-                    return default
-
-            ranked_users.append({
-                'id': user.get('id'),
-                'username': user.get('username') or 'Unknown User',
-                'email': user.get('email', '') or '',
-                'phone': user.get('phone', '') or '',
-                'name': user.get('name', '') or '',
-                'total_commission': safe_float(user.get('total_commission')),
-                'referral_count': safe_int(user.get('referral_count')),
-                'user_rank': user.get('user_rank', 'Bronze'),
-                'balance': safe_float(user.get('balance')),
-                'is_verified': bool(user.get('is_verified', False))
-            })
-
-        # Sort by: commission DESC, referrals DESC
-        ranked_users.sort(
-            key=lambda x: (x['total_commission'], x['referral_count']),
-            reverse=True
-        )
-
-        # Return limited list
-        return ranked_users[:limit]
-
-    except Exception as e:
-        logger.error(f"Error in get_top_users: {e}")
-        return []
-
+        
 @staticmethod
 def update_user_ranks_batch():
     """Update all users' ranks based on total_commission."""
