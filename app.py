@@ -473,7 +473,6 @@ try:
         default_limits=["2000 per day", "500 per hour", "50 per minute"],  # Balanced limits
         strategy="moving-window",  # Better than fixed-window
         on_breach=lambda limit: current_app.logger.warning(f"Rate limit breached: {limit}"),
-        headers_enabled=True,
         fail_on_first_breach=False  # Don't crash if Redis fails
     )
     logger.info("Rate limiter initialized successfully")
@@ -632,11 +631,11 @@ class SupabaseDB:
             
             if not response.data:
                 return {
-                    'Bronze': 40,
-                    'Silver': 25, 
-                    'Gold': 20,
-                    'Platinum': 10,
-                    'Diamond': 5
+                    'bronze_percentage': 40,
+                    'silver_percentage': 25, 
+                    'gold_percentage': 20,
+                    'platinum_percentage': 10,
+                    'diamond_percentage': 5
                 }
             
             users = response.data
@@ -661,9 +660,9 @@ class SupabaseDB:
             for tier, count in tier_counts.items():
                 if total_users > 0:
                     percentage = (count / total_users) * 100
-                    tier_percentages[tier] = round(percentage, 1)
+                    tier_percentages[f'{tier.lower()}_percentage'] = round(percentage, 1)
                 else:
-                    tier_percentages[tier] = 0
+                    tier_percentages[f'{tier.lower()}_percentage'] = 0
             
             return tier_percentages
             
@@ -671,11 +670,11 @@ class SupabaseDB:
             logger.error(f"Error calculating tier distribution: {e}")
             # Return default distribution if calculation fails
             return {
-                'Bronze': 40,
-                'Silver': 25,
-                'Gold': 20,
-                'Platinum': 10,
-                'Diamond': 5
+                'bronze_percentage': 40,
+                'silver_percentage': 25,
+                'gold_percentage': 20,
+                'platinum_percentage': 10,
+                'diamond_percentage': 5
             }
         
     @staticmethod
@@ -4817,7 +4816,7 @@ def leaderboard():
                             top_users=top_users,
                             user_ranking=user_ranking,
                             current_user=current_user,
-                            tier_distribution=tier_distribution)
+                            tier_stats=tier_distribution)  # Changed to tier_stats to match template
     
     except Exception as e:
         logger.error(f"Error in leaderboard route: {e}")
@@ -4826,7 +4825,7 @@ def leaderboard():
                             top_users=[],
                             user_ranking=None,
                             current_user=current_user,
-                            tier_distribution=None)
+                            tier_stats=None)
 
 @app.route('/statistics')
 @login_required
