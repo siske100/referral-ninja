@@ -225,7 +225,8 @@
                                     
                                     {% if next_tier_requirement > 0 %}
                                         {% set progress_percentage = (user_commission / next_tier_requirement * 100) | round(1) %}
-                                        {% set progress_percentage = progress_percentage | min(100) %}
+                                        <!-- FIXED: Proper way to cap at 100 using min with a list -->
+                                        {% set progress_percentage = [progress_percentage, 100] | min %}
                                     {% else %}
                                         {% set progress_percentage = 0 %}
                                     {% endif %}
