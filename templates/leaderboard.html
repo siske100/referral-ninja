@@ -264,7 +264,13 @@
             <p class="text-muted">Live ranking of top performing referral partners</p>
             <div class="leaderboard-meta">
                 <span class="badge bg-primary-subtle text-primary p-3 fs-6">
-                    <i class="fas fa-users me-2"></i><span id="elite-performers-count">{{ top_users | length | default(0) }}</span> Active Performers
+                    <i class="fas fa-users me-2"></i><span id="elite-performers-count">
+                        {% if top_users is iterable and top_users is not string %}
+                            {{ top_users | length | default(0) }}
+                        {% else %}
+                            0
+                        {% endif %}
+                    </span> Active Performers
                 </span>
                 <span class="badge bg-success-subtle text-success p-3 fs-6 ms-2">
                     <i class="fas fa-sync-alt me-2"></i>Last Updated: <span id="last-updated">Just now</span>
@@ -488,7 +494,13 @@
             <div class="row align-items-center">
                 <div class="col-md-6">
                     <div class="results-info">
-                        Showing <strong>{{ top_users | length | default(0) }}</strong> top performers
+                        Showing <strong>
+                            {% if top_users is iterable and top_users is not string %}
+                                {{ top_users | length | default(0) }}
+                            {% else %}
+                                0
+                            {% endif %}
+                        </strong> top performers
                     </div>
                 </div>
                 <div class="col-md-6 text-md-end">
@@ -564,7 +576,7 @@
             <div class="rank-tiers-grid">
                 <!-- Bronze Tier -->
                 {% set user_rank_safe = user_ranking.user_rank | default('Bronze') if user_ranking and user_ranking is mapping else 'Bronze' %}
-                {% set tier_stats = tier_stats or {} %}
+                {% set tier_stats = tier_stats if tier_stats is mapping else {} %}
                 <div class="rank-tier-card bronze-tier {% if user_rank_safe == 'Bronze' %}current-tier{% endif %}">
                     <div class="tier-header">
                         <div class="tier-icon">
@@ -582,7 +594,9 @@
                         </div>
                         <div class="tier-stats">
                             <div class="stat">
-                                <div class="stat-value" id="bronze-tier-percentage">{{ tier_stats.get('bronze_percentage', 0) }}%</div>
+                                <div class="stat-value" id="bronze-tier-percentage">
+                                    {{ tier_stats.get('bronze_percentage', 0) if tier_stats is mapping else 0 }}%
+                                </div>
                                 <div class="stat-label">of Users</div>
                             </div>
                             <div class="stat">
@@ -629,7 +643,9 @@
                         </div>
                         <div class="tier-stats">
                             <div class="stat">
-                                <div class="stat-value" id="silver-tier-percentage">{{ tier_stats.get('silver_percentage', 0) }}%</div>
+                                <div class="stat-value" id="silver-tier-percentage">
+                                    {{ tier_stats.get('silver_percentage', 0) if tier_stats is mapping else 0 }}%
+                                </div>
                                 <div class="stat-label">of Users</div>
                             </div>
                             <div class="stat">
@@ -676,7 +692,9 @@
                         </div>
                         <div class="tier-stats">
                             <div class="stat">
-                                <div class="stat-value" id="gold-tier-percentage">{{ tier_stats.get('gold_percentage', 0) }}%</div>
+                                <div class="stat-value" id="gold-tier-percentage">
+                                    {{ tier_stats.get('gold_percentage', 0) if tier_stats is mapping else 0 }}%
+                                </div>
                                 <div class="stat-label">of Users</div>
                             </div>
                             <div class="stat">
@@ -723,7 +741,9 @@
                         </div>
                         <div class="tier-stats">
                             <div class="stat">
-                                <div class="stat-value" id="platinum-tier-percentage">{{ tier_stats.get('platinum_percentage', 0) }}%</div>
+                                <div class="stat-value" id="platinum-tier-percentage">
+                                    {{ tier_stats.get('platinum_percentage', 0) if tier_stats is mapping else 0 }}%
+                                </div>
                                 <div class="stat-label">of Users</div>
                             </div>
                             <div class="stat">
@@ -770,7 +790,9 @@
                         </div>
                         <div class="tier-stats">
                             <div class="stat">
-                                <div class="stat-value" id="diamond-tier-percentage">{{ tier_stats.get('diamond_percentage', 0) }}%</div>
+                                <div class="stat-value" id="diamond-tier-percentage">
+                                    {{ tier_stats.get('diamond_percentage', 0) if tier_stats is mapping else 0 }}%
+                                </div>
                                 <div class="stat-label">of Users</div>
                             </div>
                             <div class="stat">
