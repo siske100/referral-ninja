@@ -1,3 +1,4 @@
+
 {% extends "base.html" %}
 
 {% block title %}Leaderboard - ReferralNinja{% endblock %}
@@ -287,7 +288,7 @@
             <div class="d-md-none" id="mobile-leaderboard">
                 {% if top_users and top_users is iterable and top_users is not string %}
                     {% for user in top_users %}
-                    <div class="leaderboard-mobile-card {% if user.id == current_user.id %}current-user{% endif %}" data-user-token="{{ user.anonymous_token | default('') }}">
+                    <div class="leaderboard-mobile-card {% if user.id == current_user.id %}current-user{% endif %}" data-user-id="{{ user.id | default('') }}">
                         <div class="card-body">
                             <div class="row align-items-center">
                                 <!-- Rank -->
@@ -317,7 +318,7 @@
                                             </div>
                                             <div class="user-details">
                                                 <div class="d-flex align-items-center">
-                                                    <span class="username fw-bold">{{ user.anonymous_name | default('Performer #' ~ loop.index) }}</span>
+                                                    <span class="username fw-bold">{{ user.username | default('Unknown User') }}</span>
                                                     {% if user.id == current_user.id %}
                                                     <span class="user-badge ms-2">You</span>
                                                     {% endif %}
@@ -366,7 +367,7 @@
                         <thead class="table-dark">
                             <tr>
                                 <th class="rank-col text-center">Rank</th>
-                                <th class="user-col">Performer</th>
+                                <th class="user-col">User Profile</th>
                                 <th class="earnings-col text-end">Total Earnings</th>
                                 <th class="referrals-col text-center">Referrals</th>
                                 <th class="level-col">Performance Tier</th>
@@ -376,7 +377,7 @@
                         <tbody id="desktop-leaderboard">
                             {% if top_users and top_users is iterable and top_users is not string %}
                                 {% for user in top_users %}
-                                <tr class="leaderboard-row {% if user.id == current_user.id %}current-user{% endif %}" data-user-token="{{ user.anonymous_token | default('') }}">
+                                <tr class="leaderboard-row {% if user.id == current_user.id %}current-user{% endif %}" data-user-id="{{ user.id | default('') }}">
                                     <td class="rank-cell text-center">
                                         <div class="rank-badge rank-{{ loop.index }}">
                                             {% if loop.index == 1 %}
@@ -400,13 +401,13 @@
                                             </div>
                                             <div class="user-details">
                                                 <div class="d-flex align-items-center">
-                                                    <span class="username fw-bold">{{ user.anonymous_name | default('Performer #' ~ loop.index) }}</span>
+                                                    <span class="username fw-bold">{{ user.username | default('Unknown User') }}</span>
                                                     {% if user.id == current_user.id %}
                                                     <span class="user-badge ms-2">Your Position</span>
                                                     {% endif %}
                                                 </div>
-                                                <div class="user-id text-muted small">
-                                                    ID: {{ user.anonymous_id | default(loop.index) }}
+                                                <div class="user-contact text-muted small">
+                                                    {{ user.email | default('', true) | truncate(25) }}
                                                 </div>
                                             </div>
                                         </div>
@@ -460,10 +461,7 @@
                                         </div>
                                         {% else %}
                                         <div class="action-buttons">
-                                            <button class="btn btn-outline-primary btn-sm analyze-btn" 
-                                                    data-user-token="{{ user.anonymous_token | default('') }}"
-                                                    data-bs-toggle="tooltip" 
-                                                    title="View Performance Analysis">
+                                            <button class="btn btn-outline-primary btn-sm" onclick="analyzeUserPerformance('{{ user.id | default('') }}')" data-bs-toggle="tooltip" title="View Performance Analysis">
                                                 <i class="fas fa-chart-bar me-1"></i>Analyze
                                             </button>
                                         </div>
@@ -1369,22 +1367,13 @@ class ProfessionalLeaderboard {
             });
         });
 
-        // Performance analysis buttons using event delegation
+        // Performance analysis buttons
         document.addEventListener('click', (e) => {
-            const analyzeBtn = e.target.closest('.analyze-btn');
-            if (analyzeBtn) {
-                const userToken = analyzeBtn.dataset.userToken;
-                if (userToken) {
-                    this.analyzeUserPerformance(userToken);
-                }
+            if (e.target.closest('[onclick*="analyzeUserPerformance"]')) {
+                const userId = e.target.closest('button').getAttribute('onclick').match(/'([^']+)'/)[1];
+                this.analyzeUserPerformance(userId);
             }
         });
-
-        // Refresh button if exists
-        const refreshBtn = document.querySelector('[data-action="refresh"]');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => this.refreshLeaderboard(true));
-        }
     }
 
     initializeAnimations() {
@@ -1458,49 +1447,30 @@ class ProfessionalLeaderboard {
         this.isRefreshing = true;
         
         try {
-            // Show loading state
-            const leaderboardCard = document.querySelector('.leaderboard-card');
-            leaderboardCard.classList.add('loading');
+            // Simulate API call - replace with actual endpoint
+            await this.fetchLeaderboardData();
             
-            // Fetch updated leaderboard data
-            const response = await fetch('/api/leaderboard/refresh', {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                
-                // Update the leaderboard with new data
-                this.updateLeaderboardUI(data);
-                
-                // Update timestamp
-                this.updateLastUpdatedTime();
-                
-                if (showNotification) {
-                    this.showNotification('Leaderboard updated successfully', 'success');
-                }
-            } else {
-                throw new Error('Failed to refresh leaderboard');
+            // Update timestamp
+            this.updateLastUpdatedTime();
+            
+            if (showNotification) {
+                this.showNotification('Leaderboard updated successfully', 'success');
             }
 
         } catch (error) {
             console.error('Error refreshing leaderboard:', error);
             this.showNotification('Error refreshing leaderboard', 'error');
         } finally {
-            const leaderboardCard = document.querySelector('.leaderboard-card');
-            leaderboardCard.classList.remove('loading');
             this.isRefreshing = false;
         }
     }
 
-    updateLeaderboardUI(data) {
-        // This would update the leaderboard with new data from the server
-        // For now, we'll just update the last updated time
-        console.log('Leaderboard data updated:', data);
+    async fetchLeaderboardData() {
+        // This would be your actual API call
+        // For now, we'll simulate a network request
+        return new Promise((resolve) => {
+            setTimeout(resolve, 1000);
+        });
     }
 
     updateLastUpdatedTime() {
@@ -1529,142 +1499,51 @@ class ProfessionalLeaderboard {
         }, 120000);
     }
 
-    async analyzeUserPerformance(userToken) {
-        // Show loading state
+    analyzeUserPerformance(userId) {
+        // This would fetch user performance data from your backend
+        console.log('Analyzing user performance:', userId);
+        
+        // For demo purposes, show a modal with placeholder content
         const modalContent = `
-            <div class="text-center py-4">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
+            <div class="text-center">
+                <i class="fas fa-chart-bar fa-3x text-primary mb-3"></i>
+                <h5>Performance Analysis</h5>
+                <p class="text-muted">Detailed performance analytics for user ${userId}</p>
+                <div class="row mt-4">
+                    <div class="col-6">
+                        <div class="metric">
+                            <div class="metric-value">KES 2,450</div>
+                            <div class="metric-label">Total Earnings</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="metric">
+                            <div class="metric-value">24</div>
+                            <div class="metric-label">Referrals</div>
+                        </div>
+                    </div>
                 </div>
-                <p class="mt-3">Loading performance data...</p>
+                <div class="mt-4">
+                    <button class="btn btn-primary" onclick="leaderboard.viewDetailedAnalytics('${userId}')">
+                        <i class="fas fa-chart-line me-2"></i>View Detailed Analytics
+                    </button>
+                </div>
             </div>
         `;
         
         document.getElementById('performance-analysis-content').innerHTML = modalContent;
         
-        // Show modal immediately
+        // Show modal
         if (typeof bootstrap !== 'undefined') {
             const modal = new bootstrap.Modal(document.getElementById('performanceModal'));
             modal.show();
         }
-        
-        try {
-            // Fetch real user performance data from your API
-            const response = await fetch(`/api/user-performance/${userToken}`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                
-                // Format the data for display
-                const realContent = this.formatPerformanceData(data);
-                document.getElementById('performance-analysis-content').innerHTML = realContent;
-            } else {
-                throw new Error('Failed to load performance data');
-            }
-        } catch (error) {
-            console.error('Error fetching performance data:', error);
-            document.getElementById('performance-analysis-content').innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    Failed to load performance data. Please try again.
-                </div>
-            `;
-        }
     }
 
-    formatPerformanceData(data) {
-        // Format the performance data for display
-        return `
-            <div class="performance-analysis-content">
-                <div class="text-center mb-4">
-                    <i class="fas fa-chart-bar fa-3x text-primary mb-3"></i>
-                    <h5>Performance Analysis</h5>
-                    <p class="text-muted">Detailed performance metrics</p>
-                </div>
-                
-                <div class="row mb-4">
-                    <div class="col-md-6 mb-3">
-                        <div class="card h-100">
-                            <div class="card-body text-center">
-                                <h6 class="card-subtitle mb-2 text-muted">Total Earnings</h6>
-                                <div class="display-5 fw-bold text-success mb-2">
-                                    KES ${this.formatCurrency(data.total_commission || 0)}
-                                </div>
-                                <div class="text-muted small">Cumulative commission earned</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <div class="card h-100">
-                            <div class="card-body text-center">
-                                <h6 class="card-subtitle mb-2 text-muted">Successful Referrals</h6>
-                                <div class="display-5 fw-bold text-primary mb-2">
-                                    ${data.referral_count || 0}
-                                </div>
-                                <div class="text-muted small">Total completed referrals</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                ${data.performance_metrics ? `
-                <div class="performance-details mt-4">
-                    <h6>Additional Metrics:</h6>
-                    <div class="row">
-                        ${data.performance_metrics.conversion_rate ? `
-                        <div class="col-6 mb-2">
-                            <span class="text-muted">Conversion Rate:</span>
-                            <span class="fw-bold ms-2">${data.performance_metrics.conversion_rate}%</span>
-                        </div>
-                        ` : ''}
-                        
-                        ${data.performance_metrics.avg_commission ? `
-                        <div class="col-6 mb-2">
-                            <span class="text-muted">Avg Commission:</span>
-                            <span class="fw-bold ms-2">KES ${this.formatCurrency(data.performance_metrics.avg_commission)}</span>
-                        </div>
-                        ` : ''}
-                        
-                        ${data.performance_metrics.this_month_referrals ? `
-                        <div class="col-6 mb-2">
-                            <span class="text-muted">This Month:</span>
-                            <span class="fw-bold ms-2">${data.performance_metrics.this_month_referrals} referrals</span>
-                        </div>
-                        ` : ''}
-                        
-                        ${data.performance_metrics.active_since ? `
-                        <div class="col-6 mb-2">
-                            <span class="text-muted">Active Since:</span>
-                            <span class="fw-bold ms-2">${data.performance_metrics.active_since}</span>
-                        </div>
-                        ` : ''}
-                    </div>
-                </div>
-                ` : ''}
-                
-                ${data.user_rank ? `
-                <div class="tier-info mt-4">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <span class="text-muted">Current Tier:</span>
-                        <span class="tier-badge tier-${(data.user_rank || 'Bronze').toLowerCase()}">
-                            ${data.user_rank}
-                        </span>
-                    </div>
-                </div>
-                ` : ''}
-            </div>
-        `;
-    }
-
-    formatCurrency(amount) {
-        // Format currency with commas
-        return parseFloat(amount).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+    viewDetailedAnalytics(userId) {
+        // Navigate to detailed analytics page or show more data
+        this.showNotification('Opening detailed analytics dashboard...', 'info');
+        // window.location.href = `/analytics/user/${userId}`;
     }
 
     showNotification(message, type = 'info') {
@@ -1674,7 +1553,7 @@ class ProfessionalLeaderboard {
         
         // Create notification element
         const notification = document.createElement('div');
-        notification.className = `professional-notification alert alert-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'} alert-dismissible fade show`;
+        notification.className = `professional-notification alert alert-${type === 'error' ? 'danger' : 'success'} alert-dismissible fade show`;
         notification.style.cssText = `
             position: fixed;
             top: 20px;
@@ -1686,7 +1565,7 @@ class ProfessionalLeaderboard {
             border: none;
         `;
         
-        const icon = type === 'error' ? 'exclamation-triangle' : type === 'success' ? 'check-circle' : 'info-circle';
+        const icon = type === 'error' ? 'exclamation-triangle' : 'check-circle';
         notification.innerHTML = `
             <div class="d-flex align-items-center">
                 <i class="fas fa-${icon} me-2"></i>
@@ -1782,6 +1661,7 @@ class ProfessionalLeaderboard {
         }
     }
 
+    // New method to update tier statistics
     updateTierStats(rankingData) {
         if (!rankingData || !rankingData.tier_stats || typeof rankingData.tier_stats !== 'object') return;
 
@@ -1813,6 +1693,13 @@ class ProfessionalLeaderboard {
         if (this.autoRefreshInterval) {
             clearInterval(this.autoRefreshInterval);
         }
+    }
+}
+
+// Global functions for onclick handlers
+function analyzeUserPerformance(userId) {
+    if (window.leaderboard) {
+        window.leaderboard.analyzeUserPerformance(userId);
     }
 }
 
