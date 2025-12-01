@@ -1098,46 +1098,118 @@ class SupabaseDB:
             return SupabaseDB.handle_db_error("get_recent_activity", e, False)
 
     @staticmethod
-    def get_top_users(limit=50):
-        try:
-            response = supabase.table('users') \
-                .select('*') \
-                .order('total_commission', desc=True) \
-                .limit(limit) \
-                .execute()
+def get_top_users(limit=50):
+    """Get top users ranked by total_commission and referral_count."""
+    try:
+        # Fetch all users
+        response = supabase.table('users') \
+            .select(
+                'id, username, email, phone, name, total_commission, referral_count, '
+                'user_rank, balance, is_verified'
+            ).execute()
 
-            data = getattr(response, "data", None)
+        data = getattr(response, "data", None)
 
-            # Validate response
-            if not data or not isinstance(data, list):
-                logger.error(f"get_top_users returned invalid data: {data}")
-                return []
+        if not isinstance(data, list):
+            logger.error(f"Supabase returned invalid user list: {data}")
+            return []
 
-            safe_users = []
+        ranked_users = []
 
-            for user in data:
-                if not isinstance(user, dict):
+        for user in data:
+            if not isinstance(user, dict):
+                continue
+
+            # Safe numeric extraction
+            def safe_float(value, default=0.0):
+                try:
+                    return float(value) if value not in (None, "") else default
+                except (ValueError, TypeError):
+                    return default
+
+            def safe_int(value, default=0):
+                try:
+                    return int(value) if value not in (None, "") else default
+                except (ValueError, TypeError):
+                    return default
+
+            ranked_users.append({
+                'id': user.get('id'),
+                'username': user.get('username') or 'Unknown User',
+                'email': user.get('email', '') or '',
+                'phone': user.get('phone', '') or '',
+                'name': user.get('name', '') or '',
+                'total_commission': safe_float(user.get('total_commission')),
+                'referral_count': safe_int(user.get('referral_count')),
+                'user_rank': user.get('user_rank', 'Bronze'),
+                'balance': safe_float(user.get('balance')),
+                'is_verified': bool(user.get('is_verified', False))
+            })
+
+        # Sort by: commission DESC, referrals DESC
+        ranked_users.sort(
+            key=lambda x: (x['total_commission'], x['referral_count']),
+            reverse=True
+        )
+
+        # Return limited list
+        return ranked_users[:limit]
+
+    except Exception as e:
+        logger.error(f"Error in get_top_users: {e}")
+        return []
+
+@staticmethod
+def update_user_ranks_batch():
+    """Update all users' ranks based on total_commission."""
+    try:
+        users = SupabaseDB.get_all_users()
+        if not users or not isinstance(users, list):
+            logger.error("No users found to update ranks.")
+            return False
+
+        for user_data in users:
+            if not isinstance(user_data, dict):
+                continue
+
+            user_id = user_data.get('id')
+            if not user_id:
+                continue
+
+            # Safe conversion of total_commission
+            try:
+                commission = float(user_data.get('total_commission', 0) or 0)
+            except (ValueError, TypeError):
+                commission = 0.0
+
+            # Determine new rank
+            if commission >= 70000:
+                new_rank = 'Diamond'
+            elif commission >= 30000:
+                new_rank = 'Platinum'
+            elif commission >= 15000:
+                new_rank = 'Gold'
+            elif commission >= 5000:
+                new_rank = 'Silver'
+            else:
+                new_rank = 'Bronze'
+
+            current_rank = user_data.get('user_rank', 'Bronze')
+
+            # Update if rank has changed
+            if current_rank != new_rank:
+                try:
+                    SupabaseDB.update_user(user_id, {'user_rank': new_rank})
+                    logger.info(f"Updated user {user_id} from {current_rank} to {new_rank}")
+                except Exception as update_error:
+                    logger.error(f"Failed to update user {user_id}: {update_error}")
                     continue
 
-                # Normalize numeric fields
-                for field in ['total_commission', 'referral_count', 'balance']:
-                    try:
-                        user[field] = float(user.get(field, 0)) if field != 'referral_count' else int(user.get(field, 0))
-                    except:
-                        user[field] = 0
+        return True
 
-                # Defaults for strings
-                user.setdefault('user_rank', 'Bronze')
-                user.setdefault('username', 'Unknown User')
-                user.setdefault('email', '')
-
-                safe_users.append(user)
-
-            return safe_users
-
-        except Exception as e:
-            logger.error(f"Error in get_top_users: {e}")
-            return []
+    except Exception as e:
+        logger.error(f"Error updating user ranks batch: {e}")
+        return False
 
 
     @staticmethod
@@ -3100,67 +3172,81 @@ def extract_mpesa_code(message):
     return 'PENDING'
 
 def get_user_ranking(user_id):
+    """Calculate user's ranking based on commission + referrals."""
     try:
+        # Fetch the user
         user = SupabaseDB.get_user_by_id(user_id)
-        if not user or not isinstance(user, dict):
+        if not user:
             return None
-
-        # Normalize the current user's numbers
-        try:
-            user_total_commission = float(user.get("total_commission", 0))
-        except:
-            user_total_commission = 0
 
         # Fetch all users
-        all_users = SupabaseDB.get_all_users()
-        if not isinstance(all_users, list):
-            logger.error(f"get_all_users returned: {type(all_users)} → {all_users}")
+        users = SupabaseDB.get_all_users()
+        if not users or not isinstance(users, list):
             return None
 
-        safe_users = []
+        ranked_users = []
 
-        for u in all_users:
-            if not isinstance(u, dict) or not u.get("id"):
+        for u in users:
+            if not isinstance(u, dict):
                 continue
 
-            # Normalize commission
+            # Safe numeric conversions
             try:
-                u["total_commission"] = float(u.get("total_commission", 0))
+                commission = float(u.get("total_commission", 0)) or 0.0
             except:
-                u["total_commission"] = 0
+                commission = 0.0
 
-            safe_users.append(u)
+            try:
+                referrals = int(u.get("referral_count", 0)) or 0
+            except:
+                referrals = 0
 
-        if not safe_users:
-            return None
+            ranked_users.append({
+                "id": str(u.get("id")),
+                "username": u.get("username", "Unknown User"),
+                "total_commission": commission,
+                "referral_count": referrals,
+                "user_rank": u.get("user_rank", "Bronze")
+            })
 
-        # Sort descending
-        safe_users.sort(key=lambda x: x['total_commission'], reverse=True)
+        # Sort by commission then referrals
+        ranked_users.sort(
+            key=lambda x: (x["total_commission"], x["referral_count"], x["id"]),
+            reverse=True
+        )
 
-        # Find position
+        # Find user position
         position = next(
-            (i + 1 for i, u in enumerate(safe_users) if str(u["id"]) == str(user_id)),
+            (index + 1 for index, ru in enumerate(ranked_users)
+             if ru["id"] == str(user_id)),
             None
         )
 
-        if position is None:
+        if not position:
             return None
 
-        total_users = len(safe_users)
-        percentile = round((total_users - position) / total_users * 100, 1)
+        total_users = len(ranked_users)
+
+        # Correct percentile calculation
+        percentile = round(((total_users - position) / total_users) * 100, 1)
+
+        # Safe user attributes
+        safe_commission = float(getattr(user, "total_commission", 0) or 0.0)
+        safe_referrals = int(getattr(user, "referral_count", 0) or 0)
 
         return {
             "position": position,
             "total_users": total_users,
-            "user_rank": user.get("user_rank", "Bronze"),
-            "total_commission": user_total_commission,
-            "referral_count": int(user.get("referral_count", 0)),
+            "user_rank": getattr(user, "user_rank", "Bronze"),
+            "total_commission": safe_commission,
+            "referral_count": safe_referrals,
             "percentile": percentile
         }
 
     except Exception as e:
-        logger.error(f"Ranking error: {e}")
+        logger.error(f"Error in get_user_ranking: {e}")
         return None
+
 
 
 # Updated send_sms function to use Celcom SMS
@@ -4775,104 +4861,75 @@ def leaderboard():
     if not current_user.is_verified:
         flash('Please complete payment verification to view leaderboard.', 'warning')
         return redirect(url_for('account_activation'))
-    
+
     try:
-        # Get top 50 users for the leaderboard
+        # Fetch top users
         top_users_data = SupabaseDB.get_top_users(limit=50)
         top_users = []
-        
-        # Safely create User objects and ensure numeric types
-        if top_users_data and isinstance(top_users_data, list):
-            for user_data in top_users_data:
-                try:
-                    if not isinstance(user_data, dict):
-                        continue
-                        
-                    # Ensure numeric fields are properly typed and safe
-                    for field in ['total_commission', 'referral_count', 'balance']:
-                        if field in user_data:
-                            try:
-                                user_data[field] = float(user_data[field]) if user_data[field] is not None else 0.0
-                            except (ValueError, TypeError):
-                                user_data[field] = 0.0
-                    
-                    # Ensure string fields have defaults
-                    user_data.setdefault('username', 'Unknown User')
-                    user_data.setdefault('email', '')
-                    user_data.setdefault('user_rank', 'Bronze')
-                    
-                    user = User(user_data)
-                    top_users.append(user)
-                except Exception as e:
-                    logger.error(f"Error creating user object: {e}")
-                    continue
-        else:
-            logger.error(f"top_users_data is not a list: {type(top_users_data)}")
-        
-        # Get current user's ranking with proper error handling
+
+        for user_data in top_users_data:
+            try:
+                # Ensure all required fields exist
+                user_data.setdefault('username', 'Unknown User')
+                user_data.setdefault('email', '')
+                user_data.setdefault('user_rank', 'Bronze')
+                user_data.setdefault('balance', 0.0)
+                user_data.setdefault('referral_count', 0)
+                user_data.setdefault('total_commission', 0.0)
+
+                # Create User object for template
+                top_users.append(User(user_data))
+            except Exception as e:
+                logger.error(f"Error creating User object: {e}")
+                continue
+
+        # Get current user's ranking
         user_ranking = get_user_ranking(current_user.id)
-        
-        # Ensure user_ranking has proper types and handle None case
-        if user_ranking and isinstance(user_ranking, dict):
-            user_ranking = {
-                'position': int(user_ranking.get('position', 0)),
-                'total_users': int(user_ranking.get('total_users', 0)),
-                'user_rank': user_ranking.get('user_rank', 'Bronze'),
-                'total_commission': float(user_ranking.get('total_commission', 0)),
-                'referral_count': int(user_ranking.get('referral_count', 0)),
-                'percentile': float(user_ranking.get('percentile', 0))
-            }
-        else:
-            user_ranking = None
-        
-        # Get tier distribution from database
+
+        # Get tier distribution
         tier_distribution = SupabaseDB.get_tier_distribution()
-        
-        # Calculate user's next tier requirements
-        if user_ranking and isinstance(user_ranking, dict):
-            user_rank_safe = user_ranking.get('user_rank', 'Bronze')
-            user_commission = user_ranking.get('total_commission', 0)
-            
-            # Define tier requirements
+
+        # Calculate next tier progress if applicable
+        if user_ranking:
+            user_rank = user_ranking.get('user_rank', 'Bronze')
+            user_commission = float(user_ranking.get('total_commission', 0))
+
             tier_requirements = {
                 'Bronze': 0,
                 'Silver': 5000,
-                'Gold': 15000, 
+                'Gold': 15000,
                 'Platinum': 30000,
                 'Diamond': 70000
             }
-            
-            # Calculate progress to next tier
-            if user_rank_safe != 'Diamond':
-                next_tier_requirement = tier_requirements.get(user_rank_safe, 70000)
-                if next_tier_requirement > 0:
-                    progress_percentage = (user_commission / next_tier_requirement * 100)
-                    progress_percentage = min(progress_percentage, 100)
-                else:
-                    progress_percentage = 0
-                
+
+            if user_rank != 'Diamond':
+                next_tier = tier_requirements.get(user_rank, 70000)
+                progress_percentage = min((user_commission / next_tier) * 100, 100) if next_tier > 0 else 0
                 user_ranking['next_tier_progress'] = round(progress_percentage, 1)
-                user_ranking['next_tier_requirement'] = next_tier_requirement
+                user_ranking['next_tier_requirement'] = next_tier
             else:
                 user_ranking['next_tier_progress'] = 100
-                user_ranking['next_tier_requirement'] = 70000
+                user_ranking['next_tier_requirement'] = tier_requirements['Diamond']
 
-        return render_template('leaderboard.html',
-                            top_users=top_users,
-                            user_ranking=user_ranking,
-                            current_user=current_user,
-                            tier_stats=tier_distribution)
-    
+        return render_template(
+            'leaderboard.html',
+            top_users=top_users,
+            user_ranking=user_ranking,
+            current_user=current_user,
+            tier_stats=tier_distribution
+        )
+
     except Exception as e:
-        logger.error(f"Error in leaderboard route: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Error in leaderboard route: {e}", exc_info=True)
         flash('Error loading leaderboard. Please try again.', 'error')
-        return render_template('leaderboard.html',
-                            top_users=[],
-                            user_ranking=None,
-                            current_user=current_user,
-                            tier_stats=None)
+        return render_template(
+            'leaderboard.html',
+            top_users=[],
+            user_ranking=None,
+            current_user=current_user,
+            tier_stats=None
+        )
+
 
 @app.route('/statistics')
 @login_required
