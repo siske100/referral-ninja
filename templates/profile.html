@@ -274,7 +274,8 @@
                     
                     <div class="progress mb-2" style="height: 8px;">
                         {% set progress = (commission / next_rank_threshold * 100) if commission <= next_rank_threshold else 100 %}
-                        <div class="progress-bar bg-gradient-rank" style="width: {{ progress|min(100) }}%"></div>
+                        {% set progress_percent = [progress, 100]|min %}
+                        <div class="progress-bar bg-gradient-rank" style="width: {{ progress_percent }}%"></div>
                     </div>
                     
                     <div class="d-flex justify-content-between text-sm">
