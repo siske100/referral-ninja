@@ -1,4 +1,3 @@
-
 {% extends "base.html" %}
 
 {% block title %}Withdraw Earnings - ReferralNinja{% endblock %}
@@ -111,24 +110,15 @@
 
                     <!-- Withdrawal Form -->
                     <form method="POST" action="{{ url_for('withdraw') }}" class="withdraw-form" id="withdrawalForm">
-                        <!-- Email Verification Notice -->
-                        <div class="email-verification-notice mb-4">
-                            <div class="d-flex align-items-start">
-                                <i class="fas fa-envelope text-primary me-3 mt-1"></i>
-                                <div>
-                                    <h6 class="text-dark fw-medium mb-1">Email Verification Required</h6>
-                                    <p class="text-muted small mb-0">
-                                        After submitting, a 6-digit verification code will be sent to your email.
-                                        You must enter this code to complete the withdrawal.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Amount Section -->
-                        <div class="form-section mb-4">
+                        <!-- Step 1: Amount Section -->
+                        <div class="form-section mb-4 step-section active-step" data-step="1">
                             <div class="section-header mb-3">
-                                <h6 class="text-dark fw-medium"><i class="fas fa-money-bill me-2"></i>Withdrawal Amount</h6>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="text-dark fw-medium mb-0">
+                                        <i class="fas fa-money-bill me-2"></i>Step 1: Withdrawal Amount
+                                    </h6>
+                                    <span class="step-badge">Step 1 of 3</span>
+                                </div>
                             </div>
                             
                             <div class="mb-3">
@@ -139,10 +129,9 @@
                                            min="400" max="{{ current_user.balance }}" step="10" required
                                            placeholder="Enter amount" autofocus>
                                 </div>
-                            </div>
-                            
-                            <div class="form-text mb-3">
-                                <i class="fas fa-info-circle me-1"></i>Minimum withdrawal: KES 400
+                                <div class="form-text mb-3">
+                                    <i class="fas fa-info-circle me-1"></i>Minimum withdrawal: KES 400
+                                </div>
                             </div>
                             
                             <!-- Quick Amount Buttons -->
@@ -168,12 +157,23 @@
                                     {% endif %}
                                 </div>
                             </div>
+
+                            <div class="step-actions mt-4">
+                                <button type="button" class="btn btn-primary next-step-btn" data-next-step="2">
+                                    Next: Enter Phone Number <i class="fas fa-arrow-right ms-2"></i>
+                                </button>
+                            </div>
                         </div>
 
-                        <!-- Phone Number Section (Auto-filled from database) -->
-                        <div class="form-section mb-4">
+                        <!-- Step 2: Phone Number Section -->
+                        <div class="form-section mb-4 step-section" data-step="2" style="display: none;">
                             <div class="section-header mb-3">
-                                <h6 class="text-dark fw-medium"><i class="fas fa-mobile-alt me-2"></i>M-Pesa Details</h6>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="text-dark fw-medium mb-0">
+                                        <i class="fas fa-mobile-alt me-2"></i>Step 2: M-Pesa Details
+                                    </h6>
+                                    <span class="step-badge">Step 2 of 3</span>
+                                </div>
                             </div>
                             
                             <div class="mb-3">
@@ -192,38 +192,110 @@
                                 </div>
                             </div>
                             
-                            <div class="form-text">
+                            <div class="form-text mb-3">
                                 <i class="fas fa-shield-alt me-1"></i>We'll send the money securely to this number
                             </div>
-                        </div>
 
-                        <!-- Confirmation Checkbox -->
-                        <div class="terms-card mb-4">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="withdrawal_terms" name="withdrawal_terms" required>
-                                <label class="form-check-label text-dark" for="withdrawal_terms">
-                                    <strong>I confirm that:</strong>
-                                    <ul class="mb-0 mt-2">
-                                        <li>The M-Pesa number displayed above is correct</li>
-                                        <li>I have access to <strong>{{ user_email }}</strong> to receive verification code</li>
-                                        <li>I understand funds will be sent to the phone number shown above</li>
-                                    </ul>
-                                </label>
+                            <div class="step-actions mt-4 d-flex justify-content-between">
+                                <button type="button" class="btn btn-outline-secondary prev-step-btn" data-prev-step="1">
+                                    <i class="fas fa-arrow-left me-2"></i>Back to Amount
+                                </button>
+                                <button type="button" class="btn btn-primary next-step-btn" data-next-step="3">
+                                    Next: Confirmation <i class="fas fa-arrow-right ms-2"></i>
+                                </button>
                             </div>
                         </div>
 
-                        <!-- Submit Button -->
-                        <button type="submit" class="btn btn-primary w-100 py-3 withdraw-submit-btn" 
-                                id="submitButton" {% if current_user.balance < 400 or not user_email %}disabled{% endif %}>
-                            <i class="fas fa-paper-plane me-2"></i>
-                            {% if current_user.balance < 400 %}
-                                <span>Insufficient Balance</span>
-                            {% elif not user_email %}
-                                <span>Add Email to Withdraw</span>
-                            {% else %}
-                                <span>Submit & Send Verification Code</span>
-                            {% endif %}
-                        </button>
+                        <!-- Step 3: Confirmation Section -->
+                        <div class="form-section mb-4 step-section" data-step="3" style="display: none;">
+                            <div class="section-header mb-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="text-dark fw-medium mb-0">
+                                        <i class="fas fa-check-circle me-2"></i>Step 3: Confirmation
+                                    </h6>
+                                    <span class="step-badge">Step 3 of 3</span>
+                                </div>
+                            </div>
+
+                            <!-- Summary Card -->
+                            <div class="summary-card mb-4">
+                                <div class="card border">
+                                    <div class="card-body">
+                                        <h6 class="card-title text-dark fw-medium mb-3">Withdrawal Summary</h6>
+                                        <div class="summary-details">
+                                            <div class="summary-item d-flex justify-content-between mb-2">
+                                                <span class="text-muted">Amount:</span>
+                                                <span class="fw-bold text-dark" id="summaryAmount">KES 0.00</span>
+                                            </div>
+                                            <div class="summary-item d-flex justify-content-between mb-2">
+                                                <span class="text-muted">Recipient:</span>
+                                                <span class="fw-bold text-dark" id="summaryPhone">{{ user_phone_formatted }}</span>
+                                            </div>
+                                            <div class="summary-item d-flex justify-content-between mb-2">
+                                                <span class="text-muted">Fee:</span>
+                                                <span class="fw-bold text-success">KES 0.00</span>
+                                            </div>
+                                            <div class="summary-item d-flex justify-content-between mb-2">
+                                                <span class="text-muted">Total to Receive:</span>
+                                                <span class="fw-bold text-success" id="summaryTotal">KES 0.00</span>
+                                            </div>
+                                            <div class="summary-item d-flex justify-content-between">
+                                                <span class="text-muted">Verification Email:</span>
+                                                <span class="fw-bold text-dark">{{ user_email }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Confirmation Checkbox -->
+                            <div class="terms-card mb-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="withdrawal_terms" name="withdrawal_terms" required>
+                                    <label class="form-check-label text-dark" for="withdrawal_terms">
+                                        <strong>I confirm that:</strong>
+                                        <ul class="mb-0 mt-2">
+                                            <li>The M-Pesa number shown above is correct and belongs to me</li>
+                                            <li>I have access to <strong>{{ user_email }}</strong> to receive verification code</li>
+                                            <li>I understand funds will be sent to the phone number shown above</li>
+                                            <li>I am not attempting to withdraw funds obtained fraudulently</li>
+                                        </ul>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Email Verification Notice -->
+                            <div class="email-verification-notice mb-4">
+                                <div class="d-flex align-items-start">
+                                    <i class="fas fa-envelope text-primary me-3 mt-1"></i>
+                                    <div>
+                                        <h6 class="text-dark fw-medium mb-1">Email Verification Required</h6>
+                                        <p class="text-muted small mb-0">
+                                            After submitting, a 6-digit verification code will be sent to:
+                                            <strong>{{ user_email }}</strong>.
+                                            You must enter this code on the next page to complete the withdrawal.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="step-actions mt-4 d-flex justify-content-between">
+                                <button type="button" class="btn btn-outline-secondary prev-step-btn" data-prev-step="2">
+                                    <i class="fas fa-arrow-left me-2"></i>Back to Phone Number
+                                </button>
+                                <button type="submit" class="btn btn-success submit-final-btn" 
+                                        id="submitButton" {% if current_user.balance < 400 or not user_email %}disabled{% endif %}>
+                                    <i class="fas fa-paper-plane me-2"></i>
+                                    {% if current_user.balance < 400 %}
+                                        <span>Insufficient Balance</span>
+                                    {% elif not user_email %}
+                                        <span>Add Email to Withdraw</span>
+                                    {% else %}
+                                        <span>Submit & Send Verification Code</span>
+                                    {% endif %}
+                                </button>
+                            </div>
+                        </div>
                     </form>
 
                     <div class="text-center mt-4">
@@ -247,31 +319,38 @@
                 </div>
                 <div class="card-body p-3">
                     <div class="status-timeline">
-                        <div class="status-item active">
+                        <div class="status-item active" data-step="1">
                             <div class="status-dot bg-primary border-primary"></div>
                             <div class="status-content">
                                 <h6 class="mb-1">Step 1: Enter Amount</h6>
                                 <p class="text-muted small mb-0">Enter the amount you want to withdraw</p>
                             </div>
                         </div>
-                        <div class="status-item">
+                        <div class="status-item" data-step="2">
                             <div class="status-dot bg-light border"></div>
                             <div class="status-content">
-                                <h6 class="mb-1">Step 2: Verify Phone</h6>
-                                <p class="text-muted small mb-0">Phone number auto-filled from your profile</p>
+                                <h6 class="mb-1">Step 2: Enter Phone Number</h6>
+                                <p class="text-muted small mb-0">Enter or confirm your M-Pesa number</p>
                             </div>
                         </div>
-                        <div class="status-item">
+                        <div class="status-item" data-step="3">
                             <div class="status-dot bg-light border"></div>
                             <div class="status-content">
-                                <h6 class="mb-1">Step 3: Email Verification</h6>
+                                <h6 class="mb-1">Step 3: Confirmation</h6>
+                                <p class="text-muted small mb-0">Review details and accept terms</p>
+                            </div>
+                        </div>
+                        <div class="status-item" data-step="4">
+                            <div class="status-dot bg-light border"></div>
+                            <div class="status-content">
+                                <h6 class="mb-1">Step 4: Email Verification</h6>
                                 <p class="text-muted small mb-0">Enter 6-digit code sent to your email</p>
                             </div>
                         </div>
-                        <div class="status-item">
+                        <div class="status-item" data-step="5">
                             <div class="status-dot bg-light border"></div>
                             <div class="status-content">
-                                <h6 class="mb-1">Step 4: Funds Sent</h6>
+                                <h6 class="mb-1">Step 5: Funds Sent</h6>
                                 <p class="text-muted small mb-0">Money sent to your registered phone</p>
                             </div>
                         </div>
@@ -473,6 +552,16 @@
     background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
 }
 
+/* Step Badge */
+.step-badge {
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
 /* Email Verification Notice */
 .email-verification-notice {
     background: rgba(52, 152, 219, 0.1);
@@ -495,6 +584,22 @@
 
 .card-header {
     border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+/* Summary Card */
+.summary-card .card {
+    border: 1px solid #e3f2fd;
+    background: #f8fdff;
+}
+
+.summary-card .card-title {
+    color: #1976d2;
+    border-bottom: 1px solid #e3f2fd;
+    padding-bottom: 0.75rem;
+}
+
+.summary-details {
+    font-size: 0.95rem;
 }
 
 /* Balance Hero */
@@ -537,6 +642,12 @@
     background: #f8f9fa;
     border-radius: 8px;
     border-left: 4px solid #3498db;
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .section-header h6 {
@@ -575,6 +686,15 @@
 .form-label {
     font-weight: 500;
     margin-bottom: 0.5rem;
+}
+
+/* Step Actions */
+.step-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e9ecef;
+    margin-top: 1.5rem;
 }
 
 /* Quick Amounts */
@@ -656,6 +776,7 @@
     font-weight: 500;
     transition: all 0.3s ease;
     border: 1px solid transparent;
+    padding: 0.75rem 1.5rem;
 }
 
 .btn-primary {
@@ -676,6 +797,17 @@
     transform: none;
 }
 
+.btn-success {
+    background: #27ae60;
+    border-color: #27ae60;
+}
+
+.btn-success:hover:not(:disabled) {
+    background: #219653;
+    border-color: #219653;
+    transform: translateY(-1px);
+}
+
 .btn-outline-primary {
     border: 1px solid #3498db;
     color: #3498db;
@@ -688,8 +820,21 @@
     transform: translateY(-1px);
 }
 
-.withdraw-submit-btn {
+.btn-outline-secondary {
+    border: 1px solid #6c757d;
+    color: #6c757d;
+    background: transparent;
+}
+
+.btn-outline-secondary:hover {
+    background: #6c757d;
+    color: white;
+    transform: translateY(-1px);
+}
+
+.withdraw-submit-btn, .submit-final-btn {
     font-size: 1rem;
+    padding: 0.875rem 2rem;
 }
 
 /* Status Timeline */
@@ -702,6 +847,7 @@
     align-items: flex-start;
     margin-bottom: 1.5rem;
     position: relative;
+    transition: all 0.3s ease;
 }
 
 .status-item:last-child {
@@ -717,11 +863,13 @@
     margin-top: 0.2rem;
     flex-shrink: 0;
     z-index: 2;
+    transition: all 0.3s ease;
 }
 
 .status-item.active .status-dot {
     background: #3498db;
     border-color: #3498db;
+    box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.2);
 }
 
 .status-item::after {
@@ -921,6 +1069,15 @@
         margin-bottom: 0.5rem;
     }
     
+    .step-actions {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .step-actions .btn {
+        width: 100%;
+    }
+    
     .withdrawal-actions .btn {
         font-size: 0.8rem;
         padding: 0.25rem 0.5rem;
@@ -947,23 +1104,30 @@
 }
 
 /* Animations */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.card {
-    animation: fadeIn 0.5s ease-out;
-}
-
 @keyframes pulse {
     0% { transform: scale(1); }
     50% { transform: scale(1.02); }
     100% { transform: scale(1); }
 }
 
-.withdraw-submit-btn:not(:disabled):hover {
+.submit-final-btn:not(:disabled):hover {
     animation: pulse 2s infinite;
+}
+
+/* Step Navigation Animation */
+.step-section {
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from { 
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 </style>
 
@@ -977,10 +1141,102 @@ document.addEventListener('DOMContentLoaded', function() {
     const withdrawalForm = document.getElementById('withdrawalForm');
     const userEmail = '{{ user_email }}';
     
+    // Summary elements
+    const summaryAmount = document.getElementById('summaryAmount');
+    const summaryPhone = document.getElementById('summaryPhone');
+    const summaryTotal = document.getElementById('summaryTotal');
+    
     // Auto-focus on amount input
     if (amountInput) {
         amountInput.focus();
     }
+    
+    // Step navigation
+    let currentStep = 1;
+    
+    // Show step function
+    function showStep(stepNumber) {
+        // Hide all steps
+        document.querySelectorAll('.step-section').forEach(section => {
+            section.style.display = 'none';
+        });
+        
+        // Show the selected step
+        const stepSection = document.querySelector(`.step-section[data-step="${stepNumber}"]`);
+        if (stepSection) {
+            stepSection.style.display = 'block';
+            currentStep = stepNumber;
+            
+            // Update timeline
+            updateTimeline(stepNumber);
+        }
+    }
+    
+    // Update timeline function
+    function updateTimeline(activeStep) {
+        document.querySelectorAll('.status-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        
+        // Mark all steps up to and including the active one as active
+        for (let i = 1; i <= activeStep; i++) {
+            const timelineItem = document.querySelector(`.status-item[data-step="${i}"]`);
+            if (timelineItem) {
+                timelineItem.classList.add('active');
+            }
+        }
+    }
+    
+    // Next step buttons
+    document.querySelectorAll('.next-step-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const nextStep = parseInt(this.getAttribute('data-next-step'));
+            
+            // Validate current step before proceeding
+            if (currentStep === 1) {
+                const amount = parseFloat(amountInput.value) || 0;
+                const balance = {{ current_user.balance }};
+                
+                if (!amount || amount < 400) {
+                    showAlert('Please enter a valid amount (minimum KES 400)', 'error');
+                    amountInput.focus();
+                    return;
+                }
+                
+                if (amount > balance) {
+                    showAlert('Amount cannot exceed your available balance', 'error');
+                    amountInput.focus();
+                    return;
+                }
+                
+                // Update summary
+                summaryAmount.textContent = 'KES ' + amount.toFixed(2);
+                summaryTotal.textContent = 'KES ' + amount.toFixed(2);
+            }
+            
+            if (currentStep === 2) {
+                const phoneValue = phoneInput.value.replace(/\D/g, '');
+                if (!phoneValue || phoneValue.length < 9 || phoneValue.length > 12) {
+                    showAlert('Please enter a valid Kenyan phone number (9-12 digits)', 'error');
+                    phoneInput.focus();
+                    return;
+                }
+                
+                // Update summary
+                summaryPhone.textContent = phoneInput.value;
+            }
+            
+            showStep(nextStep);
+        });
+    });
+    
+    // Previous step buttons
+    document.querySelectorAll('.prev-step-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const prevStep = parseInt(this.getAttribute('data-prev-step'));
+            showStep(prevStep);
+        });
+    });
     
     // Edit phone number button
     if (editPhoneBtn && phoneInput) {
@@ -989,8 +1245,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Enable editing
                 phoneInput.readOnly = false;
                 phoneInput.removeAttribute('readonly');
-                phoneInput.classList.remove('form-control-plaintext');
-                phoneInput.classList.add('form-control');
                 phoneInput.focus();
                 editPhoneBtn.innerHTML = '<i class="fas fa-save"></i>';
                 editPhoneBtn.classList.remove('btn-outline-secondary');
@@ -999,13 +1253,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Save and make read-only again
                 phoneInput.readOnly = true;
                 phoneInput.setAttribute('readonly', true);
-                phoneInput.classList.add('form-control-plaintext');
-                phoneInput.classList.remove('form-control');
                 editPhoneBtn.innerHTML = '<i class="fas fa-edit"></i>';
                 editPhoneBtn.classList.remove('btn-outline-success');
                 editPhoneBtn.classList.add('btn-outline-secondary');
             }
-            updateSubmitButton();
         });
     }
     
@@ -1015,7 +1266,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const amount = this.getAttribute('data-amount');
             amountInput.value = amount;
             amountInput.focus();
-            updateSubmitButton();
             
             // Add visual feedback
             this.style.background = '#3498db';
@@ -1036,8 +1286,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Amount validation
     if (amountInput) {
         amountInput.addEventListener('input', function() {
-            updateSubmitButton();
-            
             // Reset quick amount buttons when typing manually
             document.querySelectorAll('.quick-amount-btn').forEach(btn => {
                 btn.style.background = 'white';
@@ -1099,7 +1347,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Terms agreement
     if (termsCheckbox) {
-        termsCheckbox.addEventListener('change', updateSubmitButton);
+        termsCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                submitButton.disabled = false;
+            } else {
+                submitButton.disabled = true;
+            }
+        });
     }
     
     // Form submission
@@ -1126,23 +1380,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // Remove spaces from phone number before submission
-            if (phoneInput) {
-                phoneInput.value = phoneInput.value.replace(/\s/g, '');
+            // Validate phone number
+            const phoneValue = phoneInput.value.replace(/\s/g, '');
+            const cleanPhone = phoneValue.replace(/\D/g, '');
+            if (!cleanPhone || cleanPhone.length < 9 || cleanPhone.length > 12) {
+                e.preventDefault();
+                showAlert('Please enter a valid Kenyan phone number (9-12 digits)', 'error');
+                return;
             }
             
-            // Validate phone number format if edited
-            if (!phoneInput.readOnly) {
-                const phoneValue = phoneInput.value.replace(/\D/g, '');
-                if (phoneValue.length < 9 || phoneValue.length > 12) {
-                    e.preventDefault();
-                    showAlert('Please enter a valid Kenyan phone number (9-12 digits)', 'error');
-                    return;
-                }
+            // Validate terms
+            if (!termsCheckbox.checked) {
+                e.preventDefault();
+                showAlert('You must accept the terms and conditions to proceed', 'error');
+                return;
             }
+            
+            // Remove spaces from phone number before submission
+            phoneInput.value = cleanPhone;
             
             // Confirm email verification
-            if (!confirm(`A 6-digit verification code will be sent to:\n\n${userEmail}\n\nContinue?`)) {
+            if (!confirm(`A 6-digit verification code will be sent to:\n\n${userEmail}\n\nYou will be redirected to enter the code.\n\nContinue?`)) {
                 e.preventDefault();
                 return;
             }
@@ -1151,36 +1409,6 @@ document.addEventListener('DOMContentLoaded', function() {
             submitButton.disabled = true;
             submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Sending Verification Code...';
         });
-    }
-    
-    function updateSubmitButton() {
-        const amount = parseFloat(amountInput.value) || 0;
-        const balance = {{ current_user.balance }};
-        const termsAgreed = termsCheckbox.checked;
-        const hasEmail = '{{ user_email }}'.length > 0;
-        
-        if (!hasEmail) {
-            submitButton.disabled = true;
-            submitButton.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Add Email to Withdraw';
-            return;
-        }
-        
-        if (amount > balance) {
-            amountInput.setCustomValidity('Amount cannot exceed your balance');
-            submitButton.disabled = true;
-            submitButton.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Amount exceeds balance';
-        } else if (amount < 400 && amount > 0) {
-            amountInput.setCustomValidity('Minimum withdrawal is KES 400');
-            submitButton.disabled = true;
-            submitButton.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Minimum: KES 400';
-        } else if (!termsAgreed) {
-            submitButton.disabled = true;
-            submitButton.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Accept terms to continue';
-        } else {
-            amountInput.setCustomValidity('');
-            submitButton.disabled = false;
-            submitButton.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Submit & Send Verification Code';
-        }
     }
     
     function showAlert(message, type) {
@@ -1212,8 +1440,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 5000);
     }
     
-    // Initialize button state
-    updateSubmitButton();
+    // Initialize
+    showStep(1);
 });
 </script>
 {% endblock %}
