@@ -5024,12 +5024,13 @@ def withdraw():
     if request.method == 'POST':
         amount = float(request.form.get('amount'))
         phone_number = request.form.get('phone_number')
+        withdrawal_terms = request.form.get('withdrawal_terms') == 'on'
         
         # Get IP and device info
         ip_address = request.remote_addr
         device_fingerprint = fraud_detector.get_device_fingerprint(request)
         
-        # UPDATED: Minimum withdrawal amount changed from 100 to 400
+        # Minimum withdrawal amount is 400
         if amount < 400:
             flash('Minimum withdrawal amount is KSH 400.', 'error')
             return redirect(url_for('withdraw'))
@@ -5038,33 +5039,51 @@ def withdraw():
             flash('Insufficient balance.', 'error')
             return redirect(url_for('withdraw'))
         
+        # Check if terms were agreed to
+        if not withdrawal_terms:
+            flash('You must agree to the withdrawal terms and conditions.', 'error')
+            return redirect(url_for('withdraw'))
+        
+        # Clean and validate phone number format
+        phone_number = phone_number.strip().replace(' ', '')
+        
         # Validate phone number format
         if not re.match(r'^254[0-9]{9}$', phone_number) and not re.match(r'^07[0-9]{8}$', phone_number):
-            flash('Please enter a valid Kenyan phone number.', 'error')
+            flash('Please enter a valid Kenyan phone number (e.g., 07XX XXX XXX).', 'error')
             return redirect(url_for('withdraw'))
         
         # Convert to 254 format
         if phone_number.startswith('07'):
             phone_number = '254' + phone_number[1:]
+        elif phone_number.startswith('+254'):
+            phone_number = phone_number[1:]
         elif phone_number.startswith('+'):
             phone_number = phone_number[1:]
         
         # ENHANCED FRAUD DETECTION for web withdrawals
         fraud_warnings = fraud_detector.detect_suspicious_withdrawal(current_user, amount, request)
+        
+        # Prepare transaction data
+        transaction_data = {
+            'id': str(uuid.uuid4()),
+            'user_id': current_user.id,
+            'amount': -amount,
+            'transaction_type': 'withdrawal',
+            'phone_number': phone_number,
+            'ip_address': ip_address,
+            'user_agent': request.headers.get('User-Agent'),
+            'device_fingerprint': device_fingerprint,
+            'created_at': datetime.now(timezone.utc).isoformat()
+        }
+        
         if fraud_warnings:
-            transaction_data = {
-                'id': str(uuid.uuid4()),
-                'user_id': current_user.id,
-                'amount': -amount,
-                'transaction_type': 'withdrawal',
+            # Suspicious withdrawal - set to Under Review
+            transaction_data.update({
                 'status': 'Under Review',
-                'phone_number': phone_number,
-                'ip_address': ip_address,
-                'user_agent': request.headers.get('User-Agent'),
-                'device_fingerprint': device_fingerprint,
                 'fraud_warnings': json.dumps(fraud_warnings),
-                'created_at': datetime.now(timezone.utc).isoformat()
-            }
+                'description': f'M-Pesa withdrawal to {phone_number} - Under Review for suspicious activity'
+            })
+            
             SupabaseDB.create_transaction(transaction_data)
             
             SecurityMonitor.log_security_event(
@@ -5086,22 +5105,14 @@ def withdraw():
                     f"Multiple fraud warnings: {', '.join(fraud_warnings)}"
                 )
             
-            flash('Withdrawal under review due to suspicious activity. We will notify you once processed.', 'warning')
+            flash('Withdrawal request submitted and is under review. We will notify you once processed.', 'warning')
             return redirect(url_for('dashboard'))
         
-        transaction_data = {
-            'id': str(uuid.uuid4()),
-            'user_id': current_user.id,
-            'amount': -amount,
-            'transaction_type': 'withdrawal',
+        # Normal withdrawal - set to pending
+        transaction_data.update({
             'status': 'pending',
-            'phone_number': phone_number,
-            'description': f'M-Pesa withdrawal to {phone_number} - Pending automatic processing',
-            'ip_address': ip_address,
-            'user_agent': request.headers.get('User-Agent'),
-            'device_fingerprint': device_fingerprint,
-            'created_at': datetime.now(timezone.utc).isoformat()
-        }
+            'description': f'M-Pesa withdrawal to {phone_number} - Pending processing'
+        })
         
         # Track withdrawal attempt
         fraud_detector.log_withdrawal_attempt(current_user.id, amount, ip_address, device_fingerprint)
@@ -5128,15 +5139,24 @@ def withdraw():
         processing_result = process_automatic_withdrawal(transaction_data)
         
         if processing_result:
-            flash('Withdrawal request submitted! We are processing your payment via M-Pesa. You will receive an SMS confirmation shortly.', 'success')
+            flash('Withdrawal request submitted successfully! We are processing your payment via M-Pesa. You will receive an SMS confirmation shortly.', 'success')
         else:
-            flash('Withdrawal request received but automatic processing failed. Our team will process it manually within 24 hours.', 'warning')
+            flash('Withdrawal request received! Our team will process it within 24 hours. You will be notified once completed.', 'info')
             # Send Telegram notification for manual processing
             send_withdrawal_notification_to_telegram(current_user, transaction_data)
         
         return redirect(url_for('dashboard'))
     
+    # GET request - show withdrawal page
     transactions = SupabaseDB.get_transactions_by_user(current_user.id, transaction_type='withdrawal', limit=5)
+    
+    # Format transactions for display (if needed)
+    for transaction in transactions:
+        # Format phone number for display (254... to 07...)
+        if transaction.phone_number and transaction.phone_number.startswith('254'):
+            transaction.display_phone = '0' + transaction.phone_number[3:]
+        else:
+            transaction.display_phone = transaction.phone_number
     
     return render_template('withdraw.html', transactions=transactions)
 
