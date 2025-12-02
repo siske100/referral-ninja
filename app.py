@@ -4236,18 +4236,94 @@ def dashboard():
         flash('Please complete payment verification to access dashboard.', 'warning')
         return redirect(url_for('account_activation'))
     
-    # Get user transactions
-    transactions = SupabaseDB.get_transactions_by_user(current_user.id, transaction_type='withdrawal')
+    try:
+        # Get user transactions
+        transactions = SupabaseDB.get_transactions_by_user(current_user.id, transaction_type='withdrawal')
+        
+        total_withdrawn = sum(abs(t['amount']) for t in transactions if t['status'] == 'completed')
+        pending_withdrawals = len([t for t in transactions if t['status'] == 'pending' or t['status'] == 'processing'])
+        
+        withdrawals = [t for t in transactions][:5]  # Last 5 withdrawals
+        
+        # Get referral stats
+        referrals = SupabaseDB.get_referrals_by_referrer(current_user.id)
+        total_referrals = len(referrals)
+        
+        # Calculate active referrals (referrals who are verified)
+        active_referrals = 0
+        earned_from_referrals = 0
+        for referral in referrals:
+            referred_user = SupabaseDB.get_user_by_id(referral['referred_id'])
+            if referred_user and referred_user.is_verified:
+                active_referrals += 1
+                earned_from_referrals += referral.get('commission_earned', 0)
+        
+        # This month referrals (simplified - would need date filtering)
+        this_month = total_referrals  # Placeholder
+        
+        # Conversion rate (simplified)
+        conversion_rate = '100%' if total_referrals > 0 else '0%'
+        
+        referral_stats = {
+            'total_referrals': total_referrals,
+            'active_referrals': active_referrals,
+            'earned_from_referrals': earned_from_referrals,
+            'this_month': this_month,
+            'conversion_rate': conversion_rate
+        }
+        
+        # Get top referrers leaderboard
+        all_users = SupabaseDB.get_all_users()
+        top_referrers = []
+        
+        # Process all users for leaderboard
+        for user_data in all_users:
+            if user_data.get('referral_count', 0) > 0 or user_data.get('total_commission', 0) > 0:
+                top_referrers.append({
+                    'id': user_data.get('id'),
+                    'username': user_data.get('username', 'Unknown'),
+                    'earnings': user_data.get('total_commission', 0),
+                    'referral_count': user_data.get('referral_count', 0)
+                })
+        
+        # Sort by earnings descending, then by referral count
+        top_referrers.sort(key=lambda x: (x['earnings'], x['referral_count']), reverse=True)
+        top_referrers = top_referrers[:5]  # Top 5
+        
+        # Get current user ranking and details for leaderboard
+        user_rank_data = get_user_ranking(current_user.id)
+        user_rank = user_rank_data.get('position', 0) if user_rank_data else 0
+        user_earnings = current_user.total_commission or 0
+        user_referrals = current_user.referral_count or 0
+        
+        return render_template('dashboard.html',
+                             total_withdrawn=total_withdrawn,
+                             pending_withdrawals=pending_withdrawals,
+                             withdrawals=withdrawals,
+                             referral_stats=referral_stats,
+                             top_referrers=top_referrers,
+                             user_rank=user_rank,
+                             user_earnings=user_earnings,
+                             user_referrals=user_referrals)
     
-    total_withdrawn = sum(abs(t['amount']) for t in transactions if t['status'] == 'completed')
-    pending_withdrawals = len([t for t in transactions if t['status'] == 'pending'])
-    
-    withdrawals = [t for t in transactions][:5]  # Last 5 withdrawals
-    
-    return render_template('dashboard.html',
-                         total_withdrawn=total_withdrawn,
-                         pending_withdrawals=pending_withdrawals,
-                         withdrawals=withdrawals)
+    except Exception as e:
+        logger.error(f"Error loading dashboard for user {current_user.id}: {e}")
+        flash('Error loading dashboard. Please try again.', 'error')
+        return render_template('dashboard.html',
+                             total_withdrawn=0,
+                             pending_withdrawals=0,
+                             withdrawals=[],
+                             referral_stats={
+                                 'total_referrals': 0,
+                                 'active_referrals': 0,
+                                 'earned_from_referrals': 0,
+                                 'this_month': 0,
+                                 'conversion_rate': '0%'
+                             },
+                             top_referrers=[],
+                             user_rank=0,
+                             user_earnings=0,
+                             user_referrals=0)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
