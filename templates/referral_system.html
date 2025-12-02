@@ -42,25 +42,25 @@
                                 <h3 class="progress-title">Your Progress to Diani</h3>
                                 <div class="progress-stats">
                                     <div class="stat">
-                                        <span class="number">{{ referrals|length }}</span>
+                                        <span class="number">{{ current_referrals }}</span>
                                         <span class="label">Current Referrals</span>
                                     </div>
                                     <div class="stat">
-                                        <span class="number">3,000</span>
+                                        <span class="number">{{ target_referrals|format_number }}</span>
                                         <span class="label">Target Referrals</span>
                                     </div>
                                     <div class="stat">
-                                        <span class="number">{{ ((referrals|length / 3000) * 100)|round(1) if referrals|length > 0 else 0 }}%</span>
+                                        <span class="number">{{ progress_percentage|round(1) }}%</span>
                                         <span class="label">Progress</span>
                                     </div>
                                 </div>
                                 <div class="progress-container">
                                     <div class="progress-bar-bg">
-                                        <div class="progress-bar-fill" style="width: {{ (referrals|length / 3000) * 100 if referrals|length > 0 else 0 }}%"></div>
+                                        <div class="progress-bar-fill" style="width: {{ progress_percentage }}%"></div>
                                     </div>
                                     <div class="progress-text">
-                                        <span>{{ referrals|length }} of 3,000 referrals</span>
-                                        <span>{{ 3000 - referrals|length }} to go!</span>
+                                        <span>{{ current_referrals|format_number }} of {{ target_referrals|format_number }} referrals</span>
+                                        <span>{{ referrals_to_go|format_number }} to go!</span>
                                     </div>
                                 </div>
                                 <div class="motivational-text">
@@ -150,14 +150,14 @@
                     </div>
                     <div class="header-content">
                         <h1 class="display-6 fw-bold text-gradient mb-1">Referral System 👥</h1>
-                        <p class="text-muted mb-0">Invite friends and earn KSH 50 for every successful referral!</p>
+                        <p class="text-muted mb-0">Invite friends and earn KSH {{ commission_per_referral }} for every successful referral!</p>
                     </div>
                 </div>
             </div>
             <div class="col-md-4 text-md-end">
                 <div class="referral-badge">
                     <span class="badge bg-success-subtle text-success fs-6 p-3">
-                        <i class="fas fa-money-bill-wave me-2"></i>Earn KSH 50 Each
+                        <i class="fas fa-money-bill-wave me-2"></i>Earn KSH {{ commission_per_referral }} Each
                     </span>
                 </div>
             </div>
@@ -179,13 +179,13 @@
                             {{ current_user.referral_code }}
                         </h2>
                         <p class="hero-description text-muted fs-5 mb-4">
-                            Share this unique code with friends and earn <strong class="text-success">KSH 50</strong> 
+                            Share this unique code with friends and earn <strong class="text-success">KSH {{ commission_per_referral }}</strong> 
                             instantly when they join and complete registration!
                         </p>
                         <div class="hero-features">
                             <div class="feature-item">
                                 <i class="fas fa-check-circle text-success me-2"></i>
-                                <span>Instant KSH 50 commission</span>
+                                <span>Instant KSH {{ commission_per_referral }} commission</span>
                             </div>
                             <div class="feature-item">
                                 <i class="fas fa-check-circle text-success me-2"></i>
@@ -226,11 +226,11 @@
                                     <div class="col-md-6">
                                         <div class="link-stats">
                                             <div class="stat">
-                                                <span class="number">{{ referrals|length }}</span>
+                                                <span class="number">{{ current_referrals|format_number }}</span>
                                                 <span class="label">Total Referrals</span>
                                             </div>
                                             <div class="stat">
-                                                <span class="number">KSH {{ referrals|length * 50 }}</span>
+                                                <span class="number">KSH {{ total_earnings|format_currency }}</span>
                                                 <span class="label">Total Earnings</span>
                                             </div>
                                         </div>
@@ -313,7 +313,7 @@
                                 <i class="fas fa-user-plus"></i>
                             </div>
                             <div class="earning-info">
-                                <h3 class="earning-value">{{ referrals|length }}</h3>
+                                <h3 class="earning-value">{{ current_referrals|format_number }}</h3>
                                 <p class="earning-label">Total Referrals</p>
                                 <div class="earning-trend">
                                     <i class="fas fa-users text-primary me-1"></i>
@@ -332,7 +332,7 @@
                                 <i class="fas fa-money-bill-wave"></i>
                             </div>
                             <div class="earning-info">
-                                <h3 class="earning-value">KSH {{ referrals|length * 50 }}</h3>
+                                <h3 class="earning-value">KSH {{ total_earnings|format_currency }}</h3>
                                 <p class="earning-label">Total Earnings</p>
                                 <div class="earning-trend">
                                     <i class="fas fa-chart-line text-success me-1"></i>
@@ -351,7 +351,7 @@
                                 <i class="fas fa-gift"></i>
                             </div>
                             <div class="earning-info">
-                                <h3 class="earning-value">KSH 50</h3>
+                                <h3 class="earning-value">KSH {{ commission_per_referral }}</h3>
                                 <p class="earning-label">Per Referral</p>
                                 <div class="earning-trend">
                                     <i class="fas fa-bolt text-warning me-1"></i>
@@ -373,11 +373,11 @@
                 <p class="text-muted mb-0">Track all your successful referrals and earnings</p>
             </div>
             <span class="badge bg-primary fs-6 p-3">
-                {{ referrals|length }} Referral{% if referrals|length != 1 %}s{% endif %}
+                {{ referrals|length if referrals else 0 }} Referral{% if referrals|length != 1 %}s{% endif %}
             </span>
         </div>
 
-        {% if referrals %}
+        {% if referrals and referrals|length > 0 %}
         <div class="referrals-table-card">
             <div class="table-responsive">
                 <table class="table referrals-table">
@@ -398,28 +398,42 @@
                                         <i class="fas fa-user"></i>
                                     </div>
                                     <div class="user-details">
-                                        <span class="username">{{ referral.referred.username }}</span>
-                                        <span class="user-email">{{ referral.referred.email }}</span>
+                                        {% if referral.referred_id %}
+                                            <span class="username">User #{{ referral.referred_id[:8] }}</span>
+                                            <span class="user-email">Joined via {{ referral.referral_code_used }}</span>
+                                        {% else %}
+                                            <span class="username">User</span>
+                                            <span class="user-email">Via code: {{ referral.referral_code_used }}</span>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </td>
                             <td class="date-cell">
                                 <div class="date-info">
-                                    <span class="date">{{ referral.created_at.strftime('%d %b %Y') }}</span>
+                                    <span class="date">{{ referral.created_at|format_date if referral.created_at else 'N/A' }}</span>
+                                    {% if referral.created_at %}
                                     <span class="time">{{ referral.created_at.strftime('%I:%M %p') }}</span>
+                                    {% endif %}
                                 </div>
                             </td>
                             <td class="earning-cell">
                                 <div class="earning-amount">
                                     <i class="fas fa-coins text-warning me-2"></i>
-                                    <span class="amount">KSH {{ referral.commission_earned }}</span>
+                                    <span class="amount">KSH {{ referral.commission_earned|format_currency if referral.commission_earned else '0' }}</span>
                                 </div>
                             </td>
                             <td class="status-cell">
-                                <span class="status-badge status-{{ referral.status }}">
+                                {% if referral.status %}
+                                <span class="status-badge status-{{ referral.status|lower }}">
                                     <i class="fas fa-check-circle me-1"></i>
                                     {{ referral.status|title }}
                                 </span>
+                                {% else %}
+                                <span class="status-badge status-pending">
+                                    <i class="fas fa-clock me-1"></i>
+                                    Pending
+                                </span>
+                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
@@ -1203,6 +1217,12 @@ document.addEventListener('DOMContentLoaded', function() {
     background: rgba(255, 193, 7, 0.1);
     color: #ffc107;
     border: 1px solid rgba(255, 193, 7, 0.2);
+}
+
+.status-completed {
+    background: rgba(13, 110, 253, 0.1);
+    color: #0d6efd;
+    border: 1px solid rgba(13, 110, 253, 0.2);
 }
 
 /* Empty State */
