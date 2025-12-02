@@ -3184,60 +3184,64 @@ def get_user_ranking(user_id):
         if not users or not isinstance(users, list):
             return None
 
+        # Create a list with all users' data
         ranked_users = []
-
         for u in users:
             if not isinstance(u, dict):
                 continue
 
-            # Safe numeric conversions
+            # Safe numeric conversions with explicit defaults
             try:
-                commission = float(u.get("total_commission", 0)) or 0.0
-            except:
+                commission = float(u.get("total_commission", 0) or 0)
+            except (ValueError, TypeError):
                 commission = 0.0
 
             try:
-                referrals = int(u.get("referral_count", 0)) or 0
-            except:
+                referrals = int(u.get("referral_count", 0) or 0)
+            except (ValueError, TypeError):
                 referrals = 0
 
             ranked_users.append({
                 "id": str(u.get("id")),
-                "username": u.get("username", "Unknown User"),
                 "total_commission": commission,
                 "referral_count": referrals,
                 "user_rank": u.get("user_rank", "Bronze")
             })
 
-        # Sort by commission then referrals
+        # Sort by: commission DESC, referrals DESC
         ranked_users.sort(
-            key=lambda x: (x["total_commission"], x["referral_count"], x["id"]),
-            reverse=True
+            key=lambda x: (-x["total_commission"], -x["referral_count"])
         )
 
-        # Find user position
-        position = next(
-            (index + 1 for index, ru in enumerate(ranked_users)
-             if ru["id"] == str(user_id)),
-            None
-        )
+        # Find user position (1-indexed)
+        position = None
+        for idx, ru in enumerate(ranked_users):
+            if ru["id"] == str(user_id):
+                position = idx + 1  # 1-indexed ranking
+                break
 
-        if not position:
+        if position is None:
             return None
 
         total_users = len(ranked_users)
-
-        # Correct percentile calculation
-        percentile = round(((total_users - position) / total_users) * 100, 1)
+        
+        # Calculate percentile: percentage of users BELOW current user
+        # Formula: (users below / total users) * 100
+        if total_users > 1:
+            users_below = total_users - position
+            percentile = round((users_below / total_users) * 100, 1)
+        else:
+            percentile = 100.0  # Only user, so top 100%
 
         # Safe user attributes
-        safe_commission = float(getattr(user, "total_commission", 0) or 0.0)
+        safe_commission = float(getattr(user, "total_commission", 0) or 0)
         safe_referrals = int(getattr(user, "referral_count", 0) or 0)
+        safe_user_rank = getattr(user, "user_rank", "Bronze")
 
         return {
             "position": position,
             "total_users": total_users,
-            "user_rank": getattr(user, "user_rank", "Bronze"),
+            "user_rank": safe_user_rank,
             "total_commission": safe_commission,
             "referral_count": safe_referrals,
             "percentile": percentile
@@ -3246,8 +3250,6 @@ def get_user_ranking(user_id):
     except Exception as e:
         logger.error(f"Error in get_user_ranking: {e}")
         return None
-
-
 
 # Updated send_sms function to use Celcom SMS
 def send_sms(phone, message):
