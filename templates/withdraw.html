@@ -131,9 +131,11 @@
                                 <div class="input-group">
                                     <span class="input-group-text bg-light border-end-0"><i class="fas fa-phone text-muted"></i></span>
                                     <input type="tel" class="form-control border-start-0" id="phone_number" name="phone_number" 
-                                           required placeholder="07XX XXX XXX" 
-                                           value="{{ current_user.phone_number if current_user.phone_number else '' }}"
-                                           pattern="[0-9+]{10,15}">
+                                           required placeholder="07XX XXX XXX or 254XXXXXXXXX" 
+                                           value="{{ current_user.phone_number if current_user.phone_number else '' }}">
+                                </div>
+                                <div class="form-text mt-1">
+                                    <small>Accepted formats: 07XX XXX XXX, 254XXXXXXXXX, +254XXXXXXXXX</small>
                                 </div>
                             </div>
                             
@@ -280,10 +282,14 @@
                             <div class="withdrawal-main d-flex justify-content-between align-items-center mb-2">
                                 <div class="withdrawal-amount">
                                     <i class="fas fa-money-bill-wave text-success me-2"></i>
-                                    <strong class="text-dark">KES {{ "%.2f"|format(transaction.amount|abs) }}</strong>
+                                    {% if transaction.amount < 0 %}
+                                        <strong class="text-dark">KES {{ "%.2f"|format(transaction.amount|abs) }}</strong>
+                                    {% else %}
+                                        <strong class="text-dark">KES {{ "%.2f"|format(transaction.amount) }}</strong>
+                                    {% endif %}
                                 </div>
                                 <div class="withdrawal-status">
-                                    <span class="status-badge status-{{ transaction.status }}">
+                                    <span class="status-badge status-{{ transaction.status|lower }}">
                                         {{ transaction.status|title }}
                                     </span>
                                 </div>
@@ -292,11 +298,31 @@
                                 <div class="withdrawal-meta d-flex justify-content-between align-items-center mb-1">
                                     <small class="text-muted">
                                         <i class="fas fa-mobile-alt me-1"></i>
-                                        {{ transaction.phone_number }}
+                                        {% if transaction.display_phone %}
+                                            {{ transaction.display_phone }}
+                                        {% elif transaction.phone_number %}
+                                            {% if transaction.phone_number.startswith('254') %}
+                                                0{{ transaction.phone_number[3:] }}
+                                            {% else %}
+                                                {{ transaction.phone_number }}
+                                            {% endif %}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
                                     </small>
                                     <small class="text-muted">
                                         <i class="far fa-clock me-1"></i>
-                                        {{ transaction.created_at.strftime('%d %b, %H:%M') }}
+                                        {% if transaction.formatted_date %}
+                                            {{ transaction.formatted_date }}
+                                        {% elif transaction.created_at %}
+                                            {% if transaction.created_at is string %}
+                                                {{ transaction.created_at[:10] }}
+                                            {% else %}
+                                                {{ transaction.created_at.strftime('%d %b, %H:%M') }}
+                                            {% endif %}
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
                                     </small>
                                 </div>
                                 {% if transaction.description %}
@@ -760,10 +786,16 @@
     border: 1px solid rgba(39, 174, 96, 0.2);
 }
 
-.status-rejected {
+.status-rejected, .status-failed {
     background: rgba(231, 76, 60, 0.1);
     color: #e74c3c;
     border: 1px solid rgba(231, 76, 60, 0.2);
+}
+
+.status-under-review {
+    background: rgba(155, 89, 182, 0.1);
+    color: #9b59b6;
+    border: 1px solid rgba(155, 89, 182, 0.2);
 }
 
 /* Empty States */
@@ -869,6 +901,13 @@
 .withdraw-submit-btn:not(:disabled):hover {
     animation: pulse 2s infinite;
 }
+
+/* Phone number formatting */
+.phone-hint {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
 </style>
 
 <script>
@@ -917,30 +956,74 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Phone number formatting
+    // Phone number formatting - accept multiple formats
     if (phoneInput) {
         phoneInput.addEventListener('input', function(e) {
+            // Get cursor position
+            const cursorPos = e.target.selectionStart;
+            const originalLength = e.target.value.length;
+            
+            // Remove all non-digits
             let value = e.target.value.replace(/\D/g, '');
             
-            // Auto-format for Kenyan numbers
-            if (value.startsWith('254')) {
-                value = value.substring(3);
-            }
-            if (value.startsWith('0')) {
-                value = value.substring(1);
+            // Auto-format based on detected format
+            if (value.startsWith('254') && value.length >= 3) {
+                // Format as 254 XXX XXX XXX
+                if (value.length > 3) {
+                    value = '254 ' + value.substring(3);
+                }
+                if (value.length > 7) {
+                    value = value.substring(0, 7) + ' ' + value.substring(7);
+                }
+                if (value.length > 11) {
+                    value = value.substring(0, 11) + ' ' + value.substring(11, 14);
+                }
+                // Limit to 12 digits + spaces
+                value = value.substring(0, 15);
+            } else if ((value.startsWith('07') || value.startsWith('01')) && value.length >= 2) {
+                // Format as 07XX XXX XXX
+                if (value.length > 2) {
+                    value = value.substring(0, 2) + ' ' + value.substring(2);
+                }
+                if (value.length > 6) {
+                    value = value.substring(0, 6) + ' ' + value.substring(6);
+                }
+                if (value.length > 10) {
+                    value = value.substring(0, 10) + ' ' + value.substring(10, 13);
+                }
+                // Limit to 10 digits + spaces
+                value = value.substring(0, 12);
+            } else if ((value.startsWith('7') || value.startsWith('1')) && value.length >= 1) {
+                // Format as 7XXX XXX XXX (for 9-digit numbers)
+                if (value.length > 1) {
+                    value = value.substring(0, 1) + ' ' + value.substring(1);
+                }
+                if (value.length > 5) {
+                    value = value.substring(0, 5) + ' ' + value.substring(5);
+                }
+                if (value.length > 9) {
+                    value = value.substring(0, 9) + ' ' + value.substring(9, 12);
+                }
+                // Limit to 9 digits + spaces
+                value = value.substring(0, 11);
+            } else if (value.startsWith('+') && value.length > 1) {
+                // Keep + for international format
+                value = '+' + value.substring(1).replace(/\D/g, '');
             }
             
-            if (value.length > 0) {
-                value = '0' + value;
-            }
-            if (value.length > 4) {
-                value = value.substring(0, 4) + ' ' + value.substring(4);
-            }
-            if (value.length > 8) {
-                value = value.substring(0, 8) + ' ' + value.substring(8);
-            }
+            // Set the formatted value
+            e.target.value = value;
             
-            e.target.value = value.substring(0, 12);
+            // Adjust cursor position
+            const newLength = e.target.value.length;
+            const lengthDiff = newLength - originalLength;
+            const newCursorPos = cursorPos + lengthDiff;
+            e.target.setSelectionRange(newCursorPos, newCursorPos);
+        });
+        
+        // On focus, select all for easy editing
+        phoneInput.addEventListener('focus', function() {
+            this.select();
         });
     }
     
@@ -967,14 +1050,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // Format phone number before submission
+            // Remove spaces from phone number before submission
             if (phoneInput) {
                 phoneInput.value = phoneInput.value.replace(/\s/g, '');
+            }
+            
+            // Validate phone number format
+            const phoneValue = phoneInput.value.replace(/\D/g, '');
+            if (phoneValue.length < 9 || phoneValue.length > 12) {
+                e.preventDefault();
+                showAlert('Please enter a valid Kenyan phone number (9-12 digits)', 'error');
+                return;
             }
             
             // Show loading state
             submitButton.disabled = true;
             submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing Request...';
+            
+            // Allow form to submit normally
         });
     }
     
