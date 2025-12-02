@@ -4911,22 +4911,40 @@ def referral_system():
         flash('Please complete payment verification to access referral system.', 'warning')
         return redirect(url_for('account_activation'))
     
+    # Get referrals for current user
     referrals = SupabaseDB.get_referrals_by_referrer(current_user.id)
     
+    # Build referral URL
     base_url = request.host_url.rstrip('/')
     referral_url = f"{base_url}/register?ref={current_user.referral_code}"
     
+    # Prepare share links for different platforms
+    share_message = f"Join Referral Ninja and earn money! Use my code: {current_user.referral_code}"
+    
     share_links = {
-        'whatsapp': f"https://wa.me/?text=Join Referral Ninja and earn money! Use my code: {current_user.referral_code} - {referral_url}",
-        'facebook': f"https://www.facebook.com/sharer/sharer.php?u={referral_url}",
-        'twitter': f"https://twitter.com/intent/tweet?text=Join Referral Ninja! Use my code: {current_user.referral_code}&url={referral_url}",
-        'telegram': f"https://t.me/share/url?url={referral_url}&text=Join Referral Ninja! Use my code: {current_user.referral_code}"
+        'whatsapp': f"https://wa.me/?text={share_message} - {referral_url}",
+        'facebook': f"https://www.facebook.com/sharer/sharer.php?u={referral_url}&quote={share_message}",
+        'twitter': f"https://twitter.com/intent/tweet?text={share_message}&url={referral_url}",
+        'telegram': f"https://t.me/share/url?url={referral_url}&text={share_message}",
+        'email': f"mailto:?subject=Join%20Referral%20Ninja&body={share_message}%20{referral_url}"
     }
+    
+    # Calculate Diani Challenge progress
+    current_referrals = len(referrals)
+    target_referrals = 3000
+    progress_percentage = round((current_referrals / target_referrals) * 100, 1) if target_referrals > 0 else 0
+    
+    # Calculate earnings
+    total_earnings = current_referrals * 50
     
     return render_template('referral_system.html',
                          referrals=referrals,
                          share_links=share_links,
-                         referral_url=referral_url)
+                         referral_url=referral_url,
+                         current_referrals=current_referrals,
+                         target_referrals=target_referrals,
+                         progress_percentage=progress_percentage,
+                         total_earnings=total_earnings)
 
 @app.route('/referrals')
 @login_required
