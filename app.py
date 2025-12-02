@@ -50,6 +50,10 @@ from werkzeug import Request
 from logging.handlers import RotatingFileHandler
 from supabase import create_client
 from telegram import Bot
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import threading
 
 # =============================================================================
 # APPLICATION SETUP AND CONFIGURATION
@@ -130,6 +134,15 @@ app = Flask(__name__)
 
 # PRODUCTION CONFIGURATION
 class Config:
+    
+    
+    # Email Configuration
+    MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
+    MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
+    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', True)
+    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
+    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', 'noreply@referralninja.co.ke')
     
     # reCAPTCHA Configuration
     RECAPTCHA_SITE_KEY = os.environ['RECAPTCHA_SITE_KEY']
@@ -214,6 +227,209 @@ class Config:
         'normal': ["1000 per day", "100 per hour", "10 per minute"],
         'generous': ["5000 per day", "1000 per hour", "100 per minute"]
     }
+
+class EmailService:
+    """Handle sending withdrawal verification emails"""
+    
+    def __init__(self, app_config):
+        self.config = app_config
+        self.logger = logging.getLogger(__name__)
+    
+    def send_withdrawal_verification_email(self, user_email, username, verification_code, amount, transaction_id):
+        """Send withdrawal verification code via email"""
+        try:
+            # Email content
+            subject = "ReferralNinja - Withdrawal Verification Required"
+            
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                    .header {{ background-color: #4CAF50; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }}
+                    .content {{ background-color: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; border: 1px solid #ddd; }}
+                    .code {{ font-size: 32px; font-weight: bold; color: #4CAF50; text-align: center; margin: 20px 0; padding: 15px; background-color: #f0f9f0; border-radius: 5px; }}
+                    .warning {{ background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0; }}
+                    .button {{ display: inline-block; background-color: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>Withdrawal Verification</h1>
+                    </div>
+                    <div class="content">
+                        <h2>Hello {username},</h2>
+                        <p>You have requested to withdraw <strong>KSH {amount:,.2f}</strong> from your ReferralNinja account.</p>
+                        
+                        <p>To complete this withdrawal, please use the verification code below:</p>
+                        
+                        <div class="code">{verification_code}</div>
+                        
+                        <div class="warning">
+                            <strong>⚠️ Important:</strong>
+                            <ul>
+                                <li>This code will expire in <strong>10 minutes</strong></li>
+                                <li>Do not share this code with anyone</li>
+                                <li>If you didn't request this withdrawal, please contact support immediately</li>
+                            </ul>
+                        </div>
+                        
+                        <p>To verify your withdrawal:</p>
+                        <ol>
+                            <li>Go to your ReferralNinja account</li>
+                            <li>Navigate to the withdrawal page</li>
+                            <li>Enter the verification code above</li>
+                        </ol>
+                        
+                        <p>Transaction ID: <code>{transaction_id}</code></p>
+                        
+                        <p>Best regards,<br>
+                        <strong>ReferralNinja Security Team</strong></p>
+                        
+                        <hr>
+                        <p style="font-size: 12px; color: #777;">
+                            This is an automated message. Please do not reply to this email.<br>
+                            If you need assistance, contact: support@referralninja.co.ke
+                        </p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            
+            # Plain text version
+            text_content = f"""
+            WITHDRAWAL VERIFICATION REQUIRED
+            
+            Hello {username},
+            
+            You have requested to withdraw KSH {amount:,.2f} from your ReferralNinja account.
+            
+            VERIFICATION CODE: {verification_code}
+            
+            This code will expire in 10 minutes.
+            
+            Transaction ID: {transaction_id}
+            
+            If you didn't request this withdrawal, please contact support immediately.
+            
+            Best regards,
+            ReferralNinja Security Team
+            """
+            
+            # Send email in background thread
+            threading.Thread(
+                target=self._send_email,
+                args=(user_email, subject, text_content, html_content),
+                daemon=True
+            ).start()
+            
+            self.logger.info(f"Withdrawal verification email sent to {user_email} for transaction {transaction_id}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error preparing withdrawal email: {str(e)}")
+            return False
+    
+    def _send_email(self, recipient, subject, text_content, html_content):
+        """Actually send the email (runs in background thread)"""
+        try:
+            if not self.config.get('MAIL_USERNAME') or not self.config.get('MAIL_PASSWORD'):
+                self.logger.warning("Email credentials not configured - skipping email send")
+                return False
+            
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = subject
+            msg['From'] = self.config['MAIL_DEFAULT_SENDER']
+            msg['To'] = recipient
+            
+            # Attach both plain text and HTML versions
+            part1 = MIMEText(text_content, 'plain')
+            part2 = MIMEText(html_content, 'html')
+            msg.attach(part1)
+            msg.attach(part2)
+            
+            # Connect to SMTP server
+            with smtplib.SMTP(self.config['MAIL_SERVER'], self.config['MAIL_PORT']) as server:
+                server.starttls()
+                server.login(self.config['MAIL_USERNAME'], self.config['MAIL_PASSWORD'])
+                server.send_message(msg)
+            
+            self.logger.info(f"Email successfully sent to {recipient}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error sending email to {recipient}: {str(e)}")
+            return False
+    
+    def send_withdrawal_confirmation_email(self, user_email, username, amount, transaction_id, mpesa_code=None):
+        """Send withdrawal confirmation email"""
+        try:
+            subject = "ReferralNinja - Withdrawal Completed Successfully"
+            
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                    .header {{ background-color: #4CAF50; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }}
+                    .content {{ background-color: #f9f9f9; padding: 30px; border-radius: 0 0 5px 5px; border: 1px solid #ddd; }}
+                    .success {{ background-color: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 5px; margin: 20px 0; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>✅ Withdrawal Successful!</h1>
+                    </div>
+                    <div class="content">
+                        <h2>Hello {username},</h2>
+                        
+                        <div class="success">
+                            <h3>🎉 Your withdrawal has been processed successfully!</h3>
+                            <p><strong>Amount:</strong> KSH {amount:,.2f}</p>
+                            <p><strong>Status:</strong> Completed</p>
+                            {f'<p><strong>M-Pesa Transaction ID:</strong> {mpesa_code}</p>' if mpesa_code else ''}
+                        </div>
+                        
+                        <p>The funds have been sent to your M-Pesa account and should arrive shortly.</p>
+                        
+                        <p><strong>Transaction Details:</strong></p>
+                        <ul>
+                            <li><strong>Transaction ID:</strong> {transaction_id}</li>
+                            <li><strong>Date Processed:</strong> {datetime.now(timezone.utc).strftime('%d %B, %Y at %H:%M')}</li>
+                        </ul>
+                        
+                        <p>Keep earning by inviting more friends to join ReferralNinja!</p>
+                        
+                        <p>Best regards,<br>
+                        <strong>ReferralNinja Team</strong></p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            
+            # Send in background
+            threading.Thread(
+                target=self._send_email,
+                args=(user_email, subject, html_content, html_content),
+                daemon=True
+            ).start()
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error sending confirmation email: {str(e)}")
+            return False
+
+# Initialize email service
+email_service = EmailService(app.config)
 
 class DevelopmentConfig(Config):
     SESSION_COOKIE_SECURE = False
@@ -5314,7 +5530,8 @@ def withdraw():
                     current_user.total_withdrawn = float(getattr(user_data, 'total_withdrawn', 0))
                     current_user.is_verified = bool(getattr(user_data, 'is_verified', False))
                     current_user.phone = getattr(user_data, 'phone', '')
-                    current_user.phone_number = getattr(user_data, 'phone_number', '')
+                    current_user.email = getattr(user_data, 'email', '')
+                    current_user.email_verified = bool(getattr(user_data, 'email_verified', False))
         except Exception as e:
             app.logger.error(f"Error refreshing user: {e}")
     
@@ -5325,6 +5542,15 @@ def withdraw():
         flash('Please complete payment verification to withdraw funds.', 'warning')
         return redirect(url_for('account_activation'))
     
+    # Check if user has email (required for verification)
+    if not current_user.email:
+        flash('Email address is required for withdrawals. Please add an email to your account in settings.', 'error')
+        return redirect(url_for('settings'))
+    
+    # Check if email is verified (recommended)
+    if not getattr(current_user, 'email_verified', False):
+        flash('⚠️ Please verify your email address for secure withdrawals. Check your email for verification link.', 'warning')
+    
     if request.method == 'POST':
         try:
             amount = float(request.form.get('amount', 0))
@@ -5334,10 +5560,6 @@ def withdraw():
         
         phone_number = request.form.get('phone_number', '').strip()
         withdrawal_terms = request.form.get('withdrawal_terms') == 'on'
-        
-        # Get IP and device info
-        ip_address = request.remote_addr
-        device_fingerprint = fraud_detector.get_device_fingerprint(request) if fraud_detector else None
         
         # Minimum withdrawal amount is 400
         if amount < 400:
@@ -5378,14 +5600,13 @@ def withdraw():
             'amount': -amount,
             'transaction_type': 'withdrawal',
             'phone_number': phone_number,
-            'ip_address': ip_address,
+            'ip_address': request.remote_addr,
             'user_agent': request.headers.get('User-Agent', ''),
-            'device_fingerprint': device_fingerprint,
             'created_at': datetime.now(timezone.utc).isoformat()
         }
         
         if fraud_warnings:
-            # Suspicious withdrawal - set to Under Review
+            # Suspicious withdrawal - set to Under Review (NO EMAIL VERIFICATION)
             transaction_data.update({
                 'status': 'Under Review',
                 'fraud_warnings': json.dumps(fraud_warnings),
@@ -5409,8 +5630,7 @@ def withdraw():
                         "amount": amount, 
                         "warnings": fraud_warnings,
                         "withdrawal_id": transaction_id,
-                        "ip": ip_address,
-                        "device": device_fingerprint
+                        "ip": request.remote_addr,
                     }
                 )
             except Exception as e:
@@ -5419,75 +5639,83 @@ def withdraw():
             flash('Withdrawal request submitted and is under review. We will notify you once processed.', 'warning')
             return redirect(url_for('dashboard'))
         
-        # Normal withdrawal - set to pending
+        # NORMAL WITHDRAWAL - REQUIRES EMAIL VERIFICATION
+        
+        # Generate 6-digit verification code
+        verification_code = ''.join(secrets.choice(string.digits) for _ in range(6))
+        verification_expires = datetime.now(timezone.utc) + timedelta(minutes=10)
+        
+        # Set to pending verification
         transaction_data.update({
-            'status': 'pending',
-            'description': f'M-Pesa withdrawal to {phone_number} - Pending processing'
+            'status': 'pending_verification',
+            'description': f'M-Pesa withdrawal to {phone_number} - Pending email verification',
+            'withdrawal_verification_code': verification_code,
+            'withdrawal_verification_expires': verification_expires.isoformat(),
+            'withdrawal_verified': False
         })
         
-        # Track withdrawal attempt
-        if fraud_detector:
-            try:
-                fraud_detector.log_withdrawal_attempt(current_user.id, amount, ip_address, device_fingerprint)
-            except Exception as e:
-                app.logger.error(f"Error logging withdrawal attempt: {e}")
-        
-        # Use atomic update to prevent race conditions
-        new_balance = current_user.balance - amount
-        new_total_withdrawn = current_user.total_withdrawn + amount
-        
-        # Update database
-        update_success = SupabaseDB.update_user(current_user.id, {
-            'balance': new_balance,
-            'total_withdrawn': new_total_withdrawn
-        })
-        
-        if not update_success:
-            flash('Failed to process withdrawal. Please try again.', 'error')
-            return redirect(url_for('withdraw'))
-        
-        # Update local user object
-        current_user.balance = new_balance
-        current_user.total_withdrawn = new_total_withdrawn
-        
-        # Create withdrawal transaction
+        # Create withdrawal transaction WITHOUT deducting balance yet
         try:
             SupabaseDB.create_transaction(transaction_data)
         except Exception as e:
             app.logger.error(f"Error creating transaction: {e}")
-            flash('Error recording transaction. Please contact support.', 'error')
+            flash('Error creating withdrawal request. Please try again.', 'error')
             return redirect(url_for('withdraw'))
         
-        # Send initial SMS via Celcom
+        # Send verification email
         try:
-            if CelcomSMS:
-                CelcomSMS.send_withdrawal_notification(
-                    current_user.phone,
-                    current_user.username,
-                    amount,
-                    'processing'
-                )
+            # Initialize EmailService if not already done
+            if 'email_service' not in globals():
+                email_service = EmailService(app.config)
+            
+            # Send email with verification code
+            email_service.send_withdrawal_verification_email(
+                user_email=current_user.email,
+                username=current_user.username,
+                verification_code=verification_code,
+                amount=amount,
+                transaction_id=transaction_id
+            )
+            
+            # Also send SMS notification
+            CelcomSMS.send_withdrawal_notification(
+                current_user.phone,
+                current_user.username,
+                amount,
+                'verification_sent',
+                transaction_id
+            )
+            
+            # Store transaction ID in session for verification page
+            session['pending_withdrawal_id'] = transaction_id
+            session['pending_withdrawal_amount'] = amount
+            session['pending_withdrawal_phone'] = phone_number
+            
+            # Log email sent
+            SecurityMonitor.log_security_event(
+                "WITHDRAWAL_VERIFICATION_SENT",
+                current_user.id,
+                {
+                    "amount": amount,
+                    "withdrawal_id": transaction_id,
+                    "email": current_user.email
+                }
+            )
+            
+            flash(f'✅ Withdrawal verification code sent to {current_user.email}. Please check your email.', 'success')
+            return redirect(url_for('verify_withdrawal_email'))
+            
         except Exception as e:
-            app.logger.error(f"Error sending SMS: {e}")
-        
-        # Process withdrawal automatically via M-Pesa B2C
-        processing_result = False
-        try:
-            processing_result = process_automatic_withdrawal(transaction_data)
-        except Exception as e:
-            app.logger.error(f"Error in automatic withdrawal: {e}")
-        
-        if processing_result:
-            flash('Withdrawal request submitted successfully! We are processing your payment via M-Pesa. You will receive an SMS confirmation shortly.', 'success')
-        else:
-            flash('Withdrawal request received! Our team will process it within 24 hours. You will be notified once completed.', 'info')
-            # Send Telegram notification for manual processing
-            try:
-                send_withdrawal_notification_to_telegram(current_user, transaction_data)
-            except Exception as e:
-                app.logger.error(f"Error sending Telegram notification: {e}")
-        
-        return redirect(url_for('dashboard'))
+            app.logger.error(f"Error sending verification email: {e}")
+            
+            # If email fails, delete the transaction and show error
+            SupabaseDB.update_transaction(transaction_id, {
+                'status': 'failed',
+                'description': 'Failed to send verification email'
+            })
+            
+            flash('Failed to send verification email. Please check your email address or try again later.', 'error')
+            return redirect(url_for('withdraw'))
     
     # GET request - show withdrawal page
     refresh_user()
@@ -5558,7 +5786,275 @@ def withdraw():
             
         processed_transactions.append(tx_dict)
     
-    return render_template('withdraw.html', transactions=processed_transactions)
+    return render_template('withdraw.html', 
+                         transactions=processed_transactions,
+                         user_email=current_user.email,
+                         email_verified=getattr(current_user, 'email_verified', False))
+
+@app.route('/withdraw/verify-email', methods=['GET', 'POST'])
+@login_required
+def verify_withdrawal_email():
+    """Verify email code for withdrawal"""
+    # Check if there's a pending withdrawal
+    withdrawal_id = session.get('pending_withdrawal_id')
+    if not withdrawal_id:
+        flash('No pending withdrawal to verify.', 'error')
+        return redirect(url_for('withdraw'))
+    
+    # Get withdrawal details
+    withdrawal = SupabaseDB.get_transaction_by_id(withdrawal_id)
+    if not withdrawal or withdrawal['user_id'] != current_user.id:
+        flash('Invalid withdrawal request.', 'error')
+        session.pop('pending_withdrawal_id', None)
+        return redirect(url_for('withdraw'))
+    
+    if withdrawal['status'] != 'pending_verification':
+        flash('This withdrawal has already been processed.', 'info')
+        session.pop('pending_withdrawal_id', None)
+        return redirect(url_for('dashboard'))
+    
+    if request.method == 'POST':
+        verification_code = request.form.get('verification_code', '').strip()
+        
+        if not verification_code:
+            flash('Please enter the verification code.', 'error')
+            return render_template('verify_withdrawal_email.html',
+                                 withdrawal_id=withdrawal_id,
+                                 amount=abs(withdrawal['amount']))
+        
+        # Check verification code
+        stored_code = withdrawal.get('withdrawal_verification_code')
+        expires_at_str = withdrawal.get('withdrawal_verification_expires')
+        
+        if not stored_code or not expires_at_str:
+            flash('Verification data missing. Please restart withdrawal.', 'error')
+            session.pop('pending_withdrawal_id', None)
+            return redirect(url_for('withdraw'))
+        
+        # Check if code matches
+        if stored_code != verification_code:
+            # Log failed attempt
+            SecurityMonitor.log_security_event(
+                "WITHDRAWAL_VERIFICATION_FAILED",
+                current_user.id,
+                {
+                    "withdrawal_id": withdrawal_id,
+                    "attempted_code": verification_code,
+                    "expected_code": stored_code
+                }
+            )
+            
+            flash('Invalid verification code. Please try again.', 'error')
+            return render_template('verify_withdrawal_email.html',
+                                 withdrawal_id=withdrawal_id,
+                                 amount=abs(withdrawal['amount']))
+        
+        # Check if code is expired
+        expires_at = datetime.fromisoformat(expires_at_str.replace('Z', '+00:00'))
+        if datetime.now(timezone.utc) > expires_at:
+            SupabaseDB.update_transaction(withdrawal_id, {
+                'status': 'failed',
+                'description': 'Verification code expired'
+            })
+            session.pop('pending_withdrawal_id', None)
+            flash('Verification code has expired. Please request a new withdrawal.', 'error')
+            return redirect(url_for('withdraw'))
+        
+        # VERIFICATION SUCCESSFUL!
+        
+        # Check balance again (in case it changed)
+        refresh_user()
+        amount = abs(withdrawal['amount'])
+        if current_user.balance < amount:
+            SupabaseDB.update_transaction(withdrawal_id, {
+                'status': 'failed',
+                'description': 'Insufficient balance during verification'
+            })
+            session.pop('pending_withdrawal_id', None)
+            flash('Insufficient balance. Withdrawal cancelled.', 'error')
+            return redirect(url_for('withdraw'))
+        
+        # Update transaction
+        SupabaseDB.update_transaction(withdrawal_id, {
+            'status': 'processing',
+            'withdrawal_verified': True,
+            'withdrawal_verified_at': datetime.now(timezone.utc).isoformat(),
+            'description': 'Email verification completed - Processing withdrawal'
+        })
+        
+        # Deduct balance from user
+        new_balance = current_user.balance - amount
+        new_total_withdrawn = current_user.total_withdrawn + amount
+        
+        update_success = SupabaseDB.update_user(current_user.id, {
+            'balance': new_balance,
+            'total_withdrawn': new_total_withdrawn
+        })
+        
+        if not update_success:
+            flash('Failed to update balance. Please contact support.', 'error')
+            return redirect(url_for('dashboard'))
+        
+        # Update local user object
+        current_user.balance = new_balance
+        current_user.total_withdrawn = new_total_withdrawn
+        
+        # Log successful verification
+        SecurityMonitor.log_security_event(
+            "WITHDRAWAL_VERIFICATION_SUCCESS",
+            current_user.id,
+            {
+                "withdrawal_id": withdrawal_id,
+                "amount": amount,
+                "method": "email_verification"
+            }
+        )
+        
+        # Send confirmation email
+        try:
+            email_service.send_withdrawal_confirmation_email(
+                current_user.email,
+                current_user.username,
+                amount,
+                withdrawal_id
+            )
+        except Exception as e:
+            app.logger.error(f"Error sending confirmation email: {e}")
+        
+        # Send SMS notification
+        CelcomSMS.send_withdrawal_notification(
+            current_user.phone,
+            current_user.username,
+            amount,
+            'processing'
+        )
+        
+        # Process withdrawal via M-Pesa
+        processing_result = False
+        try:
+            processing_result = process_automatic_withdrawal(withdrawal)
+        except Exception as e:
+            app.logger.error(f"Error in automatic withdrawal: {e}")
+        
+        # Clear session
+        session.pop('pending_withdrawal_id', None)
+        session.pop('pending_withdrawal_amount', None)
+        session.pop('pending_withdrawal_phone', None)
+        
+        if processing_result:
+            flash('✅ Withdrawal verified and processing! You will receive payment confirmation shortly.', 'success')
+        else:
+            flash('✅ Withdrawal verified! Manual processing required. We will notify you once completed.', 'info')
+            # Send Telegram notification for manual processing
+            try:
+                send_withdrawal_notification_to_telegram(current_user, withdrawal)
+            except Exception as e:
+                app.logger.error(f"Error sending Telegram notification: {e}")
+        
+        return redirect(url_for('dashboard'))
+    
+    # GET request - show verification form
+    return render_template('verify_withdrawal_email.html',
+                         withdrawal_id=withdrawal_id,
+                         amount=abs(withdrawal['amount']),
+                         user_email=current_user.email)
+
+@app.route('/withdraw/resend-verification', methods=['POST'])
+@login_required
+def resend_withdrawal_verification():
+    """Resend withdrawal verification email"""
+    withdrawal_id = request.form.get('withdrawal_id')
+    
+    if not withdrawal_id:
+        flash('Withdrawal ID required.', 'error')
+        return redirect(url_for('withdraw'))
+    
+    withdrawal = SupabaseDB.get_transaction_by_id(withdrawal_id)
+    
+    if not withdrawal or withdrawal['user_id'] != current_user.id:
+        flash('Invalid withdrawal.', 'error')
+        return redirect(url_for('withdraw'))
+    
+    if withdrawal['status'] != 'pending_verification':
+        flash('This withdrawal has already been processed.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    # Generate new verification code
+    new_code = ''.join(secrets.choice(string.digits) for _ in range(6))
+    new_expires = datetime.now(timezone.utc) + timedelta(minutes=10)
+    
+    # Update transaction with new code
+    SupabaseDB.update_transaction(withdrawal_id, {
+        'withdrawal_verification_code': new_code,
+        'withdrawal_verification_expires': new_expires.isoformat()
+    })
+    
+    # Resend email
+    try:
+        email_service.send_withdrawal_verification_email(
+            user_email=current_user.email,
+            username=current_user.username,
+            verification_code=new_code,
+            amount=abs(withdrawal['amount']),
+            transaction_id=withdrawal_id
+        )
+        
+        flash('✅ New verification code sent to your email!', 'success')
+    except Exception as e:
+        app.logger.error(f"Error resending verification email: {e}")
+        flash('Failed to resend verification email. Please try again.', 'error')
+    
+    return redirect(url_for('verify_withdrawal_email'))
+
+@app.route('/withdraw/cancel/<transaction_id>', methods=['POST'])
+@login_required
+def cancel_withdrawal(transaction_id):
+    """Cancel a pending withdrawal"""
+    withdrawal = SupabaseDB.get_transaction_by_id(transaction_id)
+    
+    if not withdrawal or withdrawal['user_id'] != current_user.id:
+        flash('Invalid withdrawal.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    if withdrawal['status'] not in ['pending', 'pending_verification']:
+        flash('Cannot cancel withdrawal that is already being processed.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    # Update transaction status
+    SupabaseDB.update_transaction(transaction_id, {
+        'status': 'cancelled',
+        'description': 'Cancelled by user'
+    })
+    
+    # Clear session if this was the pending withdrawal
+    if session.get('pending_withdrawal_id') == transaction_id:
+        session.pop('pending_withdrawal_id', None)
+        session.pop('pending_withdrawal_amount', None)
+        session.pop('pending_withdrawal_phone', None)
+    
+    flash('Withdrawal cancelled successfully.', 'success')
+    return redirect(url_for('dashboard'))
+
+def refresh_user():
+    """Refresh current user data from database"""
+    try:
+        user_data = SupabaseDB.get_user_by_id(current_user.id)
+        if user_data:
+            if hasattr(user_data, '__dict__'):
+                # Copy non-private attributes
+                for key, value in user_data.__dict__.items():
+                    if not key.startswith('_'):
+                        setattr(current_user, key, value)
+            else:
+                # Assume it's an object with attributes
+                current_user.balance = float(getattr(user_data, 'balance', 0))
+                current_user.total_withdrawn = float(getattr(user_data, 'total_withdrawn', 0))
+                current_user.is_verified = bool(getattr(user_data, 'is_verified', False))
+                current_user.phone = getattr(user_data, 'phone', '')
+                current_user.email = getattr(user_data, 'email', '')
+                current_user.email_verified = bool(getattr(user_data, 'email_verified', False))
+    except Exception as e:
+        app.logger.error(f"Error refreshing user: {e}")
 
 # =============================================================================
 # JOBS MANAGEMENT ROUTES
