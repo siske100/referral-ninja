@@ -5282,10 +5282,19 @@ def withdraw():
         from flask_login import current_user as login_user
         user_data = SupabaseDB.get_user_by_id(login_user.id)
         if user_data:
-            # Update the current_user object attributes
-            for key, value in user_data.items():
-                if hasattr(login_user, key):
-                    setattr(login_user, key, value)
+            # If user_data is a User object, copy its attributes
+            if hasattr(user_data, '__dict__'):
+                # It's a User object - copy attributes
+                user_dict = user_data.__dict__
+                for key, value in user_dict.items():
+                    # Skip private attributes
+                    if not key.startswith('_'):
+                        setattr(login_user, key, value)
+            elif isinstance(user_data, dict):
+                # It's a dictionary
+                for key, value in user_data.items():
+                    if hasattr(login_user, key):
+                        setattr(login_user, key, value)
         return login_user
     
     # Reload user data at the start
@@ -5450,24 +5459,47 @@ def withdraw():
     # Process transactions for display
     processed_transactions = []
     for transaction in transactions:
-        # Create a dictionary for display
-        tx_dict = transaction.__dict__ if hasattr(transaction, '__dict__') else transaction
+        # Convert transaction to dictionary if it's an object
+        if hasattr(transaction, '__dict__'):
+            tx_dict = transaction.__dict__
+            # Remove SQLAlchemy internal attributes
+            tx_dict = {k: v for k, v in tx_dict.items() if not k.startswith('_')}
+        elif isinstance(transaction, dict):
+            tx_dict = transaction.copy()
+        else:
+            # Try to convert to dict
+            try:
+                tx_dict = dict(transaction)
+            except:
+                tx_dict = {}
         
         # Format phone number for display (254... to 07...)
-        if tx_dict.get('phone_number', '').startswith('254'):
-            tx_dict['display_phone'] = '0' + tx_dict['phone_number'][3:]
+        phone = tx_dict.get('phone_number', '')
+        if phone and str(phone).startswith('254'):
+            tx_dict['display_phone'] = '0' + str(phone)[3:]
         else:
-            tx_dict['display_phone'] = tx_dict.get('phone_number', '')
+            tx_dict['display_phone'] = str(phone) if phone else ''
         
         # Ensure amount is positive for display
-        if tx_dict.get('amount', 0) < 0:
-            tx_dict['display_amount'] = abs(tx_dict['amount'])
-        else:
-            tx_dict['display_amount'] = tx_dict.get('amount', 0)
+        amount_val = tx_dict.get('amount', 0)
+        try:
+            amount_val = float(amount_val)
+            if amount_val < 0:
+                tx_dict['display_amount'] = abs(amount_val)
+            else:
+                tx_dict['display_amount'] = amount_val
+        except (ValueError, TypeError):
+            tx_dict['display_amount'] = 0
             
-        # Ensure we have all required attributes
-        for key in ['amount', 'phone_number', 'status', 'description', 'created_at']:
-            tx_dict.setdefault(key, '')
+        # Ensure we have all required attributes for the template
+        required_fields = ['amount', 'phone_number', 'status', 'description', 'created_at']
+        for field in required_fields:
+            if field not in tx_dict:
+                tx_dict[field] = ''
+                
+        # Convert created_at to string if it's a datetime object
+        if hasattr(tx_dict.get('created_at'), 'strftime'):
+            tx_dict['created_at'] = tx_dict['created_at'].strftime('%Y-%m-%d %H:%M:%S')
             
         processed_transactions.append(tx_dict)
     
