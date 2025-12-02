@@ -5078,6 +5078,29 @@ def api_payment_status():
     
     return jsonify({'verified': False})
 
+@app.template_filter('format_number')
+def format_number(value):
+    try:
+        return f"{int(value):,}"
+    except (ValueError, TypeError):
+        return "0"
+
+@app.template_filter('format_currency')
+def format_currency(value):
+    try:
+        if float(value) == int(float(value)):
+            return f"{int(value):,}"
+        else:
+            return f"{float(value):,.2f}"
+    except (ValueError, TypeError):
+        return "0"
+
+@app.template_filter('format_date')
+def format_date(date_value):
+    if date_value:
+        return date_value.strftime('%d %b %Y')
+    return ''
+
 @app.route('/referral-system')
 @login_required
 def referral_system():
@@ -5087,6 +5110,17 @@ def referral_system():
     
     # Get referrals for current user
     referrals = SupabaseDB.get_referrals_by_referrer(current_user.id)
+    
+    # Calculate Diani progress
+    target_referrals = 3000
+    current_referrals = current_user.referral_count or 0
+    referrals_to_go = max(0, target_referrals - current_referrals)
+    
+    # Calculate progress percentage
+    if target_referrals > 0:
+        progress_percentage = min(100, (current_referrals / target_referrals) * 100)
+    else:
+        progress_percentage = 0
     
     # Build referral URL
     base_url = request.host_url.rstrip('/')
@@ -5102,13 +5136,22 @@ def referral_system():
         'telegram': f"https://t.me/share/url?url={urllib.parse.quote(referral_url)}&text={urllib.parse.quote(share_message)}"
     }
     
-    # Make sure to import urllib.parse at the top of your file
-    # import urllib.parse
+    # Get referral statistics
+    total_earnings = current_user.total_commission or 0
+    commission_per_referral = 50  # KSH per referral
     
     return render_template('referral_system.html',
                          referrals=referrals,
                          share_links=share_links,
-                         referral_url=referral_url)
+                         referral_url=referral_url,
+                         # Progress data
+                         target_referrals=target_referrals,
+                         current_referrals=current_referrals,
+                         referrals_to_go=referrals_to_go,
+                         progress_percentage=progress_percentage,
+                         # Earnings data
+                         total_earnings=total_earnings,
+                         commission_per_referral=commission_per_referral)
 
 @app.route('/referrals')
 @login_required
