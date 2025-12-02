@@ -23,7 +23,7 @@
             <div class="col-md-4 text-md-end">
                 <div class="status-badge">
                     <span class="badge bg-success-subtle text-success fs-6 p-2 border border-success">
-                        <i class="fas fa-shield-check me-2"></i>Account Verified
+                        <i class="fas fa-shield-check me-2"></i>{% if current_user.is_verified %}Account Verified{% else %}Verification Pending{% endif %}
                     </span>
                 </div>
             </div>
@@ -69,18 +69,29 @@
                         <label for="email" class="form-label text-dark fw-medium">Email Address</label>
                         <div class="input-group">
                             <span class="input-group-text bg-light border-end-0"><i class="fas fa-envelope text-muted"></i></span>
-                            <input type="email" class="form-control border-start-0" id="email" name="email" value="{{ current_user.email }}" required>
+                            <input type="email" class="form-control border-start-0" id="email" name="email" value="{{ current_user.email or '' }}" {% if current_user.email %}readonly{% else %}required{% endif %}>
                         </div>
+                        {% if current_user.email %}
+                        <div class="form-text">Email cannot be changed</div>
+                        {% endif %}
                     </div>
                     
                     <div class="mb-4">
                         <label for="phone" class="form-label text-dark fw-medium">Phone Number</label>
                         <div class="input-group">
                             <span class="input-group-text bg-light border-end-0"><i class="fas fa-phone text-muted"></i></span>
-                            <input type="tel" class="form-control border-start-0" id="phone" name="phone_number" value="{{ current_user.phone_number or '' }}" 
+                            <input type="tel" class="form-control border-start-0" id="phone" name="phone" value="{{ current_user.phone or '' }}" 
                                    pattern="254[0-9]{9}" placeholder="254712345678" required>
                         </div>
                         <div class="form-text">Format: 254712345678 (for M-Pesa withdrawals)</div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="name" class="form-label text-dark fw-medium">Full Name</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="fas fa-user text-muted"></i></span>
+                            <input type="text" class="form-control border-start-0" id="name" name="full_name" value="{{ current_user.name or '' }}" required>
+                        </div>
                     </div>
                     
                     <div class="mb-4">
@@ -117,6 +128,7 @@
                 </div>
 
                 <div class="challenge-progress mb-4">
+                    {% set referred_count = current_user.referral_count %}
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <small class="text-muted">Your Progress</small>
                         <small class="text-dark fw-medium">{{ referred_count }} Referrals</small>
@@ -203,17 +215,17 @@
                 <div class="stats-grid mb-4">
                     <div class="stat-card border-start border-primary">
                         <h6 class="text-uppercase text-muted small fw-bold">Total Earned</h6>
-                        <p class="stat-value text-dark mb-0">KSH {{ "%.2f"|format(total_earned) }}</p>
+                        <p class="stat-value text-dark mb-0">KSH {{ "%.2f"|format(current_user.total_commission or 0) }}</p>
                     </div>
 
                     <div class="stat-card border-start border-info">
                         <h6 class="text-uppercase text-muted small fw-bold">Total Withdrawn</h6>
-                        <p class="stat-value text-dark mb-0">KSH {{ "%.2f"|format(total_withdrawn) }}</p>
+                        <p class="stat-value text-dark mb-0">KSH {{ "%.2f"|format(current_user.total_withdrawn or 0) }}</p>
                     </div>
 
                     <div class="stat-card border-start border-success">
                         <h6 class="text-uppercase text-muted small fw-bold">Current Balance</h6>
-                        <p class="stat-value text-dark mb-0">KSH {{ "%.2f"|format(balance) }}</p>
+                        <p class="stat-value text-dark mb-0">KSH {{ "%.2f"|format(current_user.balance or 0) }}</p>
                     </div>
                 </div>
 
@@ -224,7 +236,7 @@
                             <i class="fas fa-users"></i>
                         </div>
                         <div class="stat-content">
-                            <div class="stat-value text-dark">{{ current_user.referral_count }}</div>
+                            <div class="stat-value text-dark">{{ current_user.referral_count or 0 }}</div>
                             <div class="stat-label text-muted">Referrals Made</div>
                         </div>
                     </div>
@@ -234,7 +246,7 @@
                             <i class="fas fa-calendar-check"></i>
                         </div>
                         <div class="stat-content">
-                            <div class="stat-value text-dark">{{ safe_strftime(current_user.created_at, '%d/%m/%Y') }}</div>
+                            <div class="stat-value text-dark">{{ safe_strftime(current_user.created_at, '%d/%m/%Y') if current_user.created_at else 'N/A' }}</div>
                             <div class="stat-label text-muted">Member Since</div>
                         </div>
                     </div>
@@ -243,17 +255,37 @@
                 <div class="rank-section mt-4 pt-4 border-top">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h6 class="mb-0 text-dark fw-medium"><i class="fas fa-trophy me-2"></i>Your Rank</h6>
-                        <span class="rank-badge rank-{{ current_user.user_rank|lower }}">
-                            <i class="fas fa-gem me-1"></i>{{ current_user.user_rank }}
+                        <span class="rank-badge rank-{{ (current_user.user_rank or 'bronze')|lower }}">
+                            <i class="fas fa-gem me-1"></i>{{ current_user.user_rank or 'Bronze' }}
                         </span>
                     </div>
+                    
+                    {% set commission = current_user.total_commission or 0 %}
+                    {% set rank_progress = {
+                        'Bronze': 5000,
+                        'Silver': 15000,
+                        'Gold': 30000,
+                        'Platinum': 70000,
+                        'Diamond': 150000
+                    } %}
+                    
+                    {% set current_rank = current_user.user_rank or 'Bronze' %}
+                    {% set next_rank_threshold = rank_progress[current_rank] if current_rank in rank_progress else 5000 %}
+                    
                     <div class="progress mb-2" style="height: 8px;">
-                        {% set progress = [current_user.total_commission / 10000 * 100, 100]|min %}
-                        <div class="progress-bar bg-gradient-rank" style="width: {{ progress }}%"></div>
+                        {% set progress = (commission / next_rank_threshold * 100) if commission <= next_rank_threshold else 100 %}
+                        <div class="progress-bar bg-gradient-rank" style="width: {{ progress|min(100) }}%"></div>
                     </div>
+                    
                     <div class="d-flex justify-content-between text-sm">
-                        <small class="text-muted">Bronze</small>
-                        <small class="text-muted">Progress to {{ 'Silver' if current_user.user_rank == 'Bronze' else 'Gold' if current_user.user_rank == 'Silver' else 'Platinum' if current_user.user_rank == 'Gold' else 'Diamond' }}</small>
+                        <small class="text-muted">{{ current_rank }}</small>
+                        <small class="text-muted">
+                            {% if current_rank != 'Diamond' %}
+                                Progress to {{ 'Silver' if current_rank == 'Bronze' else 'Gold' if current_rank == 'Silver' else 'Platinum' if current_rank == 'Gold' else 'Diamond' }}
+                            {% else %}
+                                Maximum Rank Achieved
+                            {% endif %}
+                        </small>
                     </div>
                 </div>
             </div>
@@ -289,11 +321,11 @@
                 
                 <div class="referral-stats-grid mb-4">
                     <div class="referral-stat p-3 border rounded text-center">
-                        <div class="stat-number text-primary">{{ referred_count }}</div>
+                        <div class="stat-number text-primary">{{ current_user.referral_count or 0 }}</div>
                         <div class="stat-label text-muted">People Referred</div>
                     </div>
                     <div class="referral-stat p-3 border rounded text-center">
-                        <div class="stat-number text-primary">KSH {{ "%.2f"|format(current_user.referral_balance) }}</div>
+                        <div class="stat-number text-primary">KSH {{ "%.2f"|format(current_user.referral_balance or 0) }}</div>
                         <div class="stat-label text-muted">Referral Earnings</div>
                     </div>
                 </div>
