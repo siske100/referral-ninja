@@ -5652,10 +5652,6 @@ def withdraw():
         
         # Send verification email (ALWAYS send verification email)
         try:
-            # Initialize EmailService if not already done
-            if 'email_service' not in globals():
-                global email_service
-                email_service = EmailService(app.config)
             
             # Send email with verification code
             email_service.send_withdrawal_verification_email(
@@ -5978,9 +5974,6 @@ def verify_withdrawal_email():
                     
                     # Send confirmation email
                     try:
-                        if 'email_service' not in globals():
-                            global email_service
-                            email_service = EmailService(app.config)
                         
                         email_service.send_withdrawal_confirmation_email(
                             user_email=current_user.email,
@@ -6024,9 +6017,7 @@ def verify_withdrawal_email():
                 send_withdrawal_notification_to_telegram(current_user, withdrawal)
                 
                 # Send email notification to user
-                if 'email_service' not in globals():
-                    global email_service
-                    email_service = EmailService(app.config)
+                email_service.send_withdrawal_confirmation_email(...)
                 
                 email_service.send_withdrawal_under_review_email(
                     user_email=current_user.email,
@@ -6083,9 +6074,6 @@ def resend_withdrawal_verification():
     
     # Resend email
     try:
-        if 'email_service' not in globals():
-            global email_service
-            email_service = EmailService(app.config)
         
         # Check if there are fraud warnings
         fraud_warnings = False
