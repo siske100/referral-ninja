@@ -20,6 +20,7 @@ from datetime import datetime, timezone, timedelta
 from urllib.parse import urlparse
 from functools import wraps
 from typing import Dict, List, Any, Tuple, Optional
+import urllib.parse
 
 # =============================================================================
 # THIRD-PARTY IMPORTS
@@ -678,7 +679,6 @@ class SupabaseDB:
                 'diamond_percentage': 5
             }
 
-        
     @staticmethod
     def get_all_jobs(user_id=None):
         """
@@ -1089,7 +1089,6 @@ class SupabaseDB:
         except Exception as e:
             logger.error(f"Error getting all users: {e}")
             return []
-
         
     @staticmethod
     def get_pending_withdrawals():
@@ -1211,109 +1210,152 @@ class SupabaseDB:
             logger.error(f"Error getting challenge progress for user {user_id}: {e}")
             return None
         
-@staticmethod
-def update_user_ranks_batch():
-    """Update all users' ranks based on total_commission."""
-    try:
-        users = SupabaseDB.get_all_users()
-        if not users or not isinstance(users, list):
-            logger.error("No users found to update ranks.")
-            return False
+    @staticmethod
+    def update_user_ranks_batch():
+        """Update all users' ranks based on total_commission."""
+        try:
+            users = SupabaseDB.get_all_users()
+            if not users or not isinstance(users, list):
+                logger.error("No users found to update ranks.")
+                return False
 
-        for user_data in users:
-            if not isinstance(user_data, dict):
-                continue
-
-            user_id = user_data.get('id')
-            if not user_id:
-                continue
-
-            # Safe conversion of total_commission
-            try:
-                commission = float(user_data.get('total_commission', 0) or 0)
-            except (ValueError, TypeError):
-                commission = 0.0
-
-            # Determine new rank
-            if commission >= 70000:
-                new_rank = 'Diamond'
-            elif commission >= 30000:
-                new_rank = 'Platinum'
-            elif commission >= 15000:
-                new_rank = 'Gold'
-            elif commission >= 5000:
-                new_rank = 'Silver'
-            else:
-                new_rank = 'Bronze'
-
-            current_rank = user_data.get('user_rank', 'Bronze')
-
-            # Update if rank has changed
-            if current_rank != new_rank:
-                try:
-                    SupabaseDB.update_user(user_id, {'user_rank': new_rank})
-                    logger.info(f"Updated user {user_id} from {current_rank} to {new_rank}")
-                except Exception as update_error:
-                    logger.error(f"Failed to update user {user_id}: {update_error}")
+            for user_data in users:
+                if not isinstance(user_data, dict):
                     continue
 
-        return True
+                user_id = user_data.get('id')
+                if not user_id:
+                    continue
 
-    except Exception as e:
-        logger.error(f"Error updating user ranks batch: {e}")
-        return False
+                # Safe conversion of total_commission
+                try:
+                    commission = float(user_data.get('total_commission', 0) or 0)
+                except (ValueError, TypeError):
+                    commission = 0.0
 
+                # Determine new rank
+                if commission >= 70000:
+                    new_rank = 'Diamond'
+                elif commission >= 30000:
+                    new_rank = 'Platinum'
+                elif commission >= 15000:
+                    new_rank = 'Gold'
+                elif commission >= 5000:
+                    new_rank = 'Silver'
+                else:
+                    new_rank = 'Bronze'
+
+                current_rank = user_data.get('user_rank', 'Bronze')
+
+                # Update if rank has changed
+                if current_rank != new_rank:
+                    try:
+                        SupabaseDB.update_user(user_id, {'user_rank': new_rank})
+                        logger.info(f"Updated user {user_id} from {current_rank} to {new_rank}")
+                    except Exception as update_error:
+                        logger.error(f"Failed to update user {user_id}: {update_error}")
+                        continue
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Error updating user ranks batch: {e}")
+            return False
 
     @staticmethod
     def get_users_count():
         try:
             response = supabase.table('users').select('*', count='exact').execute()
-            return len(response.data)
+            count = response.count if hasattr(response, 'count') else len(response.data)
+            return count
         except Exception as e:
-            return SupabaseDB.handle_db_error("get_users_count", e, False)
+            logger.error(f"Error getting users count: {e}")
+            return 0
 
     @staticmethod
     def get_verified_users_count():
         try:
             response = supabase.table('users').select('*', count='exact').eq('is_verified', True).execute()
-            return len(response.data)
+            count = response.count if hasattr(response, 'count') else len(response.data)
+            return count
         except Exception as e:
-            return SupabaseDB.handle_db_error("get_verified_users_count", e, False)
+            logger.error(f"Error getting verified users count: {e}")
+            return 0
 
     @staticmethod
     def get_referrals_count():
         try:
             response = supabase.table('referrals').select('*', count='exact').execute()
-            return len(response.data)
+            count = response.count if hasattr(response, 'count') else len(response.data)
+            return count
         except Exception as e:
-            return SupabaseDB.handle_db_error("get_referrals_count", e, False)
+            logger.error(f"Error getting referrals count: {e}")
+            return 0
 
     @staticmethod
     def get_total_commission():
         try:
             response = supabase.table('users').select('total_commission').execute()
-            total = sum(user['total_commission'] for user in response.data if user['total_commission'])
+            total = sum(float(user['total_commission']) for user in response.data 
+                       if user.get('total_commission') is not None)
             return total
         except Exception as e:
-            return SupabaseDB.handle_db_error("get_total_commission", e, False)
+            logger.error(f"Error getting total commission: {e}")
+            return 0.0
 
     @staticmethod
     def get_total_withdrawn():
         try:
             response = supabase.table('users').select('total_withdrawn').execute()
-            total = sum(user['total_withdrawn'] for user in response.data if user['total_withdrawn'])
+            total = sum(float(user['total_withdrawn']) for user in response.data 
+                       if user.get('total_withdrawn') is not None)
             return total
         except Exception as e:
-            return SupabaseDB.handle_db_error("get_total_withdrawn", e, False)
+            logger.error(f"Error getting total withdrawn: {e}")
+            return 0.0
 
     @staticmethod
     def get_total_balance():
         try:
             response = supabase.table('users').select('balance').execute()
-            total = sum(user['balance'] for user in response.data if user['balance'])
+            total = sum(float(user['balance']) for user in response.data 
+                       if user.get('balance') is not None)
             return total
         except Exception as e:
-            return SupabaseDB.handle_db_error("get_total_balance", e, False)
+            logger.error(f"Error getting total balance: {e}")
+            return 0.0
+
+    @staticmethod
+    def get_dashboard_stats():
+        """Get overall dashboard statistics for admin"""
+        try:
+            stats = {
+                'total_users': SupabaseDB.get_users_count(),
+                'verified_users': SupabaseDB.get_verified_users_count(),
+                'total_referrals': SupabaseDB.get_referrals_count(),
+                'total_commission': SupabaseDB.get_total_commission(),
+                'total_withdrawn': SupabaseDB.get_total_withdrawn(),
+                'total_balance': SupabaseDB.get_total_balance(),
+                'tier_distribution': SupabaseDB.get_tier_distribution()
+            }
+            return stats
+        except Exception as e:
+            logger.error(f"Error getting dashboard stats: {e}")
+            return {
+                'total_users': 0,
+                'verified_users': 0,
+                'total_referrals': 0,
+                'total_commission': 0,
+                'total_withdrawn': 0,
+                'total_balance': 0,
+                'tier_distribution': {
+                    'bronze_percentage': 40,
+                    'silver_percentage': 25,
+                    'gold_percentage': 20,
+                    'platinum_percentage': 10,
+                    'diamond_percentage': 5
+                }
+            }
 
 # =============================================================================
 # SECURITY AND FRAUD DETECTION
@@ -4274,13 +4316,28 @@ def start_health_monitoring():
 # =============================================================================
 # MAIN APPLICATION ROUTES
 # =============================================================================
-
 @app.route('/')
 def index():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
     return render_template('landing.html')
 
+@login_manager.user_loader
+def load_user(user_id):
+    """Load user by ID from database for Flask-Login"""
+    try:
+        user = SupabaseDB.get_user_by_id(user_id)
+        if user:
+            # Debug logging
+            logger.info(f"Loaded user {user_id} from database")
+            logger.info(f"  User data: balance={user.balance}, total_earned={user.total_earned}")
+            return user
+        return None
+    except Exception as e:
+        logger.error(f"Error loading user {user_id}: {e}")
+        return None
+    
+    
 @app.route('/dashboard')
 @login_required
 def dashboard():
@@ -4289,59 +4346,44 @@ def dashboard():
         return redirect(url_for('account_activation'))
     
     try:
-        # Get user transactions for withdrawals
-        transactions = SupabaseDB.get_transactions_by_user(current_user.id, transaction_type='withdrawal')
+        # Debug: Log current user data
+        logger.info(f"Current user data for {current_user.id}:")
+        logger.info(f"  Balance: {current_user.balance}")
+        logger.info(f"  Total earned: {current_user.total_earned}")
+        logger.info(f"  Total withdrawn: {current_user.total_withdrawn}")
+        logger.info(f"  Referral count: {current_user.referral_count}")
+        logger.info(f"  Total commission: {current_user.total_commission}")
         
-        # Get all transactions to calculate earnings
-        all_transactions = SupabaseDB.get_all_transactions_by_user(current_user.id)
+        # Convert values to float to ensure proper formatting
+        available_balance = float(current_user.balance) if current_user.balance else 0.0
+        total_withdrawn = float(current_user.total_withdrawn) if current_user.total_withdrawn else 0.0
+        all_time_earnings = float(current_user.total_earned) if current_user.total_earned else 0.0
+        total_referrals = int(current_user.referral_count) if current_user.referral_count else 0
+        earned_from_referrals = float(current_user.total_commission) if current_user.total_commission else 0.0
         
-        # Calculate financial stats
-        total_withdrawn = sum(abs(t['amount']) for t in transactions if t['status'] == 'completed')
-        
-        # Calculate available balance (sum of all deposits/commissions minus withdrawals)
-        deposits = [t for t in all_transactions if t['type'] == 'deposit' and t['status'] == 'completed']
-        commissions = [t for t in all_transactions if t['type'] == 'commission' and t['status'] == 'completed']
-        withdrawals = [t for t in all_transactions if t['type'] == 'withdrawal' and t['status'] == 'completed']
-        
-        total_deposits = sum(t['amount'] for t in deposits)
-        total_commissions = sum(t['amount'] for t in commissions)
-        total_completed_withdrawals = sum(abs(t['amount']) for t in withdrawals)
-        
-        # Available balance = (deposits + commissions) - withdrawals
-        available_balance = (total_deposits + total_commissions) - total_completed_withdrawals
-        
-        # Ready to withdraw is the same as available balance (assuming no restrictions)
+        # Ready to withdraw is the same as available balance
         ready_to_withdraw = available_balance if available_balance > 0 else 0
         
-        # All time earnings (total deposits + total commissions)
-        all_time_earnings = total_deposits + total_commissions
+        # Get user transactions for withdrawals to calculate pending
+        transactions = SupabaseDB.get_transactions_by_user(current_user.id, transaction_type='withdrawal')
         
-        # Pending withdrawals (both pending and processing)
-        pending_withdrawals_count = len([t for t in transactions if t['status'] in ['pending', 'processing']])
-        
-        # Being processed withdrawals (just processing status)
-        being_processed_count = len([t for t in transactions if t['status'] == 'processing'])
+        # Get pending and processing withdrawals from transactions
+        pending_withdrawals_count = len([t for t in transactions if t.get('status') in ['pending', 'processing']])
+        being_processed_count = len([t for t in transactions if t.get('status') == 'processing'])
         
         # Recent withdrawals (last 5 for activity section)
         recent_withdrawals = sorted(transactions, 
                                   key=lambda x: x.get('created_at', ''), 
                                   reverse=True)[:5]
         
-        # Get referral stats
-        total_referrals = current_user.referral_count or 0
-        
-        # Get active referrals (referrals who are verified and have made at least one deposit)
+        # Get active referrals (referrals who are verified)
         active_referrals = 0
         referred_users = SupabaseDB.get_referred_users(current_user.id)
-        for user in referred_users:
-            # Check if user is verified and has made at least one deposit
-            user_transactions = SupabaseDB.get_transactions_by_user(user['id'])
-            user_deposits = [t for t in user_transactions if t['type'] == 'deposit' and t['status'] == 'completed']
-            if user.get('is_verified') and len(user_deposits) > 0:
-                active_referrals += 1
         
-        # Earned from referrals (commission earnings)
-        earned_from_referrals = current_user.total_commission or 0
+        for user in referred_users:
+            # Check if user is verified
+            if user.get('is_verified'):
+                active_referrals += 1
         
         # Calculate this month referrals
         from datetime import datetime
@@ -4350,10 +4392,24 @@ def dashboard():
         
         this_month_referrals = 0
         for user in referred_users:
-            if user.get('created_at'):
-                user_date = datetime.fromisoformat(str(user['created_at']))
-                if user_date.month == current_month and user_date.year == current_year:
-                    this_month_referrals += 1
+            created_at = user.get('created_at')
+            if created_at:
+                try:
+                    if isinstance(created_at, str):
+                        # Try to parse the string date
+                        if 'T' in created_at:
+                            user_date = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                        else:
+                            user_date = datetime.strptime(created_at, '%Y-%m-%d %H:%M:%S')
+                    else:
+                        # It might already be a datetime object
+                        user_date = created_at
+                    
+                    if user_date.month == current_month and user_date.year == current_year:
+                        this_month_referrals += 1
+                except (ValueError, AttributeError, TypeError) as e:
+                    logger.error(f"Error parsing date for user {user.get('id')}: {e}")
+                    continue
         
         # Conversion rate (active referrals / total referrals * 100)
         if total_referrals > 0:
@@ -4361,13 +4417,15 @@ def dashboard():
         else:
             conversion_rate = "0%"
         
-        # Current challenge stats (static for now, can be dynamic from database)
-        challenge_progress = 0  # current referrals count for the challenge
+        # Current challenge stats - use user's total referrals for progress
+        challenge_progress = total_referrals
         challenge_target = 3000
         
         # Calculate challenge progress percentage
         challenge_percentage = (challenge_progress / challenge_target * 100) if challenge_target > 0 else 0
+        challenge_percentage = min(challenge_percentage, 100)  # Cap at 100%
         
+        # Prepare data for template
         referral_stats = {
             'total_referrals': total_referrals,
             'active_referrals': active_referrals,
@@ -4376,7 +4434,6 @@ def dashboard():
             'conversion_rate': conversion_rate
         }
         
-        # Financial stats
         financial_stats = {
             'available_balance': available_balance,
             'ready_to_withdraw': ready_to_withdraw,
@@ -4386,12 +4443,17 @@ def dashboard():
             'being_processed': being_processed_count
         }
         
-        # Challenge stats
         challenge_stats = {
             'progress': challenge_progress,
             'target': challenge_target,
             'percentage': challenge_percentage
         }
+        
+        # Debug: Log the stats we're passing to template
+        logger.info(f"Dashboard stats for {current_user.id}:")
+        logger.info(f"  Financial stats: {financial_stats}")
+        logger.info(f"  Referral stats: {referral_stats}")
+        logger.info(f"  Challenge stats: {challenge_stats}")
         
         return render_template('dashboard.html',
                              financial_stats=financial_stats,
@@ -4402,7 +4464,7 @@ def dashboard():
                              challenge_stats=challenge_stats)
     
     except Exception as e:
-        logger.error(f"Error loading dashboard for user {current_user.id}: {e}")
+        logger.error(f"Error loading dashboard for user {current_user.id}: {e}", exc_info=True)
         
         # Return default values on error
         financial_stats = {
