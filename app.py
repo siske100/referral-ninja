@@ -5664,8 +5664,9 @@ def withdraw():
         
         # Send verification email
         try:
-            # Initialize EmailService if not already done
-            if 'email_service' not in globals():
+            # Initialize EmailService if not already done - FIXED: Use global variable
+            global email_service
+            if 'email_service' not in globals() or email_service is None:
                 email_service = EmailService(app.config)
             
             # Send email with verification code
@@ -5912,6 +5913,11 @@ def verify_withdrawal_email():
         
         # Send confirmation email
         try:
+            # Ensure email_service is available
+            global email_service
+            if 'email_service' not in globals() or email_service is None:
+                email_service = EmailService(app.config)
+            
             email_service.send_withdrawal_confirmation_email(
                 current_user.email,
                 current_user.username,
@@ -5991,6 +5997,11 @@ def resend_withdrawal_verification():
     
     # Resend email
     try:
+        # Ensure email_service is available
+        global email_service
+        if 'email_service' not in globals() or email_service is None:
+            email_service = EmailService(app.config)
+        
         email_service.send_withdrawal_verification_email(
             user_email=current_user.email,
             username=current_user.username,
@@ -6034,6 +6045,28 @@ def cancel_withdrawal(transaction_id):
     
     flash('Withdrawal cancelled successfully.', 'success')
     return redirect(url_for('dashboard'))
+
+def refresh_user():
+    """Helper function to refresh user data (defined at module level for reuse)"""
+    from flask_login import current_user
+    try:
+        user_data = SupabaseDB.get_user_by_id(current_user.id)
+        if user_data:
+            if hasattr(user_data, '__dict__'):
+                # Copy non-private attributes
+                for key, value in user_data.__dict__.items():
+                    if not key.startswith('_'):
+                        setattr(current_user, key, value)
+            else:
+                # Assume it's an object with attributes
+                current_user.balance = float(getattr(user_data, 'balance', 0))
+                current_user.total_withdrawn = float(getattr(user_data, 'total_withdrawn', 0))
+                current_user.is_verified = bool(getattr(user_data, 'is_verified', False))
+                current_user.phone = getattr(user_data, 'phone', '')
+                current_user.email = getattr(user_data, 'email', '')
+                current_user.email_verified = bool(getattr(user_data, 'email_verified', False))
+    except Exception as e:
+        app.logger.error(f"Error refreshing user: {e}"))
 
 def refresh_user():
     """Refresh current user data from database"""
