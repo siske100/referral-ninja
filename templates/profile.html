@@ -128,16 +128,16 @@
                 </div>
 
                 <div class="challenge-progress mb-4">
-                    {% set referred_count = current_user.referral_count %}
+                    {% set referred_count = current_user.referral_count or 0 %}
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <small class="text-muted">Your Progress</small>
                         <small class="text-dark fw-medium">{{ referred_count }} Referrals</small>
                     </div>
                     <div class="progress mb-3" style="height: 8px;">
-                        {% set progress = (referred_count / 50 * 100) if referred_count <= 50 else 100 %}
+                        {% set progress = (referred_count / 3000 * 100) if referred_count <= 3000 else 100 %}
                         <div class="progress-bar bg-warning" style="width: {{ progress }}%"></div>
                     </div>
-                    <small class="text-muted">Goal: 50+ referrals to qualify</small>
+                    <small class="text-muted">Goal: 3000+ referrals to qualify</small>
                 </div>
 
                 <div class="tips-section">
@@ -434,7 +434,7 @@
 /* Additional stats row */
 .stats-grid .stat-item {
     display: flex;
-    align-items: center;
+    align-items-center;
     gap: 1rem;
     transition: transform 0.3s ease;
 }
