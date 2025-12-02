@@ -11,6 +11,21 @@
     'conversion_rate': '0%'
 } %}
 
+{% set financial_stats = financial_stats or {
+    'available_balance': 0,
+    'ready_to_withdraw': 0,
+    'total_withdrawn': 0,
+    'all_time_earnings': 0,
+    'pending_withdrawals': 0,
+    'being_processed': 0
+} %}
+
+{% set challenge_stats = challenge_stats or {
+    'progress': 0,
+    'target': 3000,
+    'percentage': 0
+} %}
+
 <div class="dashboard-container">
     <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -79,12 +94,12 @@
                                 </div>
                                 <div class="stat-content flex-grow-1">
                                     <span class="stat-label">Available Balance</span>
-                                    <h2 class="stat-amount mb-0">KES {{ "%.2f"|format(current_user.balance|float) }}</h2>
+                                    <h2 class="stat-amount mb-0">KES {{ "%.2f"|format(financial_stats.available_balance) }}</h2>
                                 </div>
                             </div>
                             <div class="mt-auto">
                                 <small class="text-success">
-                                    <i class="fas fa-arrow-up me-1"></i>Ready to withdraw
+                                    <i class="fas fa-arrow-up me-1"></i>Ready to withdraw: KES {{ "%.2f"|format(financial_stats.ready_to_withdraw) }}
                                 </small>
                             </div>
                         </div>
@@ -100,12 +115,12 @@
                                 </div>
                                 <div class="stat-content flex-grow-1">
                                     <span class="stat-label">Total Withdrawn</span>
-                                    <h2 class="stat-amount mb-0">KES {{ "%.2f"|format(total_withdrawn) }}</h2>
+                                    <h2 class="stat-amount mb-0">KES {{ "%.2f"|format(financial_stats.total_withdrawn) }}</h2>
                                 </div>
                             </div>
                             <div class="mt-auto">
                                 <small class="text-muted">
-                                    <i class="fas fa-history me-1"></i>All time earnings
+                                    <i class="fas fa-history me-1"></i>All time earnings: KES {{ "%.2f"|format(financial_stats.all_time_earnings) }}
                                 </small>
                             </div>
                         </div>
@@ -121,12 +136,12 @@
                                 </div>
                                 <div class="stat-content flex-grow-1">
                                     <span class="stat-label">Pending Withdrawals</span>
-                                    <h2 class="stat-amount mb-0">{{ pending_withdrawals }}</h2>
+                                    <h2 class="stat-amount mb-0">{{ financial_stats.pending_withdrawals }}</h2>
                                 </div>
                             </div>
                             <div class="mt-auto">
                                 <small class="text-warning">
-                                    <i class="fas fa-sync-alt me-1"></i>Being processed
+                                    <i class="fas fa-sync-alt me-1"></i>Being processed: {{ financial_stats.being_processed }}
                                 </small>
                             </div>
                         </div>
@@ -148,6 +163,12 @@
                     <div class="row text-center">
                         <div class="col-md-3 mb-3">
                             <div class="performance-card p-3 rounded-3 bg-light">
+                                <h3 class="text-primary mb-1">{{ referral_stats.total_referrals }}</h3>
+                                <small class="text-muted">Total Referrals</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="performance-card p-3 rounded-3 bg-light">
                                 <h3 class="text-primary mb-1">{{ referral_stats.active_referrals }}</h3>
                                 <small class="text-muted">Active Referrals</small>
                             </div>
@@ -164,7 +185,9 @@
                                 <small class="text-muted">This Month</small>
                             </div>
                         </div>
-                        <div class="col-md-3 mb-3">
+                    </div>
+                    <div class="row text-center mt-3">
+                        <div class="col-md-6 offset-md-3">
                             <div class="performance-card p-3 rounded-3 bg-light">
                                 <h3 class="text-warning mb-1">{{ referral_stats.conversion_rate }}</h3>
                                 <small class="text-muted">Conversion Rate</small>
@@ -304,10 +327,10 @@
                     <div class="challenge-progress">
                         <div class="d-flex justify-content-between mb-1">
                             <small class="text-muted">Your Progress</small>
-                            <small class="text-muted">{{ referral_stats.total_referrals }}/3000 referrals</small>
+                            <small class="text-muted">{{ challenge_stats.progress }}/{{ challenge_stats.target }} referrals</small>
                         </div>
                         <div class="progress mb-3" style="height: 6px;">
-                            <div class="progress-bar bg-danger" style="width: {{ (referral_stats.total_referrals / 3000 * 100) if 3000 > 0 else 0 }}%"></div>
+                            <div class="progress-bar bg-danger" style="width: {{ challenge_stats.percentage }}%"></div>
                         </div>
                         
                         <div class="d-grid">
@@ -335,11 +358,11 @@
                             {% for transaction in withdrawals %}
                                 <div class="activity-item d-flex align-items-center p-3 rounded-2 mb-2 bg-light-hover">
                                     <div class="activity-icon me-3">
-                                        <i class="fas fa-{% if transaction.status == 'approved' %}check-circle text-success{% elif transaction.status == 'rejected' %}times-circle text-danger{% else %}clock text-warning{% endif %} fa-lg"></i>
+                                        <i class="fas fa-{% if transaction.status == 'completed' %}check-circle text-success{% elif transaction.status == 'failed' %}times-circle text-danger{% else %}clock text-warning{% endif %} fa-lg"></i>
                                     </div>
                                     <div class="activity-details flex-grow-1">
                                         <div class="d-flex justify-content-between align-items-center">
-                                            <h6 class="mb-1 fw-semibold">KES {{ "%.2f"|format(transaction.amount|float) }}</h6>
+                                            <h6 class="mb-1 fw-semibold">KES {{ "%.2f"|format(transaction.amount|float|abs) }}</h6>
                                             <span class="badge status-{{ transaction.status }} fs-7">
                                                 {{ transaction.status|title }}
                                             </span>
@@ -729,13 +752,13 @@
     border: 1px solid rgba(243, 156, 18, 0.2);
 }
 
-.status-approved {
+.status-completed {
     background: rgba(39, 174, 96, 0.1);
     color: #27ae60;
     border: 1px solid rgba(39, 174, 96, 0.2);
 }
 
-.status-rejected {
+.status-failed {
     background: rgba(231, 76, 60, 0.1);
     color: #e74c3c;
     border: 1px solid rgba(231, 76, 60, 0.2);
