@@ -5335,8 +5335,9 @@ def withdraw():
         phone_number = request.form.get('phone_number', '').strip()
         withdrawal_terms = request.form.get('withdrawal_terms') == 'on'
         
-        # Get IP address
+        # Get IP and device info
         ip_address = request.remote_addr
+        device_fingerprint = fraud_detector.get_device_fingerprint(request) if fraud_detector else None
         
         # Minimum withdrawal amount is 400
         if amount < 400:
@@ -5379,6 +5380,7 @@ def withdraw():
             'phone_number': phone_number,
             'ip_address': ip_address,
             'user_agent': request.headers.get('User-Agent', ''),
+            'device_fingerprint': device_fingerprint,
             'created_at': datetime.now(timezone.utc).isoformat()
         }
         
@@ -5407,7 +5409,8 @@ def withdraw():
                         "amount": amount, 
                         "warnings": fraud_warnings,
                         "withdrawal_id": transaction_id,
-                        "ip": ip_address
+                        "ip": ip_address,
+                        "device": device_fingerprint
                     }
                 )
             except Exception as e:
@@ -5425,7 +5428,7 @@ def withdraw():
         # Track withdrawal attempt
         if fraud_detector:
             try:
-                fraud_detector.log_withdrawal_attempt(current_user.id, amount, ip_address)
+                fraud_detector.log_withdrawal_attempt(current_user.id, amount, ip_address, device_fingerprint)
             except Exception as e:
                 app.logger.error(f"Error logging withdrawal attempt: {e}")
         
