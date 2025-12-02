@@ -926,6 +926,32 @@ class SupabaseDB:
             return SupabaseDB.handle_db_error("get_transactions_by_user", e, False)
 
     @staticmethod
+    def get_all_transactions_by_user(user_id):
+        """Get all transactions for a user regardless of type"""
+        try:
+            response = supabase.table('transactions') \
+                .select('*') \
+                .eq('user_id', user_id) \
+                .execute()
+            return response.data
+        except Exception as e:
+            logger.error(f"Error getting all transactions for user {user_id}: {e}")
+            return []
+
+    @staticmethod
+    def get_referred_users(referrer_id):
+        """Get all users referred by a specific user"""
+        try:
+            response = supabase.table('users') \
+                .select('*') \
+                .eq('referred_by', referrer_id) \
+                .execute()
+            return response.data
+        except Exception as e:
+            logger.error(f"Error getting referred users for {referrer_id}: {e}")
+            return []
+
+    @staticmethod
     def get_referrals_by_referrer(referrer_id):
         try:
             response = supabase.table('referrals').select('*').eq('referrer_id', referrer_id).order('created_at', desc=True).execute()
@@ -1158,6 +1184,32 @@ class SupabaseDB:
         except Exception as e:
             logger.error(f"Error in get_top_users: {e}")
             return []
+
+    # Additional method for dashboard challenge progress
+    @staticmethod
+    def get_challenge_progress(user_id, challenge_id=None):
+        """Get user's progress for a specific challenge"""
+        try:
+            if challenge_id:
+                response = supabase.table('challenge_progress') \
+                    .select('*') \
+                    .eq('user_id', user_id) \
+                    .eq('challenge_id', challenge_id) \
+                    .single() \
+                    .execute()
+            else:
+                # Get current active challenge
+                response = supabase.table('challenge_progress') \
+                    .select('*') \
+                    .eq('user_id', user_id) \
+                    .eq('is_active', True) \
+                    .single() \
+                    .execute()
+            
+            return response.data if response.data else None
+        except Exception as e:
+            logger.error(f"Error getting challenge progress for user {user_id}: {e}")
+            return None
         
 @staticmethod
 def update_user_ranks_batch():
@@ -4237,23 +4289,71 @@ def dashboard():
         return redirect(url_for('account_activation'))
     
     try:
-        # Get user transactions
+        # Get user transactions for withdrawals
         transactions = SupabaseDB.get_transactions_by_user(current_user.id, transaction_type='withdrawal')
         
+        # Get all transactions to calculate earnings
+        all_transactions = SupabaseDB.get_all_transactions_by_user(current_user.id)
+        
+        # Calculate financial stats
         total_withdrawn = sum(abs(t['amount']) for t in transactions if t['status'] == 'completed')
-        pending_withdrawals = len([t for t in transactions if t['status'] == 'pending' or t['status'] == 'processing'])
         
-        withdrawals = [t for t in transactions][:5]  # Last 5 withdrawals
+        # Calculate available balance (sum of all deposits/commissions minus withdrawals)
+        deposits = [t for t in all_transactions if t['type'] == 'deposit' and t['status'] == 'completed']
+        commissions = [t for t in all_transactions if t['type'] == 'commission' and t['status'] == 'completed']
+        withdrawals = [t for t in all_transactions if t['type'] == 'withdrawal' and t['status'] == 'completed']
         
-        # Get referral stats - Using current_user attributes directly
+        total_deposits = sum(t['amount'] for t in deposits)
+        total_commissions = sum(t['amount'] for t in commissions)
+        total_completed_withdrawals = sum(abs(t['amount']) for t in withdrawals)
+        
+        # Available balance = (deposits + commissions) - withdrawals
+        available_balance = (total_deposits + total_commissions) - total_completed_withdrawals
+        
+        # Ready to withdraw is the same as available balance (assuming no restrictions)
+        ready_to_withdraw = available_balance if available_balance > 0 else 0
+        
+        # All time earnings (total deposits + total commissions)
+        all_time_earnings = total_deposits + total_commissions
+        
+        # Pending withdrawals (both pending and processing)
+        pending_withdrawals_count = len([t for t in transactions if t['status'] in ['pending', 'processing']])
+        
+        # Being processed withdrawals (just processing status)
+        being_processed_count = len([t for t in transactions if t['status'] == 'processing'])
+        
+        # Recent withdrawals (last 5 for activity section)
+        recent_withdrawals = sorted(transactions, 
+                                  key=lambda x: x.get('created_at', ''), 
+                                  reverse=True)[:5]
+        
+        # Get referral stats
         total_referrals = current_user.referral_count or 0
         
-        # Get active referrals (referrals who are verified)
+        # Get active referrals (referrals who are verified and have made at least one deposit)
         active_referrals = 0
+        referred_users = SupabaseDB.get_referred_users(current_user.id)
+        for user in referred_users:
+            # Check if user is verified and has made at least one deposit
+            user_transactions = SupabaseDB.get_transactions_by_user(user['id'])
+            user_deposits = [t for t in user_transactions if t['type'] == 'deposit' and t['status'] == 'completed']
+            if user.get('is_verified') and len(user_deposits) > 0:
+                active_referrals += 1
+        
+        # Earned from referrals (commission earnings)
         earned_from_referrals = current_user.total_commission or 0
         
         # Calculate this month referrals
-        this_month = 0  # You'll need to implement date filtering
+        from datetime import datetime
+        current_month = datetime.now().month
+        current_year = datetime.now().year
+        
+        this_month_referrals = 0
+        for user in referred_users:
+            if user.get('created_at'):
+                user_date = datetime.fromisoformat(str(user['created_at']))
+                if user_date.month == current_month and user_date.year == current_year:
+                    this_month_referrals += 1
         
         # Conversion rate (active referrals / total referrals * 100)
         if total_referrals > 0:
@@ -4261,34 +4361,81 @@ def dashboard():
         else:
             conversion_rate = "0%"
         
+        # Current challenge stats (static for now, can be dynamic from database)
+        challenge_progress = 0  # current referrals count for the challenge
+        challenge_target = 3000
+        
+        # Calculate challenge progress percentage
+        challenge_percentage = (challenge_progress / challenge_target * 100) if challenge_target > 0 else 0
+        
         referral_stats = {
             'total_referrals': total_referrals,
             'active_referrals': active_referrals,
             'earned_from_referrals': earned_from_referrals,
-            'this_month': this_month,
+            'this_month': this_month_referrals,
             'conversion_rate': conversion_rate
         }
         
+        # Financial stats
+        financial_stats = {
+            'available_balance': available_balance,
+            'ready_to_withdraw': ready_to_withdraw,
+            'total_withdrawn': total_withdrawn,
+            'all_time_earnings': all_time_earnings,
+            'pending_withdrawals': pending_withdrawals_count,
+            'being_processed': being_processed_count
+        }
+        
+        # Challenge stats
+        challenge_stats = {
+            'progress': challenge_progress,
+            'target': challenge_target,
+            'percentage': challenge_percentage
+        }
+        
         return render_template('dashboard.html',
+                             financial_stats=financial_stats,
                              total_withdrawn=total_withdrawn,
-                             pending_withdrawals=pending_withdrawals,
-                             withdrawals=withdrawals,
-                             referral_stats=referral_stats)
+                             pending_withdrawals=pending_withdrawals_count,
+                             withdrawals=recent_withdrawals,
+                             referral_stats=referral_stats,
+                             challenge_stats=challenge_stats)
     
     except Exception as e:
         logger.error(f"Error loading dashboard for user {current_user.id}: {e}")
+        
+        # Return default values on error
+        financial_stats = {
+            'available_balance': 0,
+            'ready_to_withdraw': 0,
+            'total_withdrawn': 0,
+            'all_time_earnings': 0,
+            'pending_withdrawals': 0,
+            'being_processed': 0
+        }
+        
+        referral_stats = {
+            'total_referrals': 0,
+            'active_referrals': 0,
+            'earned_from_referrals': 0,
+            'this_month': 0,
+            'conversion_rate': '0%'
+        }
+        
+        challenge_stats = {
+            'progress': 0,
+            'target': 3000,
+            'percentage': 0
+        }
+        
         flash('Error loading dashboard. Please try again.', 'error')
         return render_template('dashboard.html',
+                             financial_stats=financial_stats,
                              total_withdrawn=0,
                              pending_withdrawals=0,
                              withdrawals=[],
-                             referral_stats={
-                                 'total_referrals': 0,
-                                 'active_referrals': 0,
-                                 'earned_from_referrals': 0,
-                                 'this_month': 0,
-                                 'conversion_rate': '0%'
-                             })
+                             referral_stats=referral_stats,
+                             challenge_stats=challenge_stats)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
