@@ -5664,9 +5664,8 @@ def withdraw():
         
         # Send verification email
         try:
-            # Initialize EmailService if not already done - FIXED: Use global variable
-            global email_service
-            if 'email_service' not in globals() or email_service is None:
+            # Initialize EmailService if not already done
+            if 'email_service' not in globals():
                 email_service = EmailService(app.config)
             
             # Send email with verification code
@@ -5913,11 +5912,6 @@ def verify_withdrawal_email():
         
         # Send confirmation email
         try:
-            # Ensure email_service is available
-            global email_service
-            if 'email_service' not in globals() or email_service is None:
-                email_service = EmailService(app.config)
-            
             email_service.send_withdrawal_confirmation_email(
                 current_user.email,
                 current_user.username,
@@ -5997,11 +5991,6 @@ def resend_withdrawal_verification():
     
     # Resend email
     try:
-        # Ensure email_service is available
-        global email_service
-        if 'email_service' not in globals() or email_service is None:
-            email_service = EmailService(app.config)
-        
         email_service.send_withdrawal_verification_email(
             user_email=current_user.email,
             username=current_user.username,
@@ -6066,7 +6055,7 @@ def refresh_user():
                 current_user.email = getattr(user_data, 'email', '')
                 current_user.email_verified = bool(getattr(user_data, 'email_verified', False))
     except Exception as e:
-        app.logger.error(f"Error refreshing user: {e}"))
+        app.logger.error(f"Error refreshing user: {e}")
 
 def refresh_user():
     """Refresh current user data from database"""
