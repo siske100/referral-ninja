@@ -1,67 +1,423 @@
 {% extends "base.html" %}
 
+{% block title %}Verify Withdrawal - ReferralNinja{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
+<div class="verify-withdrawal-container">
     <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">📧 Email Verification Required</h4>
-                </div>
-                <div class="card-body">
-                    <p class="lead">We've sent a 6-digit verification code to:</p>
-                    <div class="alert alert-info">
-                        <strong>{{ user_email }}</strong>
+        <div class="col-lg-6">
+            <!-- Header -->
+            <div class="text-center mb-5">
+                <div class="verification-icon mb-4">
+                    <div class="icon-circle bg-gradient-primary mx-auto">
+                        <i class="fas fa-envelope fa-2x"></i>
                     </div>
-                    
-                    <p>Please check your inbox and enter the code below to complete your withdrawal of <strong>KES {{ amount|int }}</strong>.</p>
-                    
-                    <form method="POST" action="{{ url_for('verify_withdrawal_email') }}">
-                        <div class="form-group">
-                            <label for="verification_code">Verification Code:</label>
-                            <input type="text" 
-                                   class="form-control form-control-lg text-center" 
-                                   id="verification_code" 
-                                   name="verification_code" 
-                                   maxlength="6"
-                                   pattern="\d{6}"
-                                   placeholder="Enter 6-digit code"
-                                   required>
-                            <small class="form-text text-muted">Code expires in 10 minutes</small>
+                </div>
+                <h1 class="h3 fw-bold text-dark mb-2">Verify Your Withdrawal</h1>
+                <p class="text-muted mb-0">Enter the 6-digit code sent to your email</p>
+            </div>
+
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'error' %}exclamation-triangle{% elif category == 'warning' %}exclamation-circle{% else %}info-circle{% endif %} me-2"></i>
+                                <span>{{ message }}</span>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <!-- Withdrawal Details Card -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-receipt text-primary me-3"></i>
+                        <h5 class="mb-0 text-dark">Withdrawal Details</h5>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row mb-4">
+                        <div class="col-md-6 mb-3">
+                            <h6 class="text-muted mb-1">Amount</h6>
+                            <p class="fs-4 fw-bold text-success">KES {{ "%.2f"|format(amount) }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <h6 class="text-muted mb-1">M-Pesa Number</h6>
+                            <p class="fs-4 fw-bold text-primary">
+                                {% if phone_number %}
+                                    {{ phone_number }}
+                                {% else %}
+                                    Not specified
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <h6 class="text-muted mb-1">Verification Email</h6>
+                            <p class="text-dark fw-medium">{{ user_email }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Verification Form Card -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-shield-alt text-primary me-3"></i>
+                        <h5 class="mb-0 text-dark">Email Verification</h5>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <div class="alert alert-info border-0 mb-4">
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-info-circle me-3 mt-1"></i>
+                            <div>
+                                <h6 class="alert-heading mb-1">Check Your Email</h6>
+                                <p class="mb-0">We've sent a 6-digit verification code to <strong>{{ user_email }}</strong>. 
+                                The code will expire in 10 minutes.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="POST" action="{{ url_for('verify_withdrawal_email') }}" class="verification-form" id="verificationForm">
+                        <!-- Hidden withdrawal ID -->
+                        <input type="hidden" name="withdrawal_id" value="{{ withdrawal_id }}">
                         
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-success btn-lg">
-                                ✅ Verify & Complete Withdrawal
+                        <!-- Verification Code Input -->
+                        <div class="mb-4">
+                            <label for="verification_code" class="form-label text-dark fw-medium mb-3">Enter 6-Digit Code</label>
+                            <div class="verification-inputs d-flex justify-content-center mb-3">
+                                {% for i in range(6) %}
+                                <input type="text" 
+                                       class="form-control verification-digit text-center mx-1" 
+                                       maxlength="1" 
+                                       data-index="{{ i }}"
+                                       required>
+                                {% endfor %}
+                            </div>
+                            <input type="hidden" name="verification_code" id="verification_code">
+                            <div class="form-text text-center">
+                                <small>Enter each digit of the code sent to your email</small>
+                            </div>
+                        </div>
+
+                        <!-- Timer Display -->
+                        <div class="timer-display text-center mb-4">
+                            <div class="d-inline-flex align-items-center bg-light rounded-pill px-4 py-2">
+                                <i class="fas fa-clock text-warning me-2"></i>
+                                <span class="fw-medium" id="countdown">10:00</span>
+                                <small class="text-muted ms-2">minutes remaining</small>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-grid gap-3">
+                            <button type="submit" class="btn btn-success btn-lg py-3" id="verifyButton">
+                                <i class="fas fa-check-circle me-2"></i>Verify & Complete Withdrawal
                             </button>
                             
-                            <form method="POST" action="{{ url_for('resend_withdrawal_verification') }}" class="d-inline">
+                            <!-- Resend Code Form -->
+                            <form method="POST" action="{{ url_for('resend_withdrawal_verification') }}" class="d-grid">
                                 <input type="hidden" name="withdrawal_id" value="{{ withdrawal_id }}">
-                                <button type="submit" class="btn btn-outline-secondary">
-                                    🔄 Resend Code
+                                <button type="submit" class="btn btn-outline-primary" id="resendButton">
+                                    <i class="fas fa-redo me-2"></i>Resend Verification Code
                                 </button>
                             </form>
                             
-                            <a href="{{ url_for('withdraw') }}" class="btn btn-outline-danger">
-                                ❌ Cancel Withdrawal
+                            <a href="{{ url_for('withdraw') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>Cancel Withdrawal
                             </a>
                         </div>
                     </form>
-                    
-                    <hr>
-                    
-                    <div class="alert alert-warning">
-                        <h6>💡 Important Tips:</h6>
-                        <ul class="mb-0">
-                            <li>Check your spam folder if you don't see the email</li>
-                            <li>The code expires in 10 minutes for security</li>
-                            <li>Never share this code with anyone</li>
-                            <li>If you didn't request this withdrawal, contact support immediately</li>
-                        </ul>
-                    </div>
                 </div>
+            </div>
+
+            <!-- Help Section -->
+            <div class="text-center mt-4">
+                <p class="text-muted small mb-2">
+                    <i class="fas fa-question-circle me-1"></i>
+                    Didn't receive the code? Check your spam folder or 
+                    <a href="#" data-bs-toggle="modal" data-bs-target="#helpModal">get help</a>
+                </p>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Help Modal -->
+<div class="modal fade" id="helpModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Verification Help</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h6>Common issues:</h6>
+                <ul class="mb-3">
+                    <li>Check your spam/junk folder</li>
+                    <li>Make sure you entered the correct email address</li>
+                    <li>Wait a few minutes for the email to arrive</li>
+                    <li>Ensure your email inbox is not full</li>
+                </ul>
+                <p class="mb-0">If you still haven't received the code after 5 minutes, click "Resend Verification Code".</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.verify-withdrawal-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 15px;
+}
+
+.icon-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+}
+
+.verification-inputs {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.verification-digit {
+    width: 50px;
+    height: 60px;
+    font-size: 1.5rem;
+    font-weight: bold;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.verification-digit:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    transform: translateY(-2px);
+}
+
+.verification-digit.filled {
+    border-color: #27ae60;
+    background-color: rgba(39, 174, 96, 0.05);
+}
+
+.timer-display {
+    font-size: 1.1rem;
+}
+
+#countdown {
+    font-size: 1.3rem;
+    color: #e74c3c;
+    font-family: 'Courier New', monospace;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #27ae60, #229954);
+    border: none;
+    font-weight: 600;
+}
+
+.btn-success:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+    .verification-digit {
+        width: 40px;
+        height: 50px;
+        font-size: 1.25rem;
+        margin: 0 3px;
+    }
+    
+    .icon-circle {
+        width: 70px;
+        height: 70px;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const digitInputs = document.querySelectorAll('.verification-digit');
+    const hiddenInput = document.getElementById('verification_code');
+    const verifyButton = document.getElementById('verifyButton');
+    const resendButton = document.getElementById('resendButton');
+    const countdownElement = document.getElementById('countdown');
+    
+    let countdown = 600; // 10 minutes in seconds
+    
+    // Focus on first digit
+    if (digitInputs.length > 0) {
+        digitInputs[0].focus();
+    }
+    
+    // Handle digit input
+    digitInputs.forEach((input, index) => {
+        input.addEventListener('input', function(e) {
+            const value = e.target.value;
+            
+            // Only allow digits
+            if (!/^\d*$/.test(value)) {
+                e.target.value = '';
+                return;
+            }
+            
+            // Auto-focus next input
+            if (value && index < digitInputs.length - 1) {
+                digitInputs[index + 1].focus();
+            }
+            
+            // Update hidden input
+            updateHiddenInput();
+            
+            // Add visual feedback
+            if (value) {
+                e.target.classList.add('filled');
+            } else {
+                e.target.classList.remove('filled');
+            }
+        });
+        
+        // Handle backspace
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                digitInputs[index - 1].focus();
+            }
+        });
+        
+        // Handle paste
+        input.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const pastedData = e.clipboardData.getData('text');
+            const digits = pastedData.replace(/\D/g, '').split('');
+            
+            digits.forEach((digit, i) => {
+                if (index + i < digitInputs.length) {
+                    digitInputs[index + i].value = digit;
+                    digitInputs[index + i].classList.add('filled');
+                }
+            });
+            
+            updateHiddenInput();
+            
+            // Focus last filled input
+            const lastIndex = Math.min(index + digits.length, digitInputs.length - 1);
+            digitInputs[lastIndex].focus();
+        });
+    });
+    
+    function updateHiddenInput() {
+        let code = '';
+        digitInputs.forEach(input => {
+            code += input.value || '';
+        });
+        hiddenInput.value = code;
+        
+        // Enable/disable verify button
+        verifyButton.disabled = code.length !== 6;
+    }
+    
+    // Countdown timer
+    function updateCountdown() {
+        const minutes = Math.floor(countdown / 60);
+        const seconds = countdown % 60;
+        countdownElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        
+        if (countdown > 0) {
+            countdown--;
+            setTimeout(updateCountdown, 1000);
+        } else {
+            countdownElement.textContent = '00:00';
+            countdownElement.style.color = '#e74c3c';
+            
+            // Disable verify button and show message
+            verifyButton.disabled = true;
+            verifyButton.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Code Expired';
+            verifyButton.classList.remove('btn-success');
+            verifyButton.classList.add('btn-danger');
+        }
+    }
+    
+    // Start countdown
+    updateCountdown();
+    
+    // Form submission
+    const verificationForm = document.getElementById('verificationForm');
+    if (verificationForm) {
+        verificationForm.addEventListener('submit', function(e) {
+            const code = hiddenInput.value;
+            
+            if (code.length !== 6) {
+                e.preventDefault();
+                showAlert('Please enter the complete 6-digit code', 'error');
+                return;
+            }
+            
+            // Show loading state
+            verifyButton.disabled = true;
+            verifyButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+        });
+    }
+    
+    // Resend button handling
+    if (resendButton) {
+        resendButton.addEventListener('click', function(e) {
+            // Show loading state
+            const originalText = resendButton.innerHTML;
+            resendButton.disabled = true;
+            resendButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Sending...';
+            
+            // Reset after 3 seconds
+            setTimeout(() => {
+                resendButton.disabled = false;
+                resendButton.innerHTML = originalText;
+            }, 3000);
+        });
+    }
+    
+    function showAlert(message, type) {
+        const alertClass = type === 'error' ? 'alert-danger' : 'alert-info';
+        const icon = type === 'error' ? 'exclamation-triangle' : 'info-circle';
+        
+        const alert = document.createElement('div');
+        alert.className = `alert ${alertClass} alert-dismissible fade show border-0 shadow-sm mb-4`;
+        alert.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas fa-${icon} me-2"></i>
+                <span>${message}</span>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.querySelector('.verify-withdrawal-container').insertBefore(alert, document.querySelector('.card'));
+        
+        setTimeout(() => {
+            if (alert.parentNode) {
+                alert.remove();
+            }
+        }, 5000);
+    }
+});
+</script>
 {% endblock %}
