@@ -564,13 +564,13 @@ class User(UserMixin):
         self.referral_code = f"RN{phone_hash}"
     
     def update_rank(self):
-        if self.total_commission >= 10000:
+        if self.total_commission >= 70000:
             self.user_rank = 'Diamond'
-        elif self.total_commission >= 5000:
+        elif self.total_commission >= 30000:
             self.user_rank = 'Platinum'
-        elif self.total_commission >= 2000:
+        elif self.total_commission >= 15000:
             self.user_rank = 'Gold'
-        elif self.total_commission >= 1000:
+        elif self.total_commission >= 5000:
             self.user_rank = 'Silver'
         else:
             self.user_rank = 'Bronze'
