@@ -39,7 +39,7 @@
                 <div class="d-flex align-items-center">
                     <div class="avatar-container me-4">
                         <div class="avatar-circle bg-primary text-white">
-                            {{ (current_user.username or 'N')[0]|upper }}
+                            {{ (current_user.username if current_user.username else 'N')[0]|upper }}
                         </div>
                     </div>
                     <div>
@@ -57,9 +57,10 @@
                         Member since 
                         {% if current_user.created_at %}
                             {% if current_user.created_at is string %}
-                                {{ current_user.created_at[:7] }}
+                                {{ current_user.created_at[:10] }}
                             {% else %}
-                                {{ current_user.created_at.strftime('%b %Y') }}
+                                {% set created = current_user.created_at|string %}
+                                {{ created[:7] }}
                             {% endif %}
                         {% else %}
                             Recently
@@ -83,7 +84,7 @@
                                 </div>
                                 <div class="stat-content flex-grow-1">
                                     <span class="stat-label">Available Balance</span>
-                                    <h2 class="stat-amount mb-0">KES {{ "%.2f"|format(current_user.balance) }}</h2>
+                                    <h2 class="stat-amount mb-0">KES {{ "%.2f"|format(current_user.balance|float) }}</h2>
                                 </div>
                             </div>
                             <div class="mt-auto">
@@ -302,7 +303,8 @@
                     {% if top_referrers and top_referrers|length > 0 %}
                         <div class="leaderboard-list">
                             {% for referrer in top_referrers %}
-                                <div class="leaderboard-item d-flex align-items-center p-3 rounded-2 mb-2 {% if referrer.username == current_user.username %}bg-primary-light border-primary{% else %}bg-light-hover{% endif %}">
+                                {% set is_current_user = referrer.get('username') == current_user.username %}
+                                <div class="leaderboard-item d-flex align-items-center p-3 rounded-2 mb-2 {% if is_current_user %}bg-primary-light border-primary{% else %}bg-light-hover{% endif %}">
                                     <div class="leaderboard-position me-3">
                                         <div class="position-circle {% if loop.index <= 3 %}top-{{ loop.index }}{% endif %}">
                                             {{ loop.index }}
@@ -310,20 +312,20 @@
                                     </div>
                                     <div class="leaderboard-avatar me-3">
                                         <div class="avatar-circle-sm bg-secondary text-white">
-                                            {{ (referrer.username or 'U')[0]|upper }}
+                                            {{ (referrer.get('username', 'U')|string)[0]|upper }}
                                         </div>
                                     </div>
                                     <div class="leaderboard-details flex-grow-1">
                                         <div class="d-flex justify-content-between align-items-center">
-                                            <h6 class="mb-0 fw-semibold {% if referrer.username == current_user.username %}text-primary{% endif %}">
-                                                {{ referrer.username or 'User' }}
-                                                {% if referrer.username == current_user.username %}
+                                            <h6 class="mb-0 fw-semibold {% if is_current_user %}text-primary{% endif %}">
+                                                {{ referrer.get('username', 'User') }}
+                                                {% if is_current_user %}
                                                     <span class="badge bg-primary ms-1">You</span>
                                                 {% endif %}
                                             </h6>
-                                            <span class="fw-bold text-success">KES {{ "%.2f"|format(referrer.earnings or 0) }}</span>
+                                            <span class="fw-bold text-success">KES {{ "%.2f"|format(referrer.get('earnings', 0)|float) }}</span>
                                         </div>
-                                        <small class="text-muted">{{ referrer.referral_count or 0 }} referrals</small>
+                                        <small class="text-muted">{{ referrer.get('referral_count', 0) }} referrals</small>
                                     </div>
                                 </div>
                             {% endfor %}
@@ -339,7 +341,7 @@
                                 </div>
                                 <div class="leaderboard-avatar me-3">
                                     <div class="avatar-circle-sm bg-primary text-white">
-                                        {{ (current_user.username or 'U')[0]|upper }}
+                                        {{ (current_user.username if current_user.username else 'U')[0]|upper }}
                                     </div>
                                 </div>
                                 <div class="leaderboard-details flex-grow-1">
@@ -428,7 +430,7 @@
                                     </div>
                                     <div class="activity-details flex-grow-1">
                                         <div class="d-flex justify-content-between align-items-center">
-                                            <h6 class="mb-1 fw-semibold">KES {{ "%.2f"|format(transaction.amount) }}</h6>
+                                            <h6 class="mb-1 fw-semibold">KES {{ "%.2f"|format(transaction.amount|float) }}</h6>
                                             <span class="badge status-{{ transaction.status }} fs-7">
                                                 {{ transaction.status|title }}
                                             </span>
@@ -436,10 +438,11 @@
                                         <small class="text-muted">
                                             <i class="far fa-clock me-1"></i>
                                             {% if transaction.created_at %}
-                                                {% if transaction.created_at is string %}
-                                                    {{ transaction.created_at[:16]|replace('T', ' ') }}
+                                                {% set created_at_str = transaction.created_at|string %}
+                                                {% if 'T' in created_at_str %}
+                                                    {{ created_at_str[:16]|replace('T', ' ') }}
                                                 {% else %}
-                                                    {{ transaction.created_at.strftime('%b %d, %Y at %H:%M') }}
+                                                    {{ created_at_str[:16] }}
                                                 {% endif %}
                                             {% else %}
                                                 Unknown date
@@ -479,7 +482,7 @@
             <div class="modal-body">
                 <p class="text-muted mb-3">Share this link with friends and start earning commissions:</p>
                 <div class="input-group mb-3">
-                    <input type="text" class="form-control" value="https://www.referralninja.co.ke/register?ref={{ current_user.referral_code }}" id="referralLink" readonly>
+                    <input type="text" class="form-control" value="{{ request.host_url.rstrip('/') }}/register?ref={{ current_user.referral_code if current_user.referral_code else '' }}" id="referralLink" readonly>
                     <button class="btn btn-primary" type="button" onclick="copyReferralLink()">
                         <i class="fas fa-copy"></i>
                     </button>
