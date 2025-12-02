@@ -5276,50 +5276,76 @@ def reload_user_from_db(user_id):
 @app.route('/withdraw', methods=['GET', 'POST'])
 @login_required
 def withdraw():
-    # Function to reload user from database without reassigning current_user
-    def reload_current_user():
-        """Helper function to reload current user data from database"""
-        from flask_login import current_user as login_user
-        user_data = SupabaseDB.get_user_by_id(login_user.id)
-        if user_data:
-            # If user_data is a User object, copy its attributes
-            if hasattr(user_data, '__dict__'):
-                # It's a User object - copy attributes
-                user_dict = user_data.__dict__
-                for key, value in user_dict.items():
-                    # Skip private attributes
-                    if not key.startswith('_'):
-                        setattr(login_user, key, value)
-            elif isinstance(user_data, dict):
-                # It's a dictionary
-                for key, value in user_data.items():
-                    if hasattr(login_user, key):
-                        setattr(login_user, key, value)
-        return login_user
+    def validate_and_normalize_phone(phone_str):
+        """Validate and normalize Kenyan phone number to 254 format"""
+        # Remove all non-digits
+        digits = re.sub(r'\D', '', phone_str)
+        
+        if not digits:
+            return None, "Phone number is required"
+        
+        # Check common Kenyan formats
+        if digits.startswith('254') and len(digits) == 12:
+            return digits, None  # Already in 254 format
+        elif digits.startswith('07') and len(digits) == 10:
+            return '254' + digits[1:], None  # Remove leading 0, add 254
+        elif digits.startswith('7') and len(digits) == 9:
+            return '254' + digits, None  # Add 254 prefix
+        elif digits.startswith('+254') and len(digits) == 13:
+            return digits[1:], None  # Remove +
+        elif digits.startswith('01') and len(digits) == 10:
+            return '254' + digits[1:], None  # Old 01 format
+        else:
+            return None, "Invalid phone format. Use: 07XX XXX XXX or 254XXXXXXXXX"
     
-    # Reload user data at the start
-    reload_current_user()
+    def refresh_user():
+        """Refresh current user data from database"""
+        try:
+            user_data = SupabaseDB.get_user_by_id(current_user.id)
+            if user_data:
+                if hasattr(user_data, '__dict__'):
+                    # Copy non-private attributes
+                    for key, value in user_data.__dict__.items():
+                        if not key.startswith('_'):
+                            setattr(current_user, key, value)
+                else:
+                    # Assume it's an object with attributes
+                    current_user.balance = float(getattr(user_data, 'balance', 0))
+                    current_user.total_withdrawn = float(getattr(user_data, 'total_withdrawn', 0))
+                    current_user.is_verified = bool(getattr(user_data, 'is_verified', False))
+                    current_user.phone = getattr(user_data, 'phone', '')
+                    current_user.phone_number = getattr(user_data, 'phone_number', '')
+        except Exception as e:
+            app.logger.error(f"Error refreshing user: {e}")
+    
+    # Refresh user at start
+    refresh_user()
     
     if not current_user.is_verified:
         flash('Please complete payment verification to withdraw funds.', 'warning')
         return redirect(url_for('account_activation'))
     
     if request.method == 'POST':
-        amount = float(request.form.get('amount'))
-        phone_number = request.form.get('phone_number')
+        try:
+            amount = float(request.form.get('amount', 0))
+        except ValueError:
+            flash('Please enter a valid amount.', 'error')
+            return redirect(url_for('withdraw'))
+        
+        phone_number = request.form.get('phone_number', '').strip()
         withdrawal_terms = request.form.get('withdrawal_terms') == 'on'
         
         # Get IP and device info
         ip_address = request.remote_addr
-        device_fingerprint = fraud_detector.get_device_fingerprint(request)
+        device_fingerprint = fraud_detector.get_device_fingerprint(request) if fraud_detector else None
         
         # Minimum withdrawal amount is 400
         if amount < 400:
             flash('Minimum withdrawal amount is KES 400.', 'error')
             return redirect(url_for('withdraw'))
         
-        # Check available balance (FRESH from database)
-        reload_current_user()  # Reload fresh balance
+        # Check available balance
+        refresh_user()
         if amount > current_user.balance:
             flash(f'Insufficient balance. Available: KES {current_user.balance:.2f}', 'error')
             return redirect(url_for('withdraw'))
@@ -5329,34 +5355,31 @@ def withdraw():
             flash('You must agree to the withdrawal terms and conditions.', 'error')
             return redirect(url_for('withdraw'))
         
-        # Clean and validate phone number format
-        phone_number = phone_number.strip().replace(' ', '')
-        
-        # Validate phone number format
-        if not re.match(r'^254[0-9]{9}$', phone_number) and not re.match(r'^07[0-9]{8}$', phone_number):
-            flash('Please enter a valid Kenyan phone number (e.g., 07XX XXX XXX).', 'error')
+        # Validate and normalize phone number
+        normalized_phone, error_msg = validate_and_normalize_phone(phone_number)
+        if error_msg:
+            flash(error_msg, 'error')
             return redirect(url_for('withdraw'))
+        phone_number = normalized_phone
         
-        # Convert to 254 format
-        if phone_number.startswith('07'):
-            phone_number = '254' + phone_number[1:]
-        elif phone_number.startswith('+254'):
-            phone_number = phone_number[1:]
-        elif phone_number.startswith('+'):
-            phone_number = phone_number[1:]
-        
-        # ENHANCED FRAUD DETECTION for web withdrawals
-        fraud_warnings = fraud_detector.detect_suspicious_withdrawal(current_user, amount, request)
+        # Fraud detection
+        fraud_warnings = []
+        if fraud_detector:
+            try:
+                fraud_warnings = fraud_detector.detect_suspicious_withdrawal(current_user, amount, request)
+            except Exception as e:
+                app.logger.error(f"Error in fraud detection: {e}")
         
         # Prepare transaction data
+        transaction_id = str(uuid.uuid4())
         transaction_data = {
-            'id': str(uuid.uuid4()),
+            'id': transaction_id,
             'user_id': current_user.id,
             'amount': -amount,
             'transaction_type': 'withdrawal',
             'phone_number': phone_number,
             'ip_address': ip_address,
-            'user_agent': request.headers.get('User-Agent'),
+            'user_agent': request.headers.get('User-Agent', ''),
             'device_fingerprint': device_fingerprint,
             'created_at': datetime.now(timezone.utc).isoformat()
         }
@@ -5369,26 +5392,29 @@ def withdraw():
                 'description': f'M-Pesa withdrawal to {phone_number} - Under Review for suspicious activity'
             })
             
-            SupabaseDB.create_transaction(transaction_data)
+            # Create transaction
+            try:
+                SupabaseDB.create_transaction(transaction_data)
+            except Exception as e:
+                app.logger.error(f"Error creating transaction: {e}")
+                flash('Error processing withdrawal. Please try again.', 'error')
+                return redirect(url_for('withdraw'))
             
-            SecurityMonitor.log_security_event(
-                "SUSPICIOUS_WITHDRAWAL", 
-                current_user.id, 
-                {
-                    "amount": amount, 
-                    "warnings": fraud_warnings,
-                    "withdrawal_id": transaction_data['id'],
-                    "ip": ip_address,
-                    "device": device_fingerprint
-                }
-            )
-            
-            # Block user if multiple high-risk warnings
-            if len(fraud_warnings) >= 3:
-                fraud_detector.block_suspicious_activity(
+            # Log security event
+            try:
+                SecurityMonitor.log_security_event(
+                    "SUSPICIOUS_WITHDRAWAL", 
                     current_user.id, 
-                    f"Multiple fraud warnings: {', '.join(fraud_warnings)}"
+                    {
+                        "amount": amount, 
+                        "warnings": fraud_warnings,
+                        "withdrawal_id": transaction_id,
+                        "ip": ip_address,
+                        "device": device_fingerprint
+                    }
                 )
+            except Exception as e:
+                app.logger.error(f"Error logging security event: {e}")
             
             flash('Withdrawal request submitted and is under review. We will notify you once processed.', 'warning')
             return redirect(url_for('dashboard'))
@@ -5400,13 +5426,17 @@ def withdraw():
         })
         
         # Track withdrawal attempt
-        fraud_detector.log_withdrawal_attempt(current_user.id, amount, ip_address, device_fingerprint)
+        if fraud_detector:
+            try:
+                fraud_detector.log_withdrawal_attempt(current_user.id, amount, ip_address, device_fingerprint)
+            except Exception as e:
+                app.logger.error(f"Error logging withdrawal attempt: {e}")
         
-        # 🔄 Use ATOMIC UPDATE to prevent race conditions
+        # Use atomic update to prevent race conditions
         new_balance = current_user.balance - amount
         new_total_withdrawn = current_user.total_withdrawn + amount
         
-        # Update database FIRST
+        # Update database
         update_success = SupabaseDB.update_user(current_user.id, {
             'balance': new_balance,
             'total_withdrawn': new_total_withdrawn
@@ -5416,62 +5446,75 @@ def withdraw():
             flash('Failed to process withdrawal. Please try again.', 'error')
             return redirect(url_for('withdraw'))
         
-        # Update local user object AFTER successful database update
-        reload_current_user()
+        # Update local user object
+        current_user.balance = new_balance
+        current_user.total_withdrawn = new_total_withdrawn
         
         # Create withdrawal transaction
-        SupabaseDB.create_transaction(transaction_data)
+        try:
+            SupabaseDB.create_transaction(transaction_data)
+        except Exception as e:
+            app.logger.error(f"Error creating transaction: {e}")
+            flash('Error recording transaction. Please contact support.', 'error')
+            return redirect(url_for('withdraw'))
         
         # Send initial SMS via Celcom
-        CelcomSMS.send_withdrawal_notification(
-            current_user.phone,
-            current_user.username,
-            amount,
-            'processing'
-        )
+        try:
+            if CelcomSMS:
+                CelcomSMS.send_withdrawal_notification(
+                    current_user.phone,
+                    current_user.username,
+                    amount,
+                    'processing'
+                )
+        except Exception as e:
+            app.logger.error(f"Error sending SMS: {e}")
         
-        # 🔄 Process withdrawal automatically via M-Pesa B2C
-        processing_result = process_automatic_withdrawal(transaction_data)
+        # Process withdrawal automatically via M-Pesa B2C
+        processing_result = False
+        try:
+            processing_result = process_automatic_withdrawal(transaction_data)
+        except Exception as e:
+            app.logger.error(f"Error in automatic withdrawal: {e}")
         
         if processing_result:
             flash('Withdrawal request submitted successfully! We are processing your payment via M-Pesa. You will receive an SMS confirmation shortly.', 'success')
         else:
             flash('Withdrawal request received! Our team will process it within 24 hours. You will be notified once completed.', 'info')
             # Send Telegram notification for manual processing
-            send_withdrawal_notification_to_telegram(current_user, transaction_data)
-        
-        # Force user reload on next request
-        reload_current_user()
+            try:
+                send_withdrawal_notification_to_telegram(current_user, transaction_data)
+            except Exception as e:
+                app.logger.error(f"Error sending Telegram notification: {e}")
         
         return redirect(url_for('dashboard'))
     
     # GET request - show withdrawal page
-    # Reload user for GET requests
-    reload_current_user()
+    refresh_user()
     
     # Get recent withdrawals (last 5)
-    transactions = SupabaseDB.get_transactions_by_user(
-        current_user.id, 
-        transaction_type='withdrawal', 
-        limit=5
-    )
+    transactions = []
+    try:
+        transactions = SupabaseDB.get_transactions_by_user(
+            current_user.id, 
+            transaction_type='withdrawal', 
+            limit=5
+        )
+    except Exception as e:
+        app.logger.error(f"Error fetching transactions: {e}")
     
     # Process transactions for display
     processed_transactions = []
     for transaction in transactions:
-        # Convert transaction to dictionary if it's an object
+        # Convert to dict if needed
         if hasattr(transaction, '__dict__'):
-            tx_dict = transaction.__dict__
-            # Remove SQLAlchemy internal attributes
+            tx_dict = transaction.__dict__.copy()
+            # Remove private attributes
             tx_dict = {k: v for k, v in tx_dict.items() if not k.startswith('_')}
         elif isinstance(transaction, dict):
             tx_dict = transaction.copy()
         else:
-            # Try to convert to dict
-            try:
-                tx_dict = dict(transaction)
-            except:
-                tx_dict = {}
+            tx_dict = {}
         
         # Format phone number for display (254... to 07...)
         phone = tx_dict.get('phone_number', '')
@@ -5491,15 +5534,27 @@ def withdraw():
         except (ValueError, TypeError):
             tx_dict['display_amount'] = 0
             
-        # Ensure we have all required attributes for the template
+        # Ensure we have all required attributes
         required_fields = ['amount', 'phone_number', 'status', 'description', 'created_at']
         for field in required_fields:
             if field not in tx_dict:
                 tx_dict[field] = ''
-                
-        # Convert created_at to string if it's a datetime object
-        if hasattr(tx_dict.get('created_at'), 'strftime'):
-            tx_dict['created_at'] = tx_dict['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Format date for display
+        created_at = tx_dict.get('created_at')
+        if created_at:
+            if hasattr(created_at, 'strftime'):
+                tx_dict['formatted_date'] = created_at.strftime('%d %b, %H:%M')
+            elif isinstance(created_at, str):
+                try:
+                    dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                    tx_dict['formatted_date'] = dt.strftime('%d %b, %H:%M')
+                except:
+                    tx_dict['formatted_date'] = created_at
+            else:
+                tx_dict['formatted_date'] = str(created_at)
+        else:
+            tx_dict['formatted_date'] = ''
             
         processed_transactions.append(tx_dict)
     
