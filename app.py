@@ -4245,24 +4245,21 @@ def dashboard():
         
         withdrawals = [t for t in transactions][:5]  # Last 5 withdrawals
         
-        # Get referral stats
-        referrals = SupabaseDB.get_referrals_by_referrer(current_user.id)
-        total_referrals = len(referrals)
+        # Get referral stats - Using current_user attributes directly
+        total_referrals = current_user.referral_count or 0
         
-        # Calculate active referrals (referrals who are verified)
+        # Get active referrals (referrals who are verified)
         active_referrals = 0
-        earned_from_referrals = 0
-        for referral in referrals:
-            referred_user = SupabaseDB.get_user_by_id(referral['referred_id'])
-            if referred_user and referred_user.is_verified:
-                active_referrals += 1
-                earned_from_referrals += referral.get('commission_earned', 0)
+        earned_from_referrals = current_user.total_commission or 0
         
-        # This month referrals (simplified - would need date filtering)
-        this_month = total_referrals  # Placeholder
+        # Calculate this month referrals
+        this_month = 0  # You'll need to implement date filtering
         
-        # Conversion rate (simplified)
-        conversion_rate = '100%' if total_referrals > 0 else '0%'
+        # Conversion rate (active referrals / total referrals * 100)
+        if total_referrals > 0:
+            conversion_rate = f"{(active_referrals / total_referrals * 100):.1f}%"
+        else:
+            conversion_rate = "0%"
         
         referral_stats = {
             'total_referrals': total_referrals,
@@ -4272,39 +4269,11 @@ def dashboard():
             'conversion_rate': conversion_rate
         }
         
-        # Get top referrers leaderboard
-        all_users = SupabaseDB.get_all_users()
-        top_referrers = []
-        
-        # Process all users for leaderboard
-        for user_data in all_users:
-            if user_data.get('referral_count', 0) > 0 or user_data.get('total_commission', 0) > 0:
-                top_referrers.append({
-                    'id': user_data.get('id'),
-                    'username': user_data.get('username', 'Unknown'),
-                    'earnings': user_data.get('total_commission', 0),
-                    'referral_count': user_data.get('referral_count', 0)
-                })
-        
-        # Sort by earnings descending, then by referral count
-        top_referrers.sort(key=lambda x: (x['earnings'], x['referral_count']), reverse=True)
-        top_referrers = top_referrers[:5]  # Top 5
-        
-        # Get current user ranking and details for leaderboard
-        user_rank_data = get_user_ranking(current_user.id)
-        user_rank = user_rank_data.get('position', 0) if user_rank_data else 0
-        user_earnings = current_user.total_commission or 0
-        user_referrals = current_user.referral_count or 0
-        
         return render_template('dashboard.html',
                              total_withdrawn=total_withdrawn,
                              pending_withdrawals=pending_withdrawals,
                              withdrawals=withdrawals,
-                             referral_stats=referral_stats,
-                             top_referrers=top_referrers,
-                             user_rank=user_rank,
-                             user_earnings=user_earnings,
-                             user_referrals=user_referrals)
+                             referral_stats=referral_stats)
     
     except Exception as e:
         logger.error(f"Error loading dashboard for user {current_user.id}: {e}")
@@ -4319,11 +4288,7 @@ def dashboard():
                                  'earned_from_referrals': 0,
                                  'this_month': 0,
                                  'conversion_rate': '0%'
-                             },
-                             top_referrers=[],
-                             user_rank=0,
-                             user_earnings=0,
-                             user_referrals=0)
+                             })
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
