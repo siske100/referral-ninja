@@ -4887,29 +4887,19 @@ def referral_system():
     share_message = f"Join Referral Ninja and earn money! Use my code: {current_user.referral_code}"
     
     share_links = {
-        'whatsapp': f"https://wa.me/?text={share_message} - {referral_url}",
-        'facebook': f"https://www.facebook.com/sharer/sharer.php?u={referral_url}&quote={share_message}",
-        'twitter': f"https://twitter.com/intent/tweet?text={share_message}&url={referral_url}",
-        'telegram': f"https://t.me/share/url?url={referral_url}&text={share_message}",
-        'email': f"mailto:?subject=Join%20Referral%20Ninja&body={share_message}%20{referral_url}"
+        'whatsapp': f"https://wa.me/?text={urllib.parse.quote(share_message + ' - ' + referral_url)}",
+        'facebook': f"https://www.facebook.com/sharer/sharer.php?u={urllib.parse.quote(referral_url)}&quote={urllib.parse.quote(share_message)}",
+        'twitter': f"https://twitter.com/intent/tweet?text={urllib.parse.quote(share_message)}&url={urllib.parse.quote(referral_url)}",
+        'telegram': f"https://t.me/share/url?url={urllib.parse.quote(referral_url)}&text={urllib.parse.quote(share_message)}"
     }
     
-    # Calculate Diani Challenge progress
-    current_referrals = len(referrals)
-    target_referrals = 3000
-    progress_percentage = round((current_referrals / target_referrals) * 100, 1) if target_referrals > 0 else 0
-    
-    # Calculate earnings
-    total_earnings = current_referrals * 50
+    # Make sure to import urllib.parse at the top of your file
+    # import urllib.parse
     
     return render_template('referral_system.html',
                          referrals=referrals,
                          share_links=share_links,
-                         referral_url=referral_url,
-                         current_referrals=current_referrals,
-                         target_referrals=target_referrals,
-                         progress_percentage=progress_percentage,
-                         total_earnings=total_earnings)
+                         referral_url=referral_url)
 
 @app.route('/referrals')
 @login_required
@@ -5013,10 +5003,30 @@ def statistics():
                          pending_balance=pending_balance,
                          referral_stats=referral_stats)
 
+def reload_user_from_db(user_id):
+    """Reload user from database to ensure fresh data"""
+    from flask_login import current_user
+    
+    # Fetch fresh user data from database
+    fresh_user_data = SupabaseDB.get_user_by_id(user_id)
+    
+    if fresh_user_data:
+        # Update current_user object with fresh data
+        current_user.balance = fresh_user_data.balance
+        current_user.total_withdrawn = fresh_user_data.total_withdrawn
+        current_user.is_verified = fresh_user_data.is_verified
+        current_user.phone = fresh_user_data.phone
+        # Add other fields as needed
+    
+    return current_user
+
 # UPDATED WITHDRAW ROUTE - Now with enhanced fraud detection
 @app.route('/withdraw', methods=['GET', 'POST'])
 @login_required
 def withdraw():
+    # 🔄 RELOAD USER FROM DATABASE at the start of EVERY request
+    current_user = reload_user_from_db(current_user.id)  # Add this function
+    
     if not current_user.is_verified:
         flash('Please complete payment verification to withdraw funds.', 'warning')
         return redirect(url_for('account_activation'))
@@ -5032,11 +5042,12 @@ def withdraw():
         
         # Minimum withdrawal amount is 400
         if amount < 400:
-            flash('Minimum withdrawal amount is KSH 400.', 'error')
+            flash('Minimum withdrawal amount is KES 400.', 'error')
             return redirect(url_for('withdraw'))
         
+        # Check available balance (FRESH from database)
         if amount > current_user.balance:
-            flash('Insufficient balance.', 'error')
+            flash(f'Insufficient balance. Available: KES {current_user.balance:.2f}', 'error')
             return redirect(url_for('withdraw'))
         
         # Check if terms were agreed to
@@ -5117,14 +5128,25 @@ def withdraw():
         # Track withdrawal attempt
         fraud_detector.log_withdrawal_attempt(current_user.id, amount, ip_address, device_fingerprint)
         
-        # Deduct balance immediately
-        current_user.balance -= amount
-        current_user.total_withdrawn += amount
-        SupabaseDB.update_user(current_user.id, {
-            'balance': current_user.balance,
-            'total_withdrawn': current_user.total_withdrawn
+        # 🔄 Use ATOMIC UPDATE to prevent race conditions
+        new_balance = current_user.balance - amount
+        new_total_withdrawn = current_user.total_withdrawn + amount
+        
+        # Update database FIRST
+        update_success = SupabaseDB.update_user(current_user.id, {
+            'balance': new_balance,
+            'total_withdrawn': new_total_withdrawn
         })
         
+        if not update_success:
+            flash('Failed to process withdrawal. Please try again.', 'error')
+            return redirect(url_for('withdraw'))
+        
+        # Update local user object AFTER successful database update
+        current_user.balance = new_balance
+        current_user.total_withdrawn = new_total_withdrawn
+        
+        # Create withdrawal transaction
         SupabaseDB.create_transaction(transaction_data)
         
         # Send initial SMS via Celcom
@@ -5145,18 +5167,36 @@ def withdraw():
             # Send Telegram notification for manual processing
             send_withdrawal_notification_to_telegram(current_user, transaction_data)
         
+        # 🔄 FORCE USER RELOAD on next request
+        logout_user()  # Optional: forces fresh login on next page
+        login_user(current_user, remember=True)  # Re-login with updated user
+        
         return redirect(url_for('dashboard'))
     
     # GET request - show withdrawal page
-    transactions = SupabaseDB.get_transactions_by_user(current_user.id, transaction_type='withdrawal', limit=5)
+    # 🔄 RELOAD USER for GET requests too
+    current_user = reload_user_from_db(current_user.id)
     
-    # Format transactions for display (if needed)
+    # Get recent withdrawals (last 5)
+    transactions = SupabaseDB.get_transactions_by_user(
+        current_user.id, 
+        transaction_type='withdrawal', 
+        limit=5
+    )
+    
+    # Process transactions for display
     for transaction in transactions:
-        # Format phone number for display (254... to 07...)
-        if transaction.phone_number and transaction.phone_number.startswith('254'):
-            transaction.display_phone = '0' + transaction.phone_number[3:]
-        else:
-            transaction.display_phone = transaction.phone_number
+        # Ensure transaction has all required attributes
+        if not hasattr(transaction, 'display_phone'):
+            # Format phone number for display (254... to 07...)
+            if transaction.phone_number and transaction.phone_number.startswith('254'):
+                transaction.display_phone = '0' + transaction.phone_number[3:]
+            else:
+                transaction.display_phone = transaction.phone_number
+        
+        # Ensure amount is positive for display
+        if hasattr(transaction, 'amount') and transaction.amount < 0:
+            transaction.display_amount = abs(transaction.amount)
     
     return render_template('withdraw.html', transactions=transactions)
 
