@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">📧 Email Verification Required</h4>
+                </div>
+                <div class="card-body">
+                    <p class="lead">We've sent a 6-digit verification code to:</p>
+                    <div class="alert alert-info">
+                        <strong>{{ user_email }}</strong>
+                    </div>
+                    
+                    <p>Please check your inbox and enter the code below to complete your withdrawal of <strong>KES {{ amount|int }}</strong>.</p>
+                    
+                    <form method="POST" action="{{ url_for('verify_withdrawal_email') }}">
+                        <div class="form-group">
+                            <label for="verification_code">Verification Code:</label>
+                            <input type="text" 
+                                   class="form-control form-control-lg text-center" 
+                                   id="verification_code" 
+                                   name="verification_code" 
+                                   maxlength="6"
+                                   pattern="\d{6}"
+                                   placeholder="Enter 6-digit code"
+                                   required>
+                            <small class="form-text text-muted">Code expires in 10 minutes</small>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                ✅ Verify & Complete Withdrawal
+                            </button>
+                            
+                            <form method="POST" action="{{ url_for('resend_withdrawal_verification') }}" class="d-inline">
+                                <input type="hidden" name="withdrawal_id" value="{{ withdrawal_id }}">
+                                <button type="submit" class="btn btn-outline-secondary">
+                                    🔄 Resend Code
+                                </button>
+                            </form>
+                            
+                            <a href="{{ url_for('withdraw') }}" class="btn btn-outline-danger">
+                                ❌ Cancel Withdrawal
+                            </a>
+                        </div>
+                    </form>
+                    
+                    <hr>
+                    
+                    <div class="alert alert-warning">
+                        <h6>💡 Important Tips:</h6>
+                        <ul class="mb-0">
+                            <li>Check your spam folder if you don't see the email</li>
+                            <li>The code expires in 10 minutes for security</li>
+                            <li>Never share this code with anyone</li>
+                            <li>If you didn't request this withdrawal, contact support immediately</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
