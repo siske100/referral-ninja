@@ -5276,8 +5276,20 @@ def reload_user_from_db(user_id):
 @app.route('/withdraw', methods=['GET', 'POST'])
 @login_required
 def withdraw():
-    # 🔄 RELOAD USER FROM DATABASE at the start of EVERY request
-    current_user = reload_user_from_db(current_user.id)  # Add this function
+    # Function to reload user from database without reassigning current_user
+    def reload_current_user():
+        """Helper function to reload current user data from database"""
+        from flask_login import current_user as login_user
+        user_data = SupabaseDB.get_user_by_id(login_user.id)
+        if user_data:
+            # Update the current_user object attributes
+            for key, value in user_data.items():
+                if hasattr(login_user, key):
+                    setattr(login_user, key, value)
+        return login_user
+    
+    # Reload user data at the start
+    reload_current_user()
     
     if not current_user.is_verified:
         flash('Please complete payment verification to withdraw funds.', 'warning')
@@ -5298,6 +5310,7 @@ def withdraw():
             return redirect(url_for('withdraw'))
         
         # Check available balance (FRESH from database)
+        reload_current_user()  # Reload fresh balance
         if amount > current_user.balance:
             flash(f'Insufficient balance. Available: KES {current_user.balance:.2f}', 'error')
             return redirect(url_for('withdraw'))
@@ -5395,8 +5408,7 @@ def withdraw():
             return redirect(url_for('withdraw'))
         
         # Update local user object AFTER successful database update
-        current_user.balance = new_balance
-        current_user.total_withdrawn = new_total_withdrawn
+        reload_current_user()
         
         # Create withdrawal transaction
         SupabaseDB.create_transaction(transaction_data)
@@ -5419,15 +5431,14 @@ def withdraw():
             # Send Telegram notification for manual processing
             send_withdrawal_notification_to_telegram(current_user, transaction_data)
         
-        # 🔄 FORCE USER RELOAD on next request
-        logout_user()  # Optional: forces fresh login on next page
-        login_user(current_user, remember=True)  # Re-login with updated user
+        # Force user reload on next request
+        reload_current_user()
         
         return redirect(url_for('dashboard'))
     
     # GET request - show withdrawal page
-    # 🔄 RELOAD USER for GET requests too
-    current_user = reload_user_from_db(current_user.id)
+    # Reload user for GET requests
+    reload_current_user()
     
     # Get recent withdrawals (last 5)
     transactions = SupabaseDB.get_transactions_by_user(
@@ -5437,20 +5448,30 @@ def withdraw():
     )
     
     # Process transactions for display
+    processed_transactions = []
     for transaction in transactions:
-        # Ensure transaction has all required attributes
-        if not hasattr(transaction, 'display_phone'):
-            # Format phone number for display (254... to 07...)
-            if transaction.phone_number and transaction.phone_number.startswith('254'):
-                transaction.display_phone = '0' + transaction.phone_number[3:]
-            else:
-                transaction.display_phone = transaction.phone_number
+        # Create a dictionary for display
+        tx_dict = transaction.__dict__ if hasattr(transaction, '__dict__') else transaction
+        
+        # Format phone number for display (254... to 07...)
+        if tx_dict.get('phone_number', '').startswith('254'):
+            tx_dict['display_phone'] = '0' + tx_dict['phone_number'][3:]
+        else:
+            tx_dict['display_phone'] = tx_dict.get('phone_number', '')
         
         # Ensure amount is positive for display
-        if hasattr(transaction, 'amount') and transaction.amount < 0:
-            transaction.display_amount = abs(transaction.amount)
+        if tx_dict.get('amount', 0) < 0:
+            tx_dict['display_amount'] = abs(tx_dict['amount'])
+        else:
+            tx_dict['display_amount'] = tx_dict.get('amount', 0)
+            
+        # Ensure we have all required attributes
+        for key in ['amount', 'phone_number', 'status', 'description', 'created_at']:
+            tx_dict.setdefault(key, '')
+            
+        processed_transactions.append(tx_dict)
     
-    return render_template('withdraw.html', transactions=transactions)
+    return render_template('withdraw.html', transactions=processed_transactions)
 
 # =============================================================================
 # JOBS MANAGEMENT ROUTES
