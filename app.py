@@ -7559,7 +7559,7 @@ def admin_withdrawals():
         items_per_page = 10
         offset = (page - 1) * items_per_page
         
-        # Base query
+        # Base query - join with users table to get complete user info
         query = supabase.table('transactions')\
             .select('*, users(*)')\
             .eq('transaction_type', 'withdrawal')\
@@ -7593,21 +7593,35 @@ def admin_withdrawals():
         for item in response.data:
             transaction = item
             user_data = item.get('users', {})
-            user = User(user_data) if user_data else None
             
-            if user:
+            # Extract user information from the database fields
+            if user_data:
                 withdrawals.append({
                     'id': transaction['id'],
-                    'user_id': user.id,
-                    'username': user.username,
-                    'email': user.email if hasattr(user, 'email') else '',
-                    'phone': transaction.get('phone_number', user.phone),
+                    'user_id': user_data.get('id', ''),
+                    'username': user_data.get('username', 'N/A'),
+                    'email': user_data.get('email', ''),
+                    'phone': user_data.get('phone', transaction.get('phone_number', '')),
+                    'name': user_data.get('name', user_data.get('username', 'N/A')),
                     'amount': abs(transaction['amount']),
                     'status': transaction['status'],
-                    'email_verified': user.email_verified if hasattr(user, 'email_verified') else False,
+                    'email_verified': user_data.get('email_verified', False),
+                    'is_verified': user_data.get('is_verified', False),
+                    'is_active': user_data.get('is_active', True),
+                    'balance': float(user_data.get('balance', 0)),
+                    'total_earned': float(user_data.get('total_earned', 0)),
+                    'total_withdrawn': float(user_data.get('total_withdrawn', 0)),
+                    'referral_code': user_data.get('referral_code', ''),
+                    'referral_count': user_data.get('referral_count', 0),
+                    'user_rank': user_data.get('user_rank', 'Member'),
+                    'total_commission': float(user_data.get('total_commission', 0)),
                     'created_at': transaction['created_at'],
                     'description': transaction.get('description', ''),
-                    'mpesa_code': transaction.get('mpesa_reference', '')
+                    'mpesa_code': transaction.get('mpesa_reference', ''),
+                    'last_login': user_data.get('last_login'),
+                    'device_fingerprint': user_data.get('device_fingerprint', ''),
+                    'referred_by': user_data.get('referred_by', ''),
+                    'is_admin': user_data.get('is_admin', False)
                 })
         
         # Calculate pagination
@@ -7636,9 +7650,9 @@ def get_withdrawal_stats():
         # Get 24-hour timeframe
         twenty_four_hours_ago = datetime.now(timezone.utc) - timedelta(hours=24)
         
-        # Get all withdrawals in last 24 hours
+        # Get all withdrawals in last 24 hours with user info
         response = supabase.table('transactions')\
-            .select('amount, status, created_at, users(email_verified)')\
+            .select('amount, status, created_at, users(*)')\
             .eq('transaction_type', 'withdrawal')\
             .gte('created_at', twenty_four_hours_ago.isoformat())\
             .execute()
@@ -7657,7 +7671,11 @@ def get_withdrawal_stats():
             'avg_processing_hours': 0,
             'change_24h': 0,
             'avg_withdrawal': 0,
-            'completion_rate': 0
+            'completion_rate': 0,
+            'active_users': 0,
+            'total_earned': 0,
+            'total_withdrawn': 0,
+            'withdrawal_rate': 0
         }
         
         # Process 24h data
@@ -7666,6 +7684,7 @@ def get_withdrawal_stats():
             status = item['status']
             user_data = item.get('users', {})
             is_verified = user_data.get('email_verified', False) if user_data else False
+            is_verified_user = user_data.get('is_verified', False) if user_data else False
             
             stats['total_24h'] += 1
             stats['total_amount_24h'] += amount
@@ -7680,7 +7699,7 @@ def get_withdrawal_stats():
                 stats['pending_now'] += 1
                 stats['pending_amount'] += amount
             
-            if is_verified:
+            if is_verified or is_verified_user:
                 stats['verified_count'] += 1
             else:
                 stats['unverified_count'] += 1
@@ -7729,8 +7748,37 @@ def get_withdrawal_stats():
         if total_week > 0:
             stats['completion_rate'] = round((completed_week / total_week) * 100, 1)
         
-        # Calculate 24h change (simplified - compare with previous 24h)
-        # In production, you might want to store daily stats
+        # Get user statistics
+        users_response = supabase.table('users')\
+            .select('total_earned, total_withdrawn, is_active, email_verified')\
+            .execute()
+        
+        if users_response.data:
+            total_earned = 0
+            total_withdrawn = 0
+            active_users = 0
+            
+            for user in users_response.data:
+                total_earned += float(user.get('total_earned', 0))
+                total_withdrawn += float(user.get('total_withdrawn', 0))
+                if user.get('is_active', False):
+                    active_users += 1
+            
+            stats['active_users'] = active_users
+            stats['total_earned'] = total_earned
+            stats['total_withdrawn'] = total_withdrawn
+            stats['total_earned_formatted'] = f"KES {total_earned:,.2f}"
+            stats['total_withdrawn_formatted'] = f"KES {total_withdrawn:,.2f}"
+            
+            if total_earned > 0:
+                withdrawal_rate = (total_withdrawn / total_earned) * 100
+                stats['withdrawal_rate'] = round(withdrawal_rate, 1)
+                stats['withdrawal_rate_formatted'] = f"{withdrawal_rate:.1f}%"
+            else:
+                stats['withdrawal_rate'] = 0
+                stats['withdrawal_rate_formatted'] = "0%"
+        
+        # Calculate 24h change
         stats['change_24h'] = 0  # Placeholder for actual change calculation
         
         return stats
@@ -7738,8 +7786,8 @@ def get_withdrawal_stats():
     except Exception as e:
         logger.error(f"Error getting withdrawal stats: {str(e)}")
         return {}
-
-
+    
+    
 @app.route('/api/admin/enhanced-stats')
 @login_required
 @admin_required
