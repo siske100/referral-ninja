@@ -234,10 +234,25 @@ class EmailService:
     def __init__(self, app_config):
         self.config = app_config
         self.logger = logging.getLogger(__name__)
+        
+        # Log configuration for debugging
+        self.logger.info(f"EmailService initialized with config:")
+        self.logger.info(f"  MAIL_SERVER: {self.config.get('MAIL_SERVER')}")
+        self.logger.info(f"  MAIL_PORT: {self.config.get('MAIL_PORT')}")
+        self.logger.info(f"  MAIL_USERNAME: {self.config.get('MAIL_USERNAME')}")
+        self.logger.info(f"  MAIL_DEFAULT_SENDER: {self.config.get('MAIL_DEFAULT_SENDER')}")
+        self.logger.info(f"  MAIL_USE_TLS: {self.config.get('MAIL_USE_TLS', True)}")
     
     def send_withdrawal_verification_email(self, user_email, username, verification_code, amount, transaction_id):
         """Send withdrawal verification code via email"""
         try:
+            # Log that we're starting the email process
+            self.logger.info(f"🎯 Starting email send process for {user_email}")
+            self.logger.info(f"  Username: {username}")
+            self.logger.info(f"  Amount: KSH {amount}")
+            self.logger.info(f"  Code: {verification_code}")
+            self.logger.info(f"  Transaction ID: {transaction_id}")
+            
             # Email content
             subject = "ReferralNinja - Withdrawal Verification Required"
             
@@ -320,30 +335,53 @@ class EmailService:
             ReferralNinja Security Team
             """
             
+            self.logger.info(f"📧 Email content prepared. Starting background thread...")
+            
             # Send email in background thread
-            threading.Thread(
+            thread = threading.Thread(
                 target=self._send_email,
                 args=(user_email, subject, text_content, html_content),
                 daemon=True
-            ).start()
+            )
+            thread.start()
             
-            self.logger.info(f"Withdrawal verification email sent to {user_email} for transaction {transaction_id}")
+            self.logger.info(f"✅ Email thread started for {user_email}")
+            self.logger.info(f"📝 Withdrawal verification email queued for {user_email} (Transaction: {transaction_id})")
             return True
             
         except Exception as e:
-            self.logger.error(f"Error preparing withdrawal email: {str(e)}")
+            self.logger.error(f"❌ Error preparing withdrawal email: {str(e)}")
+            import traceback
+            self.logger.error(traceback.format_exc())
             return False
     
     def _send_email(self, recipient, subject, text_content, html_content):
         """Actually send the email (runs in background thread)"""
         try:
-            if not self.config.get('MAIL_USERNAME') or not self.config.get('MAIL_PASSWORD'):
-                self.logger.warning("Email credentials not configured - skipping email send")
+            # Log email configuration for debugging
+            self.logger.info(f"🔧 Attempting to send email to {recipient}")
+            self.logger.info(f"   SMTP Server: {self.config.get('MAIL_SERVER')}:{self.config.get('MAIL_PORT')}")
+            self.logger.info(f"   Username: {self.config.get('MAIL_USERNAME')}")
+            self.logger.info(f"   Sender: {self.config.get('MAIL_DEFAULT_SENDER')}")
+            
+            # Check email credentials
+            mail_username = self.config.get('MAIL_USERNAME')
+            mail_password = self.config.get('MAIL_PASSWORD')
+            
+            if not mail_username or not mail_password:
+                self.logger.error("❌ Email credentials missing or empty!")
+                self.logger.error(f"   MAIL_USERNAME: {mail_username}")
+                self.logger.error(f"   MAIL_PASSWORD set: {bool(mail_password)}")
                 return False
+            
+            # Ensure sender email matches username (Gmail requirement)
+            sender = self.config.get('MAIL_DEFAULT_SENDER', '')
+            if not sender:
+                sender = mail_username  # Use username as sender if not specified
             
             msg = MIMEMultipart('alternative')
             msg['Subject'] = subject
-            msg['From'] = self.config['MAIL_DEFAULT_SENDER']
+            msg['From'] = sender
             msg['To'] = recipient
             
             # Attach both plain text and HTML versions
@@ -352,17 +390,54 @@ class EmailService:
             msg.attach(part1)
             msg.attach(part2)
             
-            # Connect to SMTP server
-            with smtplib.SMTP(self.config['MAIL_SERVER'], self.config['MAIL_PORT']) as server:
-                server.starttls()
-                server.login(self.config['MAIL_USERNAME'], self.config['MAIL_PASSWORD'])
+            # Connect to SMTP server with timeout and debug
+            self.logger.info(f"🔗 Connecting to SMTP server: {self.config.get('MAIL_SERVER')}:{self.config.get('MAIL_PORT')}")
+            
+            server = smtplib.SMTP(self.config.get('MAIL_SERVER'), self.config.get('MAIL_PORT'), timeout=30)
+            server.set_debuglevel(1)  # Enable debug output
+            
+            try:
+                server.ehlo()  # Identify ourselves to the SMTP server
+                
+                # Start TLS if enabled
+                if self.config.get('MAIL_USE_TLS', True):
+                    self.logger.info("🔒 Starting TLS...")
+                    server.starttls()
+                    server.ehlo()  # Re-identify ourselves after TLS
+                
+                # Login
+                self.logger.info("🔑 Logging in to SMTP server...")
+                server.login(mail_username, mail_password)
+                
+                # Send email
+                self.logger.info(f"📤 Sending email from {sender} to {recipient}...")
                 server.send_message(msg)
-            
-            self.logger.info(f"Email successfully sent to {recipient}")
-            return True
-            
+                
+                self.logger.info(f"✅ Email successfully sent to {recipient}")
+                return True
+                
+            except smtplib.SMTPAuthenticationError as e:
+                self.logger.error(f"❌ SMTP Authentication Error: {str(e)}")
+                self.logger.error("   Please check:")
+                self.logger.error("   1. Gmail username and password are correct")
+                self.logger.error("   2. 'Less secure app access' is enabled in Gmail settings")
+                self.logger.error("   3. Or use an App Password if 2FA is enabled")
+                return False
+                
+            except smtplib.SMTPException as e:
+                self.logger.error(f"❌ SMTP Error: {str(e)}")
+                return False
+                
+            finally:
+                try:
+                    server.quit()
+                except:
+                    pass
+                    
         except Exception as e:
-            self.logger.error(f"Error sending email to {recipient}: {str(e)}")
+            self.logger.error(f"❌ Error sending email to {recipient}: {str(e)}")
+            import traceback
+            self.logger.error(traceback.format_exc())
             return False
     
     def send_withdrawal_confirmation_email(self, user_email, username, amount, transaction_id, mpesa_code=None):
@@ -416,16 +491,18 @@ class EmailService:
             """
             
             # Send in background
-            threading.Thread(
+            thread = threading.Thread(
                 target=self._send_email,
                 args=(user_email, subject, html_content, html_content),
                 daemon=True
-            ).start()
+            )
+            thread.start()
             
+            self.logger.info(f"✅ Withdrawal confirmation email queued for {user_email}")
             return True
             
         except Exception as e:
-            self.logger.error(f"Error sending confirmation email: {str(e)}")
+            self.logger.error(f"❌ Error sending confirmation email: {str(e)}")
             return False
 
 # Initialize email service
