@@ -5547,10 +5547,6 @@ def withdraw():
         flash('Email address is required for withdrawals. Please add an email to your account in settings.', 'error')
         return redirect(url_for('settings'))
     
-    # Check if email is verified (recommended)
-    if not getattr(current_user, 'email_verified', False):
-        flash('⚠️ Please verify your email address for secure withdrawals. Check your email for verification link.', 'warning')
-    
     if request.method == 'POST':
         try:
             amount = float(request.form.get('amount', 0))
@@ -5584,6 +5580,10 @@ def withdraw():
             return redirect(url_for('withdraw'))
         phone_number = normalized_phone
         
+        # Check if email is verified (recommended but not required)
+        if not getattr(current_user, 'email_verified', False):
+            flash('⚠️ For enhanced security, please verify your email address. Check your email for verification link.', 'warning')
+        
         # Fraud detection
         fraud_warnings = []
         if fraud_detector:
@@ -5605,7 +5605,7 @@ def withdraw():
             'created_at': datetime.now(timezone.utc).isoformat()
         }
         
-        # ALWAYS require email verification, but also flag suspicious transactions
+        # ALWAYS require email verification
         # Generate 6-digit verification code
         verification_code = ''.join(secrets.choice(string.digits) for _ in range(6))
         verification_expires = datetime.now(timezone.utc) + timedelta(minutes=10)
@@ -5685,6 +5685,7 @@ def withdraw():
             else:
                 flash(f'✅ 6-digit verification code sent to {current_user.email}. Please check your email.', 'success')
             
+            # REDIRECT TO VERIFICATION PAGE (New Flow)
             return redirect(url_for('verify_withdrawal_email'))
             
         except Exception as e:
@@ -5699,7 +5700,7 @@ def withdraw():
             flash('Failed to send verification email. Please check your email address or try again later.', 'error')
             return redirect(url_for('withdraw'))
     
-    # GET request - show withdrawal page
+    # GET request - show withdrawal page with multi-step form
     refresh_user()
     
     # Get recent withdrawals (last 5)
@@ -5781,6 +5782,7 @@ def withdraw():
                          user_email=current_user.email,
                          user_phone_formatted=user_phone_formatted,
                          email_verified=getattr(current_user, 'email_verified', False))
+
 
 @app.route('/withdraw/verify-email', methods=['GET', 'POST'])
 @login_required
@@ -5900,6 +5902,10 @@ def verify_withdrawal_email():
                 'description': f'M-Pesa withdrawal to {withdrawal.get("phone_number")} - Email verification passed, awaiting manual review'
             }
             
+            # Store in session for the dashboard to show this is under review
+            session['recent_withdrawal_status'] = 'under_review'
+            session['recent_withdrawal_amount'] = amount
+            
             flash('✅ Email verification successful! Your withdrawal is under review for security purposes. We will notify you once processed.', 'warning')
         else:
             # NORMAL WITHDRAWAL: Email verification passed, proceed to send money
@@ -5910,12 +5916,16 @@ def verify_withdrawal_email():
                 'description': 'Email verification completed - Processing M-Pesa payment'
             }
             
+            # Store in session for the dashboard to show this is processing
+            session['recent_withdrawal_status'] = 'processing'
+            session['recent_withdrawal_amount'] = amount
+            
             flash('✅ Email verification successful! Processing your withdrawal...', 'success')
         
         # Update transaction
         SupabaseDB.update_transaction(withdrawal_id, transaction_update)
         
-        # Only deduct balance for normal withdrawals
+        # Only deduct balance for normal withdrawals (not suspicious ones)
         if not fraud_warnings:
             # Deduct balance from user
             new_balance = current_user.balance - amount
@@ -5972,6 +5982,9 @@ def verify_withdrawal_email():
                         'mpesa_response': json.dumps(mpesa_result)
                     })
                     
+                    # Update session status
+                    session['recent_withdrawal_status'] = 'completed'
+                    
                     # Send confirmation email
                     try:
                         
@@ -6002,6 +6015,13 @@ def verify_withdrawal_email():
                         'total_withdrawn': refund_withdrawn
                     })
                     
+                    # Update local user object
+                    current_user.balance = refund_balance
+                    current_user.total_withdrawn = refund_withdrawn
+                    
+                    # Update session status
+                    session['recent_withdrawal_status'] = 'failed'
+                    
                     flash('❌ M-Pesa transfer failed. Funds have been returned to your balance.', 'error')
             except Exception as e:
                 app.logger.error(f"Error processing M-Pesa payment: {e}")
@@ -6009,6 +6029,22 @@ def verify_withdrawal_email():
                     'status': 'failed',
                     'description': f'Error processing M-Pesa: {str(e)}'
                 })
+                
+                # Refund on error
+                refund_balance = current_user.balance + amount
+                refund_withdrawn = current_user.total_withdrawn - amount
+                SupabaseDB.update_user(current_user.id, {
+                    'balance': refund_balance,
+                    'total_withdrawn': refund_withdrawn
+                })
+                
+                # Update local user object
+                current_user.balance = refund_balance
+                current_user.total_withdrawn = refund_withdrawn
+                
+                # Update session status
+                session['recent_withdrawal_status'] = 'failed'
+                
                 flash('❌ Error processing M-Pesa payment. Please contact support.', 'error')
         elif fraud_warnings:
             # SUSPICIOUS WITHDRAWAL: Send notification for manual review
@@ -6017,8 +6053,6 @@ def verify_withdrawal_email():
                 send_withdrawal_notification_to_telegram(current_user, withdrawal)
                 
                 # Send email notification to user
-                email_service.send_withdrawal_confirmation_email(...)
-                
                 email_service.send_withdrawal_under_review_email(
                     user_email=current_user.email,
                     username=current_user.username,
@@ -6026,10 +6060,12 @@ def verify_withdrawal_email():
                     transaction_id=withdrawal_id,
                     phone_number=phone_number
                 )
+                
+                flash('✅ Withdrawal submitted for review. You will be notified once processed.', 'info')
             except Exception as e:
                 app.logger.error(f"Error sending under review notifications: {e}")
         
-        # Clear session
+        # Clear session withdrawal data but keep recent status for dashboard
         session.pop('pending_withdrawal_id', None)
         session.pop('pending_withdrawal_amount', None)
         session.pop('pending_withdrawal_phone', None)
@@ -6041,6 +6077,7 @@ def verify_withdrawal_email():
                          user_email=current_user.email,
                          amount=abs(withdrawal['amount']),
                          withdrawal_id=withdrawal_id)
+
 
 @app.route('/withdraw/resend-verification', methods=['POST'])
 @login_required
@@ -6099,6 +6136,7 @@ def resend_withdrawal_verification():
         flash('Failed to resend verification email. Please try again.', 'error')
     
     return redirect(url_for('verify_withdrawal_email'))
+
 
 @app.route('/withdraw/cancel/<transaction_id>', methods=['POST'])
 @login_required
