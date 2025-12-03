@@ -7797,6 +7797,266 @@ def top_withdrawal_users():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/admin/withdrawals')
+@login_required
+@admin_required
+def admin_withdrawals():
+    """Professional withdrawal management dashboard"""
+    try:
+        # Get query parameters for filtering and pagination
+        page = request.args.get('page', 1, type=int)
+        status_filter = request.args.get('status', 'all')
+        items_per_page = 10
+        offset = (page - 1) * items_per_page
+        
+        # Base query
+        query = supabase.table('transactions')\
+            .select('*, users(*)')\
+            .eq('transaction_type', 'withdrawal')\
+            .order('created_at', desc=True)
+        
+        # Apply status filter
+        if status_filter != 'all':
+            if status_filter == 'pending':
+                query = query.in_('status', ['pending', 'Under Review', 'processing'])
+            else:
+                query = query.eq('status', status_filter)
+        
+        # Get total count for pagination
+        count_query = supabase.table('transactions')\
+            .select('id', count='exact')\
+            .eq('transaction_type', 'withdrawal')
+        
+        if status_filter != 'all':
+            if status_filter == 'pending':
+                count_query = count_query.in_('status', ['pending', 'Under Review', 'processing'])
+            else:
+                count_query = count_query.eq('status', status_filter)
+        
+        count_result = count_query.execute()
+        total_count = count_result.count if hasattr(count_result, 'count') else len(count_result.data)
+        
+        # Get paginated data
+        response = query.range(offset, offset + items_per_page - 1).execute()
+        
+        withdrawals = []
+        for item in response.data:
+            transaction = item
+            user_data = item.get('users', {})
+            
+            if user_data:
+                withdrawals.append({
+                    'id': transaction['id'],
+                    'user_id': user_data.get('id', ''),
+                    'username': user_data.get('username', 'Unknown'),
+                    'email': user_data.get('email', ''),
+                    'phone': transaction.get('phone_number', user_data.get('phone', '')),
+                    'amount': abs(transaction['amount']),
+                    'status': transaction['status'],
+                    'email_verified': user_data.get('email_verified', False),
+                    'created_at': transaction['created_at'],
+                    'description': transaction.get('description', ''),
+                    'mpesa_code': transaction.get('mpesa_reference', ''),
+                    'user_balance': float(user_data.get('balance', 0)),
+                    'user_rank': user_data.get('user_rank', 'Standard'),
+                    'total_commission': float(user_data.get('total_commission', 0)),
+                    'is_verified': user_data.get('is_verified', False),
+                    'is_active': user_data.get('is_active', True)
+                })
+        
+        # Calculate pagination
+        total_pages = (total_count + items_per_page - 1) // items_per_page
+        
+        # Get dashboard statistics
+        stats = get_withdrawal_stats()
+        
+        return render_template('admin_withdrawals.html',
+                             withdrawals=withdrawals,
+                             stats=stats,
+                             current_page=page,
+                             total_pages=total_pages,
+                             status_filter=status_filter,
+                             items_per_page=items_per_page)
+                             
+    except Exception as e:
+        logger.error(f"Error loading withdrawals dashboard: {str(e)}")
+        flash('Error loading withdrawal dashboard.', 'error')
+        return redirect(url_for('admin_dashboard'))
+
+
+def get_withdrawal_stats():
+    """Get comprehensive withdrawal statistics"""
+    try:
+        # Get 24-hour timeframe
+        twenty_four_hours_ago = datetime.now(timezone.utc) - timedelta(hours=24)
+        
+        # Get all withdrawals in last 24 hours
+        response = supabase.table('transactions')\
+            .select('amount, status, created_at, users(email_verified, is_verified)')\
+            .eq('transaction_type', 'withdrawal')\
+            .gte('created_at', twenty_four_hours_ago.isoformat())\
+            .execute()
+        
+        stats = {
+            'total_24h': 0,
+            'successful_24h': 0,
+            'failed_24h': 0,
+            'pending_now': 0,
+            'total_amount_24h': 0,
+            'successful_amount': 0,
+            'failed_amount': 0,
+            'pending_amount': 0,
+            'verified_count': 0,
+            'unverified_count': 0,
+            'avg_processing_hours': 0,
+            'change_24h': 0,
+            'avg_withdrawal': 0,
+            'completion_rate': 0
+        }
+        
+        # Process 24h data
+        for item in response.data:
+            amount = abs(item['amount'])
+            status = item['status']
+            user_data = item.get('users', {})
+            
+            # Check both email_verified and is_verified fields
+            email_verified = user_data.get('email_verified', False)
+            is_verified = user_data.get('is_verified', False)
+            is_verified_user = email_verified or is_verified
+            
+            stats['total_24h'] += 1
+            stats['total_amount_24h'] += amount
+            
+            if status == 'completed':
+                stats['successful_24h'] += 1
+                stats['successful_amount'] += amount
+            elif status in ['rejected', 'failed']:
+                stats['failed_24h'] += 1
+                stats['failed_amount'] += amount
+            elif status in ['pending', 'Under Review', 'processing']:
+                stats['pending_now'] += 1
+                stats['pending_amount'] += amount
+            
+            if is_verified_user:
+                stats['verified_count'] += 1
+            else:
+                stats['unverified_count'] += 1
+        
+        # Calculate percentages and averages
+        if stats['total_24h'] > 0:
+            stats['success_rate'] = round((stats['successful_24h'] / stats['total_24h']) * 100, 1)
+            stats['verified_rate'] = round((stats['verified_count'] / stats['total_24h']) * 100, 1)
+            stats['avg_withdrawal'] = round(stats['total_amount_24h'] / stats['total_24h'], 2)
+        
+        # Get processing time stats (completed withdrawals in last 7 days)
+        seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
+        
+        processing_response = supabase.table('transactions')\
+            .select('created_at, updated_at')\
+            .eq('transaction_type', 'withdrawal')\
+            .eq('status', 'completed')\
+            .gte('created_at', seven_days_ago.isoformat())\
+            .execute()
+        
+        processing_times = []
+        for item in processing_response.data:
+            try:
+                created_at = datetime.fromisoformat(item['created_at'].replace('Z', '+00:00'))
+                updated_at = datetime.fromisoformat(item['updated_at'].replace('Z', '+00:00')) if item.get('updated_at') else created_at
+                processing_hours = (updated_at - created_at).total_seconds() / 3600
+                if processing_hours > 0:
+                    processing_times.append(processing_hours)
+            except Exception as e:
+                logger.error(f"Error calculating processing time: {str(e)}")
+                continue
+        
+        if processing_times:
+            stats['avg_processing_hours'] = round(sum(processing_times) / len(processing_times), 1)
+        
+        # Calculate completion rate for last 7 days
+        week_response = supabase.table('transactions')\
+            .select('status')\
+            .eq('transaction_type', 'withdrawal')\
+            .gte('created_at', seven_days_ago.isoformat())\
+            .execute()
+        
+        total_week = len(week_response.data) if week_response.data else 0
+        completed_week = sum(1 for item in week_response.data if item['status'] == 'completed') if week_response.data else 0
+        
+        if total_week > 0:
+            stats['completion_rate'] = round((completed_week / total_week) * 100, 1)
+        
+        # Calculate 24h change (simplified - compare with previous 24h)
+        # In production, you might want to store daily stats
+        stats['change_24h'] = 0  # Placeholder for actual change calculation
+        
+        return stats
+        
+    except Exception as e:
+        logger.error(f"Error getting withdrawal stats: {str(e)}")
+        return {}
+
+
+@app.route('/api/admin/enhanced-stats')
+@login_required
+@admin_required
+def enhanced_withdrawal_stats():
+    """API endpoint for enhanced dashboard statistics"""
+    try:
+        stats = get_withdrawal_stats()
+        return jsonify({'success': True, 'stats': stats})
+    except Exception as e:
+        logger.error(f"Error getting enhanced stats: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/admin/top-users')
+@login_required
+@admin_required
+def top_withdrawal_users():
+    """Get top users by withdrawal activity (24h)"""
+    try:
+        twenty_four_hours_ago = datetime.now(timezone.utc) - timedelta(hours=24)
+        
+        response = supabase.table('transactions')\
+            .select('user_id, amount, users(username, user_rank, total_commission)')\
+            .eq('transaction_type', 'withdrawal')\
+            .gte('created_at', twenty_four_hours_ago.isoformat())\
+            .execute()
+        
+        user_totals = {}
+        for item in response.data:
+            user_id = item['user_id']
+            amount = abs(item['amount'])
+            user_data = item.get('users', {})
+            
+            if user_id not in user_totals:
+                user_totals[user_id] = {
+                    'username': user_data.get('username', 'Unknown'),
+                    'user_rank': user_data.get('user_rank', 'Standard'),
+                    'total_amount': 0,
+                    'withdrawal_count': 0,
+                    'total_commission': float(user_data.get('total_commission', 0))
+                }
+            
+            user_totals[user_id]['total_amount'] += amount
+            user_totals[user_id]['withdrawal_count'] += 1
+        
+        # Sort by total amount and get top 5
+        top_users = sorted(
+            user_totals.values(),
+            key=lambda x: x['total_amount'],
+            reverse=True
+        )[:5]
+        
+        return jsonify({'success': True, 'users': top_users})
+        
+    except Exception as e:
+        logger.error(f"Error getting top users: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/admin/withdrawal-trends')
 @login_required
 @admin_required
@@ -7870,7 +8130,7 @@ def recent_withdrawal_activity():
         one_hour_ago = datetime.now(timezone.utc) - timedelta(hours=1)
         
         response = supabase.table('transactions')\
-            .select('*, users(username)')\
+            .select('*, users(username, user_rank)')\
             .eq('transaction_type', 'withdrawal')\
             .gte('created_at', one_hour_ago.isoformat())\
             .order('created_at', desc=True)\
@@ -7893,8 +8153,12 @@ def recent_withdrawal_activity():
                 else:
                     time_ago = "Just now"
                 
+                user_data = item.get('users', {})
+                username = user_data.get('username', 'Unknown')
+                user_rank = user_data.get('user_rank', 'Standard')
+                
                 activities.append({
-                    'user': item.get('users', {}).get('username', 'Unknown'),
+                    'user': f"{username} ({user_rank})",
                     'action': f"Withdrawal of KES {abs(item['amount']):,}",
                     'status': item['status'],
                     'time_ago': time_ago
@@ -7920,7 +8184,7 @@ def withdrawal_risk_assessment():
         
         # Get recent withdrawals with user data
         response = supabase.table('transactions')\
-            .select('*, users(*)')\
+            .select('*, users(email_verified, is_verified, is_active, user_rank, created_at)')\
             .eq('transaction_type', 'withdrawal')\
             .gte('created_at', twenty_four_hours_ago.isoformat())\
             .execute()
@@ -7930,7 +8194,8 @@ def withdrawal_risk_assessment():
             'unverified_count': 0,
             'high_frequency_count': 0,
             'large_amount_count': 0,
-            'new_account_count': 0
+            'new_account_count': 0,
+            'inactive_account_count': 0
         }
         
         user_withdrawals = {}
@@ -7946,15 +8211,37 @@ def withdrawal_risk_assessment():
                 user_withdrawals[user_id] = {
                     'count': 0,
                     'total_amount': 0,
-                    'is_verified': user_data.get('email_verified', False) if user_data else False
+                    'email_verified': user_data.get('email_verified', False),
+                    'is_verified': user_data.get('is_verified', False),
+                    'is_active': user_data.get('is_active', True),
+                    'user_rank': user_data.get('user_rank', 'Standard'),
+                    'account_age_days': 0
                 }
             
             user_withdrawals[user_id]['count'] += 1
             user_withdrawals[user_id]['total_amount'] += amount
             
+            # Check account age
+            if user_data.get('created_at'):
+                try:
+                    account_created = datetime.fromisoformat(user_data['created_at'].replace('Z', '+00:00'))
+                    age_days = (datetime.now(timezone.utc) - account_created).days
+                    user_withdrawals[user_id]['account_age_days'] = age_days
+                    
+                    if age_days < 1:  # Less than 1 day old
+                        risk_metrics['new_account_count'] += 1
+                except Exception as e:
+                    logger.error(f"Error calculating account age: {str(e)}")
+            
             # Check for unverified users
-            if user_data and not user_data.get('email_verified', False):
+            email_verified = user_data.get('email_verified', False)
+            is_verified = user_data.get('is_verified', False)
+            if not (email_verified or is_verified):
                 risk_metrics['unverified_count'] += 1
+            
+            # Check for inactive accounts
+            if not user_data.get('is_active', True):
+                risk_metrics['inactive_account_count'] += 1
             
             # Check for large amounts
             if amount > 10000:  # Threshold for large withdrawal
@@ -7969,22 +8256,30 @@ def withdrawal_risk_assessment():
         total_risk_score = (
             risk_metrics['unverified_count'] * 3 +  # Weight unverified higher
             risk_metrics['high_frequency_count'] * 2 +
-            risk_metrics['large_amount_count'] * 1
+            risk_metrics['large_amount_count'] * 2 +
+            risk_metrics['new_account_count'] * 3 +  # New accounts are high risk
+            risk_metrics['inactive_account_count'] * 4  # Inactive accounts are highest risk
         )
         
         if total_risk_score == 0:
             risk_level = 'low'
-        elif total_risk_score <= 5:
+            risk_message = 'All transactions appear normal'
+        elif total_risk_score <= 10:
             risk_level = 'medium'
+            risk_message = 'Some transactions require review'
         else:
             risk_level = 'high'
+            risk_message = 'High risk - Immediate review needed'
         
         return jsonify({
             'success': True,
             'risk_level': risk_level,
+            'risk_message': risk_message,
             'unverified_count': risk_metrics['unverified_count'],
             'high_frequency': risk_metrics['high_frequency_count'],
-            'large_amounts': risk_metrics['large_amount_count']
+            'large_amounts': risk_metrics['large_amount_count'],
+            'new_accounts': risk_metrics['new_account_count'],
+            'inactive_accounts': risk_metrics['inactive_account_count']
         })
         
     except Exception as e:
@@ -7998,9 +8293,16 @@ def withdrawal_risk_assessment():
 def user_withdrawal_history(user_id):
     """Get detailed withdrawal history for a specific user"""
     try:
-        user = SupabaseDB.get_user_by_id(user_id)
-        if not user:
+        # Get user data
+        user_response = supabase.table('users')\
+            .select('*')\
+            .eq('id', user_id)\
+            .execute()
+        
+        if not user_response.data:
             return jsonify({'success': False, 'message': 'User not found'})
+        
+        user_data = user_response.data[0]
         
         # Get user's withdrawal history
         response = supabase.table('transactions')\
@@ -8036,7 +8338,8 @@ def user_withdrawal_history(user_id):
                     'status': item['status'],
                     'phone_number': item.get('phone_number', ''),
                     'created_at': item['created_at'],
-                    'time_ago': time_ago
+                    'time_ago': time_ago,
+                    'mpesa_reference': item.get('mpesa_reference', '')
                 }
                 
                 withdrawals.append(withdrawal_data)
@@ -8049,41 +8352,51 @@ def user_withdrawal_history(user_id):
                 logger.error(f"Error processing withdrawal history: {str(e)}")
                 continue
         
+        # Calculate account age
+        account_age = "N/A"
+        try:
+            created = datetime.fromisoformat(user_data['created_at'].replace('Z', '+00:00'))
+            age_days = (datetime.now(timezone.utc) - created).days
+            if age_days < 1:
+                account_age = "Less than 1 day"
+            elif age_days < 30:
+                account_age = f"{age_days} days"
+            else:
+                months = age_days // 30
+                account_age = f"{months} month{'s' if months > 1 else ''}"
+        except Exception as e:
+            logger.error(f"Error calculating account age: {str(e)}")
+        
         # Calculate user stats
         stats = {
             'total_withdrawn': total_withdrawn,
             'total_withdrawals': len(withdrawals),
             'success_count': successful_count,
             'success_rate': round((successful_count / len(withdrawals)) * 100, 1) if withdrawals else 0,
-            'avg_withdrawal': round(total_withdrawn / successful_count, 2) if successful_count > 0 else 0
+            'avg_withdrawal': round(total_withdrawn / successful_count, 2) if successful_count > 0 else 0,
+            'current_balance': float(user_data.get('balance', 0)),
+            'total_commission': float(user_data.get('total_commission', 0)),
+            'total_earned': float(user_data.get('total_earned', 0))
         }
-        
-        # Get user account age
-        account_age = "N/A"
-        if hasattr(user, 'created_at'):
-            try:
-                created = datetime.fromisoformat(user.created_at.replace('Z', '+00:00'))
-                age_days = (datetime.now(timezone.utc) - created).days
-                if age_days < 30:
-                    account_age = f"{age_days} days"
-                else:
-                    account_age = f"{age_days // 30} months"
-            except:
-                account_age = "N/A"
         
         return jsonify({
             'success': True,
             'user': {
-                'id': user.id,
-                'username': user.username,
-                'email': user.email if hasattr(user, 'email') else 'N/A',
-                'email_verified': user.email_verified if hasattr(user, 'email_verified') else False,
-                'phone': user.phone if hasattr(user, 'phone') else 'N/A',
+                'id': user_data['id'],
+                'username': user_data.get('username', 'Unknown'),
+                'email': user_data.get('email', 'N/A'),
+                'email_verified': user_data.get('email_verified', False),
+                'is_verified': user_data.get('is_verified', False),
+                'phone': user_data.get('phone', 'N/A'),
                 'account_age': account_age,
-                'balance': user.balance if hasattr(user, 'balance') else 0
+                'balance': float(user_data.get('balance', 0)),
+                'user_rank': user_data.get('user_rank', 'Standard'),
+                'is_active': user_data.get('is_active', True),
+                'last_login': user_data.get('last_login', 'Never'),
+                'referral_count': user_data.get('referral_count', 0)
             },
             'stats': stats,
-            'recent_withdrawals': withdrawals[:5]  # Return only 5 most recent
+            'recent_withdrawals': withdrawals[:5]
         })
         
     except Exception as e:
@@ -8097,9 +8410,18 @@ def user_withdrawal_history(user_id):
 def approve_withdrawal(transaction_id):
     """Approve a withdrawal transaction"""
     try:
-        transaction = SupabaseDB.get_transaction_by_id(transaction_id)
+        # Get transaction data
+        transaction_response = supabase.table('transactions')\
+            .select('*, users(*)')\
+            .eq('id', transaction_id)\
+            .execute()
         
-        if not transaction or transaction['transaction_type'] != 'withdrawal':
+        if not transaction_response.data:
+            return jsonify({'success': False, 'message': 'Transaction not found'})
+        
+        transaction = transaction_response.data[0]
+        
+        if transaction['transaction_type'] != 'withdrawal':
             return jsonify({'success': False, 'message': 'Not a withdrawal transaction'})
         
         # Check if already processing
@@ -8128,10 +8450,14 @@ def approve_withdrawal(transaction_id):
             
             if mpesa_result:
                 # Update transaction status
-                SupabaseDB.update_transaction(transaction_id, {
-                    'status': 'processing',
-                    'description': f'M-Pesa processing initiated for KES {amount} to {phone}'
-                })
+                supabase.table('transactions')\
+                    .update({
+                        'status': 'processing',
+                        'description': f'M-Pesa processing initiated for KES {amount} to {phone}',
+                        'updated_at': datetime.now(timezone.utc).isoformat()
+                    })\
+                    .eq('id', transaction_id)\
+                    .execute()
                 
                 return jsonify({
                     'success': True,
@@ -8144,10 +8470,14 @@ def approve_withdrawal(transaction_id):
                 })
         
         # For other statuses, mark as completed
-        SupabaseDB.update_transaction(transaction_id, {
-            'status': 'completed',
-            'description': 'Withdrawal approved and completed'
-        })
+        supabase.table('transactions')\
+            .update({
+                'status': 'completed',
+                'description': 'Withdrawal approved and completed',
+                'updated_at': datetime.now(timezone.utc).isoformat()
+            })\
+            .eq('id', transaction_id)\
+            .execute()
         
         return jsonify({
             'success': True,
@@ -8165,13 +8495,22 @@ def approve_withdrawal(transaction_id):
 def reject_withdrawal(transaction_id):
     """Reject a withdrawal transaction and refund user"""
     try:
-        transaction = SupabaseDB.get_transaction_by_id(transaction_id)
+        # Get transaction data
+        transaction_response = supabase.table('transactions')\
+            .select('*, users(*)')\
+            .eq('id', transaction_id)\
+            .execute()
         
-        if not transaction or transaction['transaction_type'] != 'withdrawal':
+        if not transaction_response.data:
+            return jsonify({'success': False, 'message': 'Transaction not found'})
+        
+        transaction = transaction_response.data[0]
+        
+        if transaction['transaction_type'] != 'withdrawal':
             return jsonify({'success': False, 'message': 'Not a withdrawal transaction'})
         
-        user = SupabaseDB.get_user_by_id(transaction['user_id'])
-        if not user:
+        user_data = transaction.get('users', {})
+        if not user_data:
             return jsonify({'success': False, 'message': 'User not found'})
         
         # Get reason from request
@@ -8180,28 +8519,51 @@ def reject_withdrawal(transaction_id):
         
         # Refund amount to user
         refund_amount = abs(transaction['amount'])
+        user_id = user_data['id']
         
-        # Update user balance
-        current_balance = getattr(user, 'balance', 0)
-        new_balance = current_balance + refund_amount
+        # Get current user balance
+        user_response = supabase.table('users')\
+            .select('balance, total_withdrawn')\
+            .eq('id', user_id)\
+            .execute()
         
-        SupabaseDB.update_user(user.id, {
-            'balance': new_balance
-        })
-        
-        # Update transaction status
-        SupabaseDB.update_transaction(transaction_id, {
-            'status': 'rejected',
-            'description': f'Withdrawal rejected: {reason}. Amount refunded to user.'
-        })
-        
-        # Optional: Log the rejection for audit
-        logger.info(f"Withdrawal {transaction_id} rejected. Reason: {reason}. Refunded: {refund_amount}")
-        
-        return jsonify({
-            'success': True,
-            'message': f'Withdrawal rejected and KES {refund_amount:,} refunded to user'
-        })
+        if user_response.data:
+            current_user = user_response.data[0]
+            current_balance = float(current_user.get('balance', 0))
+            current_total_withdrawn = float(current_user.get('total_withdrawn', 0))
+            
+            new_balance = current_balance + refund_amount
+            new_total_withdrawn = max(0, current_total_withdrawn - refund_amount)
+            
+            # Update user balance and total withdrawn
+            supabase.table('users')\
+                .update({
+                    'balance': new_balance,
+                    'total_withdrawn': new_total_withdrawn,
+                    'updated_at': datetime.now(timezone.utc).isoformat()
+                })\
+                .eq('id', user_id)\
+                .execute()
+            
+            # Update transaction status
+            supabase.table('transactions')\
+                .update({
+                    'status': 'rejected',
+                    'description': f'Withdrawal rejected: {reason}. Amount refunded to user.',
+                    'updated_at': datetime.now(timezone.utc).isoformat()
+                })\
+                .eq('id', transaction_id)\
+                .execute()
+            
+            # Log the rejection for audit
+            logger.info(f"Withdrawal {transaction_id} rejected. Reason: {reason}. Refunded: {refund_amount}")
+            
+            return jsonify({
+                'success': True,
+                'message': f'Withdrawal rejected and KES {refund_amount:,} refunded to user'
+            })
+        else:
+            return jsonify({'success': False, 'message': 'User data not found'})
         
     except Exception as e:
         logger.error(f"Error rejecting withdrawal: {str(e)}")
@@ -8278,7 +8640,7 @@ def recent_withdrawals():
         one_hour_ago = datetime.now(timezone.utc) - timedelta(hours=1)
         
         response = supabase.table('transactions')\
-            .select('*, users(*)')\
+            .select('*, users(username, email_verified, is_verified, is_active, created_at)')\
             .eq('transaction_type', 'withdrawal')\
             .gte('created_at', one_hour_ago.isoformat())\
             .order('created_at', desc=True)\
@@ -8300,29 +8662,67 @@ def recent_withdrawals():
                 user_activity[user_id] = {
                     'count': 0,
                     'total_amount': 0,
-                    'username': user_data.get('username', 'Unknown') if user_data else 'Unknown',
-                    'is_verified': user_data.get('email_verified', False) if user_data else False
+                    'username': user_data.get('username', 'Unknown'),
+                    'email_verified': user_data.get('email_verified', False),
+                    'is_verified': user_data.get('is_verified', False),
+                    'is_active': user_data.get('is_active', True),
+                    'account_age_days': 0
                 }
             
             user_activity[user_id]['count'] += 1
             user_activity[user_id]['total_amount'] += amount
+            
+            # Calculate account age
+            if user_data.get('created_at'):
+                try:
+                    account_created = datetime.fromisoformat(user_data['created_at'].replace('Z', '+00:00'))
+                    age_days = (datetime.now(timezone.utc) - account_created).days
+                    user_activity[user_id]['account_age_days'] = age_days
+                except Exception as e:
+                    logger.error(f"Error calculating account age: {str(e)}")
         
         # Check for suspicious patterns
         for user_id, activity in user_activity.items():
-            if activity['count'] >= 2:  # Multiple withdrawals in 1 hour
+            # Multiple withdrawals in 1 hour
+            if activity['count'] >= 2:
                 suspicious_activities.append({
                     'user': activity['username'],
                     'pattern': f'Multiple withdrawals ({activity["count"]}) in 1 hour',
                     'amount': activity['total_amount'],
-                    'time_ago': 'Recently'
+                    'time_ago': 'Recently',
+                    'risk_level': 'medium'
                 })
             
-            if not activity['is_verified'] and activity['total_amount'] > 5000:
+            # Large withdrawal by unverified user
+            email_verified = activity.get('email_verified', False)
+            is_verified = activity.get('is_verified', False)
+            if not (email_verified or is_verified) and activity['total_amount'] > 5000:
                 suspicious_activities.append({
                     'user': activity['username'],
-                    'pattern': f'Large withdrawal ({activity["total_amount"]:,}) by unverified user',
+                    'pattern': f'Large withdrawal (KES {activity["total_amount"]:,}) by unverified user',
                     'amount': activity['total_amount'],
-                    'time_ago': 'Recently'
+                    'time_ago': 'Recently',
+                    'risk_level': 'high'
+                })
+            
+            # New account making withdrawals
+            if activity['account_age_days'] < 1 and activity['total_amount'] > 0:
+                suspicious_activities.append({
+                    'user': activity['username'],
+                    'pattern': f'New account (less than 1 day old) making withdrawals',
+                    'amount': activity['total_amount'],
+                    'time_ago': 'Recently',
+                    'risk_level': 'high'
+                })
+            
+            # Inactive account making withdrawals
+            if not activity.get('is_active', True):
+                suspicious_activities.append({
+                    'user': activity['username'],
+                    'pattern': f'Inactive account making withdrawals',
+                    'amount': activity['total_amount'],
+                    'time_ago': 'Recently',
+                    'risk_level': 'medium'
                 })
         
         return jsonify({
