@@ -5430,9 +5430,24 @@ def format_currency(value):
         return "0"
 
 @app.template_filter('format_date')
-def format_date(date_value):
+def format_date(date_value, format='%d %b %Y %H:%M'):
     if date_value:
-        return date_value.strftime('%d %b %Y')
+        if isinstance(date_value, str):
+            try:
+                # Try to parse the string
+                from datetime import datetime
+                # Handle different date formats
+                for fmt in ('%Y-%m-%dT%H:%M:%S.%f%z', '%Y-%m-%dT%H:%M:%S%z', '%Y-%m-%d %H:%M:%S%z', '%Y-%m-%d %H:%M:%S'):
+                    try:
+                        dt = datetime.strptime(date_value, fmt)
+                        return dt.strftime(format)
+                    except ValueError:
+                        continue
+                return date_value
+            except:
+                return date_value
+        else:
+            return date_value.strftime(format)
     return ''
 
 @app.route('/referral-system')
@@ -7556,7 +7571,8 @@ def admin_withdrawals():
         # Get query parameters for filtering and pagination
         page = request.args.get('page', 1, type=int)
         status_filter = request.args.get('status', 'all')
-        items_per_page = 10
+        search = request.args.get('search', '')
+        items_per_page = request.args.get('items_per_page', 10, type=int)
         offset = (page - 1) * items_per_page
         
         # Base query - join with users table to get complete user info
@@ -7572,6 +7588,20 @@ def admin_withdrawals():
             else:
                 query = query.eq('status', status_filter)
         
+        # Apply search filter if provided
+        if search:
+            # Search in user data
+            users_with_search = supabase.table('users')\
+                .select('id')\
+                .or_(f'username.ilike.%{search}%,email.ilike.%{search}%,phone.ilike.%{search}%,name.ilike.%{search}%')\
+                .execute()
+            
+            user_ids = [user['id'] for user in users_with_search.data]
+            
+            if user_ids:
+                # Also search in transaction data
+                query = query.or_(f'user_id.in.({",".join([f"\"{uid}\"" for uid in user_ids])}),phone_number.ilike.%{search}%,mpesa_reference.ilike.%{search}%')
+        
         # Get total count for pagination
         count_query = supabase.table('transactions')\
             .select('id', count='exact')\
@@ -7582,6 +7612,9 @@ def admin_withdrawals():
                 count_query = count_query.in_('status', ['pending', 'Under Review', 'processing'])
             else:
                 count_query = count_query.eq('status', status_filter)
+        
+        if search and 'user_ids' in locals() and user_ids:
+            count_query = count_query.in_('user_id', user_ids)
         
         count_result = count_query.execute()
         total_count = count_result.count if hasattr(count_result, 'count') else len(count_result.data)
@@ -7603,7 +7636,7 @@ def admin_withdrawals():
                     'email': user_data.get('email', ''),
                     'phone': user_data.get('phone', transaction.get('phone_number', '')),
                     'name': user_data.get('name', user_data.get('username', 'N/A')),
-                    'amount': abs(transaction['amount']),
+                    'amount': abs(float(transaction['amount'])) if transaction['amount'] else 0,
                     'status': transaction['status'],
                     'email_verified': user_data.get('email_verified', False),
                     'is_verified': user_data.get('is_verified', False),
@@ -7625,7 +7658,7 @@ def admin_withdrawals():
                 })
         
         # Calculate pagination
-        total_pages = (total_count + items_per_page - 1) // items_per_page
+        total_pages = (total_count + items_per_page - 1) // items_per_page if items_per_page > 0 else 1
         
         # Get dashboard statistics
         stats = get_withdrawal_stats()
@@ -7635,8 +7668,10 @@ def admin_withdrawals():
                              stats=stats,
                              current_page=page,
                              total_pages=total_pages,
+                             total_count=total_count,
                              status_filter=status_filter,
-                             items_per_page=items_per_page)
+                             items_per_page=items_per_page,
+                             search=search)
                              
     except Exception as e:
         logger.error(f"Error loading withdrawals dashboard: {str(e)}")
@@ -7680,7 +7715,7 @@ def get_withdrawal_stats():
         
         # Process 24h data
         for item in response.data:
-            amount = abs(item['amount'])
+            amount = abs(float(item['amount'])) if item['amount'] else 0
             status = item['status']
             user_data = item.get('users', {})
             is_verified = user_data.get('email_verified', False) if user_data else False
@@ -7706,36 +7741,13 @@ def get_withdrawal_stats():
         
         # Calculate percentages and averages
         if stats['total_24h'] > 0:
-            stats['success_rate'] = round((stats['successful_24h'] / stats['total_24h']) * 100, 1)
-            stats['verified_rate'] = round((stats['verified_count'] / stats['total_24h']) * 100, 1)
-            stats['avg_withdrawal'] = round(stats['total_amount_24h'] / stats['total_24h'], 2)
-        
-        # Get processing time stats (completed withdrawals in last 7 days)
-        seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
-        
-        processing_response = supabase.table('transactions')\
-            .select('created_at, updated_at')\
-            .eq('transaction_type', 'withdrawal')\
-            .eq('status', 'completed')\
-            .gte('created_at', seven_days_ago.isoformat())\
-            .execute()
-        
-        processing_times = []
-        for item in processing_response.data:
-            try:
-                created_at = datetime.fromisoformat(item['created_at'].replace('Z', '+00:00'))
-                updated_at = datetime.fromisoformat(item['updated_at'].replace('Z', '+00:00')) if item.get('updated_at') else created_at
-                processing_hours = (updated_at - created_at).total_seconds() / 3600
-                if processing_hours > 0:
-                    processing_times.append(processing_hours)
-            except Exception as e:
-                logger.error(f"Error calculating processing time: {str(e)}")
-                continue
-        
-        if processing_times:
-            stats['avg_processing_hours'] = round(sum(processing_times) / len(processing_times), 1)
+            stats['success_rate'] = round((stats['successful_24h'] / stats['total_24h']) * 100, 1) if stats['total_24h'] > 0 else 0
+            stats['verified_rate'] = round((stats['verified_count'] / stats['total_24h']) * 100, 1) if stats['total_24h'] > 0 else 0
+            stats['avg_withdrawal'] = round(stats['total_amount_24h'] / stats['total_24h'], 2) if stats['total_24h'] > 0 else 0
         
         # Calculate completion rate for last 7 days
+        seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
+        
         week_response = supabase.table('transactions')\
             .select('status')\
             .eq('transaction_type', 'withdrawal')\
@@ -7747,6 +7759,8 @@ def get_withdrawal_stats():
         
         if total_week > 0:
             stats['completion_rate'] = round((completed_week / total_week) * 100, 1)
+        else:
+            stats['completion_rate'] = 0
         
         # Get user statistics
         users_response = supabase.table('users')\
@@ -7779,13 +7793,38 @@ def get_withdrawal_stats():
                 stats['withdrawal_rate_formatted'] = "0%"
         
         # Calculate 24h change
-        stats['change_24h'] = 0  # Placeholder for actual change calculation
+        stats['change_24h'] = 0
         
         return stats
         
     except Exception as e:
         logger.error(f"Error getting withdrawal stats: {str(e)}")
-        return {}
+        # Return default stats structure
+        return {
+            'total_24h': 0,
+            'successful_24h': 0,
+            'failed_24h': 0,
+            'pending_now': 0,
+            'total_amount_24h': 0,
+            'successful_amount': 0,
+            'failed_amount': 0,
+            'pending_amount': 0,
+            'verified_count': 0,
+            'unverified_count': 0,
+            'avg_processing_hours': 0,
+            'change_24h': 0,
+            'avg_withdrawal': 0,
+            'completion_rate': 0,
+            'active_users': 0,
+            'total_earned': 0,
+            'total_withdrawn': 0,
+            'withdrawal_rate': 0,
+            'success_rate': 0,
+            'verified_rate': 0,
+            'total_earned_formatted': 'KES 0',
+            'total_withdrawn_formatted': 'KES 0',
+            'withdrawal_rate_formatted': '0%'
+        }
     
     
 @app.route('/api/admin/enhanced-stats')
