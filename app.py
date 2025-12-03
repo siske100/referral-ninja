@@ -7551,18 +7551,33 @@ def admin_dashboard():
 @login_required
 @admin_required
 def admin_withdrawal_notice():
-    """Admin page to view and manage pending withdrawal requests"""
+    """Admin page to view live withdrawal updates"""
     try:
-        # Get pending withdrawals with user information
+        # Get all withdrawals in the last 24 hours with user info
+        twenty_four_hours_ago = datetime.now(timezone.utc) - timedelta(hours=24)
+        
+        # Get recent withdrawals with user information
         response = supabase.table('transactions')\
             .select('*, users(*)')\
             .eq('transaction_type', 'withdrawal')\
-            .in_('status', ['pending', 'Under Review', 'processing'])\
+            .gte('created_at', twenty_four_hours_ago.isoformat())\
             .order('created_at', desc=True)\
+            .limit(100)\
             .execute()
         
-        pending_withdrawals = []
-        total_pending_amount = 0
+        withdrawals = []
+        stats = {
+            'total_24h': 0,
+            'total_amount_24h': 0,
+            'completed_24h': 0,
+            'completed_amount': 0,
+            'failed_24h': 0,
+            'failed_amount': 0,
+            'pending_now': 0,
+            'pending_amount': 0,
+            'verified_count': 0,
+            'unverified_count': 0
+        }
         
         for item in response.data:
             transaction = item
@@ -7570,223 +7585,418 @@ def admin_withdrawal_notice():
             user = User(user_data) if user_data else None
             
             if user:
-                pending_withdrawals.append({
-                    'transaction': transaction,
-                    'user': user,
-                    'days_pending': (datetime.now(timezone.utc) - 
-                                   datetime.fromisoformat(transaction['created_at'].replace('Z', '+00:00'))).days
+                amount = abs(transaction['amount'])
+                created_at = datetime.fromisoformat(transaction['created_at'].replace('Z', '+00:00'))
+                time_diff = datetime.now(timezone.utc) - created_at
+                
+                # Format time ago
+                if time_diff.days > 0:
+                    time_ago = f"{time_diff.days}d ago"
+                elif time_diff.seconds // 3600 > 0:
+                    time_ago = f"{time_diff.seconds // 3600}h ago"
+                elif time_diff.seconds // 60 > 0:
+                    time_ago = f"{time_diff.seconds // 60}m ago"
+                else:
+                    time_ago = "Just now"
+                
+                # Check email verification
+                is_email_verified = user.email_verified if hasattr(user, 'email_verified') else False
+                
+                withdrawals.append({
+                    'id': transaction['id'],
+                    'user_name': user.username,
+                    'user_id': user.id,
+                    'email': user.email if hasattr(user, 'email') else '',
+                    'phone': transaction.get('phone_number', user.phone),
+                    'amount': amount,
+                    'status': transaction['status'],
+                    'email_verified': is_email_verified,
+                    'created_at': transaction['created_at'],
+                    'created_at_formatted': created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                    'time_ago': time_ago
                 })
-                total_pending_amount += abs(transaction['amount'])
+                
+                # Update stats
+                stats['total_24h'] += 1
+                stats['total_amount_24h'] += amount
+                
+                if transaction['status'] == 'completed':
+                    stats['completed_24h'] += 1
+                    stats['completed_amount'] += amount
+                elif transaction['status'] in ['rejected', 'failed']:
+                    stats['failed_24h'] += 1
+                    stats['failed_amount'] += amount
+                elif transaction['status'] in ['pending', 'Under Review', 'processing']:
+                    stats['pending_now'] += 1
+                    stats['pending_amount'] += amount
+                
+                if is_email_verified:
+                    stats['verified_count'] += 1
+                else:
+                    stats['unverified_count'] += 1
         
-        # Get statistics
-        stats = {
-            'total_pending': len(pending_withdrawals),
-            'total_amount': total_pending_amount,
-            'under_review': len([w for w in pending_withdrawals if w['transaction']['status'] == 'Under Review']),
-            'processing': len([w for w in pending_withdrawals if w['transaction']['status'] == 'processing']),
-            'regular_pending': len([w for w in pending_withdrawals if w['transaction']['status'] == 'pending'])
-        }
+        # Calculate percentages
+        if stats['total_24h'] > 0:
+            stats['success_rate'] = round((stats['completed_24h'] / stats['total_24h']) * 100, 1)
+            stats['verified_rate'] = round((stats['verified_count'] / stats['total_24h']) * 100, 1)
+            stats['avg_withdrawal'] = round(stats['total_amount_24h'] / stats['total_24h'], 2)
+        else:
+            stats['success_rate'] = 0
+            stats['verified_rate'] = 0
+            stats['avg_withdrawal'] = 0
+        
+        # Get withdrawal trends for last 7 days
+        seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
+        
+        # Try to get daily trends from database
+        try:
+            # Group by day
+            trends_response = supabase.table('transactions')\
+                .select('created_at, amount, status')\
+                .eq('transaction_type', 'withdrawal')\
+                .gte('created_at', seven_days_ago.isoformat())\
+                .execute()
+            
+            daily_trends = {}
+            for item in trends_response.data:
+                date = datetime.fromisoformat(item['created_at'].replace('Z', '+00:00')).date()
+                if date not in daily_trends:
+                    daily_trends[date] = {
+                        'total': 0,
+                        'completed': 0,
+                        'amount': 0
+                    }
+                daily_trends[date]['total'] += 1
+                daily_trends[date]['amount'] += abs(item['amount'])
+                if item['status'] == 'completed':
+                    daily_trends[date]['completed'] += 1
+            
+            # Format for chart
+            chart_labels = []
+            chart_data_total = []
+            chart_data_completed = []
+            
+            for i in range(7):
+                date = (datetime.now(timezone.utc) - timedelta(days=6-i)).date()
+                day_data = daily_trends.get(date, {'total': 0, 'completed': 0, 'amount': 0})
+                chart_labels.append(date.strftime('%a'))
+                chart_data_total.append(day_data['total'])
+                chart_data_completed.append(day_data['completed'])
+            
+            stats['chart_labels'] = chart_labels
+            stats['chart_data_total'] = chart_data_total
+            stats['chart_data_completed'] = chart_data_completed
+            
+        except Exception as e:
+            logger.error(f"Error getting trends: {str(e)}")
+            stats['chart_labels'] = []
+            stats['chart_data_total'] = []
+            stats['chart_data_completed'] = []
+        
+        # Check for suspicious patterns
+        suspicious_patterns = check_suspicious_patterns_from_data(withdrawals)
         
         return render_template('admin_withdrawal_notice.html',
-                             pending_withdrawals=pending_withdrawals,
+                             withdrawals=withdrawals,
                              stats=stats,
+                             suspicious_patterns=suspicious_patterns,
                              current_time=datetime.now(timezone.utc))
                              
     except Exception as e:
         logger.error(f"Error loading withdrawal notice page: {str(e)}")
-        flash('Error loading withdrawal notices.', 'error')
+        flash('Error loading withdrawal updates.', 'error')
         return redirect(url_for('admin_dashboard'))
 
-@app.route('/admin/withdrawal-notice/update-status', methods=['POST'])
-@login_required
-@admin_required
-def update_withdrawal_status():
-    """Update withdrawal status via AJAX"""
-    try:
-        data = request.get_json()
-        transaction_id = data.get('transaction_id')
-        new_status = data.get('status')
-        notes = data.get('notes', '')
-        
-        if not transaction_id or not new_status:
-            return jsonify({'success': False, 'message': 'Missing required fields'})
-        
-        transaction = SupabaseDB.get_transaction_by_id(transaction_id)
-        if not transaction:
-            return jsonify({'success': False, 'message': 'Transaction not found'})
-        
-        user = SupabaseDB.get_user_by_id(transaction['user_id'])
-        if not user:
-            return jsonify({'success': False, 'message': 'User not found'})
-        
-        # Prepare update data
-        update_data = {
-            'status': new_status,
-            'description': f"Status updated to {new_status} by admin"
-        }
-        
-        if notes:
-            update_data['description'] += f" - {notes}"
-        
-        # Handle different status changes
-        if new_status == 'rejected':
-            # Refund the amount
-            refund_amount = abs(transaction['amount'])
-            user.balance += refund_amount
-            user.total_withdrawn -= refund_amount
-            
-            SupabaseDB.update_user(user.id, {
-                'balance': user.balance,
-                'total_withdrawn': user.total_withdrawn
-            })
-            
-            # Send rejection SMS
-            CelcomSMS.send_withdrawal_notification(
-                user.phone,
-                user.username,
-                refund_amount,
-                'failed',
-                notes="Withdrawal rejected by admin"
-            )
-            
-        elif new_status == 'processing':
-            # Initiate automatic processing if not already processing
-            if transaction['status'] != 'processing':
-                process_automatic_withdrawal(transaction)
-        
-        # Update transaction
-        SupabaseDB.update_transaction(transaction_id, update_data)
-        
-        # Log admin action
-        SecurityMonitor.log_security_event(
-            "ADMIN_WITHDRAWAL_UPDATE",
-            current_user.id,
-            {
-                "transaction_id": transaction_id,
-                "old_status": transaction['status'],
-                "new_status": new_status,
-                "user_affected": user.id,
-                "notes": notes
-            }
-        )
-        
-        return jsonify({
-            'success': True, 
-            'message': f'Withdrawal status updated to {new_status}'
-        })
-        
-    except Exception as e:
-        logger.error(f"Error updating withdrawal status: {str(e)}")
-        return jsonify({'success': False, 'message': str(e)})
 
-@app.route('/admin/withdrawal-notice/bulk-action', methods=['POST'])
+def check_suspicious_patterns_from_data(withdrawals):
+    """Check for suspicious withdrawal patterns from withdrawal data"""
+    suspicious = []
+    
+    if not withdrawals:
+        return suspicious
+    
+    # Group withdrawals by user
+    user_withdrawals = {}
+    for w in withdrawals:
+        user_id = w['user_id']
+        if user_id not in user_withdrawals:
+            user_withdrawals[user_id] = []
+        user_withdrawals[user_id].append(w)
+    
+    # Check for patterns
+    for user_id, user_wds in user_withdrawals.items():
+        # Multiple withdrawals in short period
+        if len(user_wds) >= 3:
+            try:
+                # Get timestamps for first 3 withdrawals
+                times = []
+                for w in user_wds[:3]:
+                    if 'created_at' in w:
+                        created_at = datetime.fromisoformat(w['created_at'].replace('Z', '+00:00'))
+                        times.append(created_at)
+                
+                if len(times) >= 3:
+                    time_diffs = [(times[i+1] - times[i]).seconds for i in range(len(times)-1)]
+                    
+                    if all(td < 300 for td in time_diffs):  # All within 5 minutes
+                        suspicious.append({
+                            'type': 'RAPID_WITHDRAWALS',
+                            'user_id': user_id,
+                            'user_name': user_wds[0]['user_name'],
+                            'count': len(user_wds),
+                            'amounts': [w['amount'] for w in user_wds[:3]],
+                            'message': f'User made {len(user_wds)} withdrawals in rapid succession',
+                            'severity': 'high'
+                        })
+            except Exception as e:
+                logger.error(f"Error checking rapid withdrawals: {str(e)}")
+        
+        # Check for unverified users with large withdrawals
+        if len(user_wds) > 0:
+            first_wd = user_wds[0]
+            if not first_wd.get('email_verified', False):
+                total_amount = sum(w['amount'] for w in user_wds)
+                if total_amount > 5000:  # Large amount without email verification
+                    suspicious.append({
+                        'type': 'UNVERIFIED_LARGE_WITHDRAWAL',
+                        'user_id': user_id,
+                        'user_name': first_wd['user_name'],
+                        'amount': total_amount,
+                        'count': len(user_wds),
+                        'message': f'Unverified user attempted withdrawals totaling KES {total_amount:,}',
+                        'severity': 'medium'
+                    })
+    
+    return suspicious[:5]  # Return top 5 suspicious patterns
+
+
+@app.route('/admin/withdrawal-notice/live-update')
 @login_required
 @admin_required
-def bulk_withdrawal_action():
-    """Process bulk actions on withdrawals"""
+def withdrawal_live_update():
+    """Endpoint for live updates (AJAX polling)"""
     try:
-        data = request.get_json()
-        action = data.get('action')
-        transaction_ids = data.get('transaction_ids', [])
+        # Get recent withdrawals (last 30 minutes)
+        thirty_minutes_ago = datetime.now(timezone.utc) - timedelta(minutes=30)
         
-        if not action or not transaction_ids:
-            return jsonify({'success': False, 'message': 'Missing required fields'})
+        recent_response = supabase.table('transactions')\
+            .select('*, users(*)')\
+            .eq('transaction_type', 'withdrawal')\
+            .gte('created_at', thirty_minutes_ago.isoformat())\
+            .order('created_at', desc=True)\
+            .execute()
         
-        results = {
-            'processed': 0,
-            'failed': 0,
-            'details': []
-        }
+        recent_withdrawals = []
+        for item in recent_response.data:
+            transaction = item
+            user_data = item.get('users', {})
+            user = User(user_data) if user_data else None
+            
+            if user:
+                created_at = datetime.fromisoformat(transaction['created_at'].replace('Z', '+00:00'))
+                time_diff = datetime.now(timezone.utc) - created_at
+                
+                # Format time ago
+                if time_diff.days > 0:
+                    time_ago = f"{time_diff.days}d ago"
+                elif time_diff.seconds // 3600 > 0:
+                    time_ago = f"{time_diff.seconds // 3600}h ago"
+                elif time_diff.seconds // 60 > 0:
+                    time_ago = f"{time_diff.seconds // 60}m ago"
+                else:
+                    time_ago = "Just now"
+                
+                recent_withdrawals.append({
+                    'id': transaction['id'],
+                    'user_name': user.username,
+                    'user_id': user.id,
+                    'amount': abs(transaction['amount']),
+                    'status': transaction['status'],
+                    'phone': transaction.get('phone_number', user.phone),
+                    'email_verified': user.email_verified if hasattr(user, 'email_verified') else False,
+                    'email': user.email if hasattr(user, 'email') else '',
+                    'timestamp': transaction['created_at'],
+                    'time_ago': time_ago,
+                    'created_at_formatted': created_at.strftime('%H:%M:%S')
+                })
         
-        for transaction_id in transaction_ids:
-            try:
-                transaction = SupabaseDB.get_transaction_by_id(transaction_id)
-                if not transaction:
-                    results['failed'] += 1
-                    results['details'].append(f"Transaction {transaction_id} not found")
-                    continue
-                
-                user = SupabaseDB.get_user_by_id(transaction['user_id'])
-                if not user:
-                    results['failed'] += 1
-                    results['details'].append(f"User for transaction {transaction_id} not found")
-                    continue
-                
-                if action == 'approve':
-                    # For pending withdrawals, process automatically
-                    if transaction['status'] == 'pending':
-                        processing_result = process_automatic_withdrawal(transaction)
-                        if processing_result:
-                            results['processed'] += 1
-                            results['details'].append(f"Approved and processing transaction {transaction_id}")
-                        else:
-                            results['failed'] += 1
-                            results['details'].append(f"Failed to process transaction {transaction_id}")
-                    
-                    # For under review, move to processing
-                    elif transaction['status'] == 'Under Review':
-                        SupabaseDB.update_transaction(transaction_id, {'status': 'processing'})
-                        process_automatic_withdrawal(transaction)
-                        results['processed'] += 1
-                        results['details'].append(f"Approved transaction {transaction_id}")
-                
-                elif action == 'reject':
-                    # Refund and mark as rejected
-                    refund_amount = abs(transaction['amount'])
-                    user.balance += refund_amount
-                    user.total_withdrawn -= refund_amount
-                    
-                    SupabaseDB.update_user(user.id, {
-                        'balance': user.balance,
-                        'total_withdrawn': user.total_withdrawn
-                    })
-                    
-                    SupabaseDB.update_transaction(transaction_id, {
-                        'status': 'rejected',
-                        'description': 'Bulk rejected by admin'
-                    })
-                    
-                    # Send rejection SMS
-                    CelcomSMS.send_withdrawal_notification(
-                        user.phone,
-                        user.username,
-                        refund_amount,
-                        'failed',
-                        notes="Withdrawal rejected by admin"
-                    )
-                    
-                    results['processed'] += 1
-                    results['details'].append(f"Rejected transaction {transaction_id}")
-                
-                # Log bulk action
-                SecurityMonitor.log_security_event(
-                    "ADMIN_BULK_WITHDRAWAL_ACTION",
-                    current_user.id,
-                    {
-                        "action": action,
-                        "transaction_id": transaction_id,
-                        "user_affected": user.id
-                    }
-                )
-                
-            except Exception as e:
-                results['failed'] += 1
-                results['details'].append(f"Error processing {transaction_id}: {str(e)}")
+        # Get updated stats for last 24 hours
+        twenty_four_hours_ago = datetime.now(timezone.utc) - timedelta(hours=24)
+        
+        # Get total count and amount
+        stats_response = supabase.table('transactions')\
+            .select('amount, status')\
+            .eq('transaction_type', 'withdrawal')\
+            .gte('created_at', twenty_four_hours_ago.isoformat())\
+            .execute()
+        
+        total_24h = len(stats_response.data) if stats_response.data else 0
+        total_amount = 0
+        completed_count = 0
+        pending_count = 0
+        
+        for item in stats_response.data:
+            amount = abs(item['amount'])
+            total_amount += amount
+            
+            if item['status'] == 'completed':
+                completed_count += 1
+            elif item['status'] in ['pending', 'Under Review', 'processing']:
+                pending_count += 1
+        
+        # Get verification stats
+        verified_response = supabase.table('transactions')\
+            .select('*, users(*)')\
+            .eq('transaction_type', 'withdrawal')\
+            .gte('created_at', twenty_four_hours_ago.isoformat())\
+            .execute()
+        
+        verified_count = 0
+        unverified_count = 0
+        
+        for item in verified_response.data:
+            user_data = item.get('users', {})
+            if user_data:
+                user = User(user_data)
+                if hasattr(user, 'email_verified') and user.email_verified:
+                    verified_count += 1
+                else:
+                    unverified_count += 1
         
         return jsonify({
             'success': True,
-            'message': f'Bulk action completed: {results["processed"]} processed, {results["failed"]} failed',
-            'results': results
+            'recent_withdrawals': recent_withdrawals,
+            'stats': {
+                'total_24h': total_24h,
+                'total_amount': total_amount,
+                'completed': completed_count,
+                'pending': pending_count,
+                'verified_count': verified_count,
+                'unverified_count': unverified_count,
+                'success_rate': round((completed_count / total_24h * 100), 1) if total_24h > 0 else 0,
+                'verified_rate': round((verified_count / total_24h * 100), 1) if total_24h > 0 else 0
+            },
+            'timestamp': datetime.now(timezone.utc).isoformat()
         })
         
     except Exception as e:
-        logger.error(f"Error in bulk withdrawal action: {str(e)}")
+        logger.error(f"Error in live update: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
+
+
+def get_time_ago(timestamp):
+    """Convert timestamp to human-readable time ago"""
+    try:
+        if timestamp.endswith('Z'):
+            timestamp = timestamp.replace('Z', '+00:00')
+        
+        created_at = datetime.fromisoformat(timestamp)
+        now = datetime.now(timezone.utc)
+        diff = now - created_at
+        
+        if diff.days > 0:
+            return f"{diff.days}d ago"
+        elif diff.seconds // 3600 > 0:
+            return f"{diff.seconds // 3600}h ago"
+        elif diff.seconds // 60 > 0:
+            return f"{diff.seconds // 60}m ago"
+        else:
+            return "Just now"
+    except:
+        return "Unknown"
+
+
+@app.route('/admin/withdrawal-notice/user/<user_id>')
+@login_required
+@admin_required
+def user_withdrawal_history(user_id):
+    """Get withdrawal history for a specific user"""
+    try:
+        user = SupabaseDB.get_user_by_id(user_id)
+        if not user:
+            return jsonify({'success': False, 'message': 'User not found'})
+        
+        withdrawals_response = supabase.table('transactions')\
+            .select('*')\
+            .eq('transaction_type', 'withdrawal')\
+            .eq('user_id', user_id)\
+            .order('created_at', desc=True)\
+            .limit(20)\
+            .execute()
+        
+        withdrawals = []
+        total_withdrawn = 0
+        successful_count = 0
+        pending_amount = 0
+        
+        for item in withdrawals_response.data:
+            amount = abs(item['amount'])
+            created_at = datetime.fromisoformat(item['created_at'].replace('Z', '+00:00'))
+            time_diff = datetime.now(timezone.utc) - created_at
+            
+            # Format time ago
+            if time_diff.days > 0:
+                time_ago = f"{time_diff.days}d ago"
+            elif time_diff.seconds // 3600 > 0:
+                time_ago = f"{time_diff.seconds // 3600}h ago"
+            elif time_diff.seconds // 60 > 0:
+                time_ago = f"{time_diff.seconds // 60}m ago"
+            else:
+                time_ago = "Just now"
+            
+            withdrawals.append({
+                'id': item['id'],
+                'amount': amount,
+                'status': item['status'],
+                'phone': item.get('phone_number', ''),
+                'created_at': item['created_at'],
+                'created_at_formatted': created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'time_ago': time_ago
+            })
+            
+            if item['status'] == 'completed':
+                total_withdrawn += amount
+                successful_count += 1
+            elif item['status'] in ['pending', 'Under Review', 'processing']:
+                pending_amount += amount
+        
+        # Get user stats
+        user_stats = {
+            'total_withdrawn': total_withdrawn,
+            'withdrawal_count': len(withdrawals),
+            'success_count': successful_count,
+            'pending_amount': pending_amount,
+            'success_rate': round((successful_count / len(withdrawals)) * 100, 1) if withdrawals else 0,
+            'avg_withdrawal': round(total_withdrawn / successful_count, 2) if successful_count > 0 else 0
+        }
+        
+        return jsonify({
+            'success': True,
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email if hasattr(user, 'email') else 'N/A',
+                'email_verified': user.email_verified if hasattr(user, 'email_verified') else False,
+                'phone': user.phone,
+                'registration_date': user.created_at if hasattr(user, 'created_at') else 'N/A',
+                'total_withdrawals': len(withdrawals),
+                'total_withdrawn': total_withdrawn,
+                'balance': user.balance if hasattr(user, 'balance') else 0
+            },
+            'stats': user_stats,
+            'withdrawals': withdrawals
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting user withdrawal history: {str(e)}")
         return jsonify({'success': False, 'message': str(e)})
+
 
 @app.route('/admin/withdrawals')
 @login_required
 @admin_required
 def admin_withdrawals():
+    """Page for viewing all withdrawal history"""
     try:
         logger.info("Fetching all withdrawals from Supabase...")
         withdrawals_data = supabase.table('transactions')\
@@ -7801,10 +8011,19 @@ def admin_withdrawals():
         for item in withdrawals_data.data or []:
             user_data = item.get('users', {})
             user = User(user_data) if user_data else None
-            withdrawals.append((item, user))
+            withdrawals.append({
+                'transaction': item,
+                'user': user
+            })
         
-        pending_withdrawals_data = SupabaseDB.get_pending_withdrawals()
-        total_pending_withdrawals = sum(abs(t['amount']) for t in pending_withdrawals_data)
+        # Get pending withdrawals
+        pending_response = supabase.table('transactions')\
+            .select('amount')\
+            .eq('transaction_type', 'withdrawal')\
+            .in_('status', ['pending', 'Under Review', 'processing'])\
+            .execute()
+        
+        total_pending_withdrawals = sum(abs(t['amount']) for t in pending_response.data) if pending_response.data else 0
 
         return render_template(
             'admin_withdrawals.html',
@@ -7815,11 +8034,13 @@ def admin_withdrawals():
         logger.error(f"Error loading withdrawals: {e}")
         return jsonify({"success": False, "message": str(e)}), 500
 
+
 # Update admin withdrawal approval to handle automatic processing
 @app.route('/admin/approve-withdrawal/<transaction_id>', methods=['POST'])
 @login_required
 @admin_required
 def approve_withdrawal(transaction_id):
+    """Approve a withdrawal transaction"""
     transaction = SupabaseDB.get_transaction_by_id(transaction_id)
     
     if not transaction or transaction['transaction_type'] != 'withdrawal':
@@ -7851,10 +8072,12 @@ def approve_withdrawal(transaction_id):
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
+
 @app.route('/admin/reject-withdrawal/<transaction_id>', methods=['POST'])
 @login_required
 @admin_required
 def reject_withdrawal(transaction_id):
+    """Reject a withdrawal transaction"""
     transaction = SupabaseDB.get_transaction_by_id(transaction_id)
     user = SupabaseDB.get_user_by_id(transaction['user_id']) if transaction else None
     
