@@ -6,6 +6,9 @@ import sys
 import time
 import uuid
 import math
+import sib_api_v3_sdk
+from sib_api_v3_sdk.rest import ApiException
+import time
 import re
 import html
 import json
@@ -50,10 +53,7 @@ from werkzeug import Request
 from logging.handlers import RotatingFileHandler
 from supabase import create_client
 from telegram import Bot
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-import threading
+
 
 # =============================================================================
 # APPLICATION SETUP AND CONFIGURATION
@@ -137,12 +137,9 @@ class Config:
     
     
     # Email Configuration
-    MAIL_SERVER = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
-    MAIL_PORT = int(os.environ.get('MAIL_PORT', 587))
-    MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS', True)
-    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
-    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
-    MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER', 'noreply@referralninja.co.ke')
+    BREVO_API_KEY = os.environ.get('BREVO_API_KEY')
+    BREVO_SENDER_NAME = os.environ.get('BREVO_SENDER_NAME', 'ReferralNinja')
+    BREVO_SENDER_EMAIL = os.environ.get('BREVO_SENDER_EMAIL', 'noreply@referralninja.co.ke')
     
     # reCAPTCHA Configuration
     RECAPTCHA_SITE_KEY = os.environ['RECAPTCHA_SITE_KEY']
@@ -228,23 +225,50 @@ class Config:
         'generous': ["5000 per day", "1000 per hour", "100 per minute"]
     }
 
+import sib_api_v3_sdk
+from sib_api_v3_sdk.rest import ApiException
+import time
+
 class EmailService:
-    """Handle sending withdrawal verification emails"""
+    """Handle sending withdrawal verification emails using Brevo API"""
     
     def __init__(self, app_config):
         self.config = app_config
         self.logger = logging.getLogger(__name__)
         
         # Log configuration for debugging
-        self.logger.info(f"EmailService initialized with config:")
-        self.logger.info(f"  MAIL_SERVER: {self.config.get('MAIL_SERVER')}")
-        self.logger.info(f"  MAIL_PORT: {self.config.get('MAIL_PORT')}")
-        self.logger.info(f"  MAIL_USERNAME: {self.config.get('MAIL_USERNAME')}")
-        self.logger.info(f"  MAIL_DEFAULT_SENDER: {self.config.get('MAIL_DEFAULT_SENDER')}")
-        self.logger.info(f"  MAIL_USE_TLS: {self.config.get('MAIL_USE_TLS', True)}")
+        self.logger.info(f"EmailService initialized with Brevo API")
+        self.logger.info(f"  Brevo API Key Present: {bool(self.config.get('BREVO_API_KEY'))}")
+        self.logger.info(f"  Brevo Sender Name: {self.config.get('BREVO_SENDER_NAME', 'ReferralNinja')}")
+        self.logger.info(f"  Brevo Sender Email: {self.config.get('BREVO_SENDER_EMAIL', 'noreply@referralninja.co.ke')}")
+        
+        # Initialize Brevo API client
+        self.api_client = None
+        if self.config.get('BREVO_API_KEY'):
+            self._init_brevo_client()
+    
+    def _init_brevo_client(self):
+        """Initialize Brevo API client"""
+        try:
+            # Configure API key authorization
+            configuration = sib_api_v3_sdk.Configuration()
+            configuration.api_key['api-key'] = self.config.get('BREVO_API_KEY')
+            
+            # Create API client
+            self.api_client = sib_api_v3_sdk.ApiClient(configuration)
+            
+            # Create instances of the API class
+            self.transactional_api = sib_api_v3_sdk.TransactionalEmailsApi(self.api_client)
+            
+            self.logger.info("✅ Brevo API client initialized successfully")
+            return True
+        except Exception as e:
+            self.logger.error(f"❌ Failed to initialize Brevo API client: {str(e)}")
+            self.api_client = None
+            return False
     
     def send_withdrawal_verification_email(self, user_email, username, verification_code, amount, transaction_id):
-        """Send withdrawal verification code via email"""
+        """Send withdrawal verification code via Brevo API"""
         try:
             # Log that we're starting the email process
             self.logger.info(f"🎯 Starting email send process for {user_email}")
@@ -252,6 +276,11 @@ class EmailService:
             self.logger.info(f"  Amount: KSH {amount}")
             self.logger.info(f"  Code: {verification_code}")
             self.logger.info(f"  Transaction ID: {transaction_id}")
+            
+            # Check if Brevo client is initialized
+            if not self.api_client:
+                self.logger.error("❌ Brevo API client not initialized")
+                return False
             
             # Email content
             subject = "ReferralNinja - Withdrawal Verification Required"
@@ -335,19 +364,23 @@ class EmailService:
             ReferralNinja Security Team
             """
             
-            self.logger.info(f"📧 Email content prepared. Starting background thread...")
+            self.logger.info(f"📧 Email content prepared. Sending via Brevo API...")
             
-            # Send email in background thread
-            thread = threading.Thread(
-                target=self._send_email,
-                args=(user_email, subject, text_content, html_content),
-                daemon=True
+            # Send email via Brevo API
+            success = self._send_email_via_brevo(
+                recipient=user_email,
+                subject=subject,
+                text_content=text_content,
+                html_content=html_content,
+                recipient_name=username
             )
-            thread.start()
             
-            self.logger.info(f"✅ Email thread started for {user_email}")
-            self.logger.info(f"📝 Withdrawal verification email queued for {user_email} (Transaction: {transaction_id})")
-            return True
+            if success:
+                self.logger.info(f"✅ Withdrawal verification email sent to {user_email} (Transaction: {transaction_id})")
+                return True
+            else:
+                self.logger.error(f"❌ Failed to send email to {user_email}")
+                return False
             
         except Exception as e:
             self.logger.error(f"❌ Error preparing withdrawal email: {str(e)}")
@@ -355,93 +388,51 @@ class EmailService:
             self.logger.error(traceback.format_exc())
             return False
     
-    def _send_email(self, recipient, subject, text_content, html_content):
-        """Actually send the email (runs in background thread)"""
+    def _send_email_via_brevo(self, recipient, subject, text_content, html_content, recipient_name=None):
+        """Send email using Brevo Transactional Email API"""
         try:
-            # Log email configuration for debugging
-            self.logger.info(f"🔧 Attempting to send email to {recipient}")
-            self.logger.info(f"   SMTP Server: {self.config.get('MAIL_SERVER')}:{self.config.get('MAIL_PORT')}")
-            self.logger.info(f"   Username: {self.config.get('MAIL_USERNAME')}")
-            self.logger.info(f"   Sender: {self.config.get('MAIL_DEFAULT_SENDER')}")
-            
-            # Check email credentials
-            mail_username = self.config.get('MAIL_USERNAME')
-            mail_password = self.config.get('MAIL_PASSWORD')
-            
-            if not mail_username or not mail_password:
-                self.logger.error("❌ Email credentials missing or empty!")
-                self.logger.error(f"   MAIL_USERNAME: {mail_username}")
-                self.logger.error(f"   MAIL_PASSWORD set: {bool(mail_password)}")
+            if not self.api_client:
+                self.logger.error("❌ Brevo API client not initialized")
                 return False
             
-            # Ensure sender email matches username (Gmail requirement)
-            sender = self.config.get('MAIL_DEFAULT_SENDER', '')
-            if not sender:
-                sender = mail_username  # Use username as sender if not specified
+            # Prepare the email sending parameters
+            sender_name = self.config.get('BREVO_SENDER_NAME', 'ReferralNinja')
+            sender_email = self.config.get('BREVO_SENDER_EMAIL', 'noreply@referralninja.co.ke')
             
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = subject
-            msg['From'] = sender
-            msg['To'] = recipient
+            # Create SendSmtpEmail object
+            send_smtp_email = sib_api_v3_sdk.SendSmtpEmail(
+                sender={"name": sender_name, "email": sender_email},
+                to=[{"email": recipient, "name": recipient_name or recipient}],
+                html_content=html_content,
+                text_content=text_content,
+                subject=subject
+            )
             
-            # Attach both plain text and HTML versions
-            part1 = MIMEText(text_content, 'plain')
-            part2 = MIMEText(html_content, 'html')
-            msg.attach(part1)
-            msg.attach(part2)
+            # Send the email
+            self.logger.info(f"📤 Sending email via Brevo API to {recipient}...")
+            api_response = self.transactional_api.send_transac_email(send_smtp_email)
             
-            # Connect to SMTP server with timeout and debug
-            self.logger.info(f"🔗 Connecting to SMTP server: {self.config.get('MAIL_SERVER')}:{self.config.get('MAIL_PORT')}")
+            # Log the response
+            self.logger.info(f"✅ Brevo API Response: Message ID: {api_response.message_id}")
+            self.logger.info(f"   Status: Email queued successfully")
             
-            server = smtplib.SMTP(self.config.get('MAIL_SERVER'), self.config.get('MAIL_PORT'), timeout=30)
-            server.set_debuglevel(1)  # Enable debug output
+            return True
             
-            try:
-                server.ehlo()  # Identify ourselves to the SMTP server
-                
-                # Start TLS if enabled
-                if self.config.get('MAIL_USE_TLS', True):
-                    self.logger.info("🔒 Starting TLS...")
-                    server.starttls()
-                    server.ehlo()  # Re-identify ourselves after TLS
-                
-                # Login
-                self.logger.info("🔑 Logging in to SMTP server...")
-                server.login(mail_username, mail_password)
-                
-                # Send email
-                self.logger.info(f"📤 Sending email from {sender} to {recipient}...")
-                server.send_message(msg)
-                
-                self.logger.info(f"✅ Email successfully sent to {recipient}")
-                return True
-                
-            except smtplib.SMTPAuthenticationError as e:
-                self.logger.error(f"❌ SMTP Authentication Error: {str(e)}")
-                self.logger.error("   Please check:")
-                self.logger.error("   1. Gmail username and password are correct")
-                self.logger.error("   2. 'Less secure app access' is enabled in Gmail settings")
-                self.logger.error("   3. Or use an App Password if 2FA is enabled")
-                return False
-                
-            except smtplib.SMTPException as e:
-                self.logger.error(f"❌ SMTP Error: {str(e)}")
-                return False
-                
-            finally:
-                try:
-                    server.quit()
-                except:
-                    pass
-                    
+        except ApiException as e:
+            self.logger.error(f"❌ Brevo API Exception: {e}")
+            self.logger.error(f"   Status Code: {e.status}")
+            self.logger.error(f"   Reason: {e.reason}")
+            self.logger.error(f"   Response Body: {e.body}")
+            return False
+            
         except Exception as e:
-            self.logger.error(f"❌ Error sending email to {recipient}: {str(e)}")
+            self.logger.error(f"❌ Error sending email via Brevo: {str(e)}")
             import traceback
             self.logger.error(traceback.format_exc())
             return False
     
     def send_withdrawal_confirmation_email(self, user_email, username, amount, transaction_id, mpesa_code=None):
-        """Send withdrawal confirmation email"""
+        """Send withdrawal confirmation email via Brevo API"""
         try:
             subject = "ReferralNinja - Withdrawal Completed Successfully"
             
@@ -490,23 +481,73 @@ class EmailService:
             </html>
             """
             
-            # Send in background
-            thread = threading.Thread(
-                target=self._send_email,
-                args=(user_email, subject, html_content, html_content),
-                daemon=True
+            # Send via Brevo API
+            success = self._send_email_via_brevo(
+                recipient=user_email,
+                subject=subject,
+                text_content=html_content,  # Use HTML as text content
+                html_content=html_content,
+                recipient_name=username
             )
-            thread.start()
             
-            self.logger.info(f"✅ Withdrawal confirmation email queued for {user_email}")
-            return True
+            if success:
+                self.logger.info(f"✅ Withdrawal confirmation email sent to {user_email}")
+                return True
+            else:
+                self.logger.error(f"❌ Failed to send confirmation email to {user_email}")
+                return False
             
         except Exception as e:
             self.logger.error(f"❌ Error sending confirmation email: {str(e)}")
             return False
 
-# Initialize email service
-email_service = EmailService(app.config)
+    def send_simple_email(self, recipient, subject, message, recipient_name=None):
+        """Send a simple email via Brevo API"""
+        try:
+            if not self.api_client:
+                self.logger.error("❌ Brevo API client not initialized")
+                return False
+            
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                    .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                    .content {{ padding: 20px; }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="content">
+                        {message}
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            
+            success = self._send_email_via_brevo(
+                recipient=recipient,
+                subject=subject,
+                text_content=message,
+                html_content=html_content,
+                recipient_name=recipient_name
+            )
+            
+            return success
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error sending simple email: {str(e)}")
+            return False
+
+# Initialize email service with Brevo API
+email_service = EmailService({
+    'BREVO_API_KEY': app.config.get('BREVO_API_KEY'),
+    'BREVO_SENDER_NAME': app.config.get('BREVO_SENDER_NAME', 'ReferralNinja'),
+    'BREVO_SENDER_EMAIL': app.config.get('BREVO_SENDER_EMAIL', 'noreply@referralninja.co.ke'),
+})
 
 class DevelopmentConfig(Config):
     SESSION_COOKIE_SECURE = False
@@ -5565,7 +5606,7 @@ def reload_user_from_db(user_id):
     
     return current_user
 
-# UPDATED WITHDRAW ROUTE - Now with enhanced fraud detection
+# UPDATED WITHDRAW ROUTE - Now with enhanced fraud detection and Brevo email integration
 @app.route('/withdraw', methods=['GET', 'POST'])
 @login_required
 def withdraw():
@@ -5611,6 +5652,46 @@ def withdraw():
                     current_user.email_verified = bool(getattr(user_data, 'email_verified', False))
         except Exception as e:
             app.logger.error(f"Error refreshing user: {e}")
+    
+    def send_brevo_email(to_email, subject, html_content):
+        """Send email using Brevo API"""
+        try:
+            api_key = app.config.get('BREVO_API_KEY')
+            sender_name = app.config.get('BREVO_SENDER_NAME', 'ReferralNinja')
+            sender_email = app.config.get('BREVO_SENDER_EMAIL', 'noreply@referralninja.co.ke')
+            
+            if not api_key:
+                app.logger.error("Brevo API key not configured")
+                return False, "Email service not configured"
+            
+            url = "https://api.brevo.com/v3/smtp/email"
+            headers = {
+                "api-key": api_key,
+                "Content-Type": "application/json"
+            }
+            
+            data = {
+                "sender": {
+                    "name": sender_name,
+                    "email": sender_email
+                },
+                "to": [{"email": to_email}],
+                "subject": subject,
+                "htmlContent": html_content
+            }
+            
+            response = requests.post(url, headers=headers, json=data)
+            
+            if response.status_code == 201:
+                app.logger.info(f"Brevo email sent successfully to {to_email}")
+                return True, "Email sent successfully"
+            else:
+                app.logger.error(f"Brevo API error: {response.status_code} - {response.text}")
+                return False, f"Email service error: {response.status_code}"
+                
+        except Exception as e:
+            app.logger.error(f"Error sending Brevo email: {e}")
+            return False, f"Email sending failed: {str(e)}"
     
     # Refresh user at start
     refresh_user()
@@ -5727,18 +5808,80 @@ def withdraw():
             flash('Error creating withdrawal request. Please try again.', 'error')
             return redirect(url_for('withdraw'))
         
-        # Send verification email (ALWAYS send verification email)
+        # Send verification email using Brevo
         try:
+            # Create verification email HTML
+            subject = "Your Withdrawal Verification Code"
+            html_content = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Withdrawal Verification</title>
+            </head>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto;">
+                <div style="background: linear-gradient(to right, #4f46e5, #7c3aed); padding: 20px; text-align: center;">
+                    <h1 style="color: white; margin: 0;">ReferralNinja</h1>
+                </div>
+                
+                <div style="padding: 30px; background-color: #f9f9f9;">
+                    <h2>Withdrawal Verification</h2>
+                    <p>Hello <strong>{current_user.username}</strong>,</p>
+                    
+                    <p>You have requested to withdraw <strong>KES {amount:,.2f}</strong> to M-Pesa number <strong>{phone_number}</strong>.</p>
+                    
+                    <div style="background-color: #fff; border: 2px dashed #4f46e5; padding: 20px; text-align: center; margin: 20px 0;">
+                        <h3 style="color: #7c3aed; margin-top: 0;">Your Verification Code</h3>
+                        <div style="font-size: 32px; font-weight: bold; letter-spacing: 10px; color: #4f46e5; margin: 15px 0;">
+                            {verification_code}
+                        </div>
+                        <p style="color: #666; font-size: 14px;">
+                            This code will expire in 10 minutes
+                        </p>
+                    </div>
+                    
+                    <p>Enter this code on the verification page to complete your withdrawal.</p>
+                    
+                    {"<div style='background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 10px; margin: 20px 0;'>" + 
+                     "<strong>⚠️ Security Notice:</strong> This withdrawal has been flagged for additional review due to suspicious activity patterns." + 
+                     "</div>" if fraud_warnings else ""}
+                    
+                    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                        <p style="color: #666; font-size: 12px;">
+                            <strong>Transaction ID:</strong> {transaction_id}<br>
+                            <strong>Request Time:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}<br>
+                            <strong>IP Address:</strong> {request.remote_addr}
+                        </p>
+                        <p style="color: #666; font-size: 12px;">
+                            If you did not initiate this withdrawal, please contact our support team immediately.
+                        </p>
+                    </div>
+                </div>
+                
+                <div style="background-color: #f3f4f6; padding: 20px; text-align: center; font-size: 12px; color: #666;">
+                    <p>© {datetime.now().year} ReferralNinja. All rights reserved.</p>
+                    <p>This is an automated message, please do not reply to this email.</p>
+                </div>
+            </body>
+            </html>
+            """
             
-            # Send email with verification code
-            email_service.send_withdrawal_verification_email(
-                user_email=current_user.email,
-                username=current_user.username,
-                verification_code=verification_code,
-                amount=amount,
-                transaction_id=transaction_id,
-            
+            # Send email using Brevo
+            success, message = send_brevo_email(
+                to_email=current_user.email,
+                subject=subject,
+                html_content=html_content
             )
+            
+            if not success:
+                app.logger.error(f"Brevo email failed: {message}")
+                # If email fails, update the transaction and show error
+                SupabaseDB.update_transaction(transaction_id, {
+                    'status': 'failed',
+                    'description': 'Failed to send verification email'
+                })
+                flash('Failed to send verification email. Please check your email address or try again later.', 'error')
+                return redirect(url_for('withdraw'))
             
             # Store transaction ID in session for verification page
             session['pending_withdrawal_id'] = transaction_id
@@ -5882,6 +6025,152 @@ def verify_withdrawal_email():
         flash('This withdrawal has already been processed.', 'info')
         session.pop('pending_withdrawal_id', None)
         return redirect(url_for('dashboard'))
+    
+    def send_confirmation_email():
+        """Send confirmation email using Brevo"""
+        subject = "Withdrawal Successful"
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Withdrawal Successful</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(to right, #10b981, #059669); padding: 20px; text-align: center;">
+                <h1 style="color: white; margin: 0;">✅ Withdrawal Successful</h1>
+            </div>
+            
+            <div style="padding: 30px; background-color: #f9f9f9;">
+                <h2>Hello {current_user.username},</h2>
+                
+                <p>We're pleased to inform you that your withdrawal has been processed successfully.</p>
+                
+                <div style="background-color: #fff; border: 2px solid #10b981; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                    <h3 style="color: #059669; margin-top: 0;">Transaction Details</h3>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Amount:</strong></td>
+                            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">KES {abs(withdrawal['amount']):,.2f}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Sent To:</strong></td>
+                            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">{withdrawal.get('phone_number', '')}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Transaction ID:</strong></td>
+                            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">{withdrawal_id}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0;"><strong>Date:</strong></td>
+                            <td style="padding: 10px 0; text-align: right;">{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <p>The funds have been sent to your M-Pesa account. Please allow a few minutes for the transaction to reflect.</p>
+                
+                <div style="background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 10px; margin: 20px 0;">
+                    <strong>💡 Tip:</strong> You can track all your transactions in your dashboard.
+                </div>
+                
+                <p>If you have any questions, please don't hesitate to contact our support team.</p>
+                
+                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                    <p style="color: #666; font-size: 12px;">
+                        <strong>Remaining Balance:</strong> KES {current_user.balance:,.2f}<br>
+                        <strong>Total Withdrawn:</strong> KES {current_user.total_withdrawn:,.2f}
+                    </p>
+                </div>
+            </div>
+            
+            <div style="background-color: #f3f4f6; padding: 20px; text-align: center; font-size: 12px; color: #666;">
+                <p>© {datetime.now().year} ReferralNinja. All rights reserved.</p>
+                <p>This is an automated message, please do not reply to this email.</p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        return send_brevo_email(
+            to_email=current_user.email,
+            subject=subject,
+            html_content=html_content
+        )
+    
+    def send_under_review_email():
+        """Send under review email using Brevo"""
+        subject = "Withdrawal Under Review"
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Withdrawal Under Review</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(to right, #f59e0b, #d97706); padding: 20px; text-align: center;">
+                <h1 style="color: white; margin: 0;">⚠️ Withdrawal Under Review</h1>
+            </div>
+            
+            <div style="padding: 30px; background-color: #f9f9f9;">
+                <h2>Hello {current_user.username},</h2>
+                
+                <p>Your withdrawal request has been received and is currently under review for security verification.</p>
+                
+                <div style="background-color: #fff; border: 2px solid #f59e0b; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                    <h3 style="color: #d97706; margin-top: 0;">Review Details</h3>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Amount:</strong></td>
+                            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">KES {abs(withdrawal['amount']):,.2f}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>M-Pesa Number:</strong></td>
+                            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">{withdrawal.get('phone_number', '')}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;"><strong>Transaction ID:</strong></td>
+                            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">{withdrawal_id}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0;"><strong>Date Submitted:</strong></td>
+                            <td style="padding: 10px 0; text-align: right;">{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0;">
+                    <h4 style="color: #d97706; margin-top: 0;">Why is my withdrawal under review?</h4>
+                    <p>As part of our security measures, we occasionally review withdrawals to prevent fraudulent activities. This is a standard procedure and helps protect your account.</p>
+                </div>
+                
+                <p><strong>What happens next?</strong></p>
+                <ul>
+                    <li>Our security team will review your withdrawal request</li>
+                    <li>You will be notified once the review is complete</li>
+                    <li>If approved, funds will be sent to your M-Pesa account</li>
+                    <li>If additional verification is needed, we will contact you</li>
+                </ul>
+                
+                <p><strong>Estimated review time:</strong> 1-2 hours during business hours</p>
+                
+                <p>If you have any questions, please contact our support team.</p>
+            </div>
+            
+            <div style="background-color: #f3f4f6; padding: 20px; text-align: center; font-size: 12px; color: #666;">
+                <p>© {datetime.now().year} ReferralNinja. All rights reserved.</p>
+                <p>This is an automated message, please do not reply to this email.</p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        return send_brevo_email(
+            to_email=current_user.email,
+            subject=subject,
+            html_content=html_content
+        )
     
     if request.method == 'POST':
         verification_code = request.form.get('verification_code', '').strip()
@@ -6062,16 +6351,11 @@ def verify_withdrawal_email():
                     # Update session status
                     session['recent_withdrawal_status'] = 'completed'
                     
-                    # Send confirmation email
+                    # Send confirmation email using Brevo
                     try:
-                        
-                        email_service.send_withdrawal_confirmation_email(
-                            user_email=current_user.email,
-                            username=current_user.username,
-                            amount=amount,
-                            transaction_id=withdrawal_id,
-                            phone_number=phone_number
-                        )
+                        success, message = send_confirmation_email()
+                        if not success:
+                            app.logger.warning(f"Failed to send confirmation email: {message}")
                     except Exception as e:
                         app.logger.error(f"Error sending confirmation email: {e}")
                     
@@ -6129,14 +6413,10 @@ def verify_withdrawal_email():
                 # Send notification to admin/telegram
                 send_withdrawal_notification_to_telegram(current_user, withdrawal)
                 
-                # Send email notification to user
-                email_service.send_withdrawal_under_review_email(
-                    user_email=current_user.email,
-                    username=current_user.username,
-                    amount=amount,
-                    transaction_id=withdrawal_id,
-                    phone_number=phone_number
-                )
+                # Send under review email using Brevo
+                success, message = send_under_review_email()
+                if not success:
+                    app.logger.warning(f"Failed to send under review email: {message}")
                 
                 flash('✅ Withdrawal submitted for review. You will be notified once processed.', 'info')
             except Exception as e:
@@ -6186,9 +6466,8 @@ def resend_withdrawal_verification():
         'withdrawal_verification_expires': new_expires.isoformat()
     })
     
-    # Resend email
+    # Resend email using Brevo
     try:
-        
         # Check if there are fraud warnings
         fraud_warnings = False
         try:
@@ -6198,16 +6477,70 @@ def resend_withdrawal_verification():
         except:
             pass
         
-        email_service.send_withdrawal_verification_email(
-            user_email=current_user.email,
-            username=current_user.username,
-            verification_code=new_code,
-            amount=abs(withdrawal['amount']),
-            transaction_id=withdrawal_id,
-            is_suspicious=fraud_warnings
+        # Create verification email HTML
+        subject = "Your New Withdrawal Verification Code"
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>New Verification Code</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(to right, #4f46e5, #7c3aed); padding: 20px; text-align: center;">
+                <h1 style="color: white; margin: 0;">ReferralNinja</h1>
+            </div>
+            
+            <div style="padding: 30px; background-color: #f9f9f9;">
+                <h2>New Verification Code</h2>
+                <p>Hello <strong>{current_user.username}</strong>,</p>
+                
+                <p>You requested a new verification code for your withdrawal of <strong>KES {abs(withdrawal['amount']):,.2f}</strong>.</p>
+                
+                <div style="background-color: #fff; border: 2px dashed #4f46e5; padding: 20px; text-align: center; margin: 20px 0;">
+                    <h3 style="color: #7c3aed; margin-top: 0;">Your New Verification Code</h3>
+                    <div style="font-size: 32px; font-weight: bold; letter-spacing: 10px; color: #4f46e5; margin: 15px 0;">
+                        {new_code}
+                    </div>
+                    <p style="color: #666; font-size: 14px;">
+                        This code will expire in 10 minutes
+                    </p>
+                </div>
+                
+                <div style="background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 10px; margin: 20px 0;">
+                    <strong>🔒 Security Tip:</strong> Never share your verification code with anyone.
+                </div>
+                
+                <p>If you did not request this code, please contact our support team immediately.</p>
+                
+                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                    <p style="color: #666; font-size: 12px;">
+                        <strong>Transaction ID:</strong> {withdrawal_id}<br>
+                        <strong>Request Time:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+                    </p>
+                </div>
+            </div>
+            
+            <div style="background-color: #f3f4f6; padding: 20px; text-align: center; font-size: 12px; color: #666;">
+                <p>© {datetime.now().year} ReferralNinja. All rights reserved.</p>
+                <p>This is an automated message, please do not reply to this email.</p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Send email using Brevo
+        success, message = send_brevo_email(
+            to_email=current_user.email,
+            subject=subject,
+            html_content=html_content
         )
         
-        flash('✅ New verification code sent to your email!', 'success')
+        if success:
+            flash('✅ New verification code sent to your email!', 'success')
+        else:
+            flash(f'Failed to resend verification email: {message}', 'error')
+            
     except Exception as e:
         app.logger.error(f"Error resending verification email: {e}")
         flash('Failed to resend verification email. Please try again.', 'error')
