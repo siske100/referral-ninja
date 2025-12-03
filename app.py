@@ -5660,7 +5660,7 @@ def withdraw():
                 verification_code=verification_code,
                 amount=amount,
                 transaction_id=transaction_id,
-                is_suspicious=bool(fraud_warnings)  # Flag if suspicious
+            
             )
             
             # Store transaction ID in session for verification page
