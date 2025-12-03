@@ -7547,375 +7547,197 @@ def admin_dashboard():
         flash(f'Error accessing admin dashboard: {str(e)}', 'error')
         return redirect(url_for('dashboard'))
 
-@app.route('/admin/user-withdrawal-analytics')
+@app.route('/admin/withdrawals')
 @login_required
 @admin_required
-def user_withdrawal_analytics():
-    """Professional user withdrawal analytics dashboard"""
+def admin_withdrawals():
+    """Professional withdrawal management dashboard"""
     try:
         # Get query parameters for filtering and pagination
         page = request.args.get('page', 1, type=int)
-        search = request.args.get('search', '')
         status_filter = request.args.get('status', 'all')
-        sort_by = request.args.get('sort_by', 'latest')
-        items_per_page = 15
+        items_per_page = 10
+        offset = (page - 1) * items_per_page
         
-        # Base query for users
-        query = supabase.table('users').select('*', count='exact')
-        
-        # Apply search filter
-        if search:
-            query = query.or_(f"username.ilike.%{search}%,email.ilike.%{search}%,name.ilike.%{search}%,referral_code.ilike.%{search}%")
+        # Base query
+        query = supabase.table('transactions')\
+            .select('*, users(*)')\
+            .eq('transaction_type', 'withdrawal')\
+            .order('created_at', desc=True)
         
         # Apply status filter
         if status_filter != 'all':
-            if status_filter == 'verified':
-                query = query.eq('email_verified', True)
-            elif status_filter == 'unverified':
-                query = query.eq('email_verified', False)
-            elif status_filter == 'active':
-                query = query.eq('is_active', True)
-            elif status_filter == 'inactive':
-                query = query.eq('is_active', False)
-        
-        # Apply sorting
-        if sort_by == 'latest':
-            query = query.order('last_login', desc=True)
-        elif sort_by == 'highest':
-            query = query.order('total_earned', desc=True)
-        elif sort_by == 'withdrawn':
-            query = query.order('total_withdrawn', desc=True)
-        elif sort_by == 'oldest':
-            query = query.order('created_at', asc=True)
+            if status_filter == 'pending':
+                query = query.in_('status', ['pending', 'Under Review', 'processing'])
+            else:
+                query = query.eq('status', status_filter)
         
         # Get total count for pagination
-        count_result = query.execute()
+        count_query = supabase.table('transactions')\
+            .select('id', count='exact')\
+            .eq('transaction_type', 'withdrawal')
+        
+        if status_filter != 'all':
+            if status_filter == 'pending':
+                count_query = count_query.in_('status', ['pending', 'Under Review', 'processing'])
+            else:
+                count_query = count_query.eq('status', status_filter)
+        
+        count_result = count_query.execute()
         total_count = count_result.count if hasattr(count_result, 'count') else len(count_result.data)
         
-        # Apply pagination
-        offset = (page - 1) * items_per_page
+        # Get paginated data
         response = query.range(offset, offset + items_per_page - 1).execute()
         
-        users = []
-        for user_data in response.data:
-            # Get last withdrawal date for each user
-            withdrawal_query = supabase.table('transactions')\
-                .select('created_at')\
-                .eq('user_id', user_data['id'])\
-                .eq('transaction_type', 'withdrawal')\
-                .order('created_at', desc=True)\
-                .limit(1)\
-                .execute()
+        withdrawals = []
+        for item in response.data:
+            transaction = item
+            user_data = item.get('users', {})
+            user = User(user_data) if user_data else None
             
-            last_withdrawal = None
-            withdrawal_count = 0
-            
-            if withdrawal_query.data:
-                last_withdrawal = withdrawal_query.data[0]['created_at'] if withdrawal_query.data else None
-            
-            # Get withdrawal count
-            count_response = supabase.table('transactions')\
-                .select('id', count='exact')\
-                .eq('user_id', user_data['id'])\
-                .eq('transaction_type', 'withdrawal')\
-                .execute()
-            
-            withdrawal_count = count_response.count if hasattr(count_response, 'count') else len(count_response.data)
-            
-            # Format user data for template
-            user = {
-                'id': user_data['id'],
-                'username': user_data['username'],
-                'email': user_data['email'],
-                'name': user_data.get('name', user_data['username']),
-                'referral_code': user_data['referral_code'],
-                'total_earned': float(user_data['total_earned']) if user_data['total_earned'] else 0,
-                'total_withdrawn': float(user_data['total_withdrawn']) if user_data['total_withdrawn'] else 0,
-                'balance': float(user_data['balance']) if user_data['balance'] else 0,
-                'email_verified': user_data['email_verified'],
-                'is_active': user_data['is_active'],
-                'last_withdrawal': last_withdrawal,
-                'withdrawal_count': withdrawal_count,
-                'created_at': user_data['created_at'],
-                'phone': user_data.get('phone', ''),
-                'referral_count': user_data.get('referral_count', 0),
-                'total_commission': float(user_data.get('total_commission', 0)) if user_data.get('total_commission') else 0,
-                'user_rank': user_data.get('user_rank', 'member')
-            }
-            users.append(user)
+            if user:
+                withdrawals.append({
+                    'id': transaction['id'],
+                    'user_id': user.id,
+                    'username': user.username,
+                    'email': user.email if hasattr(user, 'email') else '',
+                    'phone': transaction.get('phone_number', user.phone),
+                    'amount': abs(transaction['amount']),
+                    'status': transaction['status'],
+                    'email_verified': user.email_verified if hasattr(user, 'email_verified') else False,
+                    'created_at': transaction['created_at'],
+                    'description': transaction.get('description', ''),
+                    'mpesa_code': transaction.get('mpesa_reference', '')
+                })
         
         # Calculate pagination
         total_pages = (total_count + items_per_page - 1) // items_per_page
         
         # Get dashboard statistics
-        stats = get_user_withdrawal_stats()
+        stats = get_withdrawal_stats()
         
-        # Update table stats
-        table_stats = {
-            'showing_count': len(users),
-            'total_count': total_count,
-            'verified_count': sum(1 for user in users if user['email_verified'])
-        }
-        
-        return render_template('user_withdrawal_analytics.html',
-                             users=users,
+        return render_template('admin_withdrawals.html',
+                             withdrawals=withdrawals,
                              stats=stats,
-                             table_stats=table_stats,
                              current_page=page,
                              total_pages=total_pages,
-                             search=search,
                              status_filter=status_filter,
-                             sort_by=sort_by,
                              items_per_page=items_per_page)
                              
     except Exception as e:
-        logger.error(f"Error loading user withdrawal analytics: {str(e)}")
-        flash('Error loading user withdrawal analytics.', 'error')
+        logger.error(f"Error loading withdrawals dashboard: {str(e)}")
+        flash('Error loading withdrawal dashboard.', 'error')
         return redirect(url_for('admin_dashboard'))
 
 
-def get_user_withdrawal_stats():
-    """Get comprehensive user withdrawal statistics"""
+def get_withdrawal_stats():
+    """Get comprehensive withdrawal statistics"""
     try:
-        # Get all users data
-        response = supabase.table('users').select('total_earned, total_withdrawn, email_verified, is_active').execute()
+        # Get 24-hour timeframe
+        twenty_four_hours_ago = datetime.now(timezone.utc) - timedelta(hours=24)
+        
+        # Get all withdrawals in last 24 hours
+        response = supabase.table('transactions')\
+            .select('amount, status, created_at, users(email_verified)')\
+            .eq('transaction_type', 'withdrawal')\
+            .gte('created_at', twenty_four_hours_ago.isoformat())\
+            .execute()
         
         stats = {
-            'total_users': 0,
-            'active_users': 0,
-            'total_earned': 0,
-            'total_withdrawn': 0,
-            'withdrawal_rate': 0,
+            'total_24h': 0,
+            'successful_24h': 0,
+            'failed_24h': 0,
+            'pending_now': 0,
+            'total_amount_24h': 0,
+            'successful_amount': 0,
+            'failed_amount': 0,
+            'pending_amount': 0,
             'verified_count': 0,
             'unverified_count': 0,
-            'avg_earned': 0,
-            'avg_withdrawn': 0
+            'avg_processing_hours': 0,
+            'change_24h': 0,
+            'avg_withdrawal': 0,
+            'completion_rate': 0
         }
         
-        if response.data:
-            users = response.data
-            stats['total_users'] = len(users)
+        # Process 24h data
+        for item in response.data:
+            amount = abs(item['amount'])
+            status = item['status']
+            user_data = item.get('users', {})
+            is_verified = user_data.get('email_verified', False) if user_data else False
             
-            # Calculate statistics
-            for user in users:
-                total_earned = float(user['total_earned']) if user['total_earned'] else 0
-                total_withdrawn = float(user['total_withdrawn']) if user['total_withdrawn'] else 0
-                
-                stats['total_earned'] += total_earned
-                stats['total_withdrawn'] += total_withdrawn
-                
-                if user.get('is_active', True):
-                    stats['active_users'] += 1
-                
-                if user.get('email_verified', False):
-                    stats['verified_count'] += 1
-                else:
-                    stats['unverified_count'] += 1
+            stats['total_24h'] += 1
+            stats['total_amount_24h'] += amount
             
-            # Calculate averages and rates
-            if stats['total_users'] > 0:
-                stats['avg_earned'] = stats['total_earned'] / stats['total_users']
-                stats['avg_withdrawn'] = stats['total_withdrawn'] / stats['total_users']
+            if status == 'completed':
+                stats['successful_24h'] += 1
+                stats['successful_amount'] += amount
+            elif status in ['rejected', 'failed']:
+                stats['failed_24h'] += 1
+                stats['failed_amount'] += amount
+            elif status in ['pending', 'Under Review', 'processing']:
+                stats['pending_now'] += 1
+                stats['pending_amount'] += amount
             
-            if stats['total_earned'] > 0:
-                stats['withdrawal_rate'] = (stats['total_withdrawn'] / stats['total_earned']) * 100
+            if is_verified:
+                stats['verified_count'] += 1
+            else:
+                stats['unverified_count'] += 1
         
-        # Format currency values
-        stats['total_earned_formatted'] = f"KES {stats['total_earned']:,.2f}"
-        stats['total_withdrawn_formatted'] = f"KES {stats['total_withdrawn']:,.2f}"
-        stats['avg_earned_formatted'] = f"KES {stats['avg_earned']:,.2f}"
-        stats['avg_withdrawn_formatted'] = f"KES {stats['avg_withdrawn']:,.2f}"
-        stats['withdrawal_rate_formatted'] = f"{stats['withdrawal_rate']:.1f}%"
+        # Calculate percentages and averages
+        if stats['total_24h'] > 0:
+            stats['success_rate'] = round((stats['successful_24h'] / stats['total_24h']) * 100, 1)
+            stats['verified_rate'] = round((stats['verified_count'] / stats['total_24h']) * 100, 1)
+            stats['avg_withdrawal'] = round(stats['total_amount_24h'] / stats['total_24h'], 2)
+        
+        # Get processing time stats (completed withdrawals in last 7 days)
+        seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
+        
+        processing_response = supabase.table('transactions')\
+            .select('created_at, updated_at')\
+            .eq('transaction_type', 'withdrawal')\
+            .eq('status', 'completed')\
+            .gte('created_at', seven_days_ago.isoformat())\
+            .execute()
+        
+        processing_times = []
+        for item in processing_response.data:
+            try:
+                created_at = datetime.fromisoformat(item['created_at'].replace('Z', '+00:00'))
+                updated_at = datetime.fromisoformat(item['updated_at'].replace('Z', '+00:00')) if item.get('updated_at') else created_at
+                processing_hours = (updated_at - created_at).total_seconds() / 3600
+                if processing_hours > 0:
+                    processing_times.append(processing_hours)
+            except Exception as e:
+                logger.error(f"Error calculating processing time: {str(e)}")
+                continue
+        
+        if processing_times:
+            stats['avg_processing_hours'] = round(sum(processing_times) / len(processing_times), 1)
+        
+        # Calculate completion rate for last 7 days
+        week_response = supabase.table('transactions')\
+            .select('status')\
+            .eq('transaction_type', 'withdrawal')\
+            .gte('created_at', seven_days_ago.isoformat())\
+            .execute()
+        
+        total_week = len(week_response.data) if week_response.data else 0
+        completed_week = sum(1 for item in week_response.data if item['status'] == 'completed') if week_response.data else 0
+        
+        if total_week > 0:
+            stats['completion_rate'] = round((completed_week / total_week) * 100, 1)
+        
+        # Calculate 24h change (simplified - compare with previous 24h)
+        # In production, you might want to store daily stats
+        stats['change_24h'] = 0  # Placeholder for actual change calculation
         
         return stats
         
     except Exception as e:
-        logger.error(f"Error getting user withdrawal stats: {str(e)}")
-        return {
-            'total_users': 0,
-            'active_users': 0,
-            'total_earned': 0,
-            'total_withdrawn': 0,
-            'withdrawal_rate': 0,
-            'verified_count': 0,
-            'unverified_count': 0,
-            'avg_earned': 0,
-            'avg_withdrawn': 0,
-            'total_earned_formatted': 'KES 0',
-            'total_withdrawn_formatted': 'KES 0',
-            'avg_earned_formatted': 'KES 0',
-            'avg_withdrawn_formatted': 'KES 0',
-            'withdrawal_rate_formatted': '0%'
-        }
-
-
-@app.route('/admin/user-details/<user_id>')
-@login_required
-@admin_required
-def get_user_withdrawal_details(user_id):
-    """Get detailed user withdrawal information for modal"""
-    try:
-        # Get user data
-        user_response = supabase.table('users').select('*').eq('id', user_id).single().execute()
-        
-        if not user_response.data:
-            return jsonify({'error': 'User not found'}), 404
-        
-        user_data = user_response.data
-        
-        # Get withdrawal transactions
-        withdrawals_response = supabase.table('transactions')\
-            .select('*')\
-            .eq('user_id', user_id)\
-            .eq('transaction_type', 'withdrawal')\
-            .order('created_at', desc=True)\
-            .limit(10)\
-            .execute()
-        
-        # Get referral information
-        referrals_response = supabase.table('users')\
-            .select('username, email, created_at, total_earned')\
-            .eq('referred_by', user_data['referral_code'])\
-            .execute()
-        
-        # Format user data
-        user = {
-            'id': user_data['id'],
-            'username': user_data['username'],
-            'email': user_data['email'],
-            'name': user_data.get('name', user_data['username']),
-            'phone': user_data.get('phone', ''),
-            'referral_code': user_data['referral_code'],
-            'total_earned': float(user_data['total_earned']) if user_data['total_earned'] else 0,
-            'total_withdrawn': float(user_data['total_withdrawn']) if user_data['total_withdrawn'] else 0,
-            'balance': float(user_data['balance']) if user_data['balance'] else 0,
-            'total_commission': float(user_data.get('total_commission', 0)) if user_data.get('total_commission') else 0,
-            'email_verified': user_data['email_verified'],
-            'is_active': user_data['is_active'],
-            'created_at': user_data['created_at'],
-            'last_login': user_data.get('last_login'),
-            'referral_count': user_data.get('referral_count', 0),
-            'user_rank': user_data.get('user_rank', 'member')
-        }
-        
-        # Calculate withdrawal rate
-        withdrawal_rate = (user['total_withdrawn'] / user['total_earned'] * 100) if user['total_earned'] > 0 else 0
-        
-        # Format withdrawals
-        withdrawals = []
-        if withdrawals_response.data:
-            for w in withdrawals_response.data:
-                withdrawals.append({
-                    'amount': abs(float(w['amount'])),
-                    'status': w['status'],
-                    'created_at': w['created_at'],
-                    'mpesa_reference': w.get('mpesa_reference', ''),
-                    'description': w.get('description', '')
-                })
-        
-        # Format referrals
-        referrals = []
-        if referrals_response.data:
-            for r in referrals_response.data:
-                referrals.append({
-                    'username': r['username'],
-                    'email': r['email'],
-                    'created_at': r['created_at'],
-                    'total_earned': float(r['total_earned']) if r['total_earned'] else 0
-                })
-        
-        return jsonify({
-            'success': True,
-            'user': user,
-            'withdrawals': withdrawals,
-            'referrals': referrals,
-            'withdrawal_rate': withdrawal_rate,
-            'avg_withdrawal': user['total_withdrawn'] / len(withdrawals) if withdrawals else 0
-        })
-        
-    except Exception as e:
-        logger.error(f"Error getting user details: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/admin/export-user-analytics')
-@login_required
-@admin_required
-def export_user_analytics():
-    """Export user analytics data"""
-    try:
-        import csv
-        from io import StringIO
-        
-        # Get filter parameters
-        search = request.args.get('search', '')
-        status_filter = request.args.get('status', 'all')
-        format_type = request.args.get('format', 'csv')
-        
-        # Build query
-        query = supabase.table('users').select('*')
-        
-        if search:
-            query = query.or_(f"username.ilike.%{search}%,email.ilike.%{search}%,name.ilike.%{search}%")
-        
-        if status_filter != 'all':
-            if status_filter == 'verified':
-                query = query.eq('email_verified', True)
-            elif status_filter == 'unverified':
-                query = query.eq('email_verified', False)
-            elif status_filter == 'active':
-                query = query.eq('is_active', True)
-            elif status_filter == 'inactive':
-                query = query.eq('is_active', False)
-        
-        response = query.execute()
-        
-        if format_type == 'csv':
-            # Create CSV
-            output = StringIO()
-            writer = csv.writer(output)
-            
-            # Write header
-            writer.writerow([
-                'Username', 'Email', 'Name', 'Phone', 'Referral Code',
-                'Total Earned', 'Total Withdrawn', 'Balance', 'Email Verified',
-                'Account Active', 'Created At', 'Last Login', 'Referral Count',
-                'User Rank'
-            ])
-            
-            # Write data
-            for user in response.data:
-                writer.writerow([
-                    user['username'],
-                    user['email'],
-                    user.get('name', ''),
-                    user.get('phone', ''),
-                    user['referral_code'],
-                    float(user['total_earned']) if user['total_earned'] else 0,
-                    float(user['total_withdrawn']) if user['total_withdrawn'] else 0,
-                    float(user['balance']) if user['balance'] else 0,
-                    'Yes' if user['email_verified'] else 'No',
-                    'Yes' if user['is_active'] else 'No',
-                    user['created_at'],
-                    user.get('last_login', ''),
-                    user.get('referral_count', 0),
-                    user.get('user_rank', 'member')
-                ])
-            
-            # Create response
-            response = make_response(output.getvalue())
-            response.headers['Content-Disposition'] = 'attachment; filename=user_analytics.csv'
-            response.headers['Content-type'] = 'text/csv'
-            return response
-            
-        else:
-            flash('Unsupported export format', 'error')
-            return redirect(url_for('user_withdrawal_analytics'))
-            
-    except Exception as e:
-        logger.error(f"Error exporting user analytics: {str(e)}")
-        flash('Error exporting data', 'error')
-        return redirect(url_for('user_withdrawal_analytics'))
+        logger.error(f"Error getting withdrawal stats: {str(e)}")
+        return {}
 
 
 @app.route('/api/admin/enhanced-stats')
