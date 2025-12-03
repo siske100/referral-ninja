@@ -9,7 +9,7 @@
         <h1 class="h2">Admin Dashboard</h1>
         <div class="btn-toolbar mb-2 mb-md-0">
             <div class="btn-group me-2">
-                <a href="{{ url_for('admin_withdrawal_notice') }}" class="btn btn-sm btn-warning position-relative">
+                <a href="{{ url_for('admin_withdrawals') }}" class="btn btn-sm btn-warning position-relative">
                     <i class="fas fa-bell"></i> Withdrawal Notices
                     {% if pending_withdrawals > 0 %}
                         <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
@@ -107,7 +107,7 @@
     <!-- Second Row Stats -->
     <div class="row">
         <div class="col-xl-3 col-md-6 mb-4">
-            <a href="{{ url_for('admin_withdrawal_notice') }}" class="text-decoration-none">
+            <a href="{{ url_for('admin_withdrawals') }}" class="text-decoration-none">
                 <div class="card border-left-danger shadow h-100 py-2 hover-card">
                     <div class="card-body">
                         <div class="row no-gutters align-items-center">
@@ -196,7 +196,7 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-3 mb-3">
-                            <a href="{{ url_for('admin_withdrawal_notice') }}" class="btn btn-warning btn-block w-100">
+                            <a href="{{ url_for('admin_withdrawals') }}" class="btn btn-warning btn-block w-100">
                                 <i class="fas fa-bell me-2"></i>
                                 Manage Withdrawals
                                 {% if pending_withdrawals > 0 %}
@@ -290,7 +290,7 @@
                         Pending Withdrawals
                     </h6>
                     <div>
-                        <a href="{{ url_for('admin_withdrawal_notice') }}" class="btn btn-sm btn-warning me-1">
+                        <a href="{{ url_for('admin_withdrawals') }}" class="btn btn-sm btn-warning me-1">
                             <i class="fas fa-bell"></i> Notices
                         </a>
                         <a href="{{ url_for('admin_withdrawals') }}" class="btn btn-sm btn-primary">View All</a>
