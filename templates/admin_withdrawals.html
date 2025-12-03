@@ -226,8 +226,8 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <div class="amount">KES {{ "%.2f"|format(withdrawal.amount) }}</div>
-                                    <small class="text-muted">Balance: KES {{ "%.2f"|format(withdrawal.balance) }}</small>
+                                    <div class="amount">KES {{ withdrawal.amount|format_currency }}</div>
+                                    <small class="text-muted">Balance: KES {{ withdrawal.balance|format_currency }}</small>
                                 </td>
                                 <td>
                                     <div class="d-flex flex-column gap-1">
@@ -256,8 +256,7 @@
                                 </td>
                                 <td>
                                     <div class="datetime">
-                                        <div class="time">{{ withdrawal.created_at|datetimeformat('%b %d, %Y %I:%M %p') }}</div>
-                                        <small class="text-muted">{{ withdrawal.created_at|time_ago }}</small>
+                                        <div class="time">{{ withdrawal.created_at }}</div>
                                     </div>
                                 </td>
                             </tr>
@@ -289,6 +288,7 @@
                            href="{{ url_for('admin_withdrawals', 
                                  search=search, 
                                  status=status_filter, 
+                                 items_per_page=items_per_page,
                                  page=current_page-1) if current_page > 1 else '#' }}">
                             <i class="fas fa-chevron-left"></i>
                         </a>
@@ -301,6 +301,7 @@
                                    href="{{ url_for('admin_withdrawals', 
                                          search=search, 
                                          status=status_filter, 
+                                         items_per_page=items_per_page,
                                          page=page_num) }}">
                                     {{ page_num }}
                                 </a>
@@ -313,6 +314,7 @@
                            href="{{ url_for('admin_withdrawals', 
                                  search=search, 
                                  status=status_filter, 
+                                 items_per_page=items_per_page,
                                  page=current_page+1) if current_page < total_pages else '#' }}">
                             <i class="fas fa-chevron-right"></i>
                         </a>
@@ -902,8 +904,8 @@ function renderWithdrawalDetails(data) {
                         <div class="fw-medium">${formatDate(withdrawal.created_at)}</div>
                     </div>
                     <div class="col-md-6">
-                        <div class="small text-muted">Last Updated</div>
-                        <div class="fw-medium">${withdrawal.updated_at ? formatDate(withdrawal.updated_at) : formatDate(withdrawal.created_at)}</div>
+                        <div class="small text-muted">Account Created</div>
+                        <div class="fw-medium">${user.created_at ? formatDate(user.created_at) : 'N/A'}</div>
                     </div>
                 </div>
             </div>
@@ -979,14 +981,32 @@ function updateStatsDisplay(stats) {
 // Utility functions
 function formatDate(dateString) {
     if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) {
+            // If it's not a valid date, try to parse it as ISO string
+            const isoDate = new Date(dateString.replace(' ', 'T'));
+            if (isNaN(isoDate.getTime())) {
+                return dateString;
+            }
+            return isoDate.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    } catch (error) {
+        return dateString;
+    }
 }
 
 function escapeHtml(text) {
