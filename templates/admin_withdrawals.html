@@ -363,14 +363,10 @@
             </div>
             <div class="modal-body">
                 <div class="list-group list-group-flush">
-                    <a href="{{ url_for('export_withdrawals', 
-                          search=search, 
-                          status=status_filter, 
-                          format='csv') }}" 
-                       class="list-group-item list-group-item-action">
+                    <button class="list-group-item list-group-item-action" onclick="exportCSV()">
                         <i class="fas fa-file-csv text-primary me-2"></i>
                         CSV Format
-                    </a>
+                    </button>
                     <button class="list-group-item list-group-item-action" onclick="exportExcel()">
                         <i class="fas fa-file-excel text-success me-2"></i>
                         Excel Format
@@ -685,7 +681,7 @@ const withdrawalDetailsModal = new bootstrap.Modal(document.getElementById('with
 const exportModal = new bootstrap.Modal(document.getElementById('exportModal'));
 const columnToggles = document.querySelectorAll('.column-toggle');
 
-// Initialize column toggles
+// Initialize
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Withdrawal Management loaded');
     
@@ -695,13 +691,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add click handlers for withdrawal rows
     document.querySelectorAll('.withdrawal-row').forEach(row => {
         row.addEventListener('click', function(e) {
+            // Don't trigger if clicking on a link or button inside the row
+            if (e.target.tagName === 'A' || e.target.tagName === 'BUTTON' || e.target.closest('a') || e.target.closest('button')) {
+                return;
+            }
             const withdrawalId = this.dataset.withdrawalId;
             viewWithdrawalDetails(withdrawalId);
         });
     });
-    
-    // Auto-refresh stats every 60 seconds
-    setInterval(refreshStats, 60000);
 });
 
 // Initialize column visibility toggles
@@ -748,8 +745,9 @@ async function viewWithdrawalDetails(withdrawalId) {
         // Show modal
         withdrawalDetailsModal.show();
         
-        // Fetch withdrawal details
-        const response = await fetch(`/admin/withdrawal-details/${withdrawalId}`);
+        // Fetch withdrawal details - NOTE: This endpoint doesn't exist yet
+        // You need to create it in your Flask app
+        const response = await fetch(`/admin/withdrawal/${withdrawalId}`);
         const data = await response.json();
         
         if (data.success) {
@@ -765,7 +763,7 @@ async function viewWithdrawalDetails(withdrawalId) {
 
 // Render withdrawal details in modal
 function renderWithdrawalDetails(data) {
-    const withdrawal = data.withdrawal;
+    const withdrawal = data.withdrawal || {};
     const user = data.user || {};
     
     const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U';
@@ -787,8 +785,8 @@ function renderWithdrawalDetails(data) {
                 </div>
                 <div class="col-md-4 text-end">
                     <div class="d-flex gap-2 justify-content-end">
-                        <span class="status-badge status-${withdrawal.status.toLowerCase().replace(' ', '-')}">
-                            ${withdrawal.status}
+                        <span class="status-badge status-${withdrawal.status ? withdrawal.status.toLowerCase().replace(' ', '-') : 'unknown'}">
+                            ${withdrawal.status || 'Unknown'}
                         </span>
                     </div>
                 </div>
@@ -798,7 +796,7 @@ function renderWithdrawalDetails(data) {
                 <div class="col-md-6">
                     <div class="card card-stat">
                         <div class="card-body text-center">
-                            <div class="h4 mb-1">KES ${withdrawal.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                            <div class="h4 mb-1">KES ${withdrawal.amount ? withdrawal.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '0.00'}</div>
                             <div class="text-muted small">Withdrawal Amount</div>
                         </div>
                     </div>
@@ -819,7 +817,7 @@ function renderWithdrawalDetails(data) {
                     <div class="col-md-4">
                         <div class="border rounded p-3">
                             <div class="small text-muted">Transaction ID</div>
-                            <div class="fw-medium">${escapeHtml(withdrawal.id)}</div>
+                            <div class="fw-medium">${escapeHtml(withdrawal.id || 'N/A')}</div>
                         </div>
                     </div>
                     <div class="col-md-4">
@@ -848,7 +846,7 @@ function renderWithdrawalDetails(data) {
                     </div>
                     <div class="col-md-6">
                         <div class="border rounded p-3">
-                            <div class="small text-muted">M-Pesa Reference</div>
+                            <div class="small text-muted">M-Pesa Code</div>
                             <div class="fw-medium">${escapeHtml(withdrawal.mpesa_code || 'Not available')}</div>
                         </div>
                     </div>
@@ -934,48 +932,21 @@ function openExportModal() {
     exportModal.show();
 }
 
-// Export to Excel (placeholder)
+// Export functions
+function exportCSV() {
+    // For now, show a message
+    showToast('CSV export feature coming soon', 'info');
+    exportModal.hide();
+}
+
 function exportExcel() {
     showToast('Excel export feature coming soon', 'info');
     exportModal.hide();
 }
 
-// Export to PDF (placeholder)
 function exportPDF() {
     showToast('PDF export feature coming soon', 'info');
     exportModal.hide();
-}
-
-// Refresh stats (AJAX)
-async function refreshStats() {
-    try {
-        const response = await fetch('/admin/withdrawals?stats_only=true');
-        const data = await response.json();
-        
-        if (data.success) {
-            updateStatsDisplay(data.stats);
-        }
-    } catch (error) {
-        console.error('Error refreshing stats:', error);
-    }
-}
-
-// Update stats display
-function updateStatsDisplay(stats) {
-    // Update the stat values if elements exist
-    const statElements = {
-        'pending-now': stats.pending_now,
-        'successful-24h': stats.successful_24h,
-        'total-amount-24h': stats.total_amount_24h ? `KES ${stats.total_amount_24h.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : 'KES 0',
-        'success-rate': stats.success_rate ? `${stats.success_rate}%` : '0%'
-    };
-    
-    for (const [key, value] of Object.entries(statElements)) {
-        const element = document.getElementById(key);
-        if (element) {
-            element.textContent = value;
-        }
-    }
 }
 
 // Utility functions
@@ -984,18 +955,7 @@ function formatDate(dateString) {
     try {
         const date = new Date(dateString);
         if (isNaN(date.getTime())) {
-            // If it's not a valid date, try to parse it as ISO string
-            const isoDate = new Date(dateString.replace(' ', 'T'));
-            if (isNaN(isoDate.getTime())) {
-                return dateString;
-            }
-            return isoDate.toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
+            return dateString;
         }
         return date.toLocaleDateString('en-US', {
             year: 'numeric',
