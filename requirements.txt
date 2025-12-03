@@ -15,6 +15,7 @@ defusedxml==0.7.1
 et_xmlfile==2.0.0
 filelock==3.19.1
 Flask==3.1.2
+Flask-Login==0.6.3
 gunicorn==23.0.0
 h11==0.16.0
 httpcore==1.0.9
