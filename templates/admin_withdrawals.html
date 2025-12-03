@@ -17,10 +17,16 @@
             </div>
             <div class="mt-2 mt-md-0">
                 <div class="d-flex align-items-center">
-                    <button class="btn btn-sm btn-outline-secondary me-2" onclick="refreshData()">
-                        <i class="fas fa-sync-alt"></i> Refresh
-                    </button>
-                    <button class="btn btn-sm btn-primary" onclick="exportUserData()">
+                    <form method="GET" action="{{ url_for('user_withdrawal_analytics') }}" id="refresh-form">
+                        <input type="hidden" name="search" id="refresh-search" value="{{ search }}">
+                        <input type="hidden" name="status" id="refresh-status" value="{{ status_filter }}">
+                        <input type="hidden" name="sort_by" id="refresh-sort" value="{{ sort_by }}">
+                        <input type="hidden" name="page" value="{{ current_page }}">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary me-2">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </form>
+                    <button class="btn btn-sm btn-primary" onclick="openExportModal()">
                         <i class="fas fa-download me-1"></i> Export
                     </button>
                 </div>
@@ -36,7 +42,7 @@
                     <i class="fas fa-users"></i>
                 </div>
                 <div class="stats-content">
-                    <div class="stat-value" id="total-users">0</div>
+                    <div class="stat-value">{{ stats.active_users|default(0) }}</div>
                     <div class="stat-label">Active Users</div>
                 </div>
             </div>
@@ -48,7 +54,7 @@
                     <i class="fas fa-money-bill-wave"></i>
                 </div>
                 <div class="stats-content">
-                    <div class="stat-value" id="total-earned">KES 0</div>
+                    <div class="stat-value">{{ stats.total_earned_formatted|default('KES 0') }}</div>
                     <div class="stat-label">Total Earned</div>
                 </div>
             </div>
@@ -60,7 +66,7 @@
                     <i class="fas fa-wallet"></i>
                 </div>
                 <div class="stats-content">
-                    <div class="stat-value" id="total-withdrawn">KES 0</div>
+                    <div class="stat-value">{{ stats.total_withdrawn_formatted|default('KES 0') }}</div>
                     <div class="stat-label">Total Withdrawn</div>
                 </div>
             </div>
@@ -72,7 +78,7 @@
                     <i class="fas fa-percentage"></i>
                 </div>
                 <div class="stats-content">
-                    <div class="stat-value" id="withdrawal-rate">0%</div>
+                    <div class="stat-value">{{ stats.withdrawal_rate_formatted|default('0%') }}</div>
                     <div class="stat-label">Withdrawal Rate</div>
                 </div>
             </div>
@@ -80,43 +86,47 @@
     </div>
 
     <!-- Search and Filter Bar -->
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body">
-            <div class="row g-3 align-items-center">
-                <div class="col-md-4">
-                    <div class="input-group">
-                        <span class="input-group-text bg-light border-end-0">
-                            <i class="fas fa-search text-muted"></i>
-                        </span>
-                        <input type="text" class="form-control border-start-0" 
-                               id="search-input" placeholder="Search users...">
+    <form method="GET" action="{{ url_for('user_withdrawal_analytics') }}" id="filter-form">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body">
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0">
+                                <i class="fas fa-search text-muted"></i>
+                            </span>
+                            <input type="text" class="form-control border-start-0" 
+                                   name="search" id="search-input" 
+                                   placeholder="Search users..." 
+                                   value="{{ search }}">
+                        </div>
                     </div>
-                </div>
-                <div class="col-md-3">
-                    <select class="form-select" id="filter-status">
-                        <option value="all">All Status</option>
-                        <option value="verified">Verified Only</option>
-                        <option value="unverified">Unverified Only</option>
-                        <option value="active">Active Only</option>
-                        <option value="inactive">Inactive Only</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <select class="form-select" id="filter-sort">
-                        <option value="latest">Latest Withdrawal</option>
-                        <option value="highest">Highest Earned</option>
-                        <option value="withdrawn">Most Withdrawn</option>
-                        <option value="oldest">Oldest Account</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <button class="btn btn-primary w-100" onclick="applyFilters()">
-                        <i class="fas fa-filter me-1"></i> Apply
-                    </button>
+                    <div class="col-md-3">
+                        <select class="form-select" name="status" id="filter-status">
+                            <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Status</option>
+                            <option value="verified" {% if status_filter == 'verified' %}selected{% endif %}>Verified Only</option>
+                            <option value="unverified" {% if status_filter == 'unverified' %}selected{% endif %}>Unverified Only</option>
+                            <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active Only</option>
+                            <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive Only</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" name="sort_by" id="filter-sort">
+                            <option value="latest" {% if sort_by == 'latest' %}selected{% endif %}>Latest Withdrawal</option>
+                            <option value="highest" {% if sort_by == 'highest' %}selected{% endif %}>Highest Earned</option>
+                            <option value="withdrawn" {% if sort_by == 'withdrawn' %}selected{% endif %}>Most Withdrawn</option>
+                            <option value="oldest" {% if sort_by == 'oldest' %}selected{% endif %}>Oldest Account</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-filter me-1"></i> Apply
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    </form>
 
     <!-- Users Table -->
     <div class="card border-0 shadow-sm">
@@ -124,13 +134,15 @@
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <h5 class="mb-0">User Withdrawal Overview</h5>
-                    <p class="text-muted small mb-0" id="table-stats">Loading user data...</p>
+                    <p class="text-muted small mb-0" id="table-stats">
+                        Showing {{ table_stats.showing_count|default(0) }} of {{ table_stats.total_count|default(0) }} users
+                    </p>
                 </div>
                 <div class="d-flex align-items-center">
                     <div class="me-3">
                         <span class="badge bg-success rounded-pill p-2">
                             <i class="fas fa-check-circle me-1"></i>
-                            <span id="verified-count">0</span> Verified
+                            <span id="verified-count">{{ table_stats.verified_count|default(0) }}</span> Verified
                         </span>
                     </div>
                     <div class="dropdown">
@@ -141,19 +153,19 @@
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li class="dropdown-item">
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="col-balance" checked>
+                                    <input class="form-check-input column-toggle" type="checkbox" id="col-balance" checked>
                                     <label class="form-check-label" for="col-balance">Balance</label>
                                 </div>
                             </li>
                             <li class="dropdown-item">
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="col-referral" checked>
+                                    <input class="form-check-input column-toggle" type="checkbox" id="col-referral" checked>
                                     <label class="form-check-label" for="col-referral">Referral Code</label>
                                 </div>
                             </li>
                             <li class="dropdown-item">
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="col-last-withdrawal" checked>
+                                    <input class="form-check-input column-toggle" type="checkbox" id="col-last-withdrawal" checked>
                                     <label class="form-check-label" for="col-last-withdrawal">Last Withdrawal</label>
                                 </div>
                             </li>
@@ -170,102 +182,197 @@
                             <th style="width: 25%;">
                                 <div class="d-flex align-items-center">
                                     <span>User Profile</span>
-                                    <button class="btn btn-link btn-sm text-muted p-0 ms-1" onclick="sortTable('username')">
+                                    <a href="{{ url_for('user_withdrawal_analytics', 
+                                          search=search, 
+                                          status=status_filter, 
+                                          sort_by='username',
+                                          page=current_page) }}" 
+                                       class="btn btn-link btn-sm text-muted p-0 ms-1">
                                         <i class="fas fa-sort"></i>
-                                    </button>
+                                    </a>
                                 </div>
                             </th>
-                            <th style="width: 15%;">
+                            <th style="width: 15%;" class="column-referral">
                                 <div class="d-flex align-items-center">
                                     <span>Referral Code</span>
-                                    <button class="btn btn-link btn-sm text-muted p-0 ms-1" onclick="sortTable('referral')">
+                                    <a href="{{ url_for('user_withdrawal_analytics', 
+                                          search=search, 
+                                          status=status_filter, 
+                                          sort_by='referral',
+                                          page=current_page) }}" 
+                                       class="btn btn-link btn-sm text-muted p-0 ms-1">
                                         <i class="fas fa-sort"></i>
-                                    </button>
+                                    </a>
                                 </div>
                             </th>
                             <th style="width: 15%;">
                                 <div class="d-flex align-items-center">
                                     <span>Total Earned</span>
-                                    <button class="btn btn-link btn-sm text-muted p-0 ms-1" onclick="sortTable('earned')">
+                                    <a href="{{ url_for('user_withdrawal_analytics', 
+                                          search=search, 
+                                          status=status_filter, 
+                                          sort_by='highest',
+                                          page=current_page) }}" 
+                                       class="btn btn-link btn-sm text-muted p-0 ms-1">
                                         <i class="fas fa-sort"></i>
-                                    </button>
+                                    </a>
                                 </div>
                             </th>
                             <th style="width: 15%;">
                                 <div class="d-flex align-items-center">
                                     <span>Total Withdrawn</span>
-                                    <button class="btn btn-link btn-sm text-muted p-0 ms-1" onclick="sortTable('withdrawn')">
+                                    <a href="{{ url_for('user_withdrawal_analytics', 
+                                          search=search, 
+                                          status=status_filter, 
+                                          sort_by='withdrawn',
+                                          page=current_page) }}" 
+                                       class="btn btn-link btn-sm text-muted p-0 ms-1">
                                         <i class="fas fa-sort"></i>
-                                    </button>
+                                    </a>
                                 </div>
                             </th>
-                            <th style="width: 15%;">
+                            <th style="width: 15%;" class="column-last-withdrawal">
                                 <div class="d-flex align-items-center">
                                     <span>Last Withdrawal</span>
-                                    <button class="btn btn-link btn-sm text-muted p-0 ms-1" onclick="sortTable('lastWithdrawal')">
+                                    <a href="{{ url_for('user_withdrawal_analytics', 
+                                          search=search, 
+                                          status=status_filter, 
+                                          sort_by='latest',
+                                          page=current_page) }}" 
+                                       class="btn btn-link btn-sm text-muted p-0 ms-1">
                                         <i class="fas fa-sort"></i>
-                                    </button>
+                                    </a>
                                 </div>
                             </th>
                             <th style="width: 15%;">
                                 <div class="d-flex align-items-center">
                                     <span>Status</span>
-                                    <button class="btn btn-link btn-sm text-muted p-0 ms-1" onclick="sortTable('status')">
+                                    <a href="{{ url_for('user_withdrawal_analytics', 
+                                          search=search, 
+                                          status=status_filter, 
+                                          sort_by='status',
+                                          page=current_page) }}" 
+                                       class="btn btn-link btn-sm text-muted p-0 ms-1">
                                         <i class="fas fa-sort"></i>
-                                    </button>
+                                    </a>
                                 </div>
                             </th>
                         </tr>
                     </thead>
                     <tbody id="users-table">
-                        <!-- Loading State -->
-                        <tr>
-                            <td colspan="6" class="text-center py-5">
-                                <div class="d-flex justify-content-center">
-                                    <div class="spinner-border text-primary" role="status">
-                                        <span class="visually-hidden">Loading...</span>
+                        {% if users %}
+                            {% for user in users %}
+                            <tr class="user-row fade-in" data-user-id="{{ user.id }}" style="cursor: pointer;">
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="user-avatar me-3">
+                                            {{ user.name[0]|upper }}{% if user.name.split(' ')|length > 1 %}{{ user.name.split(' ')[1][0]|upper }}{% else %}{{ user.name[1]|upper if user.name|length > 1 else '' }}{% endif %}
+                                        </div>
+                                        <div>
+                                            <div class="fw-medium mb-1">{{ user.username }}</div>
+                                            <div class="text-muted small">{{ user.email }}</div>
+                                        </div>
                                     </div>
+                                </td>
+                                <td class="column-referral">
+                                    <div class="referral-code">{{ user.referral_code }}</div>
+                                </td>
+                                <td>
+                                    <div class="amount earned">KES {{ "%.2f"|format(user.total_earned) }}</div>
+                                    <small class="text-muted column-balance">Balance: KES {{ "%.2f"|format(user.balance) }}</small>
+                                </td>
+                                <td>
+                                    <div class="amount withdrawn">KES {{ "%.2f"|format(user.total_withdrawn) }}</div>
+                                    <small class="text-muted">{{ user.withdrawal_count }} withdrawals</small>
+                                </td>
+                                <td class="column-last-withdrawal">
+                                    {% if user.last_withdrawal %}
+                                    <div class="last-withdrawal">
+                                        <div class="time">{{ user.last_withdrawal|datetimeformat('%b %d, %Y %I:%M %p') }}</div>
+                                        <small class="text-muted">{{ user.last_withdrawal|time_ago }}</small>
+                                    </div>
+                                    {% else %}
+                                    <span class="text-muted">No withdrawals</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-2">
+                                        <span class="status-badge {% if user.email_verified %}verified{% else %}unverified{% endif %}">
+                                            {% if user.email_verified %}Verified{% else %}Unverified{% endif %}
+                                        </span>
+                                        <span class="status-badge {% if user.is_active %}active{% else %}inactive{% endif %}">
+                                            {% if user.is_active %}Active{% else %}Inactive{% endif %}
+                                        </span>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                        <!-- Empty State -->
+                        <tr id="empty-state">
+                            <td colspan="6" class="text-center py-5">
+                                <div class="mb-3">
+                                    <i class="fas fa-users fa-3x text-muted opacity-50"></i>
                                 </div>
-                                <p class="text-muted mt-3">Loading user withdrawal data...</p>
+                                <h5 class="text-muted mb-2">No Users Found</h5>
+                                <p class="text-muted">Try adjusting your search or filters</p>
                             </td>
                         </tr>
+                        {% endif %}
                     </tbody>
                 </table>
-            </div>
-            
-            <!-- Empty State -->
-            <div id="empty-state" class="d-none">
-                <div class="text-center py-5">
-                    <div class="mb-3">
-                        <i class="fas fa-users fa-3x text-muted opacity-50"></i>
-                    </div>
-                    <h5 class="text-muted mb-2">No Users Found</h5>
-                    <p class="text-muted">Try adjusting your search or filters</p>
-                </div>
             </div>
         </div>
         
         <!-- Pagination -->
+        {% if total_pages > 1 %}
         <div class="card-footer bg-white border-0 py-3">
             <nav aria-label="Users pagination">
                 <ul class="pagination justify-content-center mb-0">
-                    <li class="page-item disabled" id="prev-page">
-                        <a class="page-link" href="#" tabindex="-1">
+                    <li class="page-item {% if current_page == 1 %}disabled{% endif %}">
+                        <a class="page-link" 
+                           href="{{ url_for('user_withdrawal_analytics', 
+                                 search=search, 
+                                 status=status_filter, 
+                                 sort_by=sort_by,
+                                 page=current_page-1) if current_page > 1 else '#' }}">
                             <i class="fas fa-chevron-left"></i>
                         </a>
                     </li>
-                    <li class="page-item active"><span class="page-link">1</span></li>
-                    <li class="page-item disabled" id="next-page">
-                        <a class="page-link" href="#">
+                    
+                    {% for page_num in range(1, total_pages + 1) %}
+                        {% if page_num >= current_page - 2 and page_num <= current_page + 2 %}
+                            <li class="page-item {% if page_num == current_page %}active{% endif %}">
+                                <a class="page-link" 
+                                   href="{{ url_for('user_withdrawal_analytics', 
+                                         search=search, 
+                                         status=status_filter, 
+                                         sort_by=sort_by,
+                                         page=page_num) }}">
+                                    {{ page_num }}
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    <li class="page-item {% if current_page == total_pages %}disabled{% endif %}">
+                        <a class="page-link" 
+                           href="{{ url_for('user_withdrawal_analytics', 
+                                 search=search, 
+                                 status=status_filter, 
+                                 sort_by=sort_by,
+                                 page=current_page+1) if current_page < total_pages else '#' }}">
                             <i class="fas fa-chevron-right"></i>
                         </a>
                     </li>
                 </ul>
             </nav>
             <div class="text-center text-muted small mt-2">
-                Showing <span id="showing-count">0</span> of <span id="total-count">0</span> users
+                Page {{ current_page }} of {{ total_pages }} • 
+                Showing {{ ((current_page - 1) * items_per_page) + 1 }}-{{ min(current_page * items_per_page, table_stats.total_count|default(0)) }} of {{ table_stats.total_count|default(0) }} users
             </div>
         </div>
+        {% endif %}
     </div>
 
     <!-- User Details Modal -->
@@ -278,7 +385,13 @@
                 </div>
                 <div class="modal-body">
                     <div id="user-details-content">
-                        <!-- Content loaded dynamically -->
+                        <!-- Content loaded dynamically via JavaScript -->
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="text-muted mt-3">Loading user details...</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -296,10 +409,14 @@
             </div>
             <div class="modal-body">
                 <div class="list-group list-group-flush">
-                    <button class="list-group-item list-group-item-action" onclick="exportCSV()">
+                    <a href="{{ url_for('export_user_analytics', 
+                          search=search, 
+                          status=status_filter, 
+                          format='csv') }}" 
+                       class="list-group-item list-group-item-action">
                         <i class="fas fa-file-csv text-primary me-2"></i>
                         CSV Format
-                    </button>
+                    </a>
                     <button class="list-group-item list-group-item-action" onclick="exportExcel()">
                         <i class="fas fa-file-excel text-success me-2"></i>
                         Excel Format
@@ -532,6 +649,17 @@
     animation: fadeIn 0.3s ease-out;
 }
 
+.card-stat {
+    border: 1px solid #f1f3f4;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.card-stat:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
 @media (max-width: 768px) {
     .dashboard-container {
         padding: 15px;
@@ -560,6 +688,11 @@
     .table th, .table td {
         padding: 0.75rem;
     }
+    
+    .status-badge {
+        font-size: 0.7rem;
+        padding: 0.3rem 0.5rem;
+    }
 }
 </style>
 {% endblock %}
@@ -567,296 +700,97 @@
 {% block scripts %}
 <script>
 // DOM Elements
-const usersTableEl = document.getElementById('users-table');
 const userDetailsModal = new bootstrap.Modal(document.getElementById('userDetailsModal'));
 const exportModal = new bootstrap.Modal(document.getElementById('exportModal'));
-const searchInput = document.getElementById('search-input');
-const filterStatus = document.getElementById('filter-status');
-const filterSort = document.getElementById('filter-sort');
+const columnToggles = document.querySelectorAll('.column-toggle');
 
-// Stats Elements
-const totalUsersEl = document.getElementById('total-users');
-const totalEarnedEl = document.getElementById('total-earned');
-const totalWithdrawnEl = document.getElementById('total-withdrawn');
-const withdrawalRateEl = document.getElementById('withdrawal-rate');
-const verifiedCountEl = document.getElementById('verified-count');
-const tableStatsEl = document.getElementById('table-stats');
-
-// Global variables
-let usersData = [];
-let filteredUsers = [];
-let currentSort = 'latest';
-let currentPage = 1;
-const itemsPerPage = 15;
-let totalPages = 1;
-
-// Initialize dashboard
+// Initialize column toggles
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Initializing User Withdrawal Analytics...');
-    loadUserData();
+    console.log('User Withdrawal Analytics loaded');
     
-    // Set up event listeners
-    searchInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            applyFilters();
-        }
+    // Initialize column toggles
+    initColumnToggles();
+    
+    // Add click handlers for user rows
+    document.querySelectorAll('.user-row').forEach(row => {
+        row.addEventListener('click', function(e) {
+            const userId = this.dataset.userId;
+            viewUserDetails(userId);
+        });
     });
     
-    // Auto-refresh every 30 seconds
-    setInterval(loadUserData, 30000);
+    // Auto-refresh stats every 60 seconds
+    setInterval(refreshStats, 60000);
 });
 
-// Load user data
-async function loadUserData() {
-    try {
-        showLoadingState();
+// Initialize column visibility toggles
+function initColumnToggles() {
+    columnToggles.forEach(toggle => {
+        // Set initial state from localStorage or default to checked
+        const columnId = toggle.id.replace('col-', '');
+        const isVisible = localStorage.getItem(`column-${columnId}`) !== 'false';
+        toggle.checked = isVisible;
         
-        // This would be your actual API endpoint
-        // For now, we'll simulate with mock data
-        setTimeout(() => {
-            // Generate mock user data
-            generateMockUsers();
-            
-            // Update stats
-            updateDashboardStats();
-            
-            // Render table
-            applyFilters();
-            
-        }, 800);
+        // Apply initial visibility
+        toggleColumn(columnId, isVisible);
         
-    } catch (error) {
-        console.error('Error loading user data:', error);
-        showErrorState();
-        showToast('Error loading user data', 'error');
-    }
-}
-
-// Generate mock user data (replace with your actual API call)
-function generateMockUsers() {
-    const firstNames = ['John', 'Jane', 'Michael', 'Sarah', 'David', 'Emma', 'James', 'Olivia', 'Robert', 'Sophia'];
-    const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez'];
-    const domains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com'];
-    
-    usersData = [];
-    
-    for (let i = 1; i <= 50; i++) {
-        const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-        const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-        const domain = domains[Math.floor(Math.random() * domains.length)];
-        
-        const totalEarned = Math.floor(Math.random() * 50000) + 1000;
-        const totalWithdrawn = Math.floor(Math.random() * 30000);
-        const referralCode = 'REF' + Math.random().toString(36).substr(2, 8).toUpperCase();
-        const isVerified = Math.random() > 0.3;
-        const isActive = Math.random() > 0.2;
-        
-        // Generate random last withdrawal date (within last 30 days)
-        const lastWithdrawalDays = Math.floor(Math.random() * 30);
-        const lastWithdrawalDate = new Date();
-        lastWithdrawalDate.setDate(lastWithdrawalDate.getDate() - lastWithdrawalDays);
-        
-        usersData.push({
-            id: i,
-            username: `${firstName}${lastName}${i}`,
-            email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@${domain}`,
-            name: `${firstName} ${lastName}`,
-            referral_code: referralCode,
-            total_earned: totalEarned,
-            total_withdrawn: totalWithdrawn,
-            balance: totalEarned - totalWithdrawn,
-            email_verified: isVerified,
-            is_active: isActive,
-            last_withdrawal: lastWithdrawalDate.toISOString(),
-            withdrawal_count: Math.floor(Math.random() * 20) + 1,
-            created_at: new Date(Date.now() - Math.random() * 31536000000).toISOString() // Random date in last year
+        // Add event listener
+        toggle.addEventListener('change', function() {
+            const isVisible = this.checked;
+            toggleColumn(columnId, isVisible);
+            localStorage.setItem(`column-${columnId}`, isVisible);
         });
-    }
-}
-
-// Update dashboard stats
-function updateDashboardStats() {
-    const totalUsers = usersData.length;
-    const totalEarned = usersData.reduce((sum, user) => sum + user.total_earned, 0);
-    const totalWithdrawn = usersData.reduce((sum, user) => sum + user.total_withdrawn, 0);
-    const withdrawalRate = totalEarned > 0 ? (totalWithdrawn / totalEarned) * 100 : 0;
-    const verifiedCount = usersData.filter(user => user.email_verified).length;
-    
-    totalUsersEl.textContent = totalUsers.toLocaleString();
-    totalEarnedEl.textContent = `KES ${totalEarned.toLocaleString()}`;
-    totalWithdrawnEl.textContent = `KES ${totalWithdrawn.toLocaleString()}`;
-    withdrawalRateEl.textContent = `${withdrawalRate.toFixed(1)}%`;
-    verifiedCountEl.textContent = verifiedCount.toLocaleString();
-}
-
-// Apply filters
-function applyFilters() {
-    const searchTerm = searchInput.value.toLowerCase();
-    const statusFilter = filterStatus.value;
-    currentSort = filterSort.value;
-    
-    filteredUsers = usersData.filter(user => {
-        // Search filter
-        const matchesSearch = !searchTerm || 
-            user.username.toLowerCase().includes(searchTerm) ||
-            user.email.toLowerCase().includes(searchTerm) ||
-            user.name.toLowerCase().includes(searchTerm) ||
-            user.referral_code.toLowerCase().includes(searchTerm);
-        
-        // Status filter
-        let matchesStatus = true;
-        switch(statusFilter) {
-            case 'verified':
-                matchesStatus = user.email_verified;
-                break;
-            case 'unverified':
-                matchesStatus = !user.email_verified;
-                break;
-            case 'active':
-                matchesStatus = user.is_active;
-                break;
-            case 'inactive':
-                matchesStatus = !user.is_active;
-                break;
-        }
-        
-        return matchesSearch && matchesStatus;
     });
-    
-    // Sort users
-    sortUsers(currentSort);
-    
-    // Update table stats
-    updateTableStats();
-    
-    // Render table
-    currentPage = 1;
-    renderUsersTable();
 }
 
-// Sort users
-function sortUsers(sortType) {
-    switch(sortType) {
-        case 'latest':
-            filteredUsers.sort((a, b) => new Date(b.last_withdrawal) - new Date(a.last_withdrawal));
-            break;
-        case 'highest':
-            filteredUsers.sort((a, b) => b.total_earned - a.total_earned);
-            break;
-        case 'withdrawn':
-            filteredUsers.sort((a, b) => b.total_withdrawn - a.total_withdrawn);
-            break;
-        case 'oldest':
-            filteredUsers.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-            break;
-    }
+// Toggle column visibility
+function toggleColumn(columnId, isVisible) {
+    const columns = document.querySelectorAll(`.column-${columnId}`);
+    columns.forEach(col => {
+        col.style.display = isVisible ? '' : 'none';
+    });
 }
 
-// Sort table by column
-function sortTable(column) {
-    switch(column) {
-        case 'username':
-            filteredUsers.sort((a, b) => a.username.localeCompare(b.username));
-            break;
-        case 'referral':
-            filteredUsers.sort((a, b) => a.referral_code.localeCompare(b.referral_code));
-            break;
-        case 'earned':
-            filteredUsers.sort((a, b) => b.total_earned - a.total_earned);
-            break;
-        case 'withdrawn':
-            filteredUsers.sort((a, b) => b.total_withdrawn - a.total_withdrawn);
-            break;
-        case 'lastWithdrawal':
-            filteredUsers.sort((a, b) => new Date(b.last_withdrawal) - new Date(a.last_withdrawal));
-            break;
-        case 'status':
-            filteredUsers.sort((a, b) => {
-                if (a.email_verified && !b.email_verified) return -1;
-                if (!a.email_verified && b.email_verified) return 1;
-                return 0;
-            });
-            break;
-    }
-    renderUsersTable();
-}
-
-// Render users table
-function renderUsersTable() {
-    if (filteredUsers.length === 0) {
-        usersTableEl.innerHTML = '';
-        document.getElementById('empty-state').classList.remove('d-none');
-        return;
-    }
-    
-    document.getElementById('empty-state').classList.add('d-none');
-    
-    // Calculate pagination
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const pageUsers = filteredUsers.slice(startIndex, endIndex);
-    totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
-    
-    usersTableEl.innerHTML = pageUsers.map(user => {
-        const initials = user.name.split(' ').map(n => n[0]).join('').toUpperCase();
-        const withdrawalTime = formatTimeAgo(user.last_withdrawal);
-        const withdrawalDate = formatDate(user.last_withdrawal);
-        
-        return `
-        <tr class="fade-in" onclick="viewUserDetails(${user.id})" style="cursor: pointer;">
-            <td>
-                <div class="d-flex align-items-center">
-                    <div class="user-avatar me-3">
-                        ${initials}
-                    </div>
-                    <div>
-                        <div class="fw-medium mb-1">${escapeHtml(user.username)}</div>
-                        <div class="text-muted small">${escapeHtml(user.email)}</div>
-                    </div>
+// View user details via AJAX
+async function viewUserDetails(userId) {
+    try {
+        // Show loading state in modal
+        document.getElementById('user-details-content').innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
                 </div>
-            </td>
-            <td>
-                <div class="referral-code">${escapeHtml(user.referral_code)}</div>
-            </td>
-            <td>
-                <div class="amount earned">KES ${user.total_earned.toLocaleString()}</div>
-                <small class="text-muted">Balance: KES ${user.balance.toLocaleString()}</small>
-            </td>
-            <td>
-                <div class="amount withdrawn">KES ${user.total_withdrawn.toLocaleString()}</div>
-                <small class="text-muted">${user.withdrawal_count} withdrawals</small>
-            </td>
-            <td>
-                <div class="last-withdrawal">
-                    <div class="time">${withdrawalTime}</div>
-                    <small class="text-muted">${withdrawalDate}</small>
-                </div>
-            </td>
-            <td>
-                <div class="d-flex gap-2">
-                    <span class="status-badge ${user.email_verified ? 'verified' : 'unverified'}">
-                        ${user.email_verified ? 'Verified' : 'Unverified'}
-                    </span>
-                    <span class="status-badge ${user.is_active ? 'active' : 'inactive'}">
-                        ${user.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                </div>
-            </td>
-        </tr>
+                <p class="text-muted mt-3">Loading user details...</p>
+            </div>
         `;
-    }).join('');
-    
-    updatePagination();
+        
+        // Show modal
+        userDetailsModal.show();
+        
+        // Fetch user details
+        const response = await fetch(`/admin/user-details/${userId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            renderUserDetails(data);
+        } else {
+            showErrorInModal(data.error || 'Failed to load user details');
+        }
+    } catch (error) {
+        console.error('Error loading user details:', error);
+        showErrorInModal('Error loading user details. Please try again.');
+    }
 }
 
-// View user details
-function viewUserDetails(userId) {
-    const user = usersData.find(u => u.id === userId);
-    if (!user) return;
+// Render user details in modal
+function renderUserDetails(data) {
+    const user = data.user;
+    const withdrawals = data.withdrawals || [];
+    const referrals = data.referrals || [];
+    const withdrawalRate = data.withdrawal_rate || 0;
+    const avgWithdrawal = data.avg_withdrawal || 0;
     
-    const withdrawals = generateMockWithdrawals(user);
-    const withdrawalRate = user.total_earned > 0 ? (user.total_withdrawn / user.total_earned) * 100 : 0;
-    const avgWithdrawal = user.withdrawal_count > 0 ? user.total_withdrawn / user.withdrawal_count : 0;
+    const initials = user.name.split(' ').map(n => n[0]).join('').toUpperCase();
     
     document.getElementById('user-details-content').innerHTML = `
         <div class="user-details">
@@ -864,11 +798,12 @@ function viewUserDetails(userId) {
                 <div class="col-md-8">
                     <div class="d-flex align-items-center">
                         <div class="user-avatar me-3" style="width: 60px; height: 60px; font-size: 1.25rem;">
-                            ${user.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                            ${initials}
                         </div>
                         <div>
                             <h4 class="mb-1">${escapeHtml(user.name)}</h4>
                             <p class="text-muted mb-0">${escapeHtml(user.email)}</p>
+                            ${user.phone ? `<p class="text-muted small mb-0">${escapeHtml(user.phone)}</p>` : ''}
                         </div>
                     </div>
                 </div>
@@ -888,7 +823,7 @@ function viewUserDetails(userId) {
                 <div class="col-md-3">
                     <div class="card card-stat">
                         <div class="card-body text-center">
-                            <div class="h4 mb-1">KES ${user.total_earned.toLocaleString()}</div>
+                            <div class="h4 mb-1">KES ${user.total_earned.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                             <div class="text-muted small">Total Earned</div>
                         </div>
                     </div>
@@ -896,7 +831,7 @@ function viewUserDetails(userId) {
                 <div class="col-md-3">
                     <div class="card card-stat">
                         <div class="card-body text-center">
-                            <div class="h4 mb-1">KES ${user.total_withdrawn.toLocaleString()}</div>
+                            <div class="h4 mb-1">KES ${user.total_withdrawn.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
                             <div class="text-muted small">Total Withdrawn</div>
                         </div>
                     </div>
@@ -912,247 +847,253 @@ function viewUserDetails(userId) {
                 <div class="col-md-3">
                     <div class="card card-stat">
                         <div class="card-body text-center">
-                            <div class="h4 mb-1">${user.withdrawal_count}</div>
-                            <div class="text-muted small">Total Withdrawals</div>
+                            <div class="h4 mb-1">${user.referral_count || 0}</div>
+                            <div class="text-muted small">Total Referrals</div>
                         </div>
                     </div>
                 </div>
             </div>
             
-            <div class="mb-3">
+            <div class="mb-4">
                 <h6>User Information</h6>
                 <div class="row g-2">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="border rounded p-3">
                             <div class="small text-muted">Referral Code</div>
                             <div class="fw-medium">${escapeHtml(user.referral_code)}</div>
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="border rounded p-3">
                             <div class="small text-muted">Current Balance</div>
-                            <div class="fw-medium h5 mb-0">KES ${user.balance.toLocaleString()}</div>
+                            <div class="fw-medium h5 mb-0">KES ${user.balance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded p-3">
+                            <div class="small text-muted">User Rank</div>
+                            <div class="fw-medium h5 mb-0">${escapeHtml(user.user_rank || 'Member')}</div>
                         </div>
                     </div>
                 </div>
             </div>
             
-            <div>
-                <h6>Recent Withdrawals</h6>
-                <div class="table-responsive">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Amount</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${withdrawals.map(w => `
-                                <tr>
-                                    <td>${formatDate(w.created_at)}</td>
-                                    <td>KES ${w.amount.toLocaleString()}</td>
-                                    <td><span class="badge bg-${w.status === 'completed' ? 'success' : 'warning'}">${w.status}</span></td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-4">
+                        <h6>Recent Withdrawals</h6>
+                        ${withdrawals.length > 0 ? `
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${withdrawals.map(w => `
+                                        <tr>
+                                            <td>${formatDate(w.created_at)}</td>
+                                            <td>KES ${w.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                            <td><span class="badge bg-${getStatusBadgeColor(w.status)}">${w.status}</span></td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                        ` : '<p class="text-muted">No withdrawal history</p>'}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-4">
+                        <h6>Recent Referrals</h6>
+                        ${referrals.length > 0 ? `
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Username</th>
+                                        <th>Joined</th>
+                                        <th>Earned</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${referrals.map(r => `
+                                        <tr>
+                                            <td>${escapeHtml(r.username)}</td>
+                                            <td>${formatDate(r.created_at)}</td>
+                                            <td>KES ${r.total_earned.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                        ` : '<p class="text-muted">No referral history</p>'}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="border-top pt-3 mt-3">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="small text-muted">Account Created</div>
+                        <div class="fw-medium">${formatDate(user.created_at)}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="small text-muted">Last Login</div>
+                        <div class="fw-medium">${user.last_login ? formatDate(user.last_login) : 'Never'}</div>
+                    </div>
                 </div>
             </div>
         </div>
     `;
-    
-    userDetailsModal.show();
 }
 
-// Generate mock withdrawals for user
-function generateMockWithdrawals(user) {
-    const statuses = ['completed', 'pending', 'processing', 'rejected'];
-    const withdrawals = [];
-    
-    for (let i = 0; i < 5; i++) {
-        const daysAgo = i * 3;
-        const date = new Date();
-        date.setDate(date.getDate() - daysAgo);
-        
-        withdrawals.push({
-            id: i + 1,
-            amount: Math.floor(Math.random() * 5000) + 500,
-            status: statuses[Math.floor(Math.random() * statuses.length)],
-            created_at: date.toISOString()
-        });
+// Get badge color for status
+function getStatusBadgeColor(status) {
+    switch(status.toLowerCase()) {
+        case 'completed':
+            return 'success';
+        case 'pending':
+            return 'warning';
+        case 'processing':
+            return 'info';
+        case 'rejected':
+            return 'danger';
+        default:
+            return 'secondary';
     }
-    
-    return withdrawals;
 }
 
-// Update table stats
-function updateTableStats() {
-    const showingCount = Math.min(filteredUsers.length, itemsPerPage);
-    tableStatsEl.textContent = `Showing ${showingCount} of ${filteredUsers.length} users`;
-    document.getElementById('showing-count').textContent = showingCount;
-    document.getElementById('total-count').textContent = filteredUsers.length;
+// Show error in modal
+function showErrorInModal(message) {
+    document.getElementById('user-details-content').innerHTML = `
+        <div class="text-center py-5">
+            <div class="mb-3">
+                <i class="fas fa-exclamation-triangle fa-2x text-danger"></i>
+            </div>
+            <h5 class="text-muted">Error</h5>
+            <p class="text-muted">${escapeHtml(message)}</p>
+            <button class="btn btn-primary btn-sm mt-3" onclick="userDetailsModal.hide()">
+                Close
+            </button>
+        </div>
+    `;
 }
 
-// Update pagination
-function updatePagination() {
-    const prevPage = document.getElementById('prev-page');
-    const nextPage = document.getElementById('next-page');
-    const pageItems = document.querySelectorAll('.pagination .page-item');
-    
-    // Remove existing page numbers (except prev and next)
-    pageItems.forEach(item => {
-        if (!item.id) item.remove();
-    });
-    
-    const pagination = document.querySelector('.pagination');
-    const prevLi = document.getElementById('prev-page');
-    
-    // Add page numbers
-    for (let i = 1; i <= Math.min(totalPages, 5); i++) {
-        const li = document.createElement('li');
-        li.className = `page-item ${i === currentPage ? 'active' : ''}`;
-        li.innerHTML = `<a class="page-link" href="#" onclick="goToPage(${i})">${i}</a>`;
-        pagination.insertBefore(li, nextPage);
-    }
-    
-    // Update prev/next buttons
-    prevPage.classList.toggle('disabled', currentPage === 1);
-    nextPage.classList.toggle('disabled', currentPage === totalPages);
-}
-
-// Go to specific page
-function goToPage(page) {
-    if (page < 1 || page > totalPages) return;
-    currentPage = page;
-    renderUsersTable();
-}
-
-// Refresh data
-function refreshData() {
-    loadUserData();
-    showToast('Data refreshed successfully', 'success');
-}
-
-// Export user data
-function exportUserData() {
+// Open export modal
+function openExportModal() {
     exportModal.show();
 }
 
-function exportCSV() {
-    const csvData = filteredUsers.map(user => ({
-        'Username': user.username,
-        'Email': user.email,
-        'Referral Code': user.referral_code,
-        'Total Earned': user.total_earned,
-        'Total Withdrawn': user.total_withdrawn,
-        'Balance': user.balance,
-        'Status': user.email_verified ? 'Verified' : 'Unverified',
-        'Last Withdrawal': formatDate(user.last_withdrawal)
-    }));
-    
-    // Convert to CSV (simplified)
-    let csv = 'Username,Email,Referral Code,Total Earned,Total Withdrawn,Balance,Status,Last Withdrawal\n';
-    csvData.forEach(row => {
-        csv += `${row.Username},${row.Email},${row['Referral Code']},${row['Total Earned']},${row['Total Withdrawn']},${row.Balance},${row.Status},${row['Last Withdrawal']}\n`;
-    });
-    
-    downloadFile(csv, 'users.csv', 'text/csv');
-    showToast('CSV export completed', 'success');
-}
-
+// Export to Excel (placeholder)
 function exportExcel() {
     showToast('Excel export feature coming soon', 'info');
+    exportModal.hide();
 }
 
+// Export to PDF (placeholder)
 function exportPDF() {
     showToast('PDF export feature coming soon', 'info');
+    exportModal.hide();
 }
 
-function downloadFile(content, filename, type) {
-    const blob = new Blob([content], { type });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+// Refresh stats (AJAX)
+async function refreshStats() {
+    try {
+        const response = await fetch('/admin/user-withdrawal-analytics?stats_only=true');
+        const data = await response.json();
+        
+        if (data.success) {
+            updateStatsDisplay(data.stats);
+        }
+    } catch (error) {
+        console.error('Error refreshing stats:', error);
+    }
 }
 
-// Show loading state
-function showLoadingState() {
-    usersTableEl.innerHTML = `
-        <tr>
-            <td colspan="6" class="text-center py-5">
-                <div class="d-flex justify-content-center">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                </div>
-                <p class="text-muted mt-3">Loading user withdrawal data...</p>
-            </td>
-        </tr>
-    `;
-}
-
-// Show error state
-function showErrorState() {
-    usersTableEl.innerHTML = `
-        <tr>
-            <td colspan="6" class="text-center py-5">
-                <div class="mb-3">
-                    <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
-                </div>
-                <h5 class="text-muted">Unable to Load Data</h5>
-                <p class="text-muted mb-3">Please check your connection and try again.</p>
-                <button class="btn btn-primary btn-sm" onclick="loadUserData()">
-                    <i class="fas fa-redo me-1"></i> Retry
-                </button>
-            </td>
-        </tr>
-    `;
+// Update stats display
+function updateStatsDisplay(stats) {
+    // Update the stat values if elements exist
+    const statElements = {
+        'active-users': stats.active_users,
+        'total-earned': stats.total_earned_formatted,
+        'total-withdrawn': stats.total_withdrawn_formatted,
+        'withdrawal-rate': stats.withdrawal_rate_formatted
+    };
+    
+    for (const [key, value] of Object.entries(statElements)) {
+        const element = document.getElementById(key);
+        if (element) {
+            element.textContent = value;
+        }
+    }
 }
 
 // Utility functions
-function formatTimeAgo(dateString) {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / 60000);
-    
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}h ago`;
-    
-    const diffDays = Math.floor(diffHours / 24);
-    if (diffDays < 7) return `${diffDays}d ago`;
-    
-    return formatDate(dateString);
-}
-
 function formatDate(dateString) {
+    if (!dateString) return 'N/A';
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
-        day: 'numeric'
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
     });
 }
 
 function escapeHtml(text) {
+    if (!text) return '';
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
 
 function showToast(message, type = 'info') {
-    // Implement toast notification
-    console.log(`${type.toUpperCase()}: ${message}`);
+    // Create toast element
+    const toastId = 'toast-' + Date.now();
+    const toastHtml = `
+        <div id="${toastId}" class="toast align-items-center text-bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${escapeHtml(message)}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    `;
+    
+    // Add to toast container
+    let toastContainer = document.querySelector('.toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        document.body.appendChild(toastContainer);
+    }
+    
+    toastContainer.innerHTML += toastHtml;
+    
+    // Show toast
+    const toastEl = document.getElementById(toastId);
+    const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+    toast.show();
+    
+    // Remove after hide
+    toastEl.addEventListener('hidden.bs.toast', function () {
+        this.remove();
+    });
 }
+
+// Setup form synchronization for refresh
+document.getElementById('filter-form').addEventListener('submit', function() {
+    // Update hidden inputs in refresh form
+    document.getElementById('refresh-search').value = document.getElementById('search-input').value;
+    document.getElementById('refresh-status').value = document.getElementById('filter-status').value;
+    document.getElementById('refresh-sort').value = document.getElementById('filter-sort').value;
+});
 </script>
 {% endblock %}
