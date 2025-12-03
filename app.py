@@ -7826,6 +7826,100 @@ def get_withdrawal_stats():
             'withdrawal_rate_formatted': '0%'
         }
     
+@app.route('/admin/export-withdrawals')
+@login_required
+@admin_required
+def export_withdrawals():
+    """Export withdrawals to CSV"""
+    try:
+        # Get query parameters
+        status_filter = request.args.get('status', 'all')
+        search = request.args.get('search', '')
+        export_format = request.args.get('format', 'csv')
+        
+        # Build query similar to admin_withdrawals
+        query = supabase.table('transactions')\
+            .select('*, users(*)')\
+            .eq('transaction_type', 'withdrawal')\
+            .order('created_at', desc=True)
+        
+        # Apply status filter
+        if status_filter != 'all':
+            if status_filter == 'pending':
+                query = query.in_('status', ['pending', 'Under Review', 'processing'])
+            else:
+                query = query.eq('status', status_filter)
+        
+        # Apply search filter if provided
+        if search:
+            users_with_search = supabase.table('users')\
+                .select('id')\
+                .or_(f'username.ilike.%{search}%,email.ilike.%{search}%,phone.ilike.%{search}%,name.ilike.%{search}%')\
+                .execute()
+            
+            user_ids = [user['id'] for user in users_with_search.data]
+            
+            if user_ids:
+                query = query.or_(f'user_id.in.({",".join([f"\"{uid}\"" for uid in user_ids])}),phone_number.ilike.%{search}%,mpesa_reference.ilike.%{search}%')
+        
+        # Get all data (no pagination for export)
+        response = query.execute()
+        
+        # Prepare data for CSV
+        withdrawals_data = []
+        for item in response.data:
+            transaction = item
+            user_data = item.get('users', {})
+            
+            if user_data:
+                withdrawals_data.append({
+                    'Transaction ID': transaction['id'],
+                    'User ID': user_data.get('id', ''),
+                    'Username': user_data.get('username', 'N/A'),
+                    'Email': user_data.get('email', ''),
+                    'Phone': user_data.get('phone', transaction.get('phone_number', '')),
+                    'Name': user_data.get('name', user_data.get('username', 'N/A')),
+                    'Amount': abs(float(transaction['amount'])) if transaction['amount'] else 0,
+                    'Status': transaction['status'],
+                    'Email Verified': 'Yes' if user_data.get('email_verified') else 'No',
+                    'Account Active': 'Yes' if user_data.get('is_active') else 'No',
+                    'User Balance': float(user_data.get('balance', 0)),
+                    'Total Earned': float(user_data.get('total_earned', 0)),
+                    'Total Withdrawn': float(user_data.get('total_withdrawn', 0)),
+                    'Referral Code': user_data.get('referral_code', ''),
+                    'Referral Count': user_data.get('referral_count', 0),
+                    'User Rank': user_data.get('user_rank', 'Member'),
+                    'Description': transaction.get('description', ''),
+                    'M-Pesa Reference': transaction.get('mpesa_reference', ''),
+                    'Created At': transaction['created_at']
+                })
+        
+        # Convert to CSV
+        if export_format == 'csv':
+            import csv
+            import io
+            
+            output = io.StringIO()
+            writer = csv.DictWriter(output, fieldnames=withdrawals_data[0].keys() if withdrawals_data else [])
+            writer.writeheader()
+            writer.writerows(withdrawals_data)
+            
+            output.seek(0)
+            
+            # Create response
+            from flask import make_response
+            response = make_response(output.getvalue())
+            response.headers["Content-Disposition"] = f"attachment; filename=withdrawals_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            response.headers["Content-type"] = "text/csv"
+            return response
+        
+        flash('Export format not supported', 'error')
+        return redirect(url_for('admin_withdrawals'))
+        
+    except Exception as e:
+        logger.error(f"Error exporting withdrawals: {str(e)}")
+        flash('Error exporting withdrawal data.', 'error')
+        return redirect(url_for('admin_withdrawals'))    
     
 @app.route('/api/admin/enhanced-stats')
 @login_required
