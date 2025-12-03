@@ -52,7 +52,7 @@ queuelib==1.8.0
 redis==7.1.0
 requests==2.32.5
 requests-file==2.1.0
-Scrapy==2.13.3
+Scrapy==2.13.4
 selenium==4.35.0
 service-identity==24.2.0
 setuptools==80.9.0
