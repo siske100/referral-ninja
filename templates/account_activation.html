@@ -1214,6 +1214,46 @@
 
             // Check initial payment status
             checkInitialStatus();
+
+            // =====================================================================
+            // Added: Enhanced payment status polling function with auto-login support
+            // =====================================================================
+            function checkPaymentStatusEnhanced() {
+                fetch('/api/payment-status')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.verified) {
+                            if (data.auto_login) {
+                                // Payment completed via callback, redirect to auto-login
+                                window.location.href = '/auto-login/' + data.login_token;
+                            } else {
+                                // Payment completed via polling, redirect to dashboard
+                                window.location.href = '/dashboard';
+                            }
+                        } else if (data.pending) {
+                            // Still pending, check again in 5 seconds
+                            setTimeout(checkPaymentStatusEnhanced, 5000);
+                        } else {
+                            // Session expired or error
+                            alert(data.message || 'Payment verification failed');
+                            window.location.href = '/register';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Payment status check failed:', error);
+                        setTimeout(checkPaymentStatusEnhanced, 10000); // Retry after 10 seconds on error
+                    });
+            }
+
+            // Start enhanced checking when page loads
+            // Start checking 30 seconds after STK push initiated (as a fallback)
+            setTimeout(function() {
+                // Only start enhanced checking if we're still in processing state
+                if (processingSection.classList.contains('show')) {
+                    checkPaymentStatusEnhanced();
+                }
+            }, 30000);
+            // =====================================================================
         });
     </script>
 </body>
