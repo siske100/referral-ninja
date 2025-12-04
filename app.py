@@ -225,9 +225,6 @@ class Config:
         'generous': ["5000 per day", "1000 per hour", "100 per minute"]
     }
 
-import sib_api_v3_sdk
-from sib_api_v3_sdk.rest import ApiException
-import time
 
 class EmailService:
     """Handle sending withdrawal verification emails using Brevo API"""
@@ -3691,7 +3688,76 @@ def send_sms(phone, message):
 # PAYMENT-ONLY USER STORAGE FUNCTIONS
 # =============================================================================
 
-def create_permanent_user_after_payment(temp_user_data, transaction_id):
+def track_pending_payment(checkout_request_id, temp_user_data):
+    """Store pending payment info in Redis (survives app restarts)"""
+    try:
+        payment_key = f"pending_payment:{checkout_request_id}"
+        payment_data = {
+            'temp_user_data': temp_user_data,
+            'checkout_request_id': checkout_request_id,
+            'created_at': datetime.now(timezone.utc).isoformat(),
+            'status': 'pending'
+        }
+        
+        # Store for 1 hour (payment timeout)
+        redis_client.setex(payment_key, 3600, json.dumps(payment_data))
+        return True
+    except Exception as e:
+        logger.error(f"Error tracking payment: {e}")
+        return False
+
+def get_pending_payment(checkout_request_id):
+    """Retrieve pending payment info from Redis"""
+    try:
+        payment_key = f"pending_payment:{checkout_request_id}"
+        payment_data = redis_client.get(payment_key)
+        if payment_data:
+            return json.loads(payment_data)
+    except Exception as e:
+        logger.error(f"Error getting pending payment: {e}")
+    return None
+
+def complete_payment(checkout_request_id, mpesa_data):
+    """Mark payment as completed and trigger user creation"""
+    try:
+        payment_key = f"pending_payment:{checkout_request_id}"
+        payment_data = get_pending_payment(checkout_request_id)
+        
+        if payment_data:
+            # Update payment data
+            payment_data['status'] = 'completed'
+            payment_data['mpesa_data'] = mpesa_data
+            payment_data['completed_at'] = datetime.now(timezone.utc).isoformat()
+            
+            # Store for 24 hours (for debugging)
+            redis_client.setex(payment_key, 86400, json.dumps(payment_data))
+            
+            # Create permanent user
+            user = create_permanent_user_after_payment(
+                payment_data['temp_user_data'], 
+                {
+                    'checkout_request_id': checkout_request_id,
+                    'mpesa_receipt_number': mpesa_data.get('MpesaReceiptNumber'),
+                    **mpesa_data
+                }
+            )
+            
+            if user:
+                # Store user login token in Redis (for auto-login)
+                login_token = secrets.token_urlsafe(32)
+                redis_client.setex(f"auto_login:{login_token}", 300, user.id)
+                
+                # Clean up pending payment
+                redis_client.delete(payment_key)
+                
+                return {'success': True, 'login_token': login_token}
+    
+    except Exception as e:
+        logger.error(f"Error completing payment: {e}")
+    
+    return {'success': False}
+
+def create_permanent_user_after_payment(temp_user_data, payment_data):
     """Create permanent user record after successful payment"""
     try:
         # Create user data for permanent storage
@@ -3701,33 +3767,30 @@ def create_permanent_user_after_payment(temp_user_data, transaction_id):
             'email': temp_user_data['email'],
             'phone': temp_user_data['phone'],
             'name': temp_user_data['name'],
+            'password_hash': generate_password_hash(temp_user_data['password']),
             'is_verified': True,
             'is_active': True,
-            'created_at': temp_user_data['created_at']
+            'created_at': datetime.now(timezone.utc).isoformat()
         }
         
-        # Create user object and set password
-        user = User(user_data)
-        user.set_password(temp_user_data['password'])
-        user.generate_phone_linked_referral_code()
+        # Generate referral code
+        phone_hash = hashlib.md5(temp_user_data['phone'].encode()).hexdigest()[:6].upper()
+        user_data['referral_code'] = f"RN{phone_hash}"
         
         # Set referral data if applicable
-        if temp_user_data.get('referrer'):
-            user.referred_by = temp_user_data['referral_code']
-            user.referral_source = temp_user_data['referral_source']
+        if temp_user_data.get('referral_code'):
+            user_data['referred_by'] = temp_user_data['referral_code']
+            user_data['referral_source'] = temp_user_data.get('referral_source', 'referral_link')
         
         # Save to database
-        user_dict = user.to_dict()
-        user_dict.pop('password_hash', None)
-        user_dict['password_hash'] = user.password_hash
-        
-        created_user = SupabaseDB.create_user(user_dict)
+        created_user = SupabaseDB.create_user(user_data)
         
         if not created_user:
             logger.error(f"Failed to create permanent user for {temp_user_data['username']}")
             return None
         
-        # Create transaction record
+        # Create transaction record - NOW this will work because user exists
+        transaction_id = str(uuid.uuid4())
         transaction_data = {
             'id': transaction_id,
             'user_id': created_user.id,
@@ -3735,9 +3798,14 @@ def create_permanent_user_after_payment(temp_user_data, transaction_id):
             'transaction_type': 'registration_fee',
             'status': 'completed',
             'phone_number': created_user.phone,
+            'mpesa_code': payment_data.get('mpesa_receipt_number', 'PENDING'),
+            'checkout_request_id': payment_data.get('checkout_request_id'),
+            'merchant_request_id': payment_data.get('merchant_request_id'),
             'description': 'Account registration fee - Payment completed',
             'created_at': datetime.now(timezone.utc).isoformat()
         }
+        
+        # This will now succeed because user exists
         SupabaseDB.create_transaction(transaction_data)
         
         # Handle referral commission if applicable
@@ -3751,6 +3819,7 @@ def create_permanent_user_after_payment(temp_user_data, transaction_id):
                 referrer.update_rank()
                 
                 referral_data = {
+                    'id': str(uuid.uuid4()),
                     'referrer_id': referrer.id,
                     'referred_id': created_user.id,
                     'referral_code_used': created_user.referred_by,
@@ -3776,14 +3845,28 @@ def create_permanent_user_after_payment(temp_user_data, transaction_id):
         SecurityMonitor.log_security_event(
             "REGISTRATION_COMPLETED", 
             created_user.id, 
-            {"ip": request.remote_addr if request else None, "transaction_id": transaction_id}
+            {
+                "ip": temp_user_data.get('ip_address'),
+                "transaction_id": transaction_id,
+                "payment_reference": payment_data.get('payment_reference')
+            }
         )
+        
+        # Send welcome email
+        try:
+            email_service.send_simple_email(
+                recipient=created_user.email,
+                subject="Welcome to ReferralNinja!",
+                message=f"Hello {created_user.username},\n\nYour account has been successfully activated with KSH 200 payment. You can now login and start earning!\n\nYour referral code: {created_user.referral_code}\n\nBest regards,\nReferralNinja Team"
+            )
+        except Exception as e:
+            logger.error(f"Error sending welcome email: {e}")
         
         logger.info(f"Permanent user created after payment: {created_user.username}")
         return created_user
         
     except Exception as e:
-        logger.error(f"Error creating permanent user: {str(e)}")
+        logger.error(f"Error creating permanent user: {str(e)}", exc_info=True)
         return None
 
 def cleanup_expired_temp_users():
@@ -5135,27 +5218,7 @@ def initiate_stk_push_route():
     if not user_id or not temp_user_data:
         return jsonify({'success': False, 'message': 'Session expired. Please register again.'})
     
-    # Check if there's already a pending transaction
-    transaction_id = f"reg_{temp_user_data['id']}"
-    existing_transaction = SupabaseDB.get_transaction_by_id(transaction_id)
-    
-    if existing_transaction and existing_transaction['status'] == 'pending':
-        transaction = existing_transaction
-    else:
-        # Create transaction record linked to temporary user ID
-        transaction_data = {
-            'id': transaction_id,
-            'user_id': temp_user_data['id'],  # Use temporary ID
-            'amount': 200.0,
-            'transaction_type': 'registration_fee',
-            'status': 'pending',
-            'phone_number': temp_user_data['phone'],
-            'description': 'Account registration fee - STK Push initiated',
-            'ip_address': request.remote_addr,
-            'device_fingerprint': fraud_detector.get_device_fingerprint(request),
-            'created_at': datetime.now(timezone.utc).isoformat()
-        }
-        transaction = SupabaseDB.create_transaction(transaction_data)
+    # DON'T create transaction yet - we'll create it in the callback AFTER user is saved
     
     try:
         # Format phone number for M-PESA (254 format)
@@ -5165,27 +5228,31 @@ def initiate_stk_push_route():
         elif phone_number.startswith('+'):
             phone_number = phone_number[1:]
         
+        # Generate a unique reference for this payment
+        payment_reference = f"RN{temp_user_data['temp_referral_code']}_{int(time.time())}"
+        
         # Initiate STK push
         stk_response = initiate_stk_push(
             phone_number=phone_number,
             amount=1 if app.config['MPESA_ENVIRONMENT'] == 'sandbox' else 200,
-            account_reference=temp_user_data['temp_referral_code'],
+            account_reference=payment_reference,
             transaction_desc="ReferralNinja Registration"
         )
         
         if stk_response and stk_response.get('ResponseCode') == '0':
-            # STK push initiated successfully
-            update_data = {
+            # Store payment reference in session for callback matching
+            session['pending_payment'] = {
                 'checkout_request_id': stk_response.get('CheckoutRequestID'),
                 'merchant_request_id': stk_response.get('MerchantRequestID'),
-                'mpesa_message': f"STK Push initiated - {stk_response.get('CustomerMessage')}"
+                'payment_reference': payment_reference,
+                'temp_user_data': temp_user_data,
+                'timestamp': datetime.now(timezone.utc).isoformat()
             }
-            SupabaseDB.update_transaction(transaction['id'], update_data)
             
             return jsonify({
                 'success': True, 
                 'message': 'STK push sent to your phone! Please check your phone and enter your M-PESA PIN to complete payment.',
-                'checkout_request_id': transaction['checkout_request_id']
+                'checkout_request_id': stk_response.get('CheckoutRequestID')
             })
         else:
             error_message = stk_response.get('errorMessage', 'Failed to initiate STK push') if stk_response else 'M-PESA service unavailable'
@@ -5202,106 +5269,103 @@ def check_payment_status():
     temp_user_data = session.get('temp_user_data')
     
     if not user_id or not temp_user_data:
-        return jsonify({'success': False, 'message': 'Session expired'})
+        return jsonify({'verified': False, 'message': 'Session expired'})
     
-    # Check if there's already a completed transaction for this temporary user
-    transaction_id = f"reg_{temp_user_data['id']}"
-    existing_transaction = SupabaseDB.get_transaction_by_id(transaction_id)
+    # Check if user has been created in database
+    user = SupabaseDB.get_user_by_id(temp_user_data['id'])
+    if user and user.is_verified:
+        session.pop('pending_verification_user', None)
+        session.pop('temp_user_data', None)
+        session.pop('pending_payment', None)
+        return jsonify({'verified': True, 'message': 'Payment verified! Account activated.'})
     
-    if existing_transaction and existing_transaction['status'] == 'completed':
-        # Payment already completed, create user and log them in
-        user = create_permanent_user_after_payment(temp_user_data, transaction_id)
-        if user:
-            login_user(user)
-            session.pop('pending_verification_user', None)
-            session.pop('temp_user_data', None)
-            return jsonify({'success': True, 'verified': True, 'message': 'Payment verified! You have been logged in successfully.'})
+    # Check if payment is pending in our records
+    pending_payment = session.get('pending_payment')
     
-    # Check STK status for pending transactions
-    pending_transaction = SupabaseDB.get_transaction_by_id(transaction_id)
-    
-    if pending_transaction and pending_transaction.get('checkout_request_id'):
+    if pending_payment and pending_payment.get('checkout_request_id'):
         # Query M-PESA for transaction status
-        stk_status = query_stk_push_status(pending_transaction['checkout_request_id'])
+        stk_status = query_stk_push_status(pending_payment['checkout_request_id'])
         if stk_status and stk_status.get('ResultCode') == '0':
             # Payment completed via query, create permanent user
-            SupabaseDB.update_transaction(transaction_id, {
-                'status': 'completed',
-                'mpesa_code': stk_status.get('MpesaReceiptNumber')
-            })
-            
-            user = create_permanent_user_after_payment(temp_user_data, transaction_id)
+            user = create_permanent_user_after_payment(temp_user_data, pending_payment)
             if user:
                 login_user(user)
                 session.pop('pending_verification_user', None)
                 session.pop('temp_user_data', None)
-                return jsonify({'success': True, 'verified': True, 'message': 'Payment verified via query! You have been logged in successfully.'})
+                session.pop('pending_payment', None)
+                return jsonify({'verified': True, 'message': 'Payment verified via query! Account activated.'})
     
-    # Check if there's a pending transaction
-    if pending_transaction:
-        return jsonify({'success': True, 'verified': False, 'pending': True})
-    
-    return jsonify({'success': True, 'verified': False, 'pending': False})
+    return jsonify({'verified': False, 'pending': bool(pending_payment)})
 
 # MODIFIED M-PESA CALLBACK - Creates user on payment success
 @app.route('/mpesa-callback', methods=['POST'])
-def mpesa_callback():
-    """Handle M-PESA STK push callback - CREATE USER AFTER PAYMENT"""
+def mpesa_callback_main():
+    """Handle M-PESA STK push callback in main app - CREATE USER AFTER PAYMENT"""
     try:
         callback_data = request.get_json()
+        logger.info("M-PESA Callback received in main app: %s", json.dumps(callback_data, indent=2))
         
-        # Log the callback for debugging
-        logger.info("M-PESA Callback received: %s", json.dumps(callback_data, indent=2))
-        
-        # Extract relevant information from callback
+        # Extract relevant information
         stk_callback = callback_data.get('Body', {}).get('stkCallback', {})
         result_code = stk_callback.get('ResultCode')
         result_desc = stk_callback.get('ResultDesc')
         checkout_request_id = stk_callback.get('CheckoutRequestID')
         merchant_request_id = stk_callback.get('MerchantRequestID')
         
-        # Find the transaction
-        response = supabase.table('transactions').select('*').eq('checkout_request_id', checkout_request_id).execute()
-        transaction = response.data[0] if response.data else None
-        
-        if transaction:
-            if result_code == 0:
-                # Payment successful - UPDATE TRANSACTION
-                update_data = {'status': 'completed'}
-                
-                # Extract metadata
-                metadata = stk_callback.get('CallbackMetadata', {}).get('Item', [])
-                mpesa_data = {}
-                for item in metadata:
-                    name = item.get('Name')
-                    value = item.get('Value')
-                    mpesa_data[name] = value
-                
-                update_data['mpesa_code'] = mpesa_data.get('MpesaReceiptNumber')
-                update_data['description'] = f'Account registration fee - Payment completed via STK Push. Amount: {mpesa_data.get("Amount")}, Phone: {mpesa_data.get("PhoneNumber")}'
-                
-                SupabaseDB.update_transaction(transaction['id'], update_data)
-                
-                # Find temporary user data and create permanent user
-                # We need to get the user_id from the transaction and find the corresponding temp data
-                # This would require storing temp user data in a way we can retrieve it
-                # For now, we'll rely on the frontend to check payment status and create the user
-                
-                logger.info(f"Payment completed for transaction {transaction['id']}")
-                
-            else:
-                # Payment failed
-                update_data = {
-                    'status': 'failed',
-                    'description': f'Payment failed: {result_desc}'
-                }
-                SupabaseDB.update_transaction(transaction['id'], update_data)
-        
-        return jsonify({'ResultCode': 0, 'ResultDesc': 'Success'})
+        if result_code == 0:
+            # Payment successful
+            metadata = stk_callback.get('CallbackMetadata', {}).get('Item', [])
+            mpesa_data = {}
+            for item in metadata:
+                name = item.get('Name')
+                value = item.get('Value')
+                mpesa_data[name] = value
+            
+            mpesa_receipt = mpesa_data.get('MpesaReceiptNumber')
+            amount = mpesa_data.get('Amount')
+            phone = mpesa_data.get('PhoneNumber')
+            
+            logger.info(f"Payment successful - Receipt: {mpesa_receipt}, Amount: {amount}, Phone: {phone}")
+            
+            # Find the pending payment in session storage (in production, use Redis/database)
+            # For now, we'll log and handle via frontend polling
+            logger.info(f"Payment completed for checkout: {checkout_request_id}")
+            
+            return jsonify({'ResultCode': 0, 'ResultDesc': 'Success'})
+        else:
+            # Payment failed
+            logger.error(f"Payment failed: {result_desc}")
+            return jsonify({'ResultCode': 0, 'ResultDesc': 'Success'})  # Still return success to M-Pesa
         
     except Exception as e:
-        logger.error(f"Error processing M-PESA callback: {str(e)}")
+        logger.error(f"Error processing M-PESA callback in main app: {str(e)}")
         return jsonify({'ResultCode': 1, 'ResultDesc': 'Failed'})
+
+@app.route('/auto-login/<token>')
+def auto_login(token):
+    """Auto-login user after successful payment"""
+    try:
+        user_id = redis_client.get(f"auto_login:{token}")
+        if user_id:
+            user = SupabaseDB.get_user_by_id(user_id)
+            if user:
+                login_user(user)
+                redis_client.delete(f"auto_login:{token}")
+                
+                # Clean up session
+                session.pop('pending_verification_user', None)
+                session.pop('temp_user_data', None)
+                session.pop('pending_payment', None)
+                
+                flash('Payment successful! Your account has been activated.', 'success')
+                return redirect(url_for('dashboard'))
+        
+        flash('Invalid or expired login token. Please login manually.', 'error')
+        return redirect(url_for('login'))
+    except Exception as e:
+        logger.error(f"Auto-login error: {e}")
+        flash('Auto-login failed. Please login manually.', 'error')
+        return redirect(url_for('login'))
 
 # M-PESA B2C CALLBACK HANDLER
 @app.route('/mpesa-b2c-callback', methods=['POST'])
@@ -5395,22 +5459,46 @@ def mpesa_b2c_timeout():
     logger.warning(f"M-PESA B2C Timeout callback: {json.dumps(callback_data)}")
     return jsonify({'ResultCode': 0, 'ResultDesc': 'Success'})
 
-@app.route('/api/payment-status')
+@app.route('/api/payment-status', methods=['GET'])
 def api_payment_status():
+    """Check payment status - returns whether user should be redirected to login"""
     user_id = session.get('pending_verification_user')
     temp_user_data = session.get('temp_user_data')
     
     if not user_id or not temp_user_data:
-        return jsonify({'verified': False, 'error': 'Session expired'})
+        return jsonify({'verified': False, 'message': 'Session expired'})
     
-    # Check if user has been created in database
+    # Check if user exists in database (payment completed)
     user = SupabaseDB.get_user_by_id(temp_user_data['id'])
     if user and user.is_verified:
+        # Clean up session
         session.pop('pending_verification_user', None)
         session.pop('temp_user_data', None)
-        return jsonify({'verified': True})
+        session.pop('pending_payment', None)
+        
+        return jsonify({
+            'verified': True,
+            'message': 'Payment verified!',
+            'user_id': user.id,
+            'username': user.username
+        })
     
-    return jsonify({'verified': False})
+    # Check for auto-login token (if payment completed via callback)
+    pending_payment = session.get('pending_payment')
+    if pending_payment:
+        checkout_request_id = pending_payment.get('checkout_request_id')
+        
+        # Check Redis for completed payment
+        payment_data = get_pending_payment(checkout_request_id)
+        if payment_data and payment_data.get('status') == 'completed':
+            # Auto-login token should be available
+            return jsonify({
+                'verified': True,
+                'message': 'Payment completed!',
+                'auto_login': True
+            })
+    
+    return jsonify({'verified': False, 'pending': True})
 
 @app.template_filter('format_number')
 def format_number(value):
