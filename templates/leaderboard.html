@@ -1031,7 +1031,7 @@
     color: #555;
 }
 
-/* Professional Leaderboard Table */
+/* Professional Leaderboard Table - Adjusted for Proportional Font Sizes */
 .leaderboard-card {
     background: white;
     border-radius: 12px;
@@ -1040,22 +1040,31 @@
     overflow: hidden;
 }
 
+/* Set proportional base font size for table */
+.leaderboard-table {
+    font-size: 0.95rem;
+    width: 100%;
+}
+
 .leaderboard-table thead th {
     background: #2c3e50;
     border: none;
-    padding: 15px 12px;
+    padding: 1rem 0.75rem;
     font-weight: 600;
     color: white;
     text-transform: uppercase;
-    font-size: 0.8rem;
+    font-size: 0.85em;
     letter-spacing: 0.5px;
+    line-height: 1.4;
 }
 
 .leaderboard-table tbody td {
-    padding: 15px 12px;
+    padding: 1rem 0.75rem;
     vertical-align: middle;
     border-bottom: 1px solid #e3e8f0;
     transition: background-color 0.2s ease;
+    font-size: 0.95em;
+    line-height: 1.5;
 }
 
 .leaderboard-row:hover {
@@ -1067,16 +1076,17 @@
     border-left: 4px solid #3498db;
 }
 
-/* Enhanced Rank Badges */
+/* Enhanced Rank Badges with proportional sizing */
 .rank-badge {
     display: inline-flex;
     align-items: center;
-    padding: 8px 12px;
+    padding: 0.5rem 0.75rem;
     border-radius: 6px;
     font-weight: bold;
-    font-size: 0.9rem;
-    min-width: 60px;
+    font-size: 0.9em;
+    min-width: 3.75rem;
     justify-content: center;
+    line-height: 1.3;
 }
 
 .rank-1 { 
@@ -1098,6 +1108,169 @@
     background: #f8f9fa; 
     color: #6c757d; 
     border: 1px solid #e3e8f0;
+}
+
+/* Table cell specific proportional adjustments */
+.rank-cell {
+    width: 8%;
+    text-align: center;
+}
+
+.user-cell {
+    width: 25%;
+}
+
+.earnings-cell {
+    width: 15%;
+    text-align: right;
+}
+
+.referrals-cell {
+    width: 12%;
+    text-align: center;
+}
+
+.level-cell {
+    width: 20%;
+}
+
+.action-cell {
+    width: 10%;
+    text-align: center;
+}
+
+/* Proportional adjustments for user info */
+.user-info {
+    display: flex;
+    align-items: center;
+}
+
+.user-avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.75rem;
+    font-size: 1em;
+    color: #6c757d;
+}
+
+.user-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.username {
+    font-size: 1em;
+    font-weight: 600;
+    color: #2c3e50;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.user-contact {
+    font-size: 0.85em;
+    color: #6c757d;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.user-badge {
+    font-size: 0.75em;
+    padding: 0.15rem 0.5rem;
+    background: #3498db;
+    color: white;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+/* Proportional earnings display */
+.earnings-amount {
+    font-size: 1.1em;
+    color: #2c3e50;
+    margin-bottom: 0.25rem;
+}
+
+.earnings-growth {
+    font-size: 0.85em;
+}
+
+/* Proportional referrals display */
+.referrals-count {
+    font-size: 1.1em;
+    color: #2c3e50;
+    margin-bottom: 0.25rem;
+}
+
+.referrals-rate {
+    font-size: 0.85em;
+}
+
+/* Proportional tier display */
+.rank-tier {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    background: #f8f9fa;
+    border: 1px solid #e3e8f0;
+}
+
+.tier-icon {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.75rem;
+    font-size: 0.9em;
+}
+
+.rank-tier-bronze .tier-icon { background: #cd7f32; color: white; }
+.rank-tier-silver .tier-icon { background: #c0c0c0; color: #2c3e50; }
+.rank-tier-gold .tier-icon { background: #ffd700; color: #2c3e50; }
+.rank-tier-platinum .tier-icon { background: #e5e4e2; color: #2c3e50; }
+.rank-tier-diamond .tier-icon { background: #b9f2ff; color: #2c3e50; }
+
+.tier-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.tier-name {
+    font-size: 1em;
+    font-weight: 600;
+    color: #2c3e50;
+    display: block;
+}
+
+.tier-requirement {
+    font-size: 0.8em;
+    color: #6c757d;
+    display: block;
+}
+
+/* Proportional action buttons */
+.action-buttons .btn {
+    font-size: 0.85em;
+    padding: 0.35rem 0.75rem;
+}
+
+.performance-indicator {
+    font-size: 0.9em;
+    color: #3498db;
+    font-weight: 500;
+}
+
+.indicator.positive {
+    color: #28a745;
 }
 
 /* Professional Tier Cards */
@@ -1269,7 +1442,7 @@
     margin-top: 40px;
 }
 
-/* Responsive Design */
+/* Responsive Design for Proportional Font Sizes */
 @media (max-width: 768px) {
     .leaderboard-hero-section .hero-background {
         padding: 40px 20px;
@@ -1295,6 +1468,27 @@
         left: 30px;
         right: 30px;
     }
+    
+    /* Adjust table font sizes for mobile */
+    .leaderboard-table {
+        font-size: 0.9rem;
+    }
+    
+    .leaderboard-table thead th {
+        font-size: 0.8em;
+        padding: 0.75rem 0.5rem;
+    }
+    
+    .leaderboard-table tbody td {
+        font-size: 0.9em;
+        padding: 0.75rem 0.5rem;
+    }
+    
+    .rank-badge {
+        font-size: 0.85em;
+        min-width: 3rem;
+        padding: 0.4rem 0.6rem;
+    }
 }
 
 @media (max-width: 576px) {
@@ -1310,6 +1504,23 @@
     
     .cta-buttons .btn:last-child {
         margin-bottom: 0;
+    }
+    
+    /* Further mobile adjustments */
+    .leaderboard-table {
+        font-size: 0.85rem;
+    }
+    
+    .user-avatar {
+        width: 2rem;
+        height: 2rem;
+        font-size: 0.9em;
+    }
+    
+    .tier-icon {
+        width: 1.5rem;
+        height: 1.5rem;
+        font-size: 0.8em;
     }
 }
 
