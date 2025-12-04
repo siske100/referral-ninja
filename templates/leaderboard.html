@@ -428,9 +428,7 @@
                                                     <span class="user-badge ms-2">Your Position</span>
                                                     {% endif %}
                                                 </div>
-                                                <div class="user-contact text-muted small">
-                                                    {{ user.email or '' | truncate(25) }}
-                                                </div>
+                                                <!-- Email removed as requested -->
                                             </div>
                                         </div>
                                     </td>
@@ -1031,7 +1029,7 @@
     color: #555;
 }
 
-/* Professional Leaderboard Table - Adjusted for Proportional Font Sizes */
+/* Professional Leaderboard Table - UPDATED FOR CONSISTENT FORMAT ACROSS DEVICES */
 .leaderboard-card {
     background: white;
     border-radius: 12px;
@@ -1040,12 +1038,14 @@
     overflow: hidden;
 }
 
-/* Set proportional base font size for table */
+/* Set consistent base font size for table */
 .leaderboard-table {
     font-size: 0.95rem;
     width: 100%;
+    table-layout: fixed; /* Ensures consistent column widths */
 }
 
+/* Table headers with consistent font scaling */
 .leaderboard-table thead th {
     background: #2c3e50;
     border: none;
@@ -1053,11 +1053,13 @@
     font-weight: 600;
     color: white;
     text-transform: uppercase;
-    font-size: 0.85em;
+    font-size: 0.9em;
     letter-spacing: 0.5px;
     line-height: 1.4;
+    white-space: nowrap; /* Prevents header text wrapping */
 }
 
+/* Table cells with consistent styling */
 .leaderboard-table tbody td {
     padding: 1rem 0.75rem;
     vertical-align: middle;
@@ -1076,15 +1078,15 @@
     border-left: 4px solid #3498db;
 }
 
-/* Enhanced Rank Badges with proportional sizing */
+/* Enhanced Rank Badges with consistent sizing */
 .rank-badge {
     display: inline-flex;
     align-items: center;
     padding: 0.5rem 0.75rem;
     border-radius: 6px;
     font-weight: bold;
-    font-size: 0.9em;
-    min-width: 3.75rem;
+    font-size: 0.95em;
+    min-width: 3.5rem;
     justify-content: center;
     line-height: 1.3;
 }
@@ -1110,9 +1112,9 @@
     border: 1px solid #e3e8f0;
 }
 
-/* Table cell specific proportional adjustments */
+/* Optimized column widths for the 6-column format */
 .rank-cell {
-    width: 8%;
+    width: 10%;
     text-align: center;
 }
 
@@ -1121,12 +1123,12 @@
 }
 
 .earnings-cell {
-    width: 15%;
+    width: 20%;
     text-align: right;
 }
 
 .referrals-cell {
-    width: 12%;
+    width: 15%;
     text-align: center;
 }
 
@@ -1139,7 +1141,7 @@
     text-align: center;
 }
 
-/* Proportional adjustments for user info */
+/* Proportional adjustments for user info - EMAIL REMOVED */
 .user-info {
     display: flex;
     align-items: center;
@@ -1156,11 +1158,16 @@
     margin-right: 0.75rem;
     font-size: 1em;
     color: #6c757d;
+    flex-shrink: 0; /* Prevents avatar from shrinking */
 }
 
 .user-details {
     flex: 1;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 100%;
 }
 
 .username {
@@ -1171,15 +1178,11 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    line-height: 1.3;
+    margin-bottom: 0.25rem;
 }
 
-.user-contact {
-    font-size: 0.85em;
-    color: #6c757d;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
+/* Email removed as requested - no .user-contact class needed */
 
 .user-badge {
     font-size: 0.75em;
@@ -1188,6 +1191,8 @@
     color: white;
     border-radius: 12px;
     font-weight: 500;
+    white-space: nowrap;
+    display: inline-block;
 }
 
 /* Proportional earnings display */
@@ -1195,21 +1200,30 @@
     font-size: 1.1em;
     color: #2c3e50;
     margin-bottom: 0.25rem;
+    line-height: 1.3;
 }
 
 .earnings-growth {
     font-size: 0.85em;
+    line-height: 1.2;
 }
 
-/* Proportional referrals display */
+/* ENLARGED Referrals display - made larger as requested */
+.referrals-cell {
+    font-size: 1.05em; /* Increased base size */
+}
+
 .referrals-count {
-    font-size: 1.1em;
+    font-size: 1.3em; /* Enlarged from 1.1em */
     color: #2c3e50;
     margin-bottom: 0.25rem;
+    line-height: 1.3;
+    font-weight: bold;
 }
 
 .referrals-rate {
-    font-size: 0.85em;
+    font-size: 0.9em; /* Slightly larger */
+    line-height: 1.2;
 }
 
 /* Proportional tier display */
@@ -1220,17 +1234,19 @@
     border-radius: 8px;
     background: #f8f9fa;
     border: 1px solid #e3e8f0;
+    min-height: 3.5rem;
 }
 
 .tier-icon {
-    width: 1.75rem;
-    height: 1.75rem;
+    width: 2rem;
+    height: 2rem;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     margin-right: 0.75rem;
     font-size: 0.9em;
+    flex-shrink: 0;
 }
 
 .rank-tier-bronze .tier-icon { background: #cd7f32; color: white; }
@@ -1249,24 +1265,29 @@
     font-weight: 600;
     color: #2c3e50;
     display: block;
+    line-height: 1.3;
+    margin-bottom: 0.15rem;
 }
 
 .tier-requirement {
     font-size: 0.8em;
     color: #6c757d;
     display: block;
+    line-height: 1.2;
 }
 
 /* Proportional action buttons */
 .action-buttons .btn {
     font-size: 0.85em;
     padding: 0.35rem 0.75rem;
+    white-space: nowrap;
 }
 
 .performance-indicator {
     font-size: 0.9em;
     color: #3498db;
     font-weight: 500;
+    white-space: nowrap;
 }
 
 .indicator.positive {
@@ -1442,8 +1463,21 @@
     margin-top: 40px;
 }
 
-/* Responsive Design for Proportional Font Sizes */
-@media (max-width: 768px) {
+/* Responsive Design for Consistent Format Across All Devices */
+@media (max-width: 1200px) {
+    .leaderboard-table {
+        font-size: 0.92rem;
+    }
+    
+    .rank-cell { width: 10%; }
+    .user-cell { width: 24%; }
+    .earnings-cell { width: 18%; }
+    .referrals-cell { width: 16%; }
+    .level-cell { width: 20%; }
+    .action-cell { width: 12%; }
+}
+
+@media (max-width: 992px) {
     .leaderboard-hero-section .hero-background {
         padding: 40px 20px;
     }
@@ -1469,29 +1503,42 @@
         right: 30px;
     }
     
-    /* Adjust table font sizes for mobile */
+    /* Adjust table font sizes for medium screens */
     .leaderboard-table {
         font-size: 0.9rem;
     }
     
     .leaderboard-table thead th {
-        font-size: 0.8em;
-        padding: 0.75rem 0.5rem;
+        font-size: 0.85em;
+        padding: 0.85rem 0.6rem;
     }
     
     .leaderboard-table tbody td {
         font-size: 0.9em;
-        padding: 0.75rem 0.5rem;
+        padding: 0.85rem 0.6rem;
     }
     
     .rank-badge {
-        font-size: 0.85em;
+        font-size: 0.9em;
         min-width: 3rem;
         padding: 0.4rem 0.6rem;
     }
+    
+    .referrals-count {
+        font-size: 1.25em; /* Keep enlarged on medium screens */
+    }
 }
 
-@media (max-width: 576px) {
+@media (max-width: 768px) {
+    /* Hide desktop table, show mobile cards */
+    .d-none.d-md-block {
+        display: none !important;
+    }
+    
+    .d-md-none {
+        display: block !important;
+    }
+    
     .hero-title {
         font-size: 2rem;
     }
@@ -1506,21 +1553,34 @@
         margin-bottom: 0;
     }
     
-    /* Further mobile adjustments */
-    .leaderboard-table {
-        font-size: 0.85rem;
+    /* Mobile card adjustments for referrals */
+    .leaderboard-mobile-card .stat-value.user-referrals {
+        font-size: 1.2em; /* Enlarged for mobile */
+    }
+}
+
+@media (max-width: 576px) {
+    .hero-title {
+        font-size: 1.75rem;
     }
     
-    .user-avatar {
-        width: 2rem;
-        height: 2rem;
-        font-size: 0.9em;
+    /* Mobile card adjustments */
+    .leaderboard-mobile-card {
+        margin-bottom: 0.75rem;
     }
     
-    .tier-icon {
-        width: 1.5rem;
-        height: 1.5rem;
-        font-size: 0.8em;
+    .leaderboard-mobile-card .card-body {
+        padding: 1rem;
+    }
+    
+    .leaderboard-mobile-card .user-referrals {
+        font-size: 1.1em; /* Keep enlarged on small mobile */
+    }
+    
+    /* Ensure mobile badges are visible */
+    .tier-badge {
+        font-size: 0.75em;
+        padding: 0.2rem 0.5rem;
     }
 }
 
