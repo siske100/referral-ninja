@@ -65,7 +65,7 @@
                     <i class="fas fa-money-bill-wave"></i>
                 </div>
                 <div class="stats-content">
-                    <div class="stat-value">KES {{ stats.total_amount_24h|default(0)|format_currency }}</div>
+                    <div class="stat-value">KES {{ "%0.2f"|format(stats.total_amount_24h|default(0)) }}</div>
                     <div class="stat-label">24h Volume</div>
                 </div>
             </div>
@@ -226,8 +226,8 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <div class="amount">KES {{ withdrawal.amount|format_currency }}</div>
-                                    <small class="text-muted">Balance: KES {{ withdrawal.balance|format_currency }}</small>
+                                    <div class="amount">KES {{ "%0.2f"|format(withdrawal.amount) }}</div>
+                                    <small class="text-muted">Balance: KES {{ "%0.2f"|format(withdrawal.balance) }}</small>
                                 </td>
                                 <td>
                                     <div class="d-flex flex-column gap-1">
@@ -363,14 +363,14 @@
             </div>
             <div class="modal-body">
                 <div class="list-group list-group-flush">
-                    <button class="list-group-item list-group-item-action" onclick="exportCSV()">
+                    <a href="{{ url_for('export_withdrawals', search=search, status=status_filter, format='csv') }}" class="list-group-item list-group-item-action">
                         <i class="fas fa-file-csv text-primary me-2"></i>
                         CSV Format
-                    </button>
-                    <button class="list-group-item list-group-item-action" onclick="exportExcel()">
+                    </a>
+                    <a href="{{ url_for('export_withdrawals', search=search, status=status_filter, format='csv') }}" class="list-group-item list-group-item-action">
                         <i class="fas fa-file-excel text-success me-2"></i>
                         Excel Format
-                    </button>
+                    </a>
                     <button class="list-group-item list-group-item-action" onclick="exportPDF()">
                         <i class="fas fa-file-pdf text-danger me-2"></i>
                         PDF Report
@@ -745,168 +745,31 @@ async function viewWithdrawalDetails(withdrawalId) {
         // Show modal
         withdrawalDetailsModal.show();
         
-        // Fetch withdrawal details - NOTE: This endpoint doesn't exist yet
-        // You need to create it in your Flask app
-        const response = await fetch(`/admin/withdrawal/${withdrawalId}`);
-        const data = await response.json();
+        // Fetch withdrawal details - You need to create this endpoint
+        // For now, we'll show a message that this feature is coming soon
+        setTimeout(() => {
+            showComingSoonInModal();
+        }, 500);
         
-        if (data.success) {
-            renderWithdrawalDetails(data);
-        } else {
-            showErrorInModal(data.error || 'Failed to load withdrawal details');
-        }
     } catch (error) {
         console.error('Error loading withdrawal details:', error);
         showErrorInModal('Error loading withdrawal details. Please try again.');
     }
 }
 
-// Render withdrawal details in modal
-function renderWithdrawalDetails(data) {
-    const withdrawal = data.withdrawal || {};
-    const user = data.user || {};
-    
-    const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U';
-    
+// Show coming soon message in modal
+function showComingSoonInModal() {
     document.getElementById('withdrawal-details-content').innerHTML = `
-        <div class="withdrawal-details">
-            <div class="row mb-4">
-                <div class="col-md-8">
-                    <div class="d-flex align-items-center">
-                        <div class="user-avatar me-3" style="width: 60px; height: 60px; font-size: 1.25rem;">
-                            ${initials}
-                        </div>
-                        <div>
-                            <h4 class="mb-1">${escapeHtml(user.name || 'Unknown User')}</h4>
-                            <p class="text-muted mb-0">${escapeHtml(user.email || '')}</p>
-                            ${user.phone ? `<p class="text-muted small mb-0">${escapeHtml(user.phone)}</p>` : ''}
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4 text-end">
-                    <div class="d-flex gap-2 justify-content-end">
-                        <span class="status-badge status-${withdrawal.status ? withdrawal.status.toLowerCase().replace(' ', '-') : 'unknown'}">
-                            ${withdrawal.status || 'Unknown'}
-                        </span>
-                    </div>
-                </div>
+        <div class="text-center py-5">
+            <div class="mb-3">
+                <i class="fas fa-cogs fa-2x text-primary"></i>
             </div>
-            
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <div class="card card-stat">
-                        <div class="card-body text-center">
-                            <div class="h4 mb-1">KES ${withdrawal.amount ? withdrawal.amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '0.00'}</div>
-                            <div class="text-muted small">Withdrawal Amount</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card card-stat">
-                        <div class="card-body text-center">
-                            <div class="h4 mb-1">KES ${user.balance ? user.balance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '0.00'}</div>
-                            <div class="text-muted small">Current Balance</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="mb-4">
-                <h6>Withdrawal Information</h6>
-                <div class="row g-2">
-                    <div class="col-md-4">
-                        <div class="border rounded p-3">
-                            <div class="small text-muted">Transaction ID</div>
-                            <div class="fw-medium">${escapeHtml(withdrawal.id || 'N/A')}</div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="border rounded p-3">
-                            <div class="small text-muted">User ID</div>
-                            <div class="fw-medium">${escapeHtml(user.id || 'N/A')}</div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="border rounded p-3">
-                            <div class="small text-muted">User Rank</div>
-                            <div class="fw-medium">${escapeHtml(user.user_rank || 'Member')}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="mb-4">
-                <h6>Additional Information</h6>
-                <div class="row g-2">
-                    <div class="col-md-6">
-                        <div class="border rounded p-3">
-                            <div class="small text-muted">Description</div>
-                            <div class="fw-medium">${escapeHtml(withdrawal.description || 'No description')}</div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="border rounded p-3">
-                            <div class="small text-muted">M-Pesa Code</div>
-                            <div class="fw-medium">${escapeHtml(withdrawal.mpesa_code || 'Not available')}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="border rounded p-3">
-                        <div class="small text-muted">User Stats</div>
-                        <div class="row mt-2">
-                            <div class="col-6">
-                                <div class="text-muted small">Total Earned</div>
-                                <div class="fw-medium">KES ${user.total_earned ? user.total_earned.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '0.00'}</div>
-                            </div>
-                            <div class="col-6">
-                                <div class="text-muted small">Total Withdrawn</div>
-                                <div class="fw-medium">KES ${user.total_withdrawn ? user.total_withdrawn.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '0.00'}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-md-6">
-                    <div class="border rounded p-3">
-                        <div class="small text-muted">Account Status</div>
-                        <div class="row mt-2">
-                            <div class="col-6">
-                                <div class="text-muted small">Email Verified</div>
-                                <div class="fw-medium">
-                                    <span class="status-badge ${user.email_verified ? 'verified' : 'unverified'}">
-                                        ${user.email_verified ? 'Yes' : 'No'}
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="text-muted small">Account Active</div>
-                                <div class="fw-medium">
-                                    <span class="status-badge ${user.is_active ? 'active' : 'inactive'}">
-                                        ${user.is_active ? 'Yes' : 'No'}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="border-top pt-3 mt-3">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="small text-muted">Request Created</div>
-                        <div class="fw-medium">${formatDate(withdrawal.created_at)}</div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="small text-muted">Account Created</div>
-                        <div class="fw-medium">${user.created_at ? formatDate(user.created_at) : 'N/A'}</div>
-                    </div>
-                </div>
-            </div>
+            <h5 class="text-muted">Feature Coming Soon</h5>
+            <p class="text-muted">Detailed withdrawal view is under development.</p>
+            <p class="text-muted small">For now, please refer to the information in the table.</p>
+            <button class="btn btn-primary btn-sm mt-3" onclick="withdrawalDetailsModal.hide()">
+                Close
+            </button>
         </div>
     `;
 }
@@ -933,17 +796,6 @@ function openExportModal() {
 }
 
 // Export functions
-function exportCSV() {
-    // For now, show a message
-    showToast('CSV export feature coming soon', 'info');
-    exportModal.hide();
-}
-
-function exportExcel() {
-    showToast('Excel export feature coming soon', 'info');
-    exportModal.hide();
-}
-
 function exportPDF() {
     showToast('PDF export feature coming soon', 'info');
     exportModal.hide();
