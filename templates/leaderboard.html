@@ -388,19 +388,19 @@
                     <table class="table leaderboard-table table-hover mb-0">
                         <thead class="table-dark">
                             <tr>
-                                <th class="text-center" style="width: 10%;">Rank</th>
-                                <th style="width: 25%;">User Profile</th>
-                                <th class="text-end" style="width: 20%;">Total Earnings</th>
-                                <th class="text-center" style="width: 15%;">Referrals</th>
-                                <th style="width: 20%;">Performance Tier</th>
-                                <th class="text-center" style="width: 10%;">Actions</th>
+                                <th class="rank-col text-center fs-6">Rank</th>
+                                <th class="user-col fs-6">User Profile</th>
+                                <th class="earnings-col text-end fs-6">Total Earnings</th>
+                                <th class="referrals-col text-center fs-6">Referrals</th>
+                                <th class="level-col fs-6">Performance Tier</th>
+                                <th class="action-col text-center fs-6">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="desktop-leaderboard">
                             {% if top_users %}
                                 {% for user in top_users %}
                                 <tr class="leaderboard-row {% if user.id == current_user.id %}current-user{% endif %}" data-user-id="{{ user.id }}">
-                                    <td class="text-center align-middle">
+                                    <td class="rank-cell text-center align-middle">
                                         <div class="rank-badge rank-{{ loop.index }}">
                                             {% if loop.index == 1 %}
                                             <i class="fas fa-crown me-1"></i>
@@ -416,12 +416,12 @@
                                             {% endif %}
                                         </div>
                                     </td>
-                                    <td class="align-middle">
-                                        <div class="user-info d-flex align-items-center">
+                                    <td class="user-cell align-middle">
+                                        <div class="user-info">
                                             <div class="user-avatar">
                                                 <i class="fas fa-user fs-5"></i>
                                             </div>
-                                            <div class="user-details ms-3">
+                                            <div class="user-details">
                                                 <div class="d-flex align-items-center">
                                                     <span class="username fw-bold fs-6">{{ user.username or 'Unknown User' }}</span>
                                                     {% if user.id == current_user.id %}
@@ -431,7 +431,7 @@
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="text-end align-middle">
+                                    <td class="earnings-cell text-end align-middle">
                                         <div class="earnings-amount fw-bold">
                                             <span class="amount user-earnings fs-6">
                                                 KES {{ "%.2f"|format(user.total_commission or 0) }}
@@ -442,7 +442,7 @@
                                             <span>Active earner</span>
                                         </div>
                                     </td>
-                                    <td class="text-center align-middle">
+                                    <td class="referrals-cell text-center align-middle">
                                         <div class="referrals-count fw-bold">
                                             <span class="user-referrals fs-5">{{ user.referral_count or 0 }}</span>
                                         </div>
@@ -451,15 +451,15 @@
                                             <span>High performer</span>
                                         </div>
                                     </td>
-                                    <td class="align-middle">
+                                    <td class="level-cell align-middle">
                                         {% set user_rank_safe = user.user_rank or 'Bronze' %}
-                                        <div class="rank-tier rank-tier-{{ user_rank_safe.lower() }} d-flex align-items-center">
+                                        <div class="rank-tier rank-tier-{{ user_rank_safe.lower() }}">
                                             <div class="tier-icon">
                                                 <i class="fas fa-gem fs-6"></i>
                                             </div>
-                                            <div class="tier-info ms-3">
+                                            <div class="tier-info">
                                                 <span class="tier-name fw-bold fs-6">{{ user_rank_safe }}</span>
-                                                <small class="tier-requirement d-block fs-6">
+                                                <small class="tier-requirement fs-6">
                                                     {% if user_rank_safe == 'Bronze' %}Entry Level
                                                     {% elif user_rank_safe == 'Silver' %}KES 5,000+
                                                     {% elif user_rank_safe == 'Gold' %}KES 15,000+
@@ -470,7 +470,7 @@
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="text-center align-middle">
+                                    <td class="action-cell text-center align-middle">
                                         {% if user.id == current_user.id %}
                                         <div class="performance-indicator">
                                             <div class="indicator positive fs-6">
@@ -1169,7 +1169,7 @@
     }
 }
 
-/* Professional Leaderboard Table - UPDATED FOR EQUAL COLUMN SPACING */
+/* Professional Leaderboard Table */
 .leaderboard-card {
     background: white;
     border-radius: 12px;
@@ -1178,68 +1178,57 @@
     overflow: hidden;
 }
 
-/* Set equal column widths for the table */
+/* Set consistent base font size for table */
 .leaderboard-table {
-    table-layout: fixed;
+    font-size: 0.85rem;
     width: 100%;
-    margin-bottom: 0;
+    table-layout: fixed;
 }
 
-/* Equal column widths distribution */
-.leaderboard-table th:nth-child(1),
-.leaderboard-table td:nth-child(1) {
-    width: 10%; /* Rank */
+@media (min-width: 768px) {
+    .leaderboard-table {
+        font-size: 0.9rem;
+    }
 }
 
-.leaderboard-table th:nth-child(2),
-.leaderboard-table td:nth-child(2) {
-    width: 25%; /* User Profile */
-}
-
-.leaderboard-table th:nth-child(3),
-.leaderboard-table td:nth-child(3) {
-    width: 20%; /* Total Earnings */
-}
-
-.leaderboard-table th:nth-child(4),
-.leaderboard-table td:nth-child(4) {
-    width: 15%; /* Referrals */
-}
-
-.leaderboard-table th:nth-child(5),
-.leaderboard-table td:nth-child(5) {
-    width: 20%; /* Performance Tier */
-}
-
-.leaderboard-table th:nth-child(6),
-.leaderboard-table td:nth-child(6) {
-    width: 10%; /* Actions */
+@media (min-width: 992px) {
+    .leaderboard-table {
+        font-size: 0.95rem;
+    }
 }
 
 /* Table headers with consistent font scaling */
 .leaderboard-table thead th {
     background: #2c3e50;
     border: none;
-    padding: 1rem 0.75rem;
+    padding: 0.75rem 0.5rem;
     font-weight: 600;
     color: white;
     text-transform: uppercase;
-    font-size: 0.9em;
     letter-spacing: 0.5px;
     line-height: 1.4;
     white-space: nowrap;
-    vertical-align: middle;
-    border-bottom: 2px solid #dee2e6;
+}
+
+@media (min-width: 768px) {
+    .leaderboard-table thead th {
+        padding: 1rem 0.75rem;
+    }
 }
 
 /* Table cells with consistent styling */
 .leaderboard-table tbody td {
-    padding: 1rem 0.75rem;
+    padding: 0.75rem 0.5rem;
     vertical-align: middle;
     border-bottom: 1px solid #e3e8f0;
     transition: background-color 0.2s ease;
-    font-size: 0.95em;
     line-height: 1.5;
+}
+
+@media (min-width: 768px) {
+    .leaderboard-table tbody td {
+        padding: 1rem 0.75rem;
+    }
 }
 
 .leaderboard-row:hover {
@@ -1255,14 +1244,19 @@
 .rank-badge {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    padding: 0.5rem 0.75rem;
+    padding: 0.4rem 0.6rem;
     border-radius: 6px;
     font-weight: bold;
-    font-size: 0.95em;
-    min-width: 3.5rem;
+    min-width: 2.5rem;
+    justify-content: center;
     line-height: 1.3;
-    margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+    .rank-badge {
+        min-width: 3rem;
+        padding: 0.5rem 0.75rem;
+    }
 }
 
 .rank-1 { 
@@ -1286,6 +1280,35 @@
     border: 1px solid #e3e8f0;
 }
 
+/* Optimized column widths for the 6-column format */
+.rank-cell {
+    width: 10%;
+    text-align: center;
+}
+
+.user-cell {
+    width: 25%;
+}
+
+.earnings-cell {
+    width: 20%;
+    text-align: right;
+}
+
+.referrals-cell {
+    width: 15%;
+    text-align: center;
+}
+
+.level-cell {
+    width: 20%;
+}
+
+.action-cell {
+    width: 10%;
+    text-align: center;
+}
+
 /* Proportional adjustments for user info */
 .user-info {
     display: flex;
@@ -1293,32 +1316,47 @@
 }
 
 .user-avatar {
-    width: 2.5rem;
-    height: 2.5rem;
+    width: 2rem;
+    height: 2rem;
     border-radius: 50%;
     background: #f8f9fa;
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
+    margin-right: 0.5rem;
     color: #6c757d;
+    flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+    .user-avatar {
+        width: 2.5rem;
+        height: 2.5rem;
+        margin-right: 0.75rem;
+    }
 }
 
 .user-details {
-    margin-left: 0.75rem;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 100%;
 }
 
 .username {
-    font-size: 1em;
     font-weight: 600;
     color: #2c3e50;
     display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     line-height: 1.3;
     margin-bottom: 0.25rem;
 }
 
 .user-badge {
-    font-size: 0.75em;
     padding: 0.15rem 0.5rem;
     background: #3498db;
     color: white;
@@ -1330,20 +1368,17 @@
 
 /* Proportional earnings display */
 .earnings-amount {
-    font-size: 1.1em;
     color: #2c3e50;
     margin-bottom: 0.25rem;
     line-height: 1.3;
 }
 
 .earnings-growth {
-    font-size: 0.85em;
     line-height: 1.2;
 }
 
 /* ENLARGED Referrals display */
 .referrals-count {
-    font-size: 1.3em;
     color: #2c3e50;
     margin-bottom: 0.25rem;
     line-height: 1.3;
@@ -1351,7 +1386,6 @@
 }
 
 .referrals-rate {
-    font-size: 0.85em;
     line-height: 1.2;
 }
 
@@ -1359,16 +1393,37 @@
 .rank-tier {
     display: flex;
     align-items: center;
+    padding: 0.4rem 0.6rem;
+    border-radius: 8px;
+    background: #f8f9fa;
+    border: 1px solid #e3e8f0;
+    min-height: 2.5rem;
+}
+
+@media (min-width: 768px) {
+    .rank-tier {
+        padding: 0.5rem 0.75rem;
+        min-height: 3.5rem;
+    }
 }
 
 .tier-icon {
-    width: 2rem;
-    height: 2rem;
+    width: 1.5rem;
+    height: 1.5rem;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
+    margin-right: 0.5rem;
     flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+    .tier-icon {
+        width: 2rem;
+        height: 2rem;
+        margin-right: 0.75rem;
+    }
 }
 
 .rank-tier-bronze .tier-icon { background: #cd7f32; color: white; }
@@ -1378,11 +1433,11 @@
 .rank-tier-diamond .tier-icon { background: #b9f2ff; color: #2c3e50; }
 
 .tier-info {
-    margin-left: 0.75rem;
+    flex: 1;
+    min-width: 0;
 }
 
 .tier-name {
-    font-size: 1em;
     font-weight: 600;
     color: #2c3e50;
     display: block;
@@ -1391,7 +1446,6 @@
 }
 
 .tier-requirement {
-    font-size: 0.8em;
     color: #6c757d;
     display: block;
     line-height: 1.2;
@@ -1399,13 +1453,17 @@
 
 /* Proportional action buttons */
 .action-buttons .btn {
-    font-size: 0.85em;
-    padding: 0.35rem 0.75rem;
+    padding: 0.25rem 0.5rem;
     white-space: nowrap;
 }
 
+@media (min-width: 768px) {
+    .action-buttons .btn {
+        padding: 0.35rem 0.75rem;
+    }
+}
+
 .performance-indicator {
-    font-size: 0.9em;
     color: #3498db;
     font-weight: 500;
     white-space: nowrap;
@@ -1744,34 +1802,6 @@
     }
 }
 
-/* Responsive table adjustments */
-@media (max-width: 992px) and (min-width: 768px) {
-    .leaderboard-table {
-        font-size: 0.85rem;
-    }
-    
-    .leaderboard-table th,
-    .leaderboard-table td {
-        padding: 0.75rem 0.5rem;
-    }
-    
-    .rank-badge {
-        min-width: 3rem;
-        padding: 0.4rem 0.6rem;
-        font-size: 0.85em;
-    }
-    
-    .user-avatar {
-        width: 2rem;
-        height: 2rem;
-    }
-    
-    .tier-icon {
-        width: 1.75rem;
-        height: 1.75rem;
-    }
-}
-
 /* Animation Classes */
 .fade-in-up {
     animation: fadeInUp 0.6s ease-out;
@@ -1858,57 +1888,6 @@ img {
     .btn, .action-buttons {
         display: none !important;
     }
-}
-
-/* Table equal spacing enhancements */
-.table-responsive {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-}
-
-.leaderboard-table th,
-.leaderboard-table td {
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-}
-
-.leaderboard-table td {
-    vertical-align: middle;
-}
-
-/* Ensure equal height rows */
-.leaderboard-table tbody tr {
-    height: 80px;
-}
-
-@media (max-width: 992px) {
-    .leaderboard-table tbody tr {
-        height: 70px;
-    }
-}
-
-/* Fix for table layout on small screens */
-@media (max-width: 1200px) {
-    .leaderboard-table {
-        min-width: 900px;
-    }
-}
-
-/* Ensure table columns are equally visible */
-.leaderboard-table th,
-.leaderboard-table td {
-    min-width: 80px;
-}
-
-/* Specific column width adjustments for better readability */
-.leaderboard-table th:nth-child(2), /* User Profile */
-.leaderboard-table td:nth-child(2) {
-    min-width: 150px;
-}
-
-.leaderboard-table th:nth-child(5), /* Performance Tier */
-.leaderboard-table td:nth-child(5) {
-    min-width: 140px;
 }
 </style>
 
