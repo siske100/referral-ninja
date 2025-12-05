@@ -480,6 +480,11 @@
             background: rgba(16, 185, 129, 0.05);
         }
 
+        .status-indicator.cooldown {
+            border-color: var(--warning-color);
+            background: rgba(245, 158, 11, 0.1);
+        }
+
         .btn-activate {
             background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
             color: white;
@@ -496,6 +501,7 @@
             align-items: center;
             gap: 0.6rem;
             margin: 0.75rem 0;
+            cursor: pointer;
         }
 
         .btn-activate::before {
@@ -513,13 +519,19 @@
             left: 100%;
         }
 
-        .btn-activate:hover {
+        .btn-activate:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: var(--shadow-lg);
         }
 
-        .btn-activate:active {
+        .btn-activate:active:not(:disabled) {
             transform: translateY(0);
+        }
+
+        .btn-activate:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            background: linear-gradient(135deg, var(--secondary-color), #94a3b8);
         }
 
         .processing-section {
@@ -562,6 +574,17 @@
             font-weight: 600;
             color: var(--primary-color);
             background: rgba(124, 58, 237, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            display: inline-block;
+            margin-top: 0.75rem;
+        }
+
+        .cooldown-timer {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--warning-color);
+            background: rgba(245, 158, 11, 0.1);
             padding: 0.5rem 1rem;
             border-radius: 20px;
             display: inline-block;
@@ -667,6 +690,33 @@
             display: none !important;
         }
 
+        /* Notification Container */
+        .notification-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+            max-width: 350px;
+        }
+
+        .alert {
+            margin-bottom: 10px;
+            animation: slideIn 0.3s ease-out;
+            border-radius: 10px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
         /* Modal Styles */
         .modal-content {
             border-radius: 12px;
@@ -745,6 +795,13 @@
             .progress-container {
                 max-width: 300px;
             }
+
+            .notification-container {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+                max-width: none;
+            }
         }
 
         /* Focus states for accessibility */
@@ -753,9 +810,30 @@
             outline: 2px solid var(--primary-color);
             outline-offset: 2px;
         }
+
+        /* Cooldown indicator */
+        .cooldown-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .cooldown-icon {
+            color: var(--warning-color);
+        }
+
+        .cooldown-text {
+            font-size: 0.85rem;
+            color: var(--warning-color);
+        }
     </style>
 </head>
 <body>
+    <!-- Notification Container -->
+    <div class="notification-container" id="notificationContainer"></div>
+
     <div class="activation-container">
         <div class="activation-header">
             <div class="header-content">
@@ -897,6 +975,12 @@
                     Activate Account Securely
                 </button>
 
+                <!-- Cooldown Indicator -->
+                <div class="cooldown-indicator" id="cooldown-indicator" style="display: none;">
+                    <i class="fas fa-clock cooldown-icon"></i>
+                    <span class="cooldown-text">Next check available in: <span id="cooldown-timer">120</span>s</span>
+                </div>
+
                 <p class="text-muted mt-3">
                     <i class="fas fa-info-circle me-2"></i>
                     You'll receive an M-PESA prompt on your registered number
@@ -907,8 +991,18 @@
             <div class="processing-section" id="processing-section">
                 <div class="processing-spinner"></div>
                 <h3 class="mb-3">Processing Your Activation</h3>
-                <p class="mb-4">We're securely processing your payment. This usually takes just a few moments...</p>
-                <div class="countdown-timer" id="countdown-timer">Checking status in 5 seconds...</div>
+                <p class="mb-4">We're securely processing your payment. Please check your phone for the M-PESA prompt...</p>
+                <div class="countdown-timer" id="countdown-timer">
+                    Status check in: <span id="check-timer">30</span>s
+                </div>
+                <div class="cooldown-timer mt-2" id="cooldown-timer-display" style="display: none;">
+                    <i class="fas fa-hourglass-half me-1"></i>
+                    Next check available in: <span id="cooldown-seconds">120</span>s
+                </div>
+                <button class="btn btn-sm btn-outline-primary mt-3" id="check-status-btn" onclick="checkPaymentStatus()">
+                    <i class="fas fa-sync-alt me-1"></i>
+                    Check Status Now
+                </button>
             </div>
 
             <!-- Activation Steps -->
@@ -992,17 +1086,46 @@
         </div>
     </div>
 
+    <!-- Cooldown Warning Modal -->
+    <div class="modal fade" id="cooldownModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-clock me-2 text-warning"></i>Please Wait</h5>
+                </div>
+                <div class="modal-body">
+                    <i class="fas fa-hourglass-half fa-3x text-warning mb-3"></i>
+                    <h4>Check Status Cooldown</h4>
+                    <p>You can check the payment status again in <span id="modal-cooldown-seconds">120</span> seconds.</p>
+                    <p class="text-muted small">This helps reduce server load and ensures optimal performance for all users.</p>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+                        OK, I'll Wait
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Global variables
+        let checkCooldown = false;
+        let cooldownSeconds = 0;
+        let checkCountdown = 30;
+        let currentActive = 1;
+        let checkInterval = null;
+        let cooldownInterval = null;
+        let autoCheckInterval = null;
+
         document.addEventListener('DOMContentLoaded', function() {
             const activateBtn = document.getElementById('activate-btn');
             const processingSection = document.getElementById('processing-section');
             const statusIndicator = document.getElementById('status-indicator');
             const progress = document.getElementById('progress');
             const circles = document.querySelectorAll('.circle');
-            let checkInterval;
-            let countdown = 5;
-            let currentActive = 1;
+            const cooldownIndicator = document.getElementById('cooldown-indicator');
+            const checkStatusBtn = document.getElementById('check-status-btn');
+            const cooldownTimerDisplay = document.getElementById('cooldown-timer-display');
 
             // Update progress bar
             function updateProgress() {
@@ -1018,8 +1141,173 @@
                 progress.style.width = ((activeCircles.length - 1) / (circles.length - 1)) * 100 + '%';
             }
 
+            // Show notification
+            function showNotification(message, type = 'info') {
+                const container = document.getElementById('notificationContainer');
+                if (!container) return;
+
+                const alert = document.createElement('div');
+                alert.className = `alert alert-${type} alert-dismissible fade show`;
+                alert.innerHTML = `
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                
+                container.appendChild(alert);
+                
+                // Auto-remove after 5 seconds
+                setTimeout(() => {
+                    if (alert.parentNode) {
+                        alert.remove();
+                    }
+                }, 5000);
+            }
+
+            // Start cooldown
+            function startCooldown(seconds) {
+                checkCooldown = true;
+                cooldownSeconds = seconds;
+                
+                // Update UI
+                cooldownIndicator.style.display = 'flex';
+                checkStatusBtn.disabled = true;
+                checkStatusBtn.innerHTML = '<i class="fas fa-clock me-1"></i> Please Wait...';
+                
+                // Update timer display
+                document.getElementById('cooldown-timer').textContent = seconds;
+                if (cooldownTimerDisplay) {
+                    cooldownTimerDisplay.style.display = 'block';
+                    document.getElementById('cooldown-seconds').textContent = seconds;
+                }
+                
+                // Start cooldown countdown
+                cooldownInterval = setInterval(() => {
+                    cooldownSeconds--;
+                    
+                    // Update displays
+                    document.getElementById('cooldown-timer').textContent = cooldownSeconds;
+                    if (cooldownTimerDisplay) {
+                        document.getElementById('cooldown-seconds').textContent = cooldownSeconds;
+                    }
+                    
+                    if (cooldownSeconds <= 0) {
+                        clearInterval(cooldownInterval);
+                        checkCooldown = false;
+                        cooldownIndicator.style.display = 'none';
+                        checkStatusBtn.disabled = false;
+                        checkStatusBtn.innerHTML = '<i class="fas fa-sync-alt me-1"></i> Check Status Now';
+                        if (cooldownTimerDisplay) {
+                            cooldownTimerDisplay.style.display = 'none';
+                        }
+                    }
+                }, 1000);
+            }
+
+            // Check payment status function
+            async function checkPaymentStatus() {
+                if (checkCooldown) {
+                    const modal = new bootstrap.Modal(document.getElementById('cooldownModal'));
+                    document.getElementById('modal-cooldown-seconds').textContent = cooldownSeconds;
+                    modal.show();
+                    return;
+                }
+
+                // Show loading state on button
+                const originalText = checkStatusBtn.innerHTML;
+                checkStatusBtn.disabled = true;
+                checkStatusBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Checking...';
+
+                try {
+                    const response = await fetch('/check-payment-status', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCsrfToken()
+                        }
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.verified) {
+                        // Payment verified - stop all intervals
+                        clearInterval(checkInterval);
+                        clearInterval(cooldownInterval);
+                        clearInterval(autoCheckInterval);
+                        
+                        // Show success modal
+                        const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                        successModal.show();
+                        
+                        // Update status indicator
+                        statusIndicator.className = 'status-indicator success';
+                        statusIndicator.innerHTML = '<i class="fas fa-check-circle text-success"></i><span>Payment verified successfully!</span>';
+                        
+                        // Update progress bar
+                        currentActive = 4;
+                        updateProgress();
+                        
+                        // Redirect after 3 seconds
+                        setTimeout(() => {
+                            successModal.hide();
+                            const approvedModal = new bootstrap.Modal(document.getElementById('approvedModal'));
+                            approvedModal.show();
+                            
+                            // Auto-redirect after 5 seconds
+                            setTimeout(() => {
+                                window.location.href = '/dashboard';
+                            }, 3000);
+                        }, 2000);
+                        
+                    } else if (data.cooldown) {
+                        // Cooldown active
+                        showNotification(data.message || 'Please wait before checking again', 'warning');
+                        startCooldown(data.wait_seconds || 120);
+                        
+                    } else if (data.pending) {
+                        // Still pending
+                        showNotification('Payment still pending. Please check your phone and enter your M-PESA PIN.', 'info');
+                        
+                        // If not in cooldown, schedule next auto-check in 30 seconds
+                        if (!checkCooldown) {
+                            checkCountdown = 30;
+                            startAutoCheckCountdown();
+                        }
+                    } else {
+                        // Error or session expired
+                        showNotification(data.message || 'Error checking payment status', 'error');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error checking payment status:', error);
+                    showNotification('Network error. Please try again.', 'danger');
+                } finally {
+                    // Reset button state
+                    checkStatusBtn.disabled = false;
+                    checkStatusBtn.innerHTML = originalText;
+                }
+            }
+
+            // Start auto-check countdown
+            function startAutoCheckCountdown() {
+                if (autoCheckInterval) clearInterval(autoCheckInterval);
+                
+                autoCheckInterval = setInterval(() => {
+                    checkCountdown--;
+                    document.getElementById('check-timer').textContent = checkCountdown;
+                    
+                    if (checkCountdown <= 0) {
+                        clearInterval(autoCheckInterval);
+                        if (!checkCooldown) {
+                            checkPaymentStatus();
+                            checkCountdown = 30;
+                            startAutoCheckCountdown();
+                        }
+                    }
+                }, 1000);
+            }
+
             // Activation button handler
-            activateBtn.addEventListener('click', function() {
+            activateBtn.addEventListener('click', async function() {
                 // Show loading state
                 this.disabled = true;
                 this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Initiating Secure Payment...';
@@ -1040,29 +1328,26 @@
 
                 // Validate phone number
                 if (!phoneNumber || phoneNumber === 'Loading...' || phoneNumber === 'Not provided' || phoneNumber === 'Phone number not available') {
-                    alert('Valid phone number is required for activation. Please ensure your phone number is correctly registered.');
+                    showNotification('Valid phone number is required for activation. Please ensure your phone number is correctly registered.', 'danger');
                     resetActivationState();
                     return;
                 }
 
-                // Initiate STK push via Flask route
-                fetch('/initiate-stk-push', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken()
-                    },
-                    body: JSON.stringify({
-                        phone_number: phoneNumber
-                    })
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(data => {
+                try {
+                    // Initiate STK push via Flask route
+                    const response = await fetch('/initiate-stk-push', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCsrfToken()
+                        },
+                        body: JSON.stringify({
+                            phone_number: phoneNumber
+                        })
+                    });
+
+                    const data = await response.json();
+                    
                     if (data.success) {
                         // Update status
                         statusIndicator.className = 'status-indicator processing';
@@ -1072,98 +1357,34 @@
                         currentActive = 3;
                         updateProgress();
                         
-                        // Start checking payment status
-                        startPaymentCheck();
+                        // Start checking payment status with cooldown protection
+                        checkCountdown = 30;
+                        startAutoCheckCountdown();
                         
-                        // Show success modal
-                        const successModal = new bootstrap.Modal(document.getElementById('successModal'));
-                        successModal.show();
+                        // Enable check status button
+                        checkStatusBtn.disabled = false;
+                        
+                        // Show notification
+                        showNotification('M-PESA prompt sent to your phone! Please check and enter your PIN.', 'success');
                         
                     } else {
                         throw new Error(data.message || 'Activation failed');
                     }
-                })
-                .catch(error => {
+                } catch (error) {
                     console.error('Error:', error);
-                    alert('Unable to initiate payment. Please try again or contact support.');
+                    showNotification('Unable to initiate payment. Please try again or contact support.', 'danger');
                     resetActivationState();
-                });
+                } finally {
+                    // Reset activation button
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-bolt"></i> Activate Account Securely';
+                }
             });
             
             // Redirect button handler
             document.getElementById('redirect-btn').addEventListener('click', function() {
                 window.location.href = '/dashboard';
             });
-            
-            function startPaymentCheck() {
-                // Check immediately first time
-                checkPaymentStatus();
-                
-                // Then check every 5 seconds
-                checkInterval = setInterval(checkPaymentStatus, 5000);
-                
-                // Start countdown timer
-                startCountdown();
-            }
-            
-            function checkPaymentStatus() {
-                fetch('/check-payment-status', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken()
-                    }
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success && data.verified) {
-                        // Payment verified - stop checking and show success
-                        clearInterval(checkInterval);
-                        showApprovedModal();
-                    }
-                    // If not verified, continue checking
-                })
-                .catch(error => {
-                    console.error('Error checking payment status:', error);
-                });
-            }
-            
-            function showApprovedModal() {
-                const successModal = bootstrap.Modal.getInstance(document.getElementById('successModal'));
-                if (successModal) successModal.hide();
-                
-                const approvedModal = new bootstrap.Modal(document.getElementById('approvedModal'));
-                approvedModal.show();
-                
-                // Update status
-                statusIndicator.className = 'status-indicator success';
-                statusIndicator.innerHTML = '<i class="fas fa-check-circle text-success"></i><span>Account activated successfully!</span>';
-                
-                // Update progress bar
-                currentActive = 4;
-                updateProgress();
-                
-                // Auto-redirect after 5 seconds
-                setTimeout(() => {
-                    window.location.href = '/dashboard';
-                }, 5000);
-            }
-            
-            function startCountdown() {
-                const timerElement = document.getElementById('countdown-timer');
-                const countdownInterval = setInterval(() => {
-                    countdown--;
-                    if (countdown <= 0) {
-                        countdown = 5;
-                    }
-                    timerElement.textContent = `Checking status in ${countdown} seconds...`;
-                }, 1000);
-            }
             
             function resetActivationState() {
                 activateBtn.disabled = false;
@@ -1173,6 +1394,9 @@
                 statusIndicator.innerHTML = '<i class="fas fa-clock text-warning"></i><span>Ready for secure activation</span>';
                 currentActive = 1;
                 updateProgress();
+                clearInterval(checkInterval);
+                clearInterval(cooldownInterval);
+                clearInterval(autoCheckInterval);
             }
             
             function getCsrfToken() {
@@ -1181,21 +1405,32 @@
                 if (metaTag) {
                     return metaTag.getAttribute('content');
                 }
+                
+                // Try to get from form input
+                const csrfInput = document.querySelector('input[name="csrf_token"]');
+                if (csrfInput) {
+                    return csrfInput.value;
+                }
+                
                 return '';
             }
 
             // Check if user is already verified (in case page was refreshed)
-            function checkInitialStatus() {
-                fetch('/api/payment-status')
-                .then(response => response.json())
-                .then(data => {
+            async function checkInitialStatus() {
+                try {
+                    const response = await fetch('/api/payment-status');
+                    const data = await response.json();
+                    
                     if (data.verified) {
-                        window.location.href = '/dashboard';
+                        if (data.auto_login) {
+                            window.location.href = '/auto-login/' + data.login_token;
+                        } else {
+                            window.location.href = '/dashboard';
+                        }
                     }
-                })
-                .catch(error => {
+                } catch (error) {
                     console.error('Error checking initial status:', error);
-                });
+                }
             }
 
             // Add hover effects to step cards
@@ -1215,46 +1450,17 @@
             // Check initial payment status
             checkInitialStatus();
 
-            // =====================================================================
-            // Added: Enhanced payment status polling function with auto-login support
-            // =====================================================================
-            function checkPaymentStatusEnhanced() {
-                fetch('/api/payment-status')
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.verified) {
-                            if (data.auto_login) {
-                                // Payment completed via callback, redirect to auto-login
-                                window.location.href = '/auto-login/' + data.login_token;
-                            } else {
-                                // Payment completed via polling, redirect to dashboard
-                                window.location.href = '/dashboard';
-                            }
-                        } else if (data.pending) {
-                            // Still pending, check again in 5 seconds
-                            setTimeout(checkPaymentStatusEnhanced, 5000);
-                        } else {
-                            // Session expired or error
-                            alert(data.message || 'Payment verification failed');
-                            window.location.href = '/register';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Payment status check failed:', error);
-                        setTimeout(checkPaymentStatusEnhanced, 10000); // Retry after 10 seconds on error
-                    });
-            }
-
-            // Start enhanced checking when page loads
-            // Start checking 30 seconds after STK push initiated (as a fallback)
-            setTimeout(function() {
-                // Only start enhanced checking if we're still in processing state
-                if (processingSection.classList.contains('show')) {
-                    checkPaymentStatusEnhanced();
+            // Start enhanced checking as fallback
+            setTimeout(() => {
+                // Only start if we're still in processing state
+                if (processingSection.classList.contains('show') && !checkCooldown) {
+                    checkPaymentStatus();
                 }
-            }, 30000);
-            // =====================================================================
+            }, 30000); // Check after 30 seconds as fallback
         });
+
+        // Make checkPaymentStatus available globally for button onclick
+        window.checkPaymentStatus = checkPaymentStatus;
     </script>
 </body>
 </html>
