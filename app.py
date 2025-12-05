@@ -7386,23 +7386,24 @@ def reset_password(token):
         
         if request.method == 'POST':
             # Handle password reset submission
-            new_password = request.form.get('new_password')
+            # Note: Your template uses 'password' and 'confirm_password' as field names
+            password = request.form.get('password')
             confirm_password = request.form.get('confirm_password')
             
-            if not new_password or not confirm_password:
+            if not password or not confirm_password:
                 flash('Please fill in all fields.', 'error')
                 return render_template('auth/reset_password.html', token=token)
             
-            if new_password != confirm_password:
+            if password != confirm_password:
                 flash('Passwords do not match.', 'error')
                 return render_template('auth/reset_password.html', token=token)
             
-            if len(new_password) < 6:
+            if len(password) < 6:
                 flash('Password must be at least 6 characters long.', 'error')
                 return render_template('auth/reset_password.html', token=token)
             
             # Update password
-            hashed_password = generate_password_hash(new_password)
+            hashed_password = generate_password_hash(password)
             update_data = {
                 'password_hash': hashed_password,
                 'reset_token': None,  # Clear reset token
@@ -7432,28 +7433,64 @@ def reset_password(token):
                     <html>
                     <head>
                         <style>
-                            body {{ font-family: Arial, sans-serif; }}
-                            .success {{ color: #10b981; }}
+                            body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                            .header {{ background: linear-gradient(to right, #4f46e5, #7c3aed); padding: 20px; text-align: center; }}
+                            .content {{ padding: 30px; background-color: #f9f9f9; }}
+                            .success {{ color: #10b981; font-size: 24px; }}
+                            .footer {{ margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #666; }}
                         </style>
                     </head>
                     <body>
-                        <h2 class="success">✅ Password Reset Successful</h2>
-                        <p>Hello {user.name or user.username},</p>
-                        <p>Your password has been successfully reset.</p>
-                        <p>If you didn't make this change, please contact support immediately.</p>
-                        <p><strong>Time:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-                        <p><strong>IP Address:</strong> {request.remote_addr}</p>
+                        <div class="container">
+                            <div class="header">
+                                <h1 style="color: white; margin: 0;">✅ Password Reset Successful</h1>
+                            </div>
+                            <div class="content">
+                                <h2>Hello {user.name or user.username},</h2>
+                                <p>Your password has been successfully reset.</p>
+                                
+                                <div style="background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0;">
+                                    <p><strong>Security Notice:</strong> If you didn't make this change, please contact support immediately.</p>
+                                </div>
+                                
+                                <div class="footer">
+                                    <p><strong>Reset Details:</strong></p>
+                                    <p>Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}<br>
+                                       IP Address: {request.remote_addr}</p>
+                                    <p>Need help? Contact: support@referralninja.co.ke</p>
+                                </div>
+                            </div>
+                        </div>
                     </body>
                     </html>
+                    """
+                    
+                    # Text version
+                    text_content = f"""
+                    PASSWORD RESET SUCCESSFUL
+                    
+                    Hello {user.name or user.username},
+                    
+                    Your password has been successfully reset.
+                    
+                    If you didn't make this change, please contact support immediately.
+                    
+                    Reset Details:
+                    - Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+                    - IP Address: {request.remote_addr}
+                    
+                    Need help? Contact: support@referralninja.co.ke
                     """
                     
                     email_service._send_email_via_brevo(
                         recipient=user.email,
                         subject="Password Reset Successful - ReferralNinja",
-                        text_content="Your password has been successfully reset.",
+                        text_content=text_content,
                         html_content=html_content,
                         recipient_name=user.name or user.username
                     )
+                    logger.info(f"Password reset confirmation email sent to {user.email}")
                 except Exception as e:
                     logger.error(f"Error sending password reset confirmation: {e}")
                 
