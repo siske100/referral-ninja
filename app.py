@@ -853,9 +853,22 @@ class User(UserMixin):
             self.referral_source = data.get('referral_source', 'direct')
             self.reset_token = data.get('reset_token')
             self.reset_token_expires = data.get('reset_token_expires')
+            
+            # Check if this is a temporary user (has 'password' field but no 'password_hash')
+            # or if it's created from session data (has 'temp_referral_code')
+            has_password_field = 'password' in data
+            has_temp_referral = 'temp_referral_code' in data
+            self._is_temporary = (has_password_field and not self.password_hash) or has_temp_referral
+            
+            # For temporary users, set temporary referral code
+            if self._is_temporary:
+                self.temp_referral_code = data.get('temp_referral_code')
 
     @property
     def is_active(self):
+        # Temporary users are not active until payment is complete
+        if getattr(self, '_is_temporary', False):
+            return False
         return self._is_active
 
     @is_active.setter
@@ -872,21 +885,34 @@ class User(UserMixin):
 
     @property
     def is_verified(self):
+        # Temporary users are not verified until payment is complete
+        if getattr(self, '_is_temporary', False):
+            return False
         return self._is_verified
 
     @is_verified.setter
     def is_verified(self, value):
         self._is_verified = value
 
+    @property
+    def is_temporary(self):
+        """Check if this is a temporary user (not yet paid)"""
+        return getattr(self, '_is_temporary', False)
+
     def set_password(self, password):
         # When creating a new user
         self.password_hash = generate_password_hash(password)
     
     def check_password(self, password):
-        # When verifying login
+        # When verifying login - temporary users can't login
+        if self.is_temporary:
+            return False
         return check_password_hash(self.password_hash, password)
     
     def is_locked(self):
+        # Temporary users can't be locked
+        if self.is_temporary:
+            return False
         if self.locked_until and datetime.fromisoformat(self.locked_until.replace('Z', '+00:00')) > datetime.now(timezone.utc):
             return True
         return False
@@ -908,11 +934,11 @@ class User(UserMixin):
             self.user_rank = 'Bronze'
 
     def to_dict(self):
-        return {
+        """Convert user object to dictionary, handling temporary users"""
+        base_dict = {
             'id': self.id,
             'username': self.username,
             'email': self.email,
-            'password_hash': self.password_hash,
             'phone': self.phone,
             'name': self.name,
             'balance': self.balance,
@@ -922,9 +948,6 @@ class User(UserMixin):
             'referred_by': self.referred_by,
             'referral_balance': self.referral_balance,
             'referral_count': self.referral_count,
-            'is_admin': self._is_admin,
-            'is_verified': self._is_verified,
-            'is_active': self._is_active,
             'created_at': self.created_at,
             'last_login': self.last_login,
             'login_attempts': self.login_attempts,
@@ -936,6 +959,33 @@ class User(UserMixin):
             'reset_token': self.reset_token,
             'reset_token_expires': self.reset_token_expires
         }
+        
+        # Only include password_hash for non-temporary users
+        if not self.is_temporary and hasattr(self, 'password_hash'):
+            base_dict['password_hash'] = self.password_hash
+        
+        # Add admin/verified/active status for non-temporary users
+        if not self.is_temporary:
+            base_dict.update({
+                'is_admin': self._is_admin,
+                'is_verified': self._is_verified,
+                'is_active': self._is_active
+            })
+        else:
+            # For temporary users, mark them as unverified and inactive
+            base_dict.update({
+                'is_admin': False,
+                'is_verified': False,
+                'is_active': False,
+                'is_temporary': True,
+                'temp_referral_code': getattr(self, 'temp_referral_code', None)
+            })
+        
+        return base_dict
+
+    def __repr__(self):
+        user_type = "Temporary" if self.is_temporary else "Permanent"
+        return f"<User {self.username} ({user_type})>"
 
 # =============================================================================
 # DATABASE UTILITIES
@@ -4759,6 +4809,20 @@ def index():
 def load_user(user_id):
     """Load user by ID from database for Flask-Login"""
     try:
+        # First, check if this is a temporary user in session
+        # (user who hasn't completed payment yet)
+        temp_user_data = session.get('temp_user_data')
+        if temp_user_data and temp_user_data.get('id') == user_id:
+            # This is a temporary user, create a User object from session data
+            # but mark them as not authenticated/not verified
+            temp_user = User(temp_user_data)
+            temp_user.is_active = False
+            temp_user.is_verified = False
+            temp_user.is_authenticated = False
+            logger.info(f"Loaded temporary user {user_id} from session (pending payment)")
+            return temp_user
+        
+        # Otherwise, try to load from database
         user = SupabaseDB.get_user_by_id(user_id)
         if user:
             # Debug logging
@@ -5196,6 +5260,7 @@ def logout():
     return redirect(url_for('login'))
 
 # MODIFIED ACCOUNT ACTIVATION ROUTE - Uses temporary session data
+# MODIFIED ACCOUNT ACTIVATION ROUTE - Uses temporary session data
 @app.route('/account-activation')
 def account_activation():
     user_id = session.get('pending_verification_user')
@@ -5205,7 +5270,10 @@ def account_activation():
         flash('Invalid access. Please register first.', 'error')
         return redirect(url_for('register'))
     
-    if current_user.is_authenticated:
+    # Don't check current_user.is_authenticated - it will trigger user loader
+    # Instead, check if there's already a verified user in the database
+    existing_user = SupabaseDB.get_user_by_id(temp_user_data['id'])
+    if existing_user and existing_user.is_verified:
         flash('You are already logged in.', 'info')
         return redirect(url_for('dashboard'))
     
