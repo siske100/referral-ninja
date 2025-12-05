@@ -7192,29 +7192,284 @@ def settings():
 
 # Forgot Password Route
 @app.route('/forgot-password', methods=['GET', 'POST'])
+@rate_limiter.limit("5 per hour")  # Prevent abuse
 def forgot_password():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
     
     if request.method == 'POST':
-        email = request.form.get('email', '').strip()
+        email = request.form.get('email', '').strip().lower()
         
         if not email:
             flash('Please enter your email address.', 'error')
             return render_template('auth/forgot_password.html')
         
+        # Verify reCAPTCHA if enabled
+        recaptcha_response = request.form.get('g-recaptcha-response')
+        if app.config.get('RECAPTCHA_ENABLED', True) and not verify_recaptcha(recaptcha_response):
+            flash('Please complete the reCAPTCHA verification.', 'error')
+            return render_template('auth/forgot_password.html', 
+                                 recaptcha_site_key=app.config['RECAPTCHA_SITE_KEY'])
+        
         user = SupabaseDB.get_user_by_email(email)
-        if user:
-            # In a real application, you would generate a reset token and send an email
-            # For now, we'll just show a success message
-            flash('If an account with that email exists, password reset instructions have been sent.', 'success')
-        else:
-            # Don't reveal whether email exists for security
-            flash('If an account with that email exists, password reset instructions have been sent.', 'success')
+        
+        # Always show the same message for security (don't reveal if email exists)
+        flash('If an account with that email exists, password reset instructions have been sent.', 'success')
+        
+        if user and user.is_active:
+            try:
+                # Generate secure reset token
+                reset_token = secrets.token_urlsafe(32)
+                expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+                
+                # Update user with reset token
+                update_data = {
+                    'reset_token': reset_token,
+                    'reset_token_expires': expires_at.isoformat()
+                }
+                SupabaseDB.update_user(user.id, update_data)
+                
+                # Create reset link
+                reset_link = f"{request.host_url.rstrip('/')}/reset-password/{reset_token}"
+                
+                # Send reset email using Brevo
+                email_service = EmailService(app.config)
+                
+                # HTML email template
+                html_content = f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                        .header {{ background: linear-gradient(to right, #4f46e5, #7c3aed); padding: 20px; text-align: center; }}
+                        .content {{ padding: 30px; background-color: #f9f9f9; }}
+                        .button {{ display: inline-block; background: linear-gradient(to right, #4f46e5, #7c3aed); 
+                                 color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; 
+                                 margin: 15px 0; }}
+                        .warning {{ background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 10px; margin: 15px 0; }}
+                        .footer {{ margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; 
+                                  font-size: 12px; color: #666; }}
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1 style="color: white; margin: 0;">Password Reset</h1>
+                        </div>
+                        <div class="content">
+                            <h2>Hello {user.name or user.username},</h2>
+                            <p>You have requested to reset your password for your ReferralNinja account.</p>
+                            
+                            <div style="text-align: center; margin: 25px 0;">
+                                <a href="{reset_link}" class="button">Reset Password</a>
+                            </div>
+                            
+                            <p>Or copy and paste this link in your browser:</p>
+                            <p style="word-break: break-all; background-color: #f3f4f6; padding: 10px; border-radius: 5px;">
+                                {reset_link}
+                            </p>
+                            
+                            <div class="warning">
+                                <strong>⚠️ Important:</strong>
+                                <ul>
+                                    <li>This link will expire in 1 hour</li>
+                                    <li>If you didn't request this, please ignore this email</li>
+                                    <li>For security, don't share this link with anyone</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="footer">
+                                <p><strong>Request Details:</strong></p>
+                                <p>Email: {user.email}<br>
+                                   Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}<br>
+                                   IP Address: {request.remote_addr}</p>
+                                <p>If you need assistance, contact: support@referralninja.co.ke</p>
+                            </div>
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """
+                
+                # Text version for email clients that don't support HTML
+                text_content = f"""
+                PASSWORD RESET REQUEST
+                
+                Hello {user.name or user.username},
+                
+                You have requested to reset your password for your ReferralNinja account.
+                
+                Reset Link: {reset_link}
+                
+                This link will expire in 1 hour.
+                
+                If you didn't request this, please ignore this email.
+                
+                Request Details:
+                - Email: {user.email}
+                - Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+                - IP Address: {request.remote_addr}
+                
+                If you need assistance, contact: support@referralninja.co.ke
+                """
+                
+                # Send email via Brevo
+                success = email_service._send_email_via_brevo(
+                    recipient=user.email,
+                    subject="Reset Your ReferralNinja Password",
+                    text_content=text_content,
+                    html_content=html_content,
+                    recipient_name=user.name or user.username
+                )
+                
+                if success:
+                    logger.info(f"Password reset email sent to {user.email}")
+                    
+                    # Log security event
+                    SecurityMonitor.log_security_event(
+                        "PASSWORD_RESET_REQUESTED",
+                        user.id,
+                        {
+                            "email": user.email,
+                            "ip": request.remote_addr,
+                            "token_generated": True
+                        }
+                    )
+                else:
+                    logger.error(f"Failed to send password reset email to {user.email}")
+                    # Don't show error to user (security)
+                
+            except Exception as e:
+                logger.error(f"Error processing password reset for {email}: {str(e)}")
+                # Don't show error to user (security)
         
         return redirect(url_for('login'))
     
-    return render_template('auth/forgot_password.html')
+    # GET request - show forgot password form
+    return render_template('auth/forgot_password.html', 
+                         recaptcha_site_key=app.config.get('RECAPTCHA_SITE_KEY'))
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+@rate_limiter.limit("10 per hour")
+def reset_password(token):
+    """Handle password reset with token"""
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+    
+    # Validate token
+    try:
+        # Find user by reset token
+        response = supabase.table('users')\
+            .select('*')\
+            .eq('reset_token', token)\
+            .execute()
+        
+        if not response.data:
+            flash('Invalid or expired reset link. Please request a new one.', 'error')
+            return redirect(url_for('forgot_password'))
+        
+        user_data = response.data[0]
+        user = User(user_data)
+        
+        # Check if token is expired
+        expires_at_str = user.reset_token_expires
+        if not expires_at_str:
+            flash('Invalid reset token.', 'error')
+            return redirect(url_for('forgot_password'))
+        
+        expires_at = datetime.fromisoformat(expires_at_str.replace('Z', '+00:00'))
+        if expires_at < datetime.now(timezone.utc):
+            flash('Reset link has expired. Please request a new one.', 'error')
+            return redirect(url_for('forgot_password'))
+        
+        if request.method == 'POST':
+            # Handle password reset submission
+            new_password = request.form.get('new_password')
+            confirm_password = request.form.get('confirm_password')
+            
+            if not new_password or not confirm_password:
+                flash('Please fill in all fields.', 'error')
+                return render_template('auth/reset_password.html', token=token)
+            
+            if new_password != confirm_password:
+                flash('Passwords do not match.', 'error')
+                return render_template('auth/reset_password.html', token=token)
+            
+            if len(new_password) < 6:
+                flash('Password must be at least 6 characters long.', 'error')
+                return render_template('auth/reset_password.html', token=token)
+            
+            # Update password
+            hashed_password = generate_password_hash(new_password)
+            update_data = {
+                'password_hash': hashed_password,
+                'reset_token': None,  # Clear reset token
+                'reset_token_expires': None,  # Clear expiration
+                'login_attempts': 0,  # Reset login attempts
+                'locked_until': None  # Unlock if locked
+            }
+            
+            success = SupabaseDB.update_user(user.id, update_data)
+            
+            if success:
+                # Log security event
+                SecurityMonitor.log_security_event(
+                    "PASSWORD_RESET_COMPLETED",
+                    user.id,
+                    {
+                        "ip": request.remote_addr,
+                        "method": "email_token"
+                    }
+                )
+                
+                # Send confirmation email
+                try:
+                    email_service = EmailService(app.config)
+                    html_content = f"""
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <style>
+                            body {{ font-family: Arial, sans-serif; }}
+                            .success {{ color: #10b981; }}
+                        </style>
+                    </head>
+                    <body>
+                        <h2 class="success">✅ Password Reset Successful</h2>
+                        <p>Hello {user.name or user.username},</p>
+                        <p>Your password has been successfully reset.</p>
+                        <p>If you didn't make this change, please contact support immediately.</p>
+                        <p><strong>Time:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+                        <p><strong>IP Address:</strong> {request.remote_addr}</p>
+                    </body>
+                    </html>
+                    """
+                    
+                    email_service._send_email_via_brevo(
+                        recipient=user.email,
+                        subject="Password Reset Successful - ReferralNinja",
+                        text_content="Your password has been successfully reset.",
+                        html_content=html_content,
+                        recipient_name=user.name or user.username
+                    )
+                except Exception as e:
+                    logger.error(f"Error sending password reset confirmation: {e}")
+                
+                flash('Password reset successful! You can now login with your new password.', 'success')
+                return redirect(url_for('login'))
+            else:
+                flash('Error resetting password. Please try again.', 'error')
+                return render_template('auth/reset_password.html', token=token)
+        
+        # GET request - show reset password form
+        return render_template('auth/reset_password.html', token=token)
+        
+    except Exception as e:
+        logger.error(f"Error in reset_password route: {str(e)}")
+        flash('An error occurred. Please try again.', 'error')
+        return redirect(url_for('forgot_password'))
 
 # =============================================================================
 # ADDED ROUTES: CHANGE PASSWORD WITH OTP AND DELETE ACCOUNT
