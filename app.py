@@ -1751,6 +1751,10 @@ class EnhancedFraudDetector:
         """Detect suspicious registration patterns"""
         warnings = []
         
+        # Skip fraud detection for localhost/development
+        if ip_address in ['127.0.0.1', 'localhost', '::1']:
+            return warnings  # Return empty list, no warnings
+        
         try:
             # Check IP-based registrations
             ip_key = f"signups:ip:{ip_address}"
