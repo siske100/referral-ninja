@@ -1751,10 +1751,6 @@ class EnhancedFraudDetector:
         """Detect suspicious registration patterns"""
         warnings = []
         
-        # Skip fraud detection for localhost/development
-        if ip_address in ['127.0.0.1', 'localhost', '::1']:
-            return warnings  # Return empty list, no warnings
-        
         try:
             # Check IP-based registrations
             ip_key = f"signups:ip:{ip_address}"
@@ -5269,11 +5265,39 @@ def initiate_stk_push_route():
 # MODIFIED PAYMENT STATUS CHECK - Creates user on successful payment
 @app.route('/check-payment-status', methods=['POST'])
 def check_payment_status():
+    """Check payment status with 2-minute cooldown between checks"""
     user_id = session.get('pending_verification_user')
     temp_user_data = session.get('temp_user_data')
     
     if not user_id or not temp_user_data:
         return jsonify({'verified': False, 'message': 'Session expired'})
+    
+    # Create a unique key for this user's payment check
+    check_key = f"payment_check:{user_id}"
+    
+    # Check if user has checked recently (within 2 minutes)
+    last_check = redis_client.get(check_key)
+    if last_check:
+        last_check_time = datetime.fromisoformat(last_check)
+        time_since_last_check = datetime.now(timezone.utc) - last_check_time
+        
+        # If less than 2 minutes (120 seconds) have passed, return cooldown message
+        if time_since_last_check.total_seconds() < 120:
+            seconds_left = 120 - time_since_last_check.total_seconds()
+            return jsonify({
+                'verified': False, 
+                'pending': True,
+                'cooldown': True,
+                'message': f'Please wait {int(seconds_left)} seconds before checking again',
+                'wait_seconds': int(seconds_left)
+            })
+    
+    # Record this check timestamp
+    redis_client.setex(
+        check_key, 
+        300,  # Store for 5 minutes (longer than cooldown)
+        datetime.now(timezone.utc).isoformat()
+    )
     
     # Check if user has been created in database
     user = SupabaseDB.get_user_by_id(temp_user_data['id'])
@@ -5281,6 +5305,8 @@ def check_payment_status():
         session.pop('pending_verification_user', None)
         session.pop('temp_user_data', None)
         session.pop('pending_payment', None)
+        # Clear the check key on successful verification
+        redis_client.delete(check_key)
         return jsonify({'verified': True, 'message': 'Payment verified! Account activated.'})
     
     # Check if payment is pending in our records
@@ -5297,6 +5323,8 @@ def check_payment_status():
                 session.pop('pending_verification_user', None)
                 session.pop('temp_user_data', None)
                 session.pop('pending_payment', None)
+                # Clear the check key on successful verification
+                redis_client.delete(check_key)
                 return jsonify({'verified': True, 'message': 'Payment verified via query! Account activated.'})
     
     return jsonify({'verified': False, 'pending': bool(pending_payment)})
