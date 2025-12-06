@@ -310,7 +310,10 @@
             <div class="d-md-none" id="mobile-leaderboard">
                 {% if top_users %}
                     {% for user in top_users %}
-                    <div class="leaderboard-mobile-card {% if user.id == current_user.id %}current-user{% endif %}" data-user-id="{{ user.id }}">
+                    <div class="leaderboard-mobile-card {% if user.id == current_user.id %}current-user{% endif %}" 
+                         data-user-id="{{ user.id }}"
+                         data-username="{{ user.username or 'Unknown User' }}"
+                         data-user-rank="{{ user.user_rank or 'Bronze' }}">
                         <div class="card-body p-3">
                             <div class="row align-items-center">
                                 <!-- Rank -->
@@ -399,7 +402,10 @@
                         <tbody id="desktop-leaderboard">
                             {% if top_users %}
                                 {% for user in top_users %}
-                                <tr class="leaderboard-row {% if user.id == current_user.id %}current-user{% endif %}" data-user-id="{{ user.id }}">
+                                <tr class="leaderboard-row {% if user.id == current_user.id %}current-user{% endif %}" 
+                                    data-user-id="{{ user.id }}"
+                                    data-username="{{ user.username or 'Unknown User' }}"
+                                    data-user-rank="{{ user.user_rank or 'Bronze' }}">
                                     <td class="rank-cell text-center align-middle">
                                         <div class="rank-badge rank-{{ loop.index }}">
                                             {% if loop.index == 1 %}
@@ -480,7 +486,12 @@
                                         </div>
                                         {% else %}
                                         <div class="action-buttons">
-                                            <button class="btn btn-outline-primary btn-sm fs-6" onclick="analyzeUserPerformance('{{ user.id }}')" data-bs-toggle="tooltip" title="View Performance Analysis">
+                                            <button class="btn btn-outline-primary btn-sm fs-6 analyze-user-btn" 
+                                                    data-user-id="{{ user.id }}"
+                                                    data-username="{{ user.username or 'Unknown User' }}"
+                                                    data-user-rank="{{ user.user_rank or 'Bronze' }}"
+                                                    data-bs-toggle="tooltip" 
+                                                    title="View Performance Analysis">
                                                 <i class="fas fa-chart-bar me-1"></i>Analyze
                                             </button>
                                         </div>
@@ -1963,11 +1974,16 @@ class ProfessionalLeaderboard {
             });
         });
 
-        // Performance analysis buttons
+        // Performance analysis buttons - using data attributes
         document.addEventListener('click', (e) => {
-            if (e.target.closest('[onclick*="analyzeUserPerformance"]')) {
-                const userId = e.target.closest('button').getAttribute('onclick').match(/'([^']+)'/)[1];
-                this.analyzeUserPerformance(userId);
+            const analyzeBtn = e.target.closest('.analyze-user-btn');
+            if (analyzeBtn) {
+                const userData = {
+                    id: analyzeBtn.dataset.userId,
+                    username: analyzeBtn.dataset.username,
+                    tier: analyzeBtn.dataset.userRank || 'Bronze'
+                };
+                this.analyzeUserPerformance(userData);
             }
         });
         
@@ -1975,17 +1991,15 @@ class ProfessionalLeaderboard {
         document.querySelectorAll('.leaderboard-mobile-card').forEach(card => {
             card.addEventListener('click', (e) => {
                 if (!e.target.closest('.btn')) {
-                    const userId = card.dataset.userId;
-                    this.showMobileUserDetails(userId);
+                    const userData = {
+                        id: card.dataset.userId,
+                        username: card.dataset.username,
+                        tier: card.dataset.userRank || 'Bronze'
+                    };
+                    this.analyzeUserPerformance(userData);
                 }
             });
         });
-    }
-
-    showMobileUserDetails(userId) {
-        // This would show detailed user information on mobile
-        console.log('Showing details for user:', userId);
-        // In a real implementation, you might show a modal or expand the card
     }
 
     initializeAnimations() {
@@ -2061,7 +2075,7 @@ class ProfessionalLeaderboard {
         this.isRefreshing = true;
         
         try {
-            // Simulate API call - replace with actual endpoint
+            // This would be your actual API call to refresh leaderboard data
             await this.fetchLeaderboardData();
             
             // Update timestamp
@@ -2080,7 +2094,7 @@ class ProfessionalLeaderboard {
     }
 
     async fetchLeaderboardData() {
-        // This would be your actual API call
+        // This would be your actual API call to fetch fresh leaderboard data
         // For now, we'll simulate a network request
         return new Promise((resolve) => {
             setTimeout(resolve, 1000);
@@ -2113,32 +2127,95 @@ class ProfessionalLeaderboard {
         }, 120000);
     }
 
-    analyzeUserPerformance(userId) {
-        // This would fetch user performance data from your backend
-        console.log('Analyzing user performance:', userId);
+    analyzeUserPerformance(userData) {
+        // Get the user's row/card to extract current displayed values
+        const userRow = document.querySelector(`[data-user-id="${userData.id}"]`);
+        if (!userRow) {
+            console.error('User row not found:', userData.id);
+            return;
+        }
+
+        // Extract current values from displayed elements (always up-to-date)
+        let earningsElement, referralsElement;
         
-        // For demo purposes, show a modal with placeholder content
+        if (userRow.classList.contains('leaderboard-row')) {
+            // Desktop row
+            earningsElement = userRow.querySelector('.user-earnings');
+            referralsElement = userRow.querySelector('.user-referrals');
+        } else {
+            // Mobile card
+            earningsElement = userRow.querySelector('.user-earnings');
+            referralsElement = userRow.querySelector('.user-referrals');
+        }
+
+        if (!earningsElement || !referralsElement) {
+            console.error('Could not find user data elements');
+            return;
+        }
+
+        // Extract the text values (these are always current from Jinja2 rendering)
+        const earningsText = earningsElement.textContent.trim();
+        const referralsText = referralsElement.textContent.trim();
+        
+        // Create modal content with REAL current values
         const modalContent = `
             <div class="text-center">
                 <i class="fas fa-chart-bar fa-3x text-primary mb-3"></i>
                 <h5 class="fs-5">Performance Analysis</h5>
-                <p class="text-muted fs-6">Detailed performance analytics for user ${userId}</p>
+                <p class="text-muted fs-6">Detailed performance analytics for ${userData.username}</p>
                 <div class="row mt-4">
                     <div class="col-6">
                         <div class="metric">
-                            <div class="metric-value fs-5">KES 2,450</div>
+                            <div class="metric-value fs-5">${earningsText}</div>
                             <div class="metric-label fs-6">Total Earnings</div>
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="metric">
-                            <div class="metric-value fs-5">24</div>
+                            <div class="metric-value fs-5">${referralsText}</div>
                             <div class="metric-label fs-6">Referrals</div>
                         </div>
                     </div>
                 </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="metric">
+                            <div class="metric-value fs-5">
+                                <span class="tier-badge tier-${userData.tier.toLowerCase()}">${userData.tier}</span>
+                            </div>
+                            <div class="metric-label fs-6">Performance Tier</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="performance-stats mt-4">
+                    <h6 class="fs-6">Performance Insights:</h6>
+                    <div class="row mt-3">
+                        <div class="col-6">
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i class="fas fa-chart-line text-success"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-value fs-6">Active</div>
+                                    <div class="stat-label fs-6">Status</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i class="fas fa-bolt text-warning"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-value fs-6">High</div>
+                                    <div class="stat-label fs-6">Performance</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="mt-4">
-                    <button class="btn btn-primary fs-6" onclick="leaderboard.viewDetailedAnalytics('${userId}')">
+                    <button class="btn btn-primary fs-6" onclick="leaderboard.viewDetailedAnalytics('${userData.id}')">
                         <i class="fas fa-chart-line me-2"></i>View Detailed Analytics
                     </button>
                 </div>
@@ -2332,13 +2409,6 @@ class ProfessionalLeaderboard {
     }
 }
 
-// Global functions for onclick handlers
-function analyzeUserPerformance(userId) {
-    if (window.leaderboard) {
-        window.leaderboard.analyzeUserPerformance(userId);
-    }
-}
-
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     window.leaderboard = new ProfessionalLeaderboard();
@@ -2348,8 +2418,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (userRankingElement && userRankingElement.textContent === '#--') {
         // Simulate fetching ranking after a delay
         setTimeout(() => {
-            // This would be your actual API call to get ranking
-            // For now, we'll just simulate it
             if (window.leaderboard) {
                 window.leaderboard.refreshLeaderboard();
             }
