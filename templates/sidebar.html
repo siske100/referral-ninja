@@ -1,193 +1,203 @@
 <div class="sidebar" id="sidebar">
-    <div class="sidebar-header">
-        <div class="logo-container">
-            <div class="logo-image">
-                <img src="{{ url_for('static', filename='images/logo.png') }}" 
-                     alt="Referral Ninja Logo" 
-                     class="sidebar-logo">
-            </div>
-            <div class="logo-text">
-                <h2>ReferralNinja</h2>
-                <span class="logo-subtitle">Earn & Grow</span>
+    <div class="sidebar-static-top">
+        <!-- Sidebar Header -->
+        <div class="sidebar-header">
+            <div class="logo-container">
+                <div class="logo-image">
+                    <img src="{{ url_for('static', filename='images/logo.png') }}" 
+                         alt="Referral Ninja Logo" 
+                         class="sidebar-logo">
+                </div>
+                <div class="logo-text">
+                    <h2>ReferralNinja</h2>
+                    <span class="logo-subtitle">Earn & Grow</span>
+                </div>
             </div>
         </div>
+        
+        <!-- User Info (Static) -->
+        {% if current_user.is_authenticated %}
+        <div class="sidebar-user">
+            <div class="user-avatar">
+                <div class="avatar-gradient">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="user-status"></div>
+            </div>
+            <div class="user-info">
+                <div class="user-name">{{ current_user.username }}</div>
+                <div class="user-balance-mini">
+                    <i class="fas fa-coins"></i>
+                    Ksh {{ "%.2f"|format(current_user.balance) }}
+                </div>
+                <div class="user-referrals">
+                    <i class="fas fa-users"></i>
+                    {{ current_user.referral_count }} Referrals
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
     
-    {% if current_user.is_authenticated %}
-    <div class="sidebar-user">
-        <div class="user-avatar">
-            <div class="avatar-gradient">
-                <i class="fas fa-user"></i>
+    <!-- Scrollable Navigation Section -->
+    <div class="sidebar-scrollable">
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <span class="nav-section-label">Main Menu</span>
+                <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                    <span class="nav-icon">
+                        <div class="nav-icon-bg">
+                            <i class="fas fa-home"></i>
+                        </div>
+                    </span>
+                    <span class="nav-text">Dashboard</span>
+                </a>
+                
+                <a href="{{ url_for('profile') }}" class="nav-item {% if request.endpoint == 'profile' %}active{% endif %}">
+                    <span class="nav-icon">
+                        <div class="nav-icon-bg">
+                            <i class="fas fa-user-circle"></i>
+                        </div>
+                    </span>
+                    <span class="nav-text">Profile</span>
+                </a>
+                
+                <a href="{{ url_for('referral_system') }}" class="nav-item {% if request.endpoint in ['referral_system', 'referrals'] %}active{% endif %}">
+                    <span class="nav-icon">
+                        <div class="nav-icon-bg">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </span>
+                    <span class="nav-text">Referrals</span>
+                    {% if current_user.referral_count > 0 %}
+                    <span class="nav-badge">{{ current_user.referral_count }}</span>
+                    {% endif %}
+                </a>
             </div>
-            <div class="user-status"></div>
-        </div>
-        <div class="user-info">
-            <div class="user-name">{{ current_user.username }}</div>
-            <div class="user-balance-mini">
-                <i class="fas fa-coins"></i>
-                Ksh {{ "%.2f"|format(current_user.balance) }}
+            
+            <div class="nav-section">
+                <span class="nav-section-label">Earnings</span>
+                <a href="{{ url_for('withdraw') }}" class="nav-item {% if request.endpoint == 'withdraw' %}active{% endif %}">
+                    <span class="nav-icon">
+                        <div class="nav-icon-bg">
+                            <i class="fas fa-wallet"></i>
+                        </div>
+                    </span>
+                    <span class="nav-text">Withdraw</span>
+                </a>
+                
+                <a href="{{ url_for('statistics') }}" class="nav-item {% if request.endpoint == 'statistics' %}active{% endif %}">
+                    <span class="nav-icon">
+                        <div class="nav-icon-bg">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                    </span>
+                    <span class="nav-text">Statistics</span>
+                </a>
             </div>
-            <div class="user-referrals">
-                <i class="fas fa-users"></i>
-                {{ current_user.referral_count }} Referrals
+            
+            <div class="nav-section">
+                <span class="nav-section-label">Community</span>
+                <a href="{{ url_for('jobs') }}" class="nav-item {% if request.endpoint == 'jobs' %}active{% endif %}">
+                    <span class="nav-icon">
+                        <div class="nav-icon-bg">
+                            <i class="fas fa-briefcase"></i>
+                        </div>
+                    </span>
+                    <span class="nav-text">Job Opportunities</span>
+                </a>
+                
+                <a href="{{ url_for('leaderboard') }}" class="nav-item {% if request.endpoint == 'leaderboard' %}active{% endif %}">
+                    <span class="nav-icon">
+                        <div class="nav-icon-bg">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                    </span>
+                    <span class="nav-text">Leaderboard</span>
+                </a>
+                
+                <a href="{{ url_for('settings') }}" class="nav-item {% if request.endpoint == 'settings' %}active{% endif %}">
+                    <span class="nav-icon">
+                        <div class="nav-icon-bg">
+                            <i class="fas fa-cog"></i>
+                        </div>
+                    </span>
+                    <span class="nav-text">Settings</span>
+                </a>
             </div>
-        </div>
+            
+            <!-- ADMIN SECTION - ONLY VISIBLE TO ADMIN USERS -->
+            {% if current_user.is_authenticated and current_user.is_admin %}
+            <div class="nav-section admin-section">
+                <span class="nav-section-label">Administration</span>
+                <a href="{{ url_for('admin_dashboard') }}" class="nav-item admin-item {% if request.endpoint == 'admin_dashboard' %}active{% endif %}">
+                    <span class="nav-icon">
+                        <div class="nav-icon-bg">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                    </span>
+                    <span class="nav-text">Admin Panel</span>
+                    <span class="nav-badge admin-badge">ADMIN</span>
+                </a>
+                
+                <a href="{{ url_for('admin_jobs') }}" class="nav-item admin-item {% if request.endpoint == 'admin_jobs' %}active{% endif %}">
+                    <span class="nav-icon">
+                        <div class="nav-icon-bg">
+                            <i class="fas fa-briefcase"></i>
+                        </div>
+                    </span>
+                    <span class="nav-text">Manage Jobs</span>
+                </a>
+                
+                <a href="{{ url_for('admin_withdrawals') }}" class="nav-item admin-item {% if request.endpoint == 'admin_withdrawals' %}active{% endif %}">
+                    <span class="nav-icon">
+                        <div class="nav-icon-bg">
+                            <i class="fas fa-money-bill-wave"></i>
+                        </div>
+                    </span>
+                    <span class="nav-text">Withdrawals</span>
+                </a>
+                
+                <a href="{{ url_for('admin_users') }}" class="nav-item admin-item {% if request.endpoint == 'admin_users' %}active{% endif %}">
+                    <span class="nav-icon">
+                        <div class="nav-icon-bg">
+                            <i class="fas fa-users-cog"></i>
+                        </div>
+                    </span>
+                    <span class="nav-text">User Management</span>
+                </a>
+            </div>
+            {% endif %}
+        </nav>
     </div>
-    {% endif %}
     
-    <nav class="sidebar-nav">
-        <div class="nav-section">
-            <span class="nav-section-label">Main Menu</span>
-            <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
-                <span class="nav-icon">
-                    <div class="nav-icon-bg">
-                        <i class="fas fa-home"></i>
-                    </div>
-                </span>
-                <span class="nav-text">Dashboard</span>
-            </a>
+    <!-- Static Footer -->
+    <div class="sidebar-static-bottom">
+        {% if current_user.is_authenticated %}
+        <div class="sidebar-footer">
+            <div class="balance-card">
+                <div class="balance-header">
+                    <i class="fas fa-wallet"></i>
+                    <span>Available Balance</span>
+                </div>
+                <div class="balance-amount">Ksh {{ "%.2f"|format(current_user.balance) }}</div>
+                <div class="balance-actions">
+                    <a href="{{ url_for('withdraw') }}" class="balance-btn">
+                        <i class="fas fa-arrow-up"></i>
+                        Withdraw
+                    </a>
+                </div>
+            </div>
             
-            <a href="{{ url_for('profile') }}" class="nav-item {% if request.endpoint == 'profile' %}active{% endif %}">
-                <span class="nav-icon">
-                    <div class="nav-icon-bg">
-                        <i class="fas fa-user-circle"></i>
-                    </div>
-                </span>
-                <span class="nav-text">Profile</span>
-            </a>
-            
-            <a href="{{ url_for('referral_system') }}" class="nav-item {% if request.endpoint in ['referral_system', 'referrals'] %}active{% endif %}">
-                <span class="nav-icon">
-                    <div class="nav-icon-bg">
-                        <i class="fas fa-users"></i>
-                    </div>
-                </span>
-                <span class="nav-text">Referrals</span>
-                {% if current_user.referral_count > 0 %}
-                <span class="nav-badge">{{ current_user.referral_count }}</span>
-                {% endif %}
-            </a>
-        </div>
-        
-        <div class="nav-section">
-            <span class="nav-section-label">Earnings</span>
-            <a href="{{ url_for('withdraw') }}" class="nav-item {% if request.endpoint == 'withdraw' %}active{% endif %}">
-                <span class="nav-icon">
-                    <div class="nav-icon-bg">
-                        <i class="fas fa-wallet"></i>
-                    </div>
-                </span>
-                <span class="nav-text">Withdraw</span>
-            </a>
-            
-            <a href="{{ url_for('statistics') }}" class="nav-item {% if request.endpoint == 'statistics' %}active{% endif %}">
-                <span class="nav-icon">
-                    <div class="nav-icon-bg">
-                        <i class="fas fa-chart-bar"></i>
-                    </div>
-                </span>
-                <span class="nav-text">Statistics</span>
-            </a>
-        </div>
-        
-        <div class="nav-section">
-            <span class="nav-section-label">Community</span>
-            <a href="{{ url_for('jobs') }}" class="nav-item {% if request.endpoint == 'jobs' %}active{% endif %}">
-                <span class="nav-icon">
-                    <div class="nav-icon-bg">
-                        <i class="fas fa-briefcase"></i>
-                    </div>
-                </span>
-                <span class="nav-text">Job Opportunities</span>
-            </a>
-            
-            <a href="{{ url_for('leaderboard') }}" class="nav-item {% if request.endpoint == 'leaderboard' %}active{% endif %}">
-                <span class="nav-icon">
-                    <div class="nav-icon-bg">
-                        <i class="fas fa-trophy"></i>
-                    </div>
-                </span>
-                <span class="nav-text">Leaderboard</span>
-            </a>
-            
-            <a href="{{ url_for('settings') }}" class="nav-item {% if request.endpoint == 'settings' %}active{% endif %}">
-                <span class="nav-icon">
-                    <div class="nav-icon-bg">
-                        <i class="fas fa-cog"></i>
-                    </div>
-                </span>
-                <span class="nav-text">Settings</span>
-            </a>
-        </div>
-        
-        <!-- ADMIN SECTION - ONLY VISIBLE TO ADMIN USERS -->
-        {% if current_user.is_authenticated and current_user.is_admin %}
-        <div class="nav-section admin-section">
-            <span class="nav-section-label">Administration</span>
-            <a href="{{ url_for('admin_dashboard') }}" class="nav-item admin-item {% if request.endpoint == 'admin_dashboard' %}active{% endif %}">
-                <span class="nav-icon">
-                    <div class="nav-icon-bg">
-                        <i class="fas fa-shield-alt"></i>
-                    </div>
-                </span>
-                <span class="nav-text">Admin Panel</span>
-                <span class="nav-badge admin-badge">ADMIN</span>
-            </a>
-            
-            <a href="{{ url_for('admin_jobs') }}" class="nav-item admin-item {% if request.endpoint == 'admin_jobs' %}active{% endif %}">
-                <span class="nav-icon">
-                    <div class="nav-icon-bg">
-                        <i class="fas fa-briefcase"></i>
-                    </div>
-                </span>
-                <span class="nav-text">Manage Jobs</span>
-            </a>
-            
-            <a href="{{ url_for('admin_withdrawals') }}" class="nav-item admin-item {% if request.endpoint == 'admin_withdrawals' %}active{% endif %}">
-                <span class="nav-icon">
-                    <div class="nav-icon-bg">
-                        <i class="fas fa-money-bill-wave"></i>
-                    </div>
-                </span>
-                <span class="nav-text">Withdrawals</span>
-            </a>
-            
-            <a href="{{ url_for('admin_users') }}" class="nav-item admin-item {% if request.endpoint == 'admin_users' %}active{% endif %}">
-                <span class="nav-icon">
-                    <div class="nav-icon-bg">
-                        <i class="fas fa-users-cog"></i>
-                    </div>
-                </span>
-                <span class="nav-text">User Management</span>
+            <a href="{{ url_for('logout') }}" class="logout-btn">
+                <div class="logout-icon">
+                    <i class="fas fa-sign-out-alt"></i>
+                </div>
+                <span class="logout-text">Logout</span>
             </a>
         </div>
         {% endif %}
-    </nav>
-    
-    {% if current_user.is_authenticated %}
-    <div class="sidebar-footer">
-        <div class="balance-card">
-            <div class="balance-header">
-                <i class="fas fa-wallet"></i>
-                <span>Available Balance</span>
-            </div>
-            <div class="balance-amount">Ksh {{ "%.2f"|format(current_user.balance) }}</div>
-            <div class="balance-actions">
-                <a href="{{ url_for('withdraw') }}" class="balance-btn">
-                    <i class="fas fa-arrow-up"></i>
-                    Withdraw
-                </a>
-            </div>
-        </div>
-        
-        <a href="{{ url_for('logout') }}" class="logout-btn">
-            <div class="logout-icon">
-                <i class="fas fa-sign-out-alt"></i>
-            </div>
-            <span class="logout-text">Logout</span>
-        </a>
     </div>
-    {% endif %}
 </div>
 
 <!-- Mobile Menu Toggle Button -->
@@ -229,7 +239,7 @@
     color: var(--text-primary);
     position: fixed;
     height: 100vh;
-    overflow-y: auto;
+    overflow: hidden; /* Changed from auto to hidden */
     z-index: 1000;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 
@@ -240,6 +250,27 @@
     display: flex;
     flex-direction: column;
     border-right: var(--glass-border);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+}
+
+/* Static top section */
+.sidebar-static-top {
+    flex-shrink: 0;
+}
+
+/* Scrollable middle section */
+.sidebar-scrollable {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Static bottom section */
+.sidebar-static-bottom {
+    flex-shrink: 0;
+    border-top: var(--glass-border);
+    background: rgba(255,255,255,0.02);
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
 }
@@ -426,7 +457,6 @@
 /* Navigation */
 .sidebar-nav {
     padding: 15px 0;
-    flex: 1;
     display: flex;
     flex-direction: column;
     gap: 5px;
@@ -556,10 +586,6 @@
 /* Sidebar Footer */
 .sidebar-footer {
     padding: 15px;
-    border-top: var(--glass-border);
-    background: rgba(255,255,255,0.02);
-    backdrop-filter: var(--glass-blur);
-    -webkit-backdrop-filter: var(--glass-blur);
 }
 
 .balance-card {
@@ -771,18 +797,23 @@
     }
 }
 
-/* Scrollbar Styling */
-.sidebar::-webkit-scrollbar {
+/* Scrollbar Styling for scrollable section */
+.sidebar-scrollable::-webkit-scrollbar {
     width: 4px;
 }
 
-.sidebar::-webkit-scrollbar-track {
+.sidebar-scrollable::-webkit-scrollbar-track {
     background: rgba(255,255,255,0.05);
 }
 
-.sidebar::-webkit-scrollbar-thumb {
+.sidebar-scrollable::-webkit-scrollbar-thumb {
     background: var(--accent-color);
     border-radius: 10px;
+}
+
+/* Hide scrollbar when collapsed */
+.sidebar.collapsed .sidebar-scrollable::-webkit-scrollbar {
+    display: none;
 }
 </style>
 
