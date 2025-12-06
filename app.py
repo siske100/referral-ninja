@@ -6515,28 +6515,25 @@ def verify_withdrawal_email():
         if not fraud_warnings and phone_number:
             # NORMAL WITHDRAWAL: Send money via M-Pesa immediately
             try:
-                # Initialize M-Pesa service
-                mpesa_service = MpesaService(app.config)
+                # Process withdrawal via existing function
+                withdrawal_data = {
+                    'id': withdrawal_id,
+                    'user_id': current_user.id,
+                    'amount': -amount,
+                    'phone_number': phone_number
+                }
                 
-                # Process M-Pesa payment
-                mpesa_result = mpesa_service.send_money(
-                    phone_number=phone_number,
-                    amount=amount,
-                    transaction_id=withdrawal_id,
-                    description=f"Withdrawal for {current_user.username}"
-                )
+                mpesa_success = process_automatic_withdrawal(withdrawal_data)
                 
-                if mpesa_result.get('success'):
+                if mpesa_success:
                     # Update transaction as completed
                     SupabaseDB.update_transaction(withdrawal_id, {
-                        'status': 'completed',
-                        'description': f'M-Pesa payment sent to {phone_number}',
-                        'mpesa_reference': mpesa_result.get('reference'),
-                        'mpesa_response': json.dumps(mpesa_result)
+                        'status': 'processing',  # Note: It's already 'processing' but we'll keep it
+                        'description': f'M-Pesa B2C payment initiated to {phone_number}'
                     })
                     
                     # Update session status
-                    session['recent_withdrawal_status'] = 'completed'
+                    session['recent_withdrawal_status'] = 'processing'
                     
                     # Send confirmation email using Brevo
                     try:
@@ -6546,13 +6543,12 @@ def verify_withdrawal_email():
                     except Exception as e:
                         app.logger.error(f"Error sending confirmation email: {e}")
                     
-                    flash(f'✅ Withdrawal successful! KES {amount} sent to {phone_number}.', 'success')
+                    flash(f'✅ Withdrawal processing! KES {amount} is being sent to {phone_number}. You will receive an M-Pesa confirmation shortly.', 'success')
                 else:
                     # M-Pesa failed
                     SupabaseDB.update_transaction(withdrawal_id, {
                         'status': 'failed',
-                        'description': f'M-Pesa transfer failed: {mpesa_result.get("error", "Unknown error")}',
-                        'mpesa_response': json.dumps(mpesa_result)
+                        'description': 'M-Pesa B2C initiation failed'
                     })
                     
                     # Refund the user
@@ -6570,7 +6566,7 @@ def verify_withdrawal_email():
                     # Update session status
                     session['recent_withdrawal_status'] = 'failed'
                     
-                    flash('❌ M-Pesa transfer failed. Funds have been returned to your balance.', 'error')
+                    flash('❌ M-Pesa transfer initiation failed. Funds have been returned to your balance.', 'error')
             except Exception as e:
                 app.logger.error(f"Error processing M-Pesa payment: {e}")
                 SupabaseDB.update_transaction(withdrawal_id, {
