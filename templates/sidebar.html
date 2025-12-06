@@ -1,5 +1,4 @@
 <div class="sidebar" id="sidebar">
-    <!-- Static Top Section (1 part) -->
     <div class="sidebar-static-top">
         <!-- Sidebar Header -->
         <div class="sidebar-header">
@@ -40,7 +39,7 @@
         {% endif %}
     </div>
     
-    <!-- Scrollable Navigation Section (3 parts) -->
+    <!-- Scrollable Navigation Section -->
     <div class="sidebar-scrollable">
         <nav class="sidebar-nav">
             <div class="nav-section">
@@ -172,7 +171,7 @@
         </nav>
     </div>
     
-    <!-- Static Bottom Section (1 part) -->
+    <!-- Static Footer -->
     <div class="sidebar-static-bottom">
         {% if current_user.is_authenticated %}
         <div class="sidebar-footer">
@@ -240,7 +239,7 @@
     color: var(--text-primary);
     position: fixed;
     height: 100vh;
-    overflow: hidden;
+    overflow: hidden; /* Changed from auto to hidden */
     z-index: 1000;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 
@@ -255,32 +254,25 @@
     -webkit-backdrop-filter: var(--glass-blur);
 }
 
-/* Static top section - 1 part (20%) */
+/* Static top section */
 .sidebar-static-top {
-    flex: 1; /* 1 part */
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
+    flex-shrink: 0;
 }
 
-/* Scrollable middle section - 3 parts (60%) */
+/* Scrollable middle section */
 .sidebar-scrollable {
-    flex: 3; /* 3 parts */
-    min-height: 0;
+    flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
 }
 
-/* Static bottom section - 1 part (20%) */
+/* Static bottom section */
 .sidebar-static-bottom {
-    flex: 1; /* 1 part */
-    min-height: 0;
+    flex-shrink: 0;
     border-top: var(--glass-border);
     background: rgba(255,255,255,0.02);
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
-    display: flex;
-    flex-direction: column;
 }
 
 .sidebar.collapsed {
@@ -327,7 +319,6 @@
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
     position: relative;
-    flex-shrink: 0;
 }
 
 .logo-container {
@@ -393,7 +384,6 @@
     background: rgba(255,255,255,0.03);
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
-    flex-shrink: 0;
 }
 
 .user-avatar {
@@ -470,7 +460,6 @@
     display: flex;
     flex-direction: column;
     gap: 5px;
-    min-height: 100%;
 }
 
 .nav-section {
@@ -597,10 +586,6 @@
 /* Sidebar Footer */
 .sidebar-footer {
     padding: 15px;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    flex: 1;
 }
 
 .balance-card {
@@ -611,7 +596,6 @@
     margin-bottom: 12px;
     text-align: center;
     transition: all 0.3s ease;
-    flex-shrink: 0;
 }
 
 .balance-card:hover {
@@ -680,7 +664,6 @@
     transition: all 0.3s ease;
     border: 1px solid rgba(244, 67, 54, 0.2);
     gap: 10px;
-    flex-shrink: 0;
 }
 
 .logout-btn:hover {
@@ -831,44 +814,6 @@
 /* Hide scrollbar when collapsed */
 .sidebar.collapsed .sidebar-scrollable::-webkit-scrollbar {
     display: none;
-}
-
-/* Adjust collapsed state for the new layout */
-.sidebar.collapsed .sidebar-static-top {
-    flex: 1;
-}
-
-.sidebar.collapsed .sidebar-scrollable {
-    flex: 3;
-}
-
-.sidebar.collapsed .sidebar-static-bottom {
-    flex: 1;
-}
-
-.sidebar.collapsed .sidebar-header {
-    padding: 20px 0;
-    justify-content: center;
-}
-
-.sidebar.collapsed .sidebar-user {
-    padding: 20px 0;
-    justify-content: center;
-}
-
-/* Ensure proper spacing in collapsed state */
-.sidebar.collapsed .sidebar-footer {
-    padding: 10px 5px;
-}
-
-.sidebar.collapsed .balance-btn {
-    padding: 6px;
-    font-size: 0.7rem;
-}
-
-.sidebar.collapsed .logout-btn {
-    padding: 10px 5px;
-    justify-content: center;
 }
 </style>
 
