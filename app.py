@@ -5793,6 +5793,57 @@ def reload_user_from_db(user_id):
     
     return current_user
 
+def send_brevo_email(to_email, subject, html_content, text_content=None):
+    """Send email using Brevo API - MODULE LEVEL FUNCTION"""
+    try:
+        from flask import current_app
+        app = current_app._get_current_object()
+        
+        api_key = app.config.get('BREVO_API_KEY')
+        sender_name = app.config.get('BREVO_SENDER_NAME', 'ReferralNinja')
+        sender_email = app.config.get('BREVO_SENDER_EMAIL', 'noreply@referralninja.co.ke')
+
+        if not api_key:
+            app.logger.error("Brevo API key not configured")
+            return False, "Email service not configured"
+
+        url = "https://api.brevo.com/v3/smtp/email"
+        headers = {
+            "api-key": api_key,
+            "Content-Type": "application/json"
+        }
+
+        # If no text content provided, use a simple version of HTML
+        if not text_content:
+            # Create a simple text version from HTML
+            import re
+            text_content = re.sub(r'<[^>]+>', '', html_content)
+            text_content = re.sub(r'\s+', ' ', text_content).strip()
+
+        data = {
+            "sender": {
+                "name": sender_name,
+                "email": sender_email
+            },
+            "to": [{"email": to_email}],
+            "subject": subject,
+            "htmlContent": html_content,
+            "textContent": text_content
+        }
+
+        response = requests.post(url, headers=headers, json=data, timeout=30)
+
+        if response.status_code == 201:
+            app.logger.info(f"✅ Brevo email sent successfully to {to_email}")
+            return True, "Email sent successfully"
+        else:
+            app.logger.error(f"❌ Brevo API error: {response.status_code} - {response.text}")
+            return False, f"Email service error: {response.status_code}"
+
+    except Exception as e:
+        app.logger.error(f"❌ Error sending Brevo email: {e}")
+        return False, f"Email sending failed: {str(e)}"
+
 # UPDATED WITHDRAW ROUTE - Now with enhanced fraud detection and Brevo email integration
 @app.route('/withdraw', methods=['GET', 'POST'])
 @login_required
