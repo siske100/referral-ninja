@@ -1,50 +1,21 @@
 {% extends "auth/base.html" %}
 
-{% block title %}Join Referral Ninja - Career Launchpad{% endblock %}
+{% block title %}Join - Referral Ninja{% endblock %}
 
 {% block auth_content %}
 <div class="auth-card">
     <div class="auth-header">
         <div class="auth-logo">
-            <i class="fas fa-rocket"></i>
+            <i class="fas fa-user-ninja"></i>
         </div>
-        <h2 class="fw-bold mb-2">Launch Your Future</h2>
-        <p class="auth-subtitle mb-0">Join Kenya's fastest-growing career community</p>
-        <div class="community-badge">
-            <i class="fas fa-users me-1"></i>TRUSTED COMMUNITY
+        <h2 class="fw-bold mb-2">Join Referral Ninja</h2>
+        <p class="auth-subtitle mb-0">Earn KSH 50 for every friend who joins!</p>
+        <div class="ninja-badge">
+            <i class="fas fa-bolt me-1"></i>INSTANT COMMISSIONS
         </div>
     </div>
     
     <div class="auth-body">
-        <!-- Investment Overview -->
-        <div class="investment-card mb-4">
-            <div class="text-center mb-3">
-                <h4 class="fw-bold mb-1">Your Career Investment</h4>
-                <div class="investment-amount">
-                    <span class="h2 fw-bold text-primary">KSH 200</span>
-                    <span class="text-muted ms-1">/ Lifetime Access</span>
-                </div>
-            </div>
-            <div class="investment-benefits">
-                <div class="benefit-item">
-                    <i class="fas fa-check-circle text-success"></i>
-                    <span>Curated Job Opportunities</span>
-                </div>
-                <div class="benefit-item">
-                    <i class="fas fa-check-circle text-success"></i>
-                    <span>Professional Network Building</span>
-                </div>
-                <div class="benefit-item">
-                    <i class="fas fa-check-circle text-success"></i>
-                    <span>Earn While You Learn</span>
-                </div>
-                <div class="benefit-item">
-                    <i class="fas fa-check-circle text-success"></i>
-                    <span>24/7 Community Support</span>
-                </div>
-            </div>
-        </div>
-        
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -63,59 +34,58 @@
                     <label for="username" class="form-label fw-semibold">Username</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light border-end-0">
-                            <i class="fas fa-user text-primary"></i>
+                            <i class="fas fa-user text-danger"></i>
                         </span>
                         <input type="text" class="form-control border-start-0" id="username" name="username" 
-                               required placeholder="Choose your username" value="{{ request.form.username if request.form }}">
+                               required placeholder="Choose a username" value="{{ request.form.username if request.form }}">
                     </div>
-                    <div class="form-text">Your unique identity in our community</div>
+                    <div class="form-text">3-20 characters, letters and numbers only</div>
                 </div>
 
-                <!-- Full Name Field -->
+                <!-- Full Name Field Added Here -->
                 <div class="col-12 mb-3">
                     <label for="full_name" class="form-label fw-semibold">Full Name</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light border-end-0">
-                            <i class="fas fa-id-card text-primary"></i>
+                            <i class="fas fa-id-card text-danger"></i>
                         </span>
                         <input type="text" class="form-control border-start-0" id="full_name" name="full_name" 
-                               required placeholder="Your complete name" value="{{ request.form.full_name if request.form }}">
+                               required placeholder="Enter your full name" value="{{ request.form.full_name if request.form }}">
                     </div>
-                    <div class="form-text">Appears on your profile and leaderboard</div>
+                    <div class="form-text">Your complete name as it should appear on your account</div>
                 </div>
                 
                 <div class="col-12 mb-3">
-                    <label for="email" class="form-label fw-semibold">Email Address</label>
+                    <label for="email" class="form-label fw-semibold">Email</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light border-end-0">
-                            <i class="fas fa-envelope text-primary"></i>
+                            <i class="fas fa-envelope text-danger"></i>
                         </span>
                         <input type="email" class="form-control border-start-0" id="email" name="email" 
-                               required placeholder="you@example.com" value="{{ request.form.email if request.form }}">
+                               required placeholder="Enter your email" value="{{ request.form.email if request.form }}">
                     </div>
-                    <div class="form-text">For important updates and job alerts</div>
                 </div>
                 
                 <div class="col-12 mb-3">
                     <label for="phone_number" class="form-label fw-semibold">Phone Number</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light border-end-0">
-                            <i class="fas fa-phone text-primary"></i>
+                            <i class="fas fa-phone text-danger"></i>
                         </span>
                         <input type="tel" class="form-control border-start-0" id="phone_number" name="phone_number" 
-                               required placeholder="07XX XXX XXX" value="{{ request.form.phone_number if request.form }}">
+                               required placeholder="07XX XXX XXX or 2547XX XXX XXX" value="{{ request.form.phone_number if request.form }}">
                     </div>
-                    <div class="form-text">For M-Pesa payments and referral verification</div>
+                    <div class="form-text">We'll use this for M-Pesa payments and your referral code</div>
                 </div>
                 
                 <div class="col-12 mb-3">
-                    <label for="password" class="form-label fw-semibold">Secure Password</label>
+                    <label for="password" class="form-label fw-semibold">Password</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light border-end-0">
-                            <i class="fas fa-lock text-primary"></i>
+                            <i class="fas fa-lock text-danger"></i>
                         </span>
                         <input type="password" class="form-control border-start-0" id="password" name="password" 
-                               required placeholder="Create a strong password" minlength="6">
+                               required placeholder="Create a password" minlength="6">
                         <button type="button" class="btn btn-outline-secondary password-toggle border-start-0">
                             <i class="fas fa-eye"></i>
                         </button>
@@ -132,7 +102,7 @@
                 
                 <div class="col-12 mb-3">
                     <label for="referral_code" class="form-label fw-semibold">
-                        <i class="fas fa-user-friends me-1"></i>Referral Code 
+                        Referral Code 
                         {% if referral_code %}
                         <span class="badge bg-success ms-1">Pre-filled</span>
                         {% else %}
@@ -141,39 +111,37 @@
                     </label>
                     <div class="input-group">
                         <span class="input-group-text bg-light border-end-0">
-                            <i class="fas fa-gift text-primary"></i>
+                            <i class="fas fa-user-friends text-danger"></i>
                         </span>
                         <input type="text" 
                                class="form-control border-start-0 {% if referral_code %}bg-light{% endif %}" 
                                id="referral_code" 
                                name="referral_code" 
-                               placeholder="{% if referral_code %}Friend's code applied{% else %}Friend's referral code{% endif %}" 
+                               placeholder="{% if referral_code %}Referral code pre-filled{% else %}Enter friend's referral code{% endif %}" 
                                value="{{ referral_code if referral_code else (request.form.referral_code if request.form.referral_code else '') }}"
                                {% if referral_code %}readonly{% endif %}>
                         {% if referral_code %}
                         <span class="input-group-text bg-success text-white">
-                            <i class="fas fa-check"></i>
+                            <i class="fas fa-lock"></i>
                         </span>
                         {% endif %}
                     </div>
                     <div class="form-text">
                         {% if referral_code %}
-                        <i class="fas fa-info-circle text-success me-1"></i>Welcome bonus activated!
+                        <i class="fas fa-info-circle text-success me-1"></i>Referral code pre-filled and locked
                         {% else %}
-                        Get KSH 50 welcome bonus with a friend's code
+                        Get KSH 50 bonus when you join with a referral code
                         {% endif %}
                     </div>
                 </div>
             </div>
 
-            <!-- reCAPTCHA Section -->
+            <!-- reCAPTCHA Section - Always Shown for Registration -->
             <div class="mb-4">
-                <div class="form-label fw-semibold">
-                    <i class="fas fa-shield-alt me-1"></i>Security Verification
-                </div>
+                <div class="form-label fw-semibold">Security Verification</div>
                 <div class="g-recaptcha" data-sitekey="{{ recaptcha_site_key }}"></div>
                 <div class="form-text text-muted">
-                    Protecting our community from spam and bots
+                    <i class="fas fa-shield-alt me-1"></i>Please verify you're not a robot
                 </div>
             </div>
             
@@ -181,39 +149,21 @@
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox" id="terms" name="terms" required>
                     <label class="form-check-label" for="terms">
-                        I agree to the <a href="#" class="text-primary">Terms of Service</a> and 
-                        <a href="#" class="text-primary">Privacy Policy</a>
-                    </label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="marketing" name="marketing">
-                    <label class="form-check-label" for="marketing">
-                        Receive job alerts and community updates via email
+                        I agree to the <a href="#" class="text-danger">Terms of Service</a> and <a href="#" class="text-danger">Privacy Policy</a>
                     </label>
                 </div>
             </div>
             
             <button type="submit" class="btn btn-primary w-100 py-3 fw-semibold">
-                <i class="fas fa-rocket me-2"></i>Launch My Career - KSH 200
+                <i class="fas fa-user-plus me-2"></i>Become a Ninja
             </button>
-            
-            <div class="text-center mt-3">
-                <small class="text-muted">
-                    <i class="fas fa-lock me-1"></i>Secure payment via M-Pesa
-                </small>
-            </div>
         </form>
         
-        <div class="auth-footer mt-4">
-            <p class="mb-0 text-center text-muted">
-                Already part of our community? 
-                <a href="{{ url_for('login') }}" class="text-primary fw-semibold text-decoration-none">Sign In Here</a>
+        <div class="auth-footer">
+            <p class="mb-0 text-muted">
+                Already a ninja? 
+                <a href="{{ url_for('login') }}" class="text-danger fw-semibold text-decoration-none">Sign In</a>
             </p>
-            <div class="text-center mt-3">
-                <small class="text-muted">
-                    Need help? WhatsApp us at <strong>0799 326 074</strong>
-                </small>
-            </div>
         </div>
     </div>
 </div>
@@ -254,22 +204,18 @@
                 if (password.match(/[a-z]/)) strength += 25;
                 if (password.match(/[A-Z]/)) strength += 25;
                 if (password.match(/[0-9]/)) strength += 25;
-                if (password.match(/[^a-zA-Z0-9]/)) strength += 25;
-                
-                // Cap at 100%
-                strength = Math.min(strength, 100);
                 
                 strengthBar.style.width = strength + '%';
                 
                 if (strength < 50) {
                     strengthBar.className = 'progress-bar bg-danger';
-                    feedbackText = 'Weak password - add more characters and variety';
+                    feedbackText = 'Weak password';
                 } else if (strength < 75) {
                     strengthBar.className = 'progress-bar bg-warning';
-                    feedbackText = 'Medium password - could be stronger';
+                    feedbackText = 'Medium password';
                 } else {
                     strengthBar.className = 'progress-bar bg-success';
-                    feedbackText = 'Strong password - excellent!';
+                    feedbackText = 'Strong password';
                 }
                 
                 feedback.textContent = feedbackText;
@@ -281,26 +227,9 @@
         if (phoneInput) {
             phoneInput.addEventListener('input', function(e) {
                 let value = e.target.value.replace(/\D/g, '');
-                
-                // Format as user types
-                if (value.startsWith('0') && value.length <= 10) {
-                    // Keep as 07XX XXX XXX format
-                    if (value.length > 3) {
-                        value = value.replace(/(\d{4})(\d{3})/, '$1 $2');
-                    }
-                    if (value.length > 7) {
-                        value = value.replace(/(\d{4})(\d{3})(\d{3})/, '$1 $2 $3');
-                    }
-                } else if (value.startsWith('254') && value.length <= 12) {
-                    // Convert to 254 format
-                    if (value.length > 3) {
-                        value = value.replace(/(\d{3})(\d{3})/, '$1 $2');
-                    }
-                    if (value.length > 6) {
-                        value = value.replace(/(\d{3})(\d{3})(\d{3})/, '$1 $2 $3');
-                    }
+                if (value.startsWith('0')) {
+                    value = '254' + value.substring(1);
                 }
-                
                 e.target.value = value;
             });
         }
@@ -351,40 +280,20 @@
                     return;
                 }
 
-                // Validate email format
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(email)) {
-                    e.preventDefault();
-                    showError('Please enter a valid email address');
-                    return;
-                }
-
-                // Validate phone number (basic Kenyan format)
-                const phoneRegex = /^(07\d{1}\s?\d{3}\s?\d{3}|2547\d{1}\s?\d{3}\s?\d{3})$/;
-                const cleanedPhone = phone.replace(/\s/g, '');
-                if (!phoneRegex.test(cleanedPhone)) {
-                    e.preventDefault();
-                    showError('Please enter a valid Kenyan phone number (07XX XXX XXX)');
-                    return;
-                }
-
                 // Validate reCAPTCHA
-                if (typeof grecaptcha !== 'undefined') {
-                    const recaptchaResponse = grecaptcha.getResponse();
-                    if (!recaptchaResponse) {
-                        e.preventDefault();
-                        showError('Please complete the security verification');
-                        return;
-                    }
+                const recaptchaResponse = grecaptcha.getResponse();
+                if (!recaptchaResponse) {
+                    e.preventDefault();
+                    showError('Please complete the reCAPTCHA verification');
+                    return;
                 }
 
                 // Show loading state
                 const submitBtn = this.querySelector('button[type="submit"]');
                 submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Launching Your Future...';
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
                 
-                // Allow form submission
-                return true;
+                // Form will submit normally to Flask, which will redirect to account_activation
             });
         }
 
@@ -443,88 +352,6 @@
                 }
             });
         });
-        
-        // Investment card highlight animation
-        const investmentCard = document.querySelector('.investment-card');
-        if (investmentCard) {
-            investmentCard.style.transition = 'transform 0.3s ease, box-shadow 0.3s ease';
-            investmentCard.addEventListener('mouseenter', function() {
-                this.style.transform = 'translateY(-5px)';
-                this.style.boxShadow = '0 10px 20px rgba(0,0,0,0.1)';
-            });
-            investmentCard.addEventListener('mouseleave', function() {
-                this.style.transform = 'translateY(0)';
-                this.style.boxShadow = 'none';
-            });
-        }
     });
 </script>
-
-<style>
-    .investment-card {
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        border: 2px solid #e2e8f0;
-        border-radius: 15px;
-        padding: 1.5rem;
-    }
-    
-    .investment-amount {
-        background: white;
-        padding: 1rem;
-        border-radius: 10px;
-        border: 2px dashed #2c5aa0;
-    }
-    
-    .investment-benefits {
-        text-align: left;
-        margin-top: 1rem;
-    }
-    
-    .benefit-item {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        margin-bottom: 0.5rem;
-        font-size: 0.9rem;
-    }
-    
-    .benefit-item i {
-        font-size: 0.8rem;
-    }
-    
-    .community-badge {
-        background: linear-gradient(135deg, #ff7a45, #ff5722);
-        color: white;
-        padding: 0.4rem 1rem;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        display: inline-block;
-        margin-top: 0.5rem;
-    }
-    
-    .auth-logo i {
-        font-size: 3rem;
-        color: #2c5aa0;
-        background: linear-gradient(135deg, #e0f2fe, #f0f9ff);
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto 1rem;
-    }
-    
-    .btn-primary {
-        background: linear-gradient(135deg, #2c5aa0, #1a3a6e);
-        border: none;
-        font-weight: 600;
-    }
-    
-    .btn-primary:hover {
-        background: linear-gradient(135deg, #1a3a6e, #0f2852);
-        transform: translateY(-2px);
-    }
-</style>
 {% endblock %}
