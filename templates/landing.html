@@ -153,61 +153,49 @@
             background: #f8fafc;
         }
         
-        .testimonial-card {
-            background: white;
-            border-radius: 15px;
-            padding: 1.5rem;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-            height: 100%;
-            border-top: 4px solid var(--primary-blue);
+        .whatsapp-btn {
+            background: #25D366;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
         }
         
-        .testimonial-photo {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 3px solid var(--primary-blue);
-            margin-bottom: 1rem;
+        .whatsapp-btn:hover {
+            background: #128C7E;
+            color: white;
+            transform: translateY(-2px);
         }
         
-        .transparency-card {
+        .step-card {
             background: white;
             border-radius: 15px;
             padding: 2rem;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
-            border: 1px solid #e2e8f0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            text-align: center;
+            border-top: 4px solid var(--primary-blue);
+            height: 100%;
         }
         
-        .chart-container {
-            max-width: 300px;
-            margin: 0 auto;
-        }
-        
-        .chart-segment {
-            height: 30px;
+        .step-number {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-dark-blue));
+            color: white;
+            border-radius: 50%;
             display: flex;
             align-items: center;
-            padding: 0 1rem;
-            margin-bottom: 0.5rem;
-            border-radius: 15px;
-            color: white;
-            font-weight: 500;
-        }
-        
-        .member-badge {
-            display: inline-block;
-            background: var(--accent-green);
-            color: white;
-            padding: 0.25rem 0.75rem;
-            border-radius: 12px;
-            font-size: 0.8rem;
-            margin-left: 0.5rem;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.5rem;
+            margin: 0 auto 1rem;
         }
     </style>
 </head>
 <body>
-    <!-- Hero Section - COMPLETELY REFRAMED -->
+    <!-- Hero Section -->
     <section class="landing-hero">
         <div class="container">
             <div class="row align-items-center">
@@ -253,8 +241,14 @@
                             </a>
                         </div>
                         
+                        <div class="mt-4">
+                            <a href="https://wa.me/254799326074" class="btn whatsapp-btn" target="_blank">
+                                <i class="fab fa-whatsapp me-2"></i>Need Help? WhatsApp Us
+                            </a>
+                        </div>
+                        
                         <p class="text-muted mt-3 small">
-                            <i class="fas fa-lock me-1"></i>One-time investment. Lifetime access.
+                            <i class="fas fa-lock me-1"></i>One-time investment of KSH 200. Lifetime access.
                         </p>
                     </div>
                 </div>
@@ -267,40 +261,34 @@
         </div>
     </section>
 
-    <!-- Trust Section: Real Results -->
-    <section class="py-5 trust-section" id="real-results">
+    <!-- How It Works Section -->
+    <section class="py-5 bg-light" id="how-it-works">
         <div class="container">
             <div class="text-center mb-5">
-                <h2 class="fw-bold">Real Results From Real Members</h2>
-                <p class="text-muted">See how Referral Ninja is transforming careers and creating opportunities</p>
+                <h2 class="fw-bold">Start Your Journey in 3 Simple Steps</h2>
+                <p class="text-muted">Join thousands who are already building their future with Referral Ninja</p>
             </div>
             
             <div class="row g-4">
                 <div class="col-md-4">
-                    <div class="testimonial-card">
-                        <img src="https://images.unsplash.com/photo-1494790108755-2616b786d4d1?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" 
-                             alt="Mary K." class="testimonial-photo">
-                        <h5>Mary K. <span class="member-badge">Job Getter</span></h5>
-                        <p class="text-muted">Graduate, UoN</p>
-                        <p class="mb-0">"I found my internship at a top tech company through Referral Ninja. The community connections made all the difference!"</p>
+                    <div class="step-card">
+                        <div class="step-number">1</div>
+                        <h4>Join the Community</h4>
+                        <p class="text-muted">Sign up with your phone number and make a one-time KSH 200 investment for lifetime access to our platform.</p>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="testimonial-card">
-                        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" 
-                             alt="David M." class="testimonial-photo">
-                        <h5>David M. <span class="member-badge">Top Earner</span></h5>
-                        <p class="text-muted">3rd Year, KU</p>
-                        <p class="mb-0">"The earnings helped fund my professional certifications. It's not just pocket money—it's investing in my future."</p>
+                    <div class="step-card">
+                        <div class="step-number">2</div>
+                        <h4>Access & Explore</h4>
+                        <p class="text-muted">Browse curated job opportunities, connect with peers, and get your unique referral link.</p>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="testimonial-card">
-                        <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80" 
-                             alt="Susan A." class="testimonial-photo">
-                        <h5>Susan A. <span class="member-badge">Community Leader</span></h5>
-                        <p class="text-muted">Recent Graduate</p>
-                        <p class="mb-0">"The WhatsApp group support and interview tips are invaluable. It feels like we're all winning together."</p>
+                    <div class="step-card">
+                        <div class="step-number">3</div>
+                        <h4>Grow & Earn</h4>
+                        <p class="text-muted">Share your link, help friends find opportunities, and earn rewards while building your network.</p>
                     </div>
                 </div>
             </div>
@@ -308,11 +296,11 @@
     </section>
 
     <!-- Value Proposition Section -->
-    <section class="py-5" id="how-it-works">
+    <section class="py-5" id="value-proposition">
         <div class="container">
             <div class="text-center mb-5">
                 <h2 class="fw-bold">More Than Just Referrals</h2>
-                <p class="text-muted">Your one-time investment unlocks a complete career ecosystem</p>
+                <p class="text-muted">Your investment unlocks a complete career development ecosystem</p>
             </div>
             
             <div class="row g-4">
@@ -347,67 +335,7 @@
         </div>
     </section>
 
-    <!-- Transparency Section -->
-    <section class="py-5 bg-light">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-lg-6">
-                    <div class="transparency-card">
-                        <h3 class="fw-bold mb-4">Complete Transparency</h3>
-                        <p class="text-muted mb-4">We believe you should know exactly where your investment goes. Here's how your one-time KSH 200 membership fee is allocated:</p>
-                        
-                        <div class="chart-container">
-                            <div class="chart-segment" style="background: #2ecc71; width: 25%">
-                                KSH 50 → Member Rewards
-                            </div>
-                            <div class="chart-segment" style="background: #3498db; width: 50%">
-                                KSH 100 → Platform & Security
-                            </div>
-                            <div class="chart-segment" style="background: #9b59b6; width: 15%">
-                                KSH 30 → Job Curation
-                            </div>
-                            <div class="chart-segment" style="background: #e67e22; width: 10%">
-                                KSH 20 → Community Pool
-                            </div>
-                        </div>
-                        
-                        <p class="mt-4 small text-muted">
-                            <i class="fas fa-info-circle me-1"></i>
-                            This sustainable model ensures quality opportunities, secure platform operations, and rewarding experiences for everyone.
-                        </p>
-                    </div>
-                </div>
-                <div class="col-lg-6">
-                    <div class="p-4">
-                        <h4 class="fw-bold">Why a Small Investment?</h4>
-                        <p class="text-muted">
-                            The nominal KSH 200 lifetime membership fee serves three important purposes:
-                        </p>
-                        <div class="benefit-item">
-                            <i class="fas fa-shield-alt text-primary"></i>
-                            <span><strong>Ensures Serious Members:</strong> Creates a committed community</span>
-                        </div>
-                        <div class="benefit-item">
-                            <i class="fas fa-cogs text-primary"></i>
-                            <span><strong>Funds Platform Quality:</strong> Keeps the job board curated and scam-free</span>
-                        </div>
-                        <div class="benefit-item">
-                            <i class="fas fa-gift text-primary"></i>
-                            <span><strong>Enables Rewards:</strong> Makes experiences like the Valentine's vacation possible</span>
-                        </div>
-                        <div class="mt-4">
-                            <p class="mb-0">
-                                <strong>Think of it this way:</strong> Less than the cost of a lunch for lifetime access to 
-                                opportunities that could launch your career.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Final CTA Section -->
+    <!-- CTA Section -->
     <section class="py-5" style="background: linear-gradient(135deg, var(--primary-blue), var(--primary-dark-blue)); color: white;">
         <div class="container text-center">
             <h2 class="fw-bold mb-3">Ready to Launch Your Future?</h2>
@@ -416,7 +344,7 @@
                 <i class="fas fa-user-plus me-2"></i>Unlock My Access Now
             </a>
             <p class="mt-3 small opacity-75">
-                One-time investment of KSH 200 • Lifetime membership • 30-day satisfaction guarantee
+                One-time investment of KSH 200 • Lifetime membership • 24/7 Support Available
             </p>
         </div>
     </section>
@@ -431,8 +359,8 @@
                 </div>
                 <div class="col-md-6 text-md-end">
                     <p class="mb-0 small">
-                        <i class="fas fa-envelope me-1"></i> support@referralninja.co.ke<br>
-                        <i class="fas fa-phone me-1"></i> 0700 000 000
+                        <i class="fas fa-headset me-1"></i> Support: 0799 326 074<br>
+                        <i class="fas fa-clock me-1"></i> Available 24/7
                     </p>
                 </div>
             </div>
@@ -444,36 +372,5 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Simple animation for chart segments on scroll
-        document.addEventListener('DOMContentLoaded', function() {
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const segments = entry.target.querySelectorAll('.chart-segment');
-                        segments.forEach((segment, index) => {
-                            setTimeout(() => {
-                                segment.style.opacity = '1';
-                                segment.style.transform = 'translateX(0)';
-                            }, index * 200);
-                        });
-                    }
-                });
-            }, { threshold: 0.5 });
-            
-            const chartContainer = document.querySelector('.chart-container');
-            if (chartContainer) {
-                // Set initial state
-                const segments = chartContainer.querySelectorAll('.chart-segment');
-                segments.forEach(segment => {
-                    segment.style.opacity = '0';
-                    segment.style.transform = 'translateX(-20px)';
-                    segment.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-                });
-                
-                observer.observe(chartContainer);
-            }
-        });
-    </script>
 </body>
 </html>
