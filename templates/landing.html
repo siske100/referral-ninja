@@ -3,20 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Referral Ninja - Earn KSH 50 Per Referral</title>
+    <title>Career Ninja Network - Your Professional Community</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         :root {
-            --primary-red: #e74c3c;
-            --primary-dark: #c0392b;
-            --secondary-dark: #2c3e50;
+            --primary-blue: #2980b9;
+            --primary-dark: #1c5d86;
+            --accent-green: #27ae60;
             --accent-orange: #e67e22;
+            --text-dark: #2c3e50;
         }
         
         .landing-hero {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            color: white;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            color: var(--text-dark);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -28,21 +29,23 @@
             padding-right: env(safe-area-inset-right);
         }
         
-        .hero-content {
-            position: relative;
-            z-index: 2;
+        .trust-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin: 2rem 0;
         }
         
-        .ninja-badge {
-            background: linear-gradient(135deg, var(--primary-red), var(--primary-dark));
-            color: white;
-            padding: 0.5rem 1.5rem;
-            border-radius: 25px;
-            font-size: clamp(0.8rem, 2vw, 0.9rem);
-            font-weight: 600;
-            display: inline-block;
-            margin-bottom: 1rem;
-            margin-top: clamp(0.5rem, 3vh, 2rem);
+        .trust-badge {
+            background: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border: 1px solid #e9ecef;
         }
         
         .hero-image {
@@ -50,47 +53,51 @@
             text-align: center;
         }
         
-        .hero-image i {
-            font-size: clamp(8rem, 25vw, 15rem);
-            color: rgba(231, 76, 60, 0.1);
-            animation: float 3s ease-in-out infinite;
-        }
-        
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-20px); }
+        .hero-image img {
+            max-width: 100%;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
         }
         
         .feature-card {
-            background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(10px);
+            background: white;
             border-radius: 15px;
             padding: clamp(1.5rem, 4vw, 2rem);
             text-align: center;
-            border: 1px solid rgba(255,255,255,0.2);
+            border: none;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
             transition: all 0.3s ease;
+            height: 100%;
         }
         
         .feature-card:hover {
             transform: translateY(-10px);
-            background: rgba(231, 76, 60, 0.2);
+            box-shadow: 0 15px 30px rgba(41, 128, 185, 0.15);
         }
         
         .feature-icon {
-            width: clamp(60px, 15vw, 80px);
-            height: clamp(60px, 15vw, 80px);
-            background: linear-gradient(135deg, var(--primary-red), var(--primary-dark));
+            width: clamp(60px, 15vw, 70px);
+            height: clamp(60px, 15vw, 70px);
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-dark));
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto 1rem;
-            font-size: clamp(1.5rem, 4vw, 2rem);
+            font-size: clamp(1.2rem, 3vw, 1.5rem);
             color: white;
         }
         
+        .feature-icon.jobs {
+            background: linear-gradient(135deg, var(--accent-green), #219653);
+        }
+        
+        .feature-icon.community {
+            background: linear-gradient(135deg, var(--accent-orange), #d35400);
+        }
+        
         .btn-primary {
-            background: linear-gradient(135deg, var(--primary-red), var(--primary-dark));
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-dark));
             border: none;
             padding: 12px 30px;
             font-weight: 600;
@@ -101,11 +108,12 @@
         
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+            box-shadow: 0 5px 15px rgba(41, 128, 185, 0.3);
         }
         
-        .btn-outline-light {
-            border: 2px solid white;
+        .btn-outline-primary {
+            border: 2px solid var(--primary-blue);
+            color: var(--primary-blue);
             padding: 12px 30px;
             font-weight: 600;
             border-radius: 25px;
@@ -113,142 +121,325 @@
             font-size: clamp(0.9rem, 2vw, 1rem);
         }
         
-        .btn-outline-light:hover {
-            background: white;
-            color: var(--primary-red);
+        .btn-outline-primary:hover {
+            background: var(--primary-blue);
+            color: white;
         }
         
-        .hero-buttons {
-            display: flex;
-            flex-wrap: wrap;
-            gap: clamp(0.75rem, 3vw, 1rem);
+        .value-prop {
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-dark));
+            color: white;
+            padding: 3rem 0;
         }
         
-        .hero-buttons .btn {
-            flex: 1 1 auto;
-            min-width: 140px;
+        .transparent-box {
+            background: rgba(255,255,255,0.9);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .stat-number {
+            font-size: clamp(2rem, 5vw, 3rem);
+            font-weight: bold;
+            color: var(--primary-blue);
         }
         
         h1.display-3 {
-            font-size: clamp(2rem, 8vw, 4.5rem);
+            font-size: clamp(1.75rem, 6vw, 3.5rem);
+            line-height: 1.2;
         }
         
-        .earning-stats h3 {
-            font-size: clamp(1.25rem, 4vw, 1.75rem);
+        .stats-section {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            padding: 4rem 0;
+        }
+        
+        .stat-card {
+            text-align: center;
+            padding: 2rem;
+        }
+        
+        .stat-icon {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-dark));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            color: white;
+            font-size: 1.5rem;
         }
     </style>
 </head>
 <body>
-    <!-- Hero Section -->
+    <!-- Hero Section - Refocused on Community & Jobs -->
     <section class="landing-hero">
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-lg-6">
                     <div class="hero-content">
-                        <div class="ninja-badge">
-                            <i class="fas fa-bolt me-1"></i> INSTANT EARNINGS
+                        <div class="mb-4">
+                            <span class="badge bg-primary bg-gradient mb-2" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
+                                <i class="fas fa-users me-1"></i> COMMUNITY-POWERED
+                            </span>
+                            <h1 class="display-3 fw-bold mb-3">
+                                Don't Job Hunt
+                                <span class="text-primary">Alone</span>
+                            </h1>
+                            <p class="lead mb-4">
+                                Join a network of professionals who <strong>share opportunities</strong> and refer each other to jobs. 
+                                Your next career move starts here.
+                            </p>
                         </div>
-                        <h1 class="display-3 fw-bold mb-4">
-                            Become a 
-                            <span class="text-danger">Referral Ninja</span>
-                        </h1>
-                        <p class="lead mb-4">
-                            Earn <strong>KSH 50 instantly</strong> for every friend who joins using your referral code. 
-                            Start building your income stream today!
-                        </p>
                         
-                        <div class="earning-stats mb-4">
-                            <div class="row">
-                                <div class="col-4">
-                                    <h3 class="text-warning fw-bold">KSH 50</h3>
-                                    <small>Per Referral</small>
+                        <!-- Trust Badges -->
+                        <div class="trust-badges">
+                            <div class="trust-badge">
+                                <i class="fas fa-shield-alt text-primary"></i>
+                                <span>Verified Job Listings</span>
+                            </div>
+                            <div class="trust-badge">
+                                <i class="fas fa-bolt text-warning"></i>
+                                <span>Instant Community Access</span>
+                            </div>
+                            <div class="trust-badge">
+                                <i class="fas fa-handshake text-success"></i>
+                                <span>Mutual Support</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Value Proposition -->
+                        <div class="transparent-box mb-4">
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <div class="stat-number">300+</div>
+                                    <small class="text-muted">Jobs Shared Monthly</small>
                                 </div>
-                                <div class="col-4">
-                                    <h3 class="text-warning fw-bold">Instant</h3>
-                                    <small>Payment</small>
-                                </div>
-                                <div class="col-4">
-                                    <h3 class="text-warning fw-bold">24/7</h3>
-                                    <small>Withdrawal</small>
+                                <div class="col-6">
+                                    <div class="stat-number">KSH 50</div>
+                                    <small class="text-muted">Reward for Helping Friends</small>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="hero-buttons">
-                            <a href="{{ url_for('register') }}" class="btn btn-primary">
-                                <i class="fas fa-user-plus me-2"></i>Start Earning Now
+                        <!-- Action Buttons -->
+                        <div class="hero-buttons d-flex flex-wrap gap-3">
+                            <a href="{{ url_for('register') }}" class="btn btn-primary flex-grow-1" style="min-width: 200px;">
+                                <i class="fas fa-door-open me-2"></i>Join the Community
                             </a>
-                            <a href="{{ url_for('login') }}" class="btn btn-outline-light">
-                                <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                            <a href="#how-it-works" class="btn btn-outline-primary flex-grow-1" style="min-width: 200px;">
+                                <i class="fas fa-play-circle me-2"></i>See How It Works
                             </a>
                         </div>
+                        
+                        <p class="text-muted mt-3 small">
+                            <i class="fas fa-lock me-1"></i> One-time KSH 200 lifetime access
+                        </p>
                     </div>
                 </div>
                 <div class="col-lg-6">
-                    <div class="hero-image">
-                        <i class="fas fa-user-ninja"></i>
+                    <div class="hero-image mt-4 mt-lg-0">
+                        <img src="https://images.unsplash.com/photo-1551836026-d5c2c5af78e4?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
+                             alt="Professional community networking" 
+                             onerror="this.style.display='none'">
+                        <div class="mt-3 text-muted small">
+                            <i class="fas fa-info-circle me-1"></i> Real professionals sharing real opportunities
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Features Section -->
-    <section class="py-5 bg-light">
+    <!-- How It Works - Reframed as Community Value -->
+    <section class="py-5 bg-white" id="how-it-works">
         <div class="container">
             <div class="text-center mb-5">
-                <h2 class="fw-bold">How It Works</h2>
-                <p class="text-muted">Start earning in just 3 simple steps</p>
+                <h2 class="fw-bold mb-3">More Than Just Referrals</h2>
+                <p class="text-muted">A community designed to help everyone succeed</p>
             </div>
             
             <div class="row g-4">
                 <div class="col-md-4">
                     <div class="feature-card">
-                        <div class="feature-icon">
-                            <i class="fas fa-user-plus"></i>
+                        <div class="feature-icon jobs">
+                            <i class="fas fa-briefcase"></i>
                         </div>
-                        <h4>1. Register</h4>
-                        <p class="text-muted">Sign up with your phone number and pay the one-time KSH 200 registration fee</p>
+                        <h4>1. Access Hidden Jobs</h4>
+                        <p class="text-muted">Get notified about opportunities that never make it to public job boards. Shared directly by community members.</p>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="feature-card">
                         <div class="feature-icon">
-                            <i class="fas fa-share-alt"></i>
+                            <i class="fas fa-network-wired"></i>
                         </div>
-                        <h4>2. Share</h4>
-                        <p class="text-muted">Share your unique referral code with friends and family</p>
+                        <h4>2. Grow Your Network</h4>
+                        <p class="text-muted">Connect with graduates, interns, and professionals who actively refer each other to opportunities.</p>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="feature-card">
-                        <div class="feature-icon">
-                            <i class="fas fa-money-bill-wave"></i>
+                        <div class="feature-icon community">
+                            <i class="fas fa-hands-helping"></i>
                         </div>
-                        <h4>3. Earn</h4>
-                        <p class="text-muted">Get KSH 50 instantly for each friend who joins using your code</p>
+                        <h4>3. Earn Together</h4>
+                        <p class="text-muted">When friends join through you, they get career support and you get KSH 50. Everyone wins.</p>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- CTA Section -->
-    <section class="py-5" style="background: linear-gradient(135deg, var(--primary-red), var(--primary-dark)); color: white;">
+    <!-- Community Stats Section -->
+    <section class="stats-section">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="fw-bold mb-3">Why Professionals Choose Us</h2>
+                <p class="text-muted">Join a growing network of career-focused individuals</p>
+            </div>
+            
+            <div class="row g-4">
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-user-graduate"></i>
+                        </div>
+                        <h3 class="stat-number">2,500+</h3>
+                        <p class="text-muted">Active Members</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-briefcase"></i>
+                        </div>
+                        <h3 class="stat-number">150+</h3>
+                        <p class="text-muted">New Jobs Weekly</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-money-bill-wave"></i>
+                        </div>
+                        <h3 class="stat-number">KSH 500K+</h3>
+                        <p class="text-muted">Rewards Shared</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-university"></i>
+                        </div>
+                        <h3 class="stat-number">50+</h3>
+                        <p class="text-muted">Universities Represented</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Valentine's Incentive - Framed as Community Achievement -->
+    <section class="py-5 text-white" style="background: linear-gradient(135deg, #e84393, #fd79a8);">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <h2 class="fw-bold mb-3">Community Achievement: Valentine's Getaway</h2>
+                    <p class="mb-4">
+                        Our top community builders who help 3000+ professionals connect with opportunities 
+                        will win an all-expenses-paid vacation for two. Because when you help others succeed, 
+                        amazing things happen.
+                    </p>
+                    <a href="{{ url_for('register') }}" class="btn btn-light">
+                        <i class="fas fa-trophy me-2"></i>Build Your Community
+                    </a>
+                </div>
+                <div class="col-lg-4 text-center">
+                    <i class="fas fa-gift" style="font-size: 6rem; opacity: 0.8;"></i>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Final CTA - Emphasizing Community -->
+    <section class="py-5 bg-white">
         <div class="container text-center">
-            <h2 class="fw-bold mb-3">Ready to Start Earning?</h2>
-            <p class="mb-4">Join thousands of Referral Ninjas already earning money by referring friends</p>
-            <a href="{{ url_for('register') }}" class="btn btn-light btn-lg">
-                <i class="fas fa-rocket me-2"></i>Join Now - KSH 200
-            </a>
+            <div class="value-prop rounded-4 p-5 mb-4">
+                <h2 class="fw-bold mb-3">Your Career Network Awaits</h2>
+                <p class="mb-4">For less than the cost of a coffee, get lifetime access to:</p>
+                
+                <div class="row justify-content-center mb-4">
+                    <div class="col-md-8">
+                        <div class="d-flex flex-wrap justify-content-center gap-3">
+                            <span class="badge bg-light text-dark p-3">
+                                <i class="fas fa-briefcase me-2"></i>Exclusive Job Board
+                            </span>
+                            <span class="badge bg-light text-dark p-3">
+                                <i class="fas fa-users me-2"></i>Active Professional Community
+                            </span>
+                            <span class="badge bg-light text-dark p-3">
+                                <i class="fas fa-handshake me-2"></i>Mutual Referral System
+                            </span>
+                            <span class="badge bg-light text-dark p-3">
+                                <i class="fas fa-gift me-2"></i>Community Rewards
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <h3 class="mb-4">One-time investment: <span class="text-warning">KSH 200</span></h3>
+                
+                <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg px-5">
+                    <i class="fas fa-users me-2"></i>Join the Community Now
+                </a>
+                
+                <p class="mt-3 small">
+                    Already have an account? <a href="{{ url_for('login') }}" class="text-white">Sign in here</a>
+                </p>
+            </div>
+            
+            <!-- Trust Signals -->
+            <div class="row justify-content-center mt-4">
+                <div class="col-md-8">
+                    <div class="d-flex flex-wrap justify-content-center gap-4 text-muted small">
+                        <div>
+                            <i class="fas fa-lock me-1"></i> Secure Registration
+                        </div>
+                        <div>
+                            <i class="fas fa-clock me-1"></i> 24/7 Support
+                        </div>
+                        <div>
+                            <i class="fas fa-shield-alt me-1"></i> Privacy Protected
+                        </div>
+                        <div>
+                            <i class="fas fa-mobile-alt me-1"></i> M-Pesa Enabled
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 
     <!-- Footer -->
     <footer class="bg-dark text-white py-4">
-        <div class="container text-center">
-            <p class="mb-0">&copy; 2025 Referral Ninja. All rights reserved.</p>
-            <small class="text-muted">Earn KSH 50 per referral | Instant M-Pesa withdrawals</small>
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6 text-center text-md-start">
+                    <h5 class="mb-2">Career Ninja Network</h5>
+                    <small class="text-muted">Building Kenya's most supportive professional community</small>
+                </div>
+                <div class="col-md-6 text-center text-md-end mt-3 mt-md-0">
+                    <small class="text-muted">
+                        Questions? <a href="mailto:info@careerninja.co.ke" class="text-light">info@careerninja.co.ke</a> |
+                        <a href="#" class="text-light ms-2">Privacy Policy</a>
+                    </small>
+                </div>
+            </div>
         </div>
     </footer>
 
