@@ -3,28 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Account Activation - ReferralNinja</title>
+    <title>Welcome to Career Ninja Network</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #7c3aed;
-            --primary-dark: #6d28d9;
-            --primary-light: #8b5cf6;
-            --secondary-color: #64748b;
-            --success-color: #10b981;
-            --warning-color: #f59e0b;
-            --danger-color: #ef4444;
-            --dark-color: #1e293b;
+            --primary-color: #2980b9;
+            --primary-dark: #1c5d86;
+            --accent-green: #27ae60;
+            --accent-orange: #f97316;
+            --dark-color: #2c3e50;
             --light-color: #f8fafc;
             --border-radius: 12px;
             --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
             --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
             --shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
             --shadow-xl: 0 20px 50px rgba(0,0,0,0.15);
-            --accent-color: #f97316;
-            --accent-light: #fb923c;
         }
 
         * {
@@ -55,9 +50,8 @@
             right: 0;
             bottom: 0;
             background: 
-                radial-gradient(circle at 20% 80%, rgba(124, 58, 237, 0.08) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
-                radial-gradient(circle at 40% 40%, rgba(249, 115, 22, 0.05) 0%, transparent 50%);
+                radial-gradient(circle at 20% 80%, rgba(41, 128, 185, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(39, 174, 96, 0.08) 0%, transparent 50%);
             z-index: -1;
         }
 
@@ -144,62 +138,6 @@
             padding: 2rem 2rem;
         }
 
-        /* Progress bar */
-        .progress-container {
-            display: flex;
-            justify-content: space-between;
-            position: relative;
-            margin: 1.5rem 0;
-            max-width: 400px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .progress-container::before {
-            content: '';
-            background-color: #e2e8f0;
-            position: absolute;
-            top: 50%;
-            left: 0;
-            transform: translateY(-50%);
-            height: 3px;
-            width: 100%;
-            z-index: 1;
-        }
-
-        .progress {
-            background-color: var(--primary-color);
-            position: absolute;
-            top: 50%;
-            left: 0;
-            transform: translateY(-50%);
-            height: 3px;
-            width: 0%;
-            z-index: 1;
-            transition: 0.4s ease;
-        }
-
-        .circle {
-            background-color: white;
-            color: var(--secondary-color);
-            border-radius: 50%;
-            height: 30px;
-            width: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 2px solid #e2e8f0;
-            transition: 0.4s ease;
-            z-index: 2;
-            font-weight: 600;
-            font-size: 0.85rem;
-        }
-
-        .circle.active {
-            border-color: var(--primary-color);
-            color: var(--primary-color);
-        }
-
         .user-profile-card {
             background: white;
             border-radius: var(--border-radius);
@@ -218,7 +156,7 @@
             left: 0;
             width: 4px;
             height: 100%;
-            background: linear-gradient(to bottom, var(--primary-color), var(--accent-color));
+            background: linear-gradient(to bottom, var(--primary-color), var(--accent-green));
         }
 
         .profile-header {
@@ -230,7 +168,7 @@
         .profile-avatar {
             width: 45px;
             height: 45px;
-            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-green));
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -249,9 +187,10 @@
         }
 
         .profile-info p {
-            color: var(--secondary-color);
+            color: var(--dark-color);
             margin-bottom: 0;
             font-size: 0.85rem;
+            opacity: 0.8;
         }
 
         .user-details-grid {
@@ -296,13 +235,14 @@
         }
 
         .detail-content p {
-            color: var(--secondary-color);
+            color: var(--dark-color);
             margin-bottom: 0;
             font-size: 0.8rem;
+            opacity: 0.8;
         }
 
         .referral-badge {
-            background: linear-gradient(135deg, var(--success-color), #34d399);
+            background: linear-gradient(135deg, var(--accent-green), #34d399);
             color: white;
             padding: 0.35rem 0.75rem;
             border-radius: 16px;
@@ -313,7 +253,7 @@
             gap: 0.4rem;
         }
 
-        /* Benefits section */
+        /* Benefits section - Updated for Career Focus */
         .benefits-section {
             background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
             border-radius: var(--border-radius);
@@ -325,13 +265,14 @@
 
         .benefits-section h3 {
             text-align: center;
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
             font-size: 1.1rem;
+            color: var(--dark-color);
         }
 
         .benefits-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1rem;
         }
 
@@ -339,34 +280,55 @@
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            padding: 0.75rem;
-            background: rgba(255, 255, 255, 0.7);
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.9);
             border-radius: 8px;
+            border-left: 3px solid var(--primary-color);
         }
 
         .benefit-icon {
-            width: 32px;
-            height: 32px;
+            width: 40px;
+            height: 40px;
             background: var(--primary-color);
-            border-radius: 6px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
             flex-shrink: 0;
-            font-size: 0.9rem;
+            font-size: 1rem;
+        }
+
+        .benefit-icon.jobs {
+            background: linear-gradient(135deg, var(--accent-green), #219653);
+        }
+
+        .benefit-icon.network {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        }
+
+        .benefit-icon.earn {
+            background: linear-gradient(135deg, var(--accent-orange), #d35400);
+        }
+
+        .benefit-icon.community {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
         }
 
         .benefit-item h6 {
             margin-bottom: 0.15rem;
-            font-size: 0.85rem;
+            font-size: 0.9rem;
+            color: var(--dark-color);
         }
 
         .benefit-item p {
             font-size: 0.75rem;
             margin-bottom: 0;
+            color: var(--dark-color);
+            opacity: 0.8;
         }
 
+        /* Security Badges - Updated */
         .security-badges {
             display: flex;
             justify-content: center;
@@ -377,25 +339,28 @@
 
         .security-badge {
             background: #f1f5f9;
-            color: var(--secondary-color);
-            padding: 0.4rem 0.75rem;
+            color: var(--dark-color);
+            padding: 0.5rem 1rem;
             border-radius: 16px;
-            font-size: 0.75rem;
+            font-size: 0.8rem;
             font-weight: 500;
             display: flex;
             align-items: center;
             gap: 0.4rem;
             transition: all 0.3s ease;
+            border: 1px solid #e2e8f0;
         }
 
         .security-badge:hover {
             background: var(--primary-color);
             color: white;
             transform: translateY(-2px);
+            border-color: var(--primary-color);
         }
 
-        .payment-section {
-            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        /* Investment Section (was Payment Section) */
+        .investment-section {
+            background: white;
             border-radius: var(--border-radius);
             padding: 2rem;
             text-align: center;
@@ -406,25 +371,26 @@
             overflow: hidden;
         }
 
-        .payment-section::before {
+        .investment-section::before {
             content: '';
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
             height: 3px;
-            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-green));
         }
 
-        .payment-section h2 {
+        .investment-section h2 {
             margin-bottom: 1rem;
             font-size: 1.3rem;
+            color: var(--dark-color);
         }
 
-        .payment-amount {
+        .investment-amount {
             font-size: 2.5rem;
             font-weight: 800;
-            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-green));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -434,21 +400,22 @@
             display: inline-block;
         }
 
-        .payment-amount::after {
+        .investment-amount::after {
             content: '';
             position: absolute;
             bottom: -3px;
             left: 0;
             width: 100%;
             height: 2px;
-            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-green));
             border-radius: 2px;
         }
 
-        .payment-subtitle {
-            color: var(--secondary-color);
+        .investment-subtitle {
+            color: var(--dark-color);
             font-size: 0.9rem;
             margin-bottom: 1.5rem;
+            opacity: 0.8;
         }
 
         .status-indicator {
@@ -466,27 +433,22 @@
         }
 
         .status-indicator.ready {
-            border-color: var(--warning-color);
-            background: rgba(245, 158, 11, 0.05);
+            border-color: var(--accent-orange);
+            background: rgba(249, 115, 22, 0.05);
         }
 
         .status-indicator.processing {
             border-color: var(--primary-color);
-            background: rgba(37, 99, 235, 0.05);
+            background: rgba(41, 128, 185, 0.05);
         }
 
         .status-indicator.success {
-            border-color: var(--success-color);
-            background: rgba(16, 185, 129, 0.05);
+            border-color: var(--accent-green);
+            background: rgba(39, 174, 96, 0.05);
         }
 
-        .status-indicator.cooldown {
-            border-color: var(--warning-color);
-            background: rgba(245, 158, 11, 0.1);
-        }
-
-        .btn-activate {
-            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+        .btn-invest {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-green));
             color: white;
             border: none;
             padding: 1rem 2rem;
@@ -504,7 +466,7 @@
             cursor: pointer;
         }
 
-        .btn-activate::before {
+        .btn-invest::before {
             content: '';
             position: absolute;
             top: 0;
@@ -515,23 +477,23 @@
             transition: left 0.5s;
         }
 
-        .btn-activate:hover::before {
+        .btn-invest:hover::before {
             left: 100%;
         }
 
-        .btn-activate:hover:not(:disabled) {
+        .btn-invest:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: var(--shadow-lg);
         }
 
-        .btn-activate:active:not(:disabled) {
+        .btn-invest:active:not(:disabled) {
             transform: translateY(0);
         }
 
-        .btn-activate:disabled {
+        .btn-invest:disabled {
             opacity: 0.6;
             cursor: not-allowed;
-            background: linear-gradient(135deg, var(--secondary-color), #94a3b8);
+            background: linear-gradient(135deg, #64748b, #94a3b8);
         }
 
         .processing-section {
@@ -573,7 +535,7 @@
             font-size: 0.9rem;
             font-weight: 600;
             color: var(--primary-color);
-            background: rgba(124, 58, 237, 0.1);
+            background: rgba(41, 128, 185, 0.1);
             padding: 0.5rem 1rem;
             border-radius: 20px;
             display: inline-block;
@@ -583,71 +545,92 @@
         .cooldown-timer {
             font-size: 0.9rem;
             font-weight: 600;
-            color: var(--warning-color);
-            background: rgba(245, 158, 11, 0.1);
+            color: var(--accent-orange);
+            background: rgba(249, 115, 22, 0.1);
             padding: 0.5rem 1rem;
             border-radius: 20px;
             display: inline-block;
             margin-top: 0.75rem;
         }
 
-        .activation-steps {
+        /* Value Proposition Section */
+        .value-proposition {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+
+        .value-proposition h3 {
+            margin-bottom: 1rem;
+            color: var(--dark-color);
+            font-size: 1.1rem;
+        }
+
+        .value-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .value-item {
+            text-align: center;
+            padding: 1rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .value-icon {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .value-item h6 {
+            font-size: 0.85rem;
+            margin-bottom: 0.25rem;
+            color: var(--dark-color);
+        }
+
+        .value-item p {
+            font-size: 0.75rem;
+            color: var(--dark-color);
+            opacity: 0.8;
+            margin-bottom: 0;
+        }
+
+        /* Community Stats */
+        .community-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
             gap: 1rem;
             margin: 1.5rem 0;
         }
 
-        .step-card {
-            background: white;
-            border-radius: var(--border-radius);
-            padding: 1.5rem;
+        .stat-item {
             text-align: center;
+            padding: 1rem;
+            background: white;
+            border-radius: 8px;
             box-shadow: var(--shadow-sm);
-            border: 1px solid #f1f5f9;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
+            border: 1px solid #e2e8f0;
         }
 
-        .step-card:hover {
-            transform: translateY(-3px);
-            box-shadow: var(--shadow-md);
-        }
-
-        .step-number {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 1rem;
-            margin: 0 auto 1rem;
-            position: relative;
-            z-index: 1;
-        }
-
-        .step-icon {
-            font-size: 2rem;
-            margin-bottom: 0.75rem;
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: 800;
             color: var(--primary-color);
+            margin-bottom: 0.25rem;
         }
 
-        .step-card h5 {
-            font-weight: 700;
-            margin-bottom: 0.75rem;
+        .stat-label {
+            font-size: 0.75rem;
             color: var(--dark-color);
-            font-size: 1rem;
-        }
-
-        .step-card p {
-            color: var(--secondary-color);
-            line-height: 1.5;
-            font-size: 0.85rem;
+            opacity: 0.8;
         }
 
         .support-section {
@@ -662,12 +645,14 @@
         .support-section h5 {
             margin-bottom: 0.75rem;
             font-size: 1rem;
+            color: var(--dark-color);
         }
 
         .support-section p {
-            color: var(--secondary-color);
+            color: var(--dark-color);
             margin-bottom: 0.75rem;
             font-size: 0.85rem;
+            opacity: 0.8;
         }
 
         .support-link {
@@ -725,7 +710,7 @@
         }
 
         .modal-header {
-            background: linear-gradient(135deg, var(--success-color), #34d399);
+            background: linear-gradient(135deg, var(--accent-green), #34d399);
             color: white;
             border-radius: 12px 12px 0 0;
             border: none;
@@ -739,18 +724,38 @@
 
         .success-icon {
             font-size: 3rem;
-            color: var(--success-color);
+            color: var(--accent-green);
             margin-bottom: 1rem;
         }
 
         .modal-body h4 {
             margin-bottom: 1rem;
             font-size: 1.2rem;
+            color: var(--dark-color);
         }
 
         .modal-body p {
             margin-bottom: 1.5rem;
             font-size: 0.9rem;
+            color: var(--dark-color);
+            opacity: 0.8;
+        }
+
+        .cooldown-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .cooldown-icon {
+            color: var(--accent-orange);
+        }
+
+        .cooldown-text {
+            font-size: 0.85rem;
+            color: var(--accent-orange);
         }
 
         @media (max-width: 768px) {
@@ -780,20 +785,16 @@
                 margin-bottom: 0.75rem;
             }
 
-            .payment-amount {
+            .investment-amount {
                 font-size: 2rem;
             }
 
-            .payment-section {
+            .investment-section {
                 padding: 1.5rem;
             }
 
-            .activation-steps {
+            .benefits-grid {
                 grid-template-columns: 1fr;
-            }
-
-            .progress-container {
-                max-width: 300px;
             }
 
             .notification-container {
@@ -806,27 +807,9 @@
 
         /* Focus states for accessibility */
         button:focus,
-        .btn-activate:focus {
+        .btn-invest:focus {
             outline: 2px solid var(--primary-color);
             outline-offset: 2px;
-        }
-
-        /* Cooldown indicator */
-        .cooldown-indicator {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            margin-top: 1rem;
-        }
-
-        .cooldown-icon {
-            color: var(--warning-color);
-        }
-
-        .cooldown-text {
-            font-size: 0.85rem;
-            color: var(--warning-color);
         }
     </style>
 </head>
@@ -838,32 +821,23 @@
         <div class="activation-header">
             <div class="header-content">
                 <div class="header-icon">
-                    <i class="fas fa-user-shield"></i>
+                    <i class="fas fa-users"></i>
                 </div>
-                <h1>Unlock Your ReferralNinja Account</h1>
-                <p>Complete your activation and start earning rewards today!</p>
+                <h1>Welcome to Career Ninja Network</h1>
+                <p>Complete your membership to join our professional community</p>
             </div>
         </div>
 
         <div class="activation-body">
-            <!-- Progress Bar -->
-            <div class="progress-container">
-                <div class="progress" id="progress"></div>
-                <div class="circle active">1</div>
-                <div class="circle">2</div>
-                <div class="circle">3</div>
-                <div class="circle">4</div>
-            </div>
-
             <!-- User Profile Section -->
             <div class="user-profile-card">
                 <div class="profile-header">
                     <div class="profile-avatar">
-                        <i class="fas fa-user"></i>
+                        <i class="fas fa-user-graduate"></i>
                     </div>
                     <div class="profile-info">
                         <h3 id="username">{{ user_data.username }}</h3>
-                        <p>Ready for Activation</p>
+                        <p>Ready to join our community of professionals</p>
                     </div>
                 </div>
                 
@@ -890,89 +864,109 @@
                     
                     <div class="detail-item">
                         <div class="detail-icon">
-                            <i class="fas fa-id-card"></i>
+                            <i class="fas fa-handshake"></i>
                         </div>
                         <div class="detail-content">
-                            <h6>Referral Code</h6>
-                            <p><span class="referral-badge"><i class="fas fa-code"></i> <span id="referral-code">{{ user_data.referral_code }}</span></span></p>
+                            <h6>Your Network Code</h6>
+                            <p><span class="referral-badge"><i class="fas fa-users"></i> <span id="referral-code">{{ user_data.referral_code }}</span></span></p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Benefits Section -->
+            <!-- Community Stats -->
+            <div class="community-stats">
+                <div class="stat-item">
+                    <div class="stat-number">2,500+</div>
+                    <div class="stat-label">Active Members</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">150+</div>
+                    <div class="stat-label">Jobs Weekly</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">KSH 500K+</div>
+                    <div class="stat-label">Rewards Shared</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">50+</div>
+                    <div class="stat-label">Universities</div>
+                </div>
+            </div>
+
+            <!-- Benefits Section - Updated for Career Focus -->
             <div class="benefits-section">
-                <h3>Why Activate Your Account?</h3>
+                <h3>What You'll Get With Membership</h3>
                 <div class="benefits-grid">
                     <div class="benefit-item">
-                        <div class="benefit-icon">
-                            <i class="fas fa-bolt"></i>
+                        <div class="benefit-icon jobs">
+                            <i class="fas fa-briefcase"></i>
                         </div>
                         <div>
-                            <h6>Instant Access</h6>
-                            <p>Unlock all features</p>
+                            <h6>Exclusive Job Board</h6>
+                            <p>Access opportunities shared by community members</p>
                         </div>
                     </div>
                     <div class="benefit-item">
-                        <div class="benefit-icon">
-                            <i class="fas fa-gift"></i>
+                        <div class="benefit-icon network">
+                            <i class="fas fa-network-wired"></i>
                         </div>
                         <div>
-                            <h6>Earn Rewards</h6>
-                            <p>Start earning from referrals</p>
+                            <h6>Professional Network</h6>
+                            <p>Connect with graduates and professionals</p>
                         </div>
                     </div>
                     <div class="benefit-item">
-                        <div class="benefit-icon">
-                            <i class="fas fa-chart-line"></i>
+                        <div class="benefit-icon earn">
+                            <i class="fas fa-hands-helping"></i>
                         </div>
                         <div>
-                            <h6>Track Performance</h6>
-                            <p>Monitor your success</p>
+                            <h6>Earn Together</h6>
+                            <p>Get KSH 50 when you help friends join</p>
                         </div>
                     </div>
                     <div class="benefit-item">
-                        <div class="benefit-icon">
-                            <i class="fas fa-shield-alt"></i>
+                        <div class="benefit-icon community">
+                            <i class="fas fa-trophy"></i>
                         </div>
                         <div>
-                            <h6>Secure Platform</h6>
-                            <p>Your data is protected</p>
+                            <h6>Community Rewards</h6>
+                            <p>Top contributors win amazing prizes</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Security Badges -->
+            <!-- Security Badges - Updated Messaging -->
             <div class="security-badges">
                 <div class="security-badge">
                     <i class="fas fa-shield-alt"></i>
-                    Secure Payment
+                    Trusted Community
                 </div>
                 <div class="security-badge">
                     <i class="fas fa-lock"></i>
-                    Encrypted Connection
+                    Secure Platform
                 </div>
                 <div class="security-badge">
                     <i class="fas fa-bolt"></i>
-                    Instant Activation
+                    Instant Access
                 </div>
             </div>
 
-            <!-- Payment Section -->
-            <div class="payment-section">
-                <h2>One-Time Activation Fee</h2>
-                <div class="payment-amount">KSh 200</div>
-                <p class="payment-subtitle">Complete your registration and unlock full platform access</p>
+            <!-- Investment Section (was Payment Section) -->
+            <div class="investment-section">
+                <h2>Your Lifetime Membership</h2>
+                <div class="investment-amount">KSh 200</div>
+                <p class="investment-subtitle">One-time investment for lifetime community access</p>
                 
                 <div class="status-indicator ready" id="status-indicator">
-                    <i class="fas fa-clock text-warning"></i>
-                    <span>Ready for secure activation</span>
+                    <i class="fas fa-clock" style="color: var(--accent-orange);"></i>
+                    <span>Ready to join the community</span>
                 </div>
 
-                <button class="btn btn-activate" id="activate-btn">
-                    <i class="fas fa-bolt"></i>
-                    Activate Account Securely
+                <button class="btn btn-invest" id="activate-btn">
+                    <i class="fas fa-users"></i>
+                    Join Career Ninja Network
                 </button>
 
                 <!-- Cooldown Indicator -->
@@ -987,11 +981,46 @@
                 </p>
             </div>
 
+            <!-- Value Proposition -->
+            <div class="value-proposition">
+                <h3>Why Members Choose Career Ninja Network</h3>
+                <div class="value-grid">
+                    <div class="value-item">
+                        <div class="value-icon">
+                            <i class="fas fa-graduation-cap"></i>
+                        </div>
+                        <h6>For Graduates</h6>
+                        <p>Access hidden job opportunities</p>
+                    </div>
+                    <div class="value-item">
+                        <div class="value-icon">
+                            <i class="fas fa-briefcase"></i>
+                        </div>
+                        <h6>For Professionals</h6>
+                        <p>Grow your referral network</p>
+                    </div>
+                    <div class="value-item">
+                        <div class="value-icon">
+                            <i class="fas fa-hands-helping"></i>
+                        </div>
+                        <h6>Mutual Support</h6>
+                        <p>Help others while earning</p>
+                    </div>
+                    <div class="value-item">
+                        <div class="value-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h6>Career Growth</h6>
+                        <p>Continuous opportunities</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Processing Section -->
             <div class="processing-section" id="processing-section">
                 <div class="processing-spinner"></div>
-                <h3 class="mb-3">Processing Your Activation</h3>
-                <p class="mb-4">We're securely processing your payment. Please check your phone for the M-PESA prompt...</p>
+                <h3 class="mb-3">Processing Your Membership</h3>
+                <p class="mb-4">We're securely processing your request. Please check your phone for the M-PESA prompt...</p>
                 <div class="countdown-timer" id="countdown-timer">
                     Status check in: <span id="check-timer">30</span>s
                 </div>
@@ -1005,42 +1034,11 @@
                 </button>
             </div>
 
-            <!-- Activation Steps -->
-            <div class="activation-steps">
-                <div class="step-card">
-                    <div class="step-number">1</div>
-                    <i class="fas fa-mouse-pointer step-icon"></i>
-                    <h5>Initiate Payment</h5>
-                    <p>Click the activation button to securely initiate the payment process</p>
-                </div>
-                
-                <div class="step-card">
-                    <div class="step-number">2</div>
-                    <i class="fas fa-mobile-alt step-icon"></i>
-                    <h5>Check Your Device</h5>
-                    <p>You'll receive an M-PESA prompt on your registered mobile number</p>
-                </div>
-                
-                <div class="step-card">
-                    <div class="step-number">3</div>
-                    <i class="fas fa-key step-icon"></i>
-                    <h5>Enter PIN Securely</h5>
-                    <p>Safely enter your M-PESA PIN to authorize the payment</p>
-                </div>
-                
-                <div class="step-card">
-                    <div class="step-number">4</div>
-                    <i class="fas fa-check-circle step-icon"></i>
-                    <h5>Access Granted</h5>
-                    <p>Get immediate access to your dashboard and start earning</p>
-                </div>
-            </div>
-
             <!-- Support Section -->
             <div class="support-section">
-                <h5>Need Assistance?</h5>
-                <p class="text-muted mb-3">Our support team is available to help you with the activation process</p>
-                <a href="https://wa.me/254799326074?text=Hello%20ReferralNinja%20Support,%20I%20need%20help%20with%20my%20account%20activation" 
+                <h5>Have Questions About Membership?</h5>
+                <p class="text-muted mb-3">Our support team is here to help you join our community</p>
+                <a href="https://wa.me/254799326074?text=Hello%20Career%20Ninja%20Network%20Support,%20I%20have%20a%20question%20about%20membership" 
                    class="support-link" target="_blank">
                     <i class="fab fa-whatsapp"></i>
                     Contact Support on WhatsApp
@@ -1054,12 +1052,12 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-check-circle me-2"></i>Payment Successful</h5>
+                    <h5 class="modal-title"><i class="fas fa-check-circle me-2"></i>Membership Payment Processed</h5>
                 </div>
                 <div class="modal-body">
                     <i class="fas fa-check-circle success-icon"></i>
-                    <h4>Payment Processed Successfully</h4>
-                    <p>Your payment has been securely processed and your account is being activated.</p>
+                    <h4>Welcome to the Community!</h4>
+                    <p>Your membership payment has been securely processed. Welcome to Career Ninja Network!</p>
                     <div class="processing-spinner"></div>
                 </div>
             </div>
@@ -1071,15 +1069,15 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-user-check me-2"></i>Account Activated</h5>
+                    <h5 class="modal-title"><i class="fas fa-users me-2"></i>Welcome to Career Ninja Network</h5>
                 </div>
                 <div class="modal-body">
-                    <i class="fas fa-user-check success-icon"></i>
-                    <h4>Welcome to ReferralNinja!</h4>
-                    <p>Your account has been successfully activated. You now have full access to all platform features.</p>
-                    <button type="button" class="btn btn-activate" id="redirect-btn">
+                    <i class="fas fa-users success-icon"></i>
+                    <h4>You're Now a Member!</h4>
+                    <p>Your account has been activated. You now have full access to our community and job board.</p>
+                    <button type="button" class="btn btn-invest" id="redirect-btn">
                         <i class="fas fa-tachometer-alt me-2"></i>
-                        Go to Dashboard
+                        Go to Your Dashboard
                     </button>
                 </div>
             </div>
@@ -1091,13 +1089,13 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-clock me-2 text-warning"></i>Please Wait</h5>
+                    <h5 class="modal-title"><i class="fas fa-clock me-2" style="color: var(--accent-orange);"></i>Please Wait</h5>
                 </div>
                 <div class="modal-body">
-                    <i class="fas fa-hourglass-half fa-3x text-warning mb-3"></i>
+                    <i class="fas fa-hourglass-half fa-3x" style="color: var(--accent-orange); margin-bottom: 1rem;"></i>
                     <h4>Check Status Cooldown</h4>
                     <p>You can check the payment status again in <span id="modal-cooldown-seconds">120</span> seconds.</p>
-                    <p class="text-muted small">This helps reduce server load and ensures optimal performance for all users.</p>
+                    <p class="text-muted small">This helps reduce server load and ensures optimal performance for all members.</p>
                     <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
                         OK, I'll Wait
                     </button>
@@ -1112,7 +1110,6 @@
         let checkCooldown = false;
         let cooldownSeconds = 0;
         let checkCountdown = 30;
-        let currentActive = 1;
         let checkInterval = null;
         let cooldownInterval = null;
         let autoCheckInterval = null;
@@ -1121,25 +1118,9 @@
             const activateBtn = document.getElementById('activate-btn');
             const processingSection = document.getElementById('processing-section');
             const statusIndicator = document.getElementById('status-indicator');
-            const progress = document.getElementById('progress');
-            const circles = document.querySelectorAll('.circle');
             const cooldownIndicator = document.getElementById('cooldown-indicator');
             const checkStatusBtn = document.getElementById('check-status-btn');
             const cooldownTimerDisplay = document.getElementById('cooldown-timer-display');
-
-            // Update progress bar
-            function updateProgress() {
-                circles.forEach((circle, idx) => {
-                    if (idx < currentActive) {
-                        circle.classList.add('active');
-                    } else {
-                        circle.classList.remove('active');
-                    }
-                });
-
-                const activeCircles = document.querySelectorAll('.circle.active');
-                progress.style.width = ((activeCircles.length - 1) / (circles.length - 1)) * 100 + '%';
-            }
 
             // Show notification
             function showNotification(message, type = 'info') {
@@ -1240,11 +1221,7 @@
                         
                         // Update status indicator
                         statusIndicator.className = 'status-indicator success';
-                        statusIndicator.innerHTML = '<i class="fas fa-check-circle text-success"></i><span>Payment verified successfully!</span>';
-                        
-                        // Update progress bar
-                        currentActive = 4;
-                        updateProgress();
+                        statusIndicator.innerHTML = '<i class="fas fa-check-circle text-success"></i><span>Membership confirmed!</span>';
                         
                         // Redirect after 3 seconds
                         setTimeout(() => {
@@ -1310,25 +1287,21 @@
             activateBtn.addEventListener('click', async function() {
                 // Show loading state
                 this.disabled = true;
-                this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Initiating Secure Payment...';
+                this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Processing Membership...';
 
                 // Show processing section
                 processingSection.classList.add('show');
                 
                 // Update status indicator
                 statusIndicator.className = 'status-indicator processing';
-                statusIndicator.innerHTML = '<i class="fas fa-sync-alt text-primary"></i><span>Processing activation request...</span>';
-
-                // Update progress bar
-                currentActive = 2;
-                updateProgress();
+                statusIndicator.innerHTML = '<i class="fas fa-sync-alt text-primary"></i><span>Processing membership request...</span>';
 
                 // Get the user's phone number for the payment request
                 const phoneNumber = document.getElementById('phone-number').textContent;
 
                 // Validate phone number
                 if (!phoneNumber || phoneNumber === 'Loading...' || phoneNumber === 'Not provided' || phoneNumber === 'Phone number not available') {
-                    showNotification('Valid phone number is required for activation. Please ensure your phone number is correctly registered.', 'danger');
+                    showNotification('Valid phone number is required for membership. Please ensure your phone number is correctly registered.', 'danger');
                     resetActivationState();
                     return;
                 }
@@ -1353,10 +1326,6 @@
                         statusIndicator.className = 'status-indicator processing';
                         statusIndicator.innerHTML = '<i class="fas fa-bell text-primary"></i><span>Check your phone for M-PESA prompt</span>';
                         
-                        // Update progress bar
-                        currentActive = 3;
-                        updateProgress();
-                        
                         // Start checking payment status with cooldown protection
                         checkCountdown = 30;
                         startAutoCheckCountdown();
@@ -1372,12 +1341,12 @@
                     }
                 } catch (error) {
                     console.error('Error:', error);
-                    showNotification('Unable to initiate payment. Please try again or contact support.', 'danger');
+                    showNotification('Unable to process membership. Please try again or contact support.', 'danger');
                     resetActivationState();
                 } finally {
                     // Reset activation button
                     this.disabled = false;
-                    this.innerHTML = '<i class="fas fa-bolt"></i> Activate Account Securely';
+                    this.innerHTML = '<i class="fas fa-users"></i> Join Career Ninja Network';
                 }
             });
             
@@ -1388,12 +1357,10 @@
             
             function resetActivationState() {
                 activateBtn.disabled = false;
-                activateBtn.innerHTML = '<i class="fas fa-bolt"></i> Activate Account Securely';
+                activateBtn.innerHTML = '<i class="fas fa-users"></i> Join Career Ninja Network';
                 processingSection.classList.remove('show');
                 statusIndicator.className = 'status-indicator ready';
-                statusIndicator.innerHTML = '<i class="fas fa-clock text-warning"></i><span>Ready for secure activation</span>';
-                currentActive = 1;
-                updateProgress();
+                statusIndicator.innerHTML = '<i class="fas fa-clock" style="color: var(--accent-orange);"></i><span>Ready to join the community</span>';
                 clearInterval(checkInterval);
                 clearInterval(cooldownInterval);
                 clearInterval(autoCheckInterval);
@@ -1433,21 +1400,7 @@
                 }
             }
 
-            // Add hover effects to step cards
-            document.querySelectorAll('.step-card').forEach(card => {
-                card.addEventListener('mouseenter', function() {
-                    this.style.transform = 'translateY(-3px)';
-                });
-                
-                card.addEventListener('mouseleave', function() {
-                    this.style.transform = 'translateY(0)';
-                });
-            });
-
-            // Initialize progress bar
-            updateProgress();
-
-            // Check initial payment status
+            // Initialize page
             checkInitialStatus();
 
             // Start enhanced checking as fallback
